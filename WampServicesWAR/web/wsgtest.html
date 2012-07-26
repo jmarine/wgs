@@ -1,0 +1,629 @@
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+		<title>WebSocket group client</title>
+		<script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
+		<script type="text/javascript" src="js/jquery-ui-1.8.19.custom.min.js"></script>
+		<script type="text/javascript" src="js/wsgclient.js"></script>
+<style type="text/css">
+
+* {
+  font-family: Verdana, sans-serif;
+  font-size: 12px;
+  color: #6c3000;
+  background: #f7e3a4; 
+}
+
+button, input, select, option {
+  background: #fff0c0; 
+}
+
+button, input, select {
+  border: 1px #6c3000 solid;
+  margin-bottom: 2px;
+  /* margin-top: 1px; */  
+}
+
+
+button {
+  border-radius: 6px;
+  margin-top: 5px;
+}
+
+button:active {
+  background: #dac394;
+}
+
+button:disabled, input:disabled {
+  background: #f7e3a4;
+  color: #777777;
+}
+
+option:active {
+  background-color: #dac394;
+}
+
+
+fieldset { border: 1px #6c3000 solid; border-radius: 10px; }
+legend { border: 1px #6c3000 solid; margin-left: 0.5em; padding: 0.2em 0.8em; border-radius: 10px; font-weight: bold;
+          color: #6c3000;
+          background:#dac394
+}
+
+label { display: block; float: left; width: 90px; clear: left; }
+
+.section { clear: both; }
+.left { float: left; padding-bottom: 10px; padding-right: 20px; }
+.right { float: left; clear: right; }
+
+.hidden { display: none; }
+
+</style>
+
+<script language="javascript">
+var wsgclient = null;
+var currentApp = null;
+var currentGroup = null;
+
+function enable_network() {
+    $("#group_params").hide();
+    $("#login").slideDown(500);
+    $("#enable_network").hide();
+    $("#exit_group").show();
+}
+
+function authentication(state, msg) {
+      if(state == WsgState.AUTHENTICATED) {
+          //alert("Authenticated");
+          $("#server_url").attr("disabled", "disabled");
+          $("#nick").attr("disabled", "disabled");
+          $("#password").attr("disabled", "disabled");
+          $("#register").attr("disabled", "disabled");
+          $("#toggle_connect").html("Disconnect");          
+          
+          list_apps();
+      } else if(state == WsgState.ERROR) {
+          alert("Error: " + msg);
+      }
+}
+
+
+function update_apps(response) {
+    if(response.apps) {
+        $("#apps option").remove();            
+        response.apps.forEach(function(item) {
+            $("#apps").append($('<option>').attr('value',item.appId).text(item.name));
+        });
+    }
+}
+
+
+function list_apps() {
+    $("#apps option").remove();
+    wsgclient.listApps(false, function(response) {
+        if(response.valid) {
+            wsgclient.subscribe("https://github.com/jmarine/wampservices/wsgservice#apps_event", update_apps, true);
+            update_apps(response);
+            $("#app_params").hide();
+            $("#app_list").slideDown(500);
+        }
+    });
+
+}
+
+function show_app_params() {
+    $("#app_list").hide();
+    $("#app_params").slideDown(500);
+}
+
+function hide_app_params() {
+    $("#app_params").hide();
+    $("#app_list").slideDown(500);
+}
+
+function update_groups(response) {
+    $("#groups option").remove();
+    if(response.groups) {
+        response.groups.forEach(function(item) {
+            $("#groups").append($('<option>').attr('value',item.gid).text(item.description));
+        });
+    }    
+}
+
+function hide_group_list() {
+    var appId = $("#apps option:selected").attr("value");
+    $("#group_list").hide();
+    $("#app_list").slideDown(500);
+    wsgclient.unsubscribe("https://github.com/jmarine/wampservices/wsgservice#app_event:" + appId, update_groups, false);
+}
+
+function list_groups() {
+    var appId = $("#apps option:selected").attr("value");
+    $("#groups option").remove();
+    wsgclient.listGroups(appId, function(response) {
+        if(response.valid) {
+            currentApp = response.app;
+            wsgclient.subscribe("https://github.com/jmarine/wampservices/wsgservice#app_event:" + appId, update_groups, true);
+            update_groups(response);
+            $("#app_list").hide();
+            $("#group_list").slideDown(500);
+            $("#group_list fieldset legend").html("Groups: " + response.app.name);
+        }
+    });
+}
+
+function delete_app() {
+    var appId = $("#apps option:selected").attr("value");
+    if(confirm("Do you really want to delete the application?")) {
+        wsgclient.deleteApp(appId, function(response) {
+            if(!response.valid) alert("Error deleting application.");
+        });
+    }
+} 
+
+function create_app() {
+    var name = $("#app_name").val();
+    var domain = $("#app_domain").val();
+    var version = $("#app_version").val();
+    var min = $("#app_min").val();
+    var max = $("#app_max").val();
+    var observable = $("#app_observable").is(':checked');
+    var dynamic = $("#app_dynamic").is(':checked');
+    var alliances = $("#app_alliances").is(':checked');
+    var ai_available = $("#app_ai_available").is(':checked');
+    var roles = [];
+    $("#app_roles option").each(function() { roles[roles.length] = $(this).attr("value"); });
+    
+    wsgclient.newApp(name, domain, version, min, max, observable, dynamic, alliances, ai_available, roles, function(response) {
+        if(response.valid) hide_app_params();
+        else alert("Error creating application.");
+    });
+}
+
+function add_role() {
+    var name = $("#app_role_name").val();
+    var required = $("#app_role_required").is(":checked");
+    var multiple = $("#app_role_multiple").is(":checked");
+    
+    var option = Option(name,name);
+    if(multiple) option.value = option.value + (required? "+" : "*");
+    else if(!required) option.value = option.value + "?";
+    
+    $('#app_roles').append(option);
+}
+
+function delete_role() {
+    $("#app_roles option:selected").remove();
+}
+
+
+function open_group(createNew) {
+    var appId = $("#apps option:selected").attr("value");
+    var gid = createNew? "" : $("#groups option:selected").attr("value");
+    wsgclient.openGroup(appId, gid, function(response) {
+       if(response.valid) {
+            if(response.gid != "") wsgclient.subscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + response.gid, update_group, true);
+            show_group(response); 
+       }
+    });
+}
+
+function show_group(group) {
+    //alert(JSON.stringify(group));
+    var tbody = $("#group_params table[id='members'] tbody");
+    tbody.find("tr").remove();
+    
+    currentGroup = group;
+    $("#group_gid").attr("value", group.gid);
+    $("#group_admin").attr("value", group.admin);
+    
+    if(group.members) {
+        var currentNick = $("#nick").val();
+        var currentNickIsOnlineMember = false;
+        var currentNickIsOfflineMember = false;
+        group.members.forEach(function(member, index) {
+            if(!member.connected && member.nick==currentNick) {
+                currentNickIsOfflineMember = true;
+            }
+        });
+        group.members.forEach(function(member, index) {
+            var memberId = index;
+            var memberNick = "";
+            var selected = "";
+            var roleFixed = false;
+            var currentNickSelected = false;
+            
+            if((member.nick=="" || member.nick==currentNick)) {
+                var selected = "";
+                if(currentNickIsOfflineMember && (!member.connected) && member.nick==currentNick) {
+                    currentNickSelected = true;;
+                    currentNickIsOnlineMember = true;
+                    currentNickIsOfflineMember = false;
+                    roleFixed = true;
+                }
+                if(!currentNickIsOfflineMember && !currentNickIsOnlineMember) {
+                    currentNickSelected = true;
+                    currentNickIsOnlineMember = true;
+                }
+            } else {
+                memberNick = member.nick;
+                roleFixed = true;
+            }
+
+            append_group_member(false, memberId, memberNick, member.cid, member.type, member.role, currentNickSelected, roleFixed, currentApp.ai);
+
+        });
+    }
+
+
+    $("#group_list").hide();
+    $("#group_params").slideDown(500);
+}
+
+function add_group_member(added) {
+    var members = $("#group_params table[id='members'] tbody tr");
+    append_group_member(added, members.size(), "", "", "user", "", "", false, currentApp.ai);
+}
+
+function update_member(field, as_previous_client) 
+{
+    var appId = $("#apps option:selected").attr("value");
+    var gid = $("#group_gid").val();
+    var option = $("#" + field + " option:selected");
+    var selectedValue = option.val();
+    var userTypePos = selectedValue.indexOf(":");
+    var cid = selectedValue;
+    var usertype = "user";
+    if(userTypePos != -1) {
+        cid = cid.substring(1+userTypePos);
+        usertype = selectedValue.substring(0,userTypePos);
+    }
+    var nick = option.text();
+    if(cid == "") nick = "";
+    else if(cid == wsgclient.cid) nick = "";
+    var slot = parseInt(field.substring(6));
+    var role = $("#role" + slot + " option:selected").val();
+    var team = parseInt($("#team" + slot).val());
+    wsgclient.updateMember(appId, gid, slot, cid, usertype, nick, role, team, update_group);
+    
+}
+
+
+function populate_group_member_fields(added, memberId, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai) {
+    var members = "";
+    var roles = "";
+    if(added || memberNick == "" || memberCid == wsgclient.cid || (wsgclient.nick == $("#group_admin").val()) ) {
+        members += '<option value="">Empty</option>';
+        members += '<option value="user:'+wsgclient.cid+'" ' + ((currentNickSelected && memberType=="user")? "selected" : "") + '>Me</option>';
+        if(ai) members += '<option value="computer:'+wsgclient.cid+'" ' + ((currentNickSelected && memberType=="computer")? "selected" : "") + '>MyComputer</option>';
+    } 
+    
+    if(!added && memberNick != "" && memberCid != wsgclient.cid) {
+        var nick = memberNick;
+        var val = memberCid;
+        if(memberType != "") {
+            val = memberType + ":" + val;
+            nick = memberType + ":" + nick;
+        }
+        members += '<option value="'+val+'" selected>' + nick + '</option>';
+    }
+    
+    currentGroup.roles.forEach(function(role) {
+        if(!roleFixed || (memberRole==role.name) || memberCid == wsgclient.cid || (wsgclient.nick == $("#group_admin").val()) ) {
+            roles += '<option value="' + role.name + '" ' + ((memberRole==role.name)? "selected" : "") + '>' + role.name + '</option>';
+        }
+    });    
+    
+    $("#member" + memberId+ " option").remove();
+    $("#member" + memberId).append(members);
+    
+    $("#role" + memberId+ " option").remove();
+    $("#role" + memberId).append(roles);
+}
+
+function append_group_member(added, memberId, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai) {
+    var tbody = $("#group_params table[id='members'] tbody");
+    
+    var html = '<tr><td align="left"><label for="member' + memberId + '">User ' + (1+memberId) + ':</label><input type="hidden" id="added' + memberId + '" value="' + added + '"/></td>';
+    html += '<td><select id="member' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
+
+    html += '</select></td><td><select id="role' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
+    currentGroup.roles.forEach(function(role) {
+        if(!roleFixed || added || (memberRole==role.name)) {
+            html += '<option value="' + role.name + '" ' + ((memberRole==role.name)? "selected" : "") + '>' + role.name + '</option>';
+        }
+    });
+    html += '</select></td>';
+    html += '<td><input type="number" size="4" id="team' + memberId + '" min="0" value="' + (1+memberId) + '"/></td>';
+    if(added) html += '<td><button class="remove_member" onclick="remove_last_member()">X</button></td>';
+    html += '</tr>';
+    
+    $("button.remove_member").hide();
+    tbody.append(html);
+    
+    populate_group_member_fields(added, memberId, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai);
+
+}
+
+function remove_last_member(memberId) {
+    $("#group_params table[id='members'] tbody tr:last").remove();
+    $("button.remove_member:last").show();
+}
+
+function update_group(response) {
+        if(response.valid) {  // TODO: check it is currentGroup gid
+            var isMember = isFinite(response.slot);
+            var num_members = $("#group_params table[id='members'] tbody tr").size();
+
+            if(response.cmd == "user_joined") {
+
+                // create UI fields for new member slots:
+                if(isMember) {
+                    var memberId = response.slot;
+                    while(num_members <= memberId) {
+                        add_group_member(false);
+                        num_members += 1;
+                    }                        
+                }
+
+                // append new joined user's nick in selectboxes
+                for(var index = 0; index < num_members; index += 1) {
+                    if( (wsgclient.nick == $("#group_admin").val()) 
+                        /* || (wsgclient.cid == $("#member"+index+" option:selected").val()) */
+                      ) {
+                        var val = "";
+                        var text = "Empty";
+                        if(response.cid != "") {
+                            val = response.type + ":" + response.cid;
+                            text = response.type + ":" + response.nick;
+                        
+                            if($("#member"+index+" option[value='"+val+"']").size() <= 0) {  // insert user
+                                $("#member"+index).append($("<option>").attr("value", val).text(text));
+                            }
+                            /*
+                            else if(response.cid != wsgclient.cid) {  // updating usertype
+                                $("#member"+index+" option[value$=':"+response.cid+"']").attr("value", val).text(text);
+                            }
+                            */
+                        }
+
+                    }
+                }
+
+                // update UI fields with new member values:
+                if(isMember) {                        
+                    var memberId = response.slot;                        
+                    if(wsgclient.nick == $("#group_admin").val()) {
+
+                        var val = "";
+                        if(response.cid != "") {
+                            val = response.type + ":" + response.cid;
+                        }
+                        $("#member"+memberId+" option[value='"+val+"']").attr("selected", "selected");
+                        $("#role"+memberId+" option[value='"+response.role+"']").attr("selected", "selected");
+                        $("#team"+memberId).val(response.team);
+
+                    } else {
+
+                        var currentNickSelected = (wsgclient.cid == response.cid);
+                        var roleFixed = (response.role != "") && (response.cid != "") && (wsgclient.cid != response.cid);
+                        populate_group_member_fields(false, memberId, response.nick, response.cid, response.type, response.role, currentNickSelected, roleFixed, currentApp.ai);
+                    }
+                }
+
+            } else if(response.cmd == "user_unjoined") {
+
+                // clear unjoined user's nick from selectboxes
+                for(var index = 0; index < num_members; index += 1) {
+                    $("#member"+index+" option[value$=':"+response.cid+"']").remove();
+                }
+                
+                if(response.members) {
+                    response.members.forEach(function(member) {
+                        var memberId = member.slot;  
+                        if(wsgclient.nick != $("#group_admin").val()) {
+                            populate_group_member_fields(false, memberId, member.nick, member.cid, member.type, member.role, false, false, currentApp.ai);
+                        }
+                    });
+                }
+                
+            }
+
+        } else {
+            alert("Error joining user:" + response.message);
+        }    
+}
+
+function start_group() {
+}
+
+
+function exit_group(toOfflineMode) {
+    if(!toOfflineMode) {
+        $("#group_params").hide();
+        $("#group_list").slideDown(500);
+    }
+    
+    var appId = $("#apps option:selected").attr("value");
+    var gid = $("#group_gid").val();
+    
+    wsgclient.exitGroup(appId, gid, function(response) {
+        wsgclient.unsubscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + gid, update_group, true);
+    });
+}
+
+function chat_message(message,sender) {
+    if (arguments.length == 1) {
+        sender = "";
+    }
+
+    var style;
+
+    if (sender == "") {
+        style = "client";
+    } else if (sender == "server") {
+        style = "server";
+        sender = "["+sender+"]";
+    } else {
+        style = "message";
+        sender = "["+sender+"]";
+    }
+
+    $("#messages").append("<span class='"+style+"'><span class='sender'>"+sender+"</span> <span class='msg'>"+message+"</span></span><br />");
+    $("#messages").prop({ scrollTop: $("#messages").prop("scrollHeight")  });
+}
+
+function disconnect() {
+    exit_group(true);
+    wsgclient.close();
+    $("#server_url").removeAttr("disabled");
+    $("#nick").removeAttr("disabled");
+    $("#password").removeAttr("disabled");
+    $("#register").removeAttr("disabled");
+    $("#toggle_connect").html("Connect");
+    $("#participants").html("");
+    
+    $("#enable_network").show();
+    $("#exit_group").hide();
+    $("#login").hide();
+    $("#app_list").hide();    
+    $("#app_params").hide();    
+    $("#group_list").hide();
+    $("#group_params").slideDown(500);    
+}
+
+function toggle_connect(create_user) {
+    if ($("#server_url").attr("disabled") != "disabled") {
+        var url = $("#server_url").val();
+        var nick = $("#nick").val();
+        var pass = $("#password").val();
+
+        wsgclient = new WsgClient(url);
+        if(create_user) {
+            var email = prompt("Enter e-mail:");
+            if(email) wsgclient.register(nick, pass, email, authentication);
+        } else {
+            wsgclient.login(nick, pass, authentication);
+        }
+    } else {
+        disconnect();
+    }
+}
+
+
+</script>
+
+        </head>
+<body onload="javascript:enable_network();">
+<div id="wrapper">
+  <div id="login" class="section left hidden">
+    <fieldset>
+      <legend>Login</legend>
+    <label for="server_url">Server:</label><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wsgservice" /><br/>
+    <label for="nick">Nick:</label><input type="text" name="nick" id="nick" value="guest" /><br/>
+    <label for="password">Password:</label><input type="password" name="password" id="password" value="guest" /><br/>
+    <button id="toggle_connect" onclick="toggle_connect(false);">Connect</button>
+    <button id="register" onclick="toggle_connect(true);">Register</button>
+    </fieldset>
+  </div>
+    
+  <div id="app_section" class="section">
+  <div id="app_list" class="left hidden">
+    <fieldset>
+      <legend>Application</legend>
+    <select id="apps" name="apps" size="8" style="width: 300px">
+    </select><br>
+    <button id="select_app" onclick="list_groups();">Select</button>
+    <button id="new_app" onclick="show_app_params();">New</button>
+    <button id="delete_app" onclick="delete_app();">Delete</button>
+    </fieldset>
+  </div>
+
+  <div id="app_params" class="left hidden">
+    <fieldset>
+      <legend>Application registration</legend>
+    <label for="app_name">Name:</label><input type="text" name="app_name" id="app_name"/><br/>
+    <label for="app_domain">Domain:</label><input type="text" name="app_domain" id="app_domain"/><br/>
+    <label for="app_version">Version:</label><input type="number" name="app_version" id="app_version" min="1" value="1"/><br/>
+    <label for="app_min">Min:</label><input type="number" size="5" name="app_min" id="app_min" min="1" value="2"/><br/>
+    <label for="app_max">Max:</label><input type="number" size="5" name="app_max" id="app_max" min="0" value="2"/><br/>
+    <label for="app_observable">Observable:</label><input type="checkbox" name="app_observable" id="app_observable" /><br/>
+    <label for="app_dynamic">Dynamic:</label><input type="checkbox" name="app_dynamic" id="app_dynamic" /><br/>
+    <label for="app_alliances">Alliances:</label><input type="checkbox" name="app_alliances" id="app_alliances" /><br/>
+    <label for="app_ai_available">AI engine</label><input type="checkbox" name="app_ai_available" id="app_ai_available" /><br/>
+
+    <label for="app_roles">Roles:</label>
+    <table>
+    <tr><td>
+    <select style="float: left" size="6" name="app_roles" id="app_roles" value="0"/><option value="White">White</option><option value="Black">Black</option></select><br/>
+    </td>
+    <td width="300">
+    <label for="app_role_name">Name:</label><input type="text" size="10" id="app_role_name" name="app_role_name" value="Green"/><br/>
+    <label for="app_role_required">Required:</label><input type="checkbox" id="app_role_required" name="app_role_required" checked/></br>
+    <label for="app_role_multiple">Multiple</label><input type="checkbox" id="app_role_multiple" name="app_role_multiple" /></br>
+    <button id="add_role" onclick="add_role();">Add</button><br>
+    <button id="delete_role" onclick="delete_role();">Remove</button>
+    </td>
+    </tr></table>
+    <button style="clear: both" id="create_app" onclick="create_app();">Create</button>
+    <button style="clear: both" id="hide_app_params" onclick="hide_app_params();">Exit</button>
+    </fieldset>
+  </div>
+  </div>
+
+  <div id="group_section" class="section">
+  <div id="group_list" class="left hidden">
+    <fieldset id="group_list_fieldset">
+      <legend>Groups</legend>
+    <select id="groups" name="groups" size="8" style="width: 300px">
+    </select><br>
+    <button id="select_group" onclick="open_group(false);">Select</button>
+    <button id="new_group" onclick="open_group(true);">New</button>
+    <button id="hide_group" onclick="hide_group_list();">Exit</button>
+    </fieldset>
+  </div>
+
+  <div id="invitations" class="left hidden">
+    <fieldset>
+      <legend>Invitations</legend>
+    <select name="invitations" size="8" style="width: 300px">
+    </select><br>
+    <button id="accept_invitation" onclick="accept_invitation();">Accept</button>
+    <button id="reject_invitation" onclick="reject_invitation();">Reject</button>
+    </fieldset>
+  </div>
+
+  <div id="group_params" class="left hidden">
+    <fieldset>
+      <legend>Users</legend>
+    <table id="members">
+      <thead>
+      <tr><th></th><th>nick</th><th>role</th><th>team</th></tr>
+      <thead>
+      <tbody>
+      </tbody>
+    </table>
+    <label for="grp_dynamic">Dynamic:</label><input type="checkbox" name="grp_dynamic" id="grp_dynamic" /><br/>
+    <label for="grp_alliances">Alliances:</label><input type="checkbox" name="grp_alliances" id="grp_dynamic" /><br/>
+    <label for="grp_observable">Observable:</label><input type="checkbox" name="grp_observable" id="grp_observable" /><br/>
+    <input type="hidden" id="group_gid" name="group_gid" value="" />
+    <input type="hidden" id="group_admin" name="group_admin" value="" />
+    <button id="start_group" onclick="start_group();">Start</button>
+    <button id="add_group_member" onclick="add_group_member(true);">Add</button>
+    <button id="exit_group" class="hidden" onclick="exit_group();">Exit</button>
+    <button id="enable_network" onclick="enable_network();">Enable network</button>
+    </fieldset>
+  </div>
+  </div>
+
+
+
+  <div id="dev_section" class="section left">
+    <fieldset>
+      <legend>Messages</legend>
+      <div id="messages"></div>
+    </fieldset>
+  </div>
+</div>
+</body>
+</html>
