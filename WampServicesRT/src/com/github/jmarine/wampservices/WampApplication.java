@@ -233,15 +233,14 @@ public class WampApplication extends WebSocketApplication {
         }
         
         String procURI = normalizeURI(clientSocket, request.getString(2));
+        String baseURL = procURI;
+        String method  = "";
+        
         int    methodPos = procURI.indexOf("#");
-        if(methodPos == -1) {
-            sendCallResponse(false, callID, createWampErrorArg(null, "ProcURI syntax error"), clientSocket);
-            return;
+        if(methodPos != -1) {
+            baseURL = procURI.substring(0, methodPos+1);
+            method = procURI.substring(methodPos+1);
         }
-        
-        
-        String baseURL = procURI.substring(0, methodPos+1);
-        String method = procURI.substring(methodPos+1);
         
         JSONArray args = new JSONArray();
         for(int i = 3; i < request.length(); i++) {
