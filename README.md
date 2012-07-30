@@ -13,7 +13,7 @@ The code is divided in two projects (compatible with [NetBeans 7.2](http://www.n
 
 ##### RPC development: #####
 
-It is very easy to add new functions that can be called with WAMP clients.
+It is very easy to add new functions that can be called by WAMP clients.
 First, you have to create a new Java class that extends WampModule.
 It must have a constructor with 1 parameter of type WampApplication (that provides methods to return CALL results/errors, and can broadcast EVENT messages), and override the abstract method "getBaseURL" to specify the procURI or the base URI of the procedures that will be implemented (including the "#" separator).
 
