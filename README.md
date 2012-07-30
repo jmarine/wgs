@@ -63,7 +63,7 @@ public class MyModule extends WampModule
 
 ##### WampApplication methods #####
 
-The WampApplication object represents a WAMP application context (uri), and provides methods to return CALL results/errors, and can broadcast EVENT messages to the clients.
+The WampApplication object represents a WAMP application context (uri), and also provides the following methods to help the development of modules:
 
 * createTopic(String topicFQname): allows to dynamically create a topic usable by WAMP clients.
 
