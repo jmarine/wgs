@@ -13,12 +13,19 @@ The code is divided in two projects (compatible with [NetBeans 7.2](http://www.n
 
 ##### RPC development: #####
 
-It is very easy to add new functions that can be called by WAMP clients.
-First, you have to create a new Java class that extends WampModule.
-It must have a constructor with 1 parameter of type WampApplication (that provides methods to return CALL results/errors, and can broadcast EVENT messages), and override the abstract method "getBaseURL" to specify the procURI or the base URI of the procedures that will be implemented (including the "#" separator).
+It is very easy to add new functions that can be called by WAMP clients:
 
-Then, override the "onCall" method to develop the business logic of the service.
-For example:
+1) Create a new Java class that extends WampModule. The class must have a constructor with 1 parameter of type [WampApplication](#wampapplication-methods).
+
+2) Overrides the abstract method "getBaseURL" to specify the procURI or the base URI of the procedures that will be implemented (including the "#" separator).
+
+3) Override the "onCall" method to develop the business logic of the service.
+
+4) Finally, attach the modules to the WAMP application context (uri):
+* In GlassFish 3.1.2+: specify the canonical name of the classes in the "modules" init-param of the WampServlet in web.xml configuration file (separated by ',')
+* Or in WampServer: specify the canonical name of the classes in the "context.yourContextName.modules" property of the "wampservices.properties" configuration file (separated by ',')
+
+Code example:
 
 ```java
 import com.github.jmarine.wampservices.WampApplication;
@@ -30,7 +37,7 @@ public class MyModule extends WampModule
 {
     private WampApplication wampApp = null;
 
-    public Module(WampApplication app) {
+    public MyModule(WampApplication app) {
         super(app);
         this.wampApp = app;
     }     
@@ -52,6 +59,9 @@ public class MyModule extends WampModule
 }
 ```
 
-Finally, attach the modules to the WAMP application context:
-* WampServer: specify the canonical name of the classes in the "context.yourContextName.modules" property of the configuration file "wampservices.properties" (separated by ',')
-* GlassFish: specify the canonical name of the classes in the "modules" init-param of the WampServlet (separated by ',')
+
+
+##### WampApplication methods #####
+
+The WampApplication object represents a WAMP application context (uri), and provides methods to return CALL results/errors, and can broadcast EVENT messages to the clients.
+
