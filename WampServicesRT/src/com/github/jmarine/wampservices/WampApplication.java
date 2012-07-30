@@ -213,7 +213,7 @@ public class WampApplication extends WebSocketApplication {
     }
 
     
-    private JSONArray createWampErrorArg(String errorURI, String errorDesc) throws Exception {
+    public JSONArray createWampErrorArg(String errorURI, String errorDesc) throws Exception {
         JSONObject error = new JSONObject();
         if(errorURI == null) errorURI = WAMP_BASE_URL + "#error";
         if(errorDesc == null) errorDesc = "";
