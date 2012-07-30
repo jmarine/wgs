@@ -65,13 +65,13 @@ public class MyModule extends WampModule
 
 The WampApplication object represents a WAMP application context (uri), and also provides the following methods to help the development of modules:
 
-* createTopic(String topicFQname): allows to dynamically create a topic usable by WAMP clients.
+* **createTopic(String topicFQname)**: allows to dynamically create a topic usable by WAMP clients.
 
-* createWampErrorArg(String errorURI, String errorDesc): prepares an errorURI and errorDesc arguments for sending a CALLERROR message to the client (see "sendCallResponse" method).
+* **createWampErrorArg(String errorURI, String errorDesc)**: prepares an errorURI and errorDesc arguments for sending a CALLERROR message to the client (see "sendCallResponse" method).
 
-* sendCallResponse(boolean valid, String callID, JSONArray args, WampSocket clientSocket): when the parameter "valid" is true, it sends a CALLRESULT to the client with the callID and results specified in the "args" parameter. Otherwise, it will send a CALLERROR to the client (see "createWampErrorArg" method). 
+* **sendCallResponse(boolean valid, String callID, JSONArray args, WampSocket clientSocket)**: when the parameter "valid" is true, it sends a CALLRESULT to the client with the callID and results specified in the "args" parameter. Otherwise, it will send a CALLERROR to the client (see "createWampErrorArg" method). 
 
-* publishEvent(WampSocket clientSocketFromSender, String topicName, JSONObject event, boolean excludeMe): broadcasts an EVENT message with the "event" object data to all clients subscribed in the topic (with the possibility to exclude the client socket).
+* **publishEvent(WampSocket clientSocketFromSender, String topicName, JSONObject event, boolean excludeMe)**: broadcasts an EVENT message with the "event" object data to all clients subscribed in the topic (with the possibility to exclude the client socket).
 
-* publishEvent(WampSocket clientSocketFromSender, String topicName, JSONObject event, Set<String> excluded, Set<String> eligible): broadcast and EVENT message with the "event" object data to the "eligible" list of clients (sessionIds), with the exception of the clients in the "excluded" list (sessionIds).
+* **publishEvent(WampSocket clientSocketFromSender, String topicName, JSONObject event, Set<String> excluded, Set<String> eligible)**: broadcast and EVENT message with the "event" object data to the "eligible" list of clients (sessionIds), with the exception of the clients in the "excluded" list (sessionIds).
 
