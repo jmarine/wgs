@@ -1,6 +1,10 @@
 WAMP services provider for Java
 ===============================
 
+Contents
+--------
+{:toc}
+
 ### About ###
 
 This repository provides [WAMP](http://wamp.ws/spec) services, and enables the development of new RPCs in Java language.
