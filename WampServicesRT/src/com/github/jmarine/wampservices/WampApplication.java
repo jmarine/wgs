@@ -236,10 +236,15 @@ public class WampApplication extends WebSocketApplication {
         String baseURL = procURI;
         String method  = "";
         
-        int    methodPos = procURI.indexOf("#");
-        if(methodPos != -1) {
-            baseURL = procURI.substring(0, methodPos+1);
-            method = procURI.substring(methodPos+1);
+        WampModule module = modules.get(baseURL);
+        if(module == null) {
+            int methodPos = procURI.indexOf("#");
+            if(methodPos != -1) {
+                baseURL = procURI.substring(0, methodPos+1);
+                method = procURI.substring(methodPos+1);
+                module = modules.get(baseURL);
+            }
+            if(module == null) throw new Exception("ProcURI not implemented");
         }
         
         JSONArray args = new JSONArray();
@@ -247,7 +252,6 @@ public class WampApplication extends WebSocketApplication {
             args.put(i-3, request.get(i));
         }
 
-        WampModule module = modules.get(baseURL);
         try {
             JSONArray response = null;
             Object result = module.onCall(clientSocket, method, args);
