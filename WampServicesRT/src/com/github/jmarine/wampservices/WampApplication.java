@@ -45,7 +45,7 @@ public class WampApplication extends WebSocketApplication {
     public WebSocket createWebSocket(ProtocolHandler handler,
                                   //HttpRequestPacket request,
                                   WebSocketListener... listeners) {
-        WampSocket socket = new WampSocket(handler, listeners);
+        WampSocket socket = new WampSocket(this, handler, listeners);
         return socket;
     }
 
@@ -168,22 +168,23 @@ public class WampApplication extends WebSocketApplication {
     
     private void processPublishMessage(WampSocket clientSocket, JSONArray request) throws Exception 
     {
-        String publicationTopicName = request.getString(1);
+        String topicName = clientSocket.normalizeURI(request.getString(1));
+        WampTopic topic = getTopic(topicName);
         JSONObject event = request.getJSONObject(2);
         if(request.length() == 3) {
-            publishEvent(clientSocket, publicationTopicName, event, false);
+            clientSocket.publishEvent(topic, event, false);
         } else if(request.length() == 4) {
             // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
             try {
                 boolean excludeMe = request.getBoolean(3);
-                publishEvent(clientSocket, publicationTopicName, event, excludeMe);
+                clientSocket.publishEvent(topic, event, excludeMe);
             } catch(Exception ex) {
                 HashSet<String> excludedSet = new HashSet<String>();
                 JSONArray excludedArray = request.getJSONArray(3);
                 for(int i = 0; i < excludedArray.length(); i++) {
                     excludedSet.add(excludedArray.getString(i));
                 }
-                publishEvent(clientSocket, publicationTopicName, event, excludedSet, null);
+                clientSocket.publishEvent(topic, event, excludedSet, null);
             }
         } else if(request.length() == 5) {
             HashSet<String> excludedSet = new HashSet<String>();
@@ -196,23 +197,12 @@ public class WampApplication extends WebSocketApplication {
             for(int i = 0; i < eligibleArray.length(); i++) {
                 eligibleSet.add(eligibleArray.getString(i));
             }
-            publishEvent(clientSocket, publicationTopicName, event, excludedSet, eligibleSet);
+            clientSocket.publishEvent(topic, event, excludedSet, eligibleSet);
         }
         
     }
     
    
-    private String normalizeURI(WampSocket clientSocket, String curie) {
-        int curiePos = curie.indexOf(":");
-        if(curiePos != -1) {
-            String prefix = curie.substring(0, curiePos);
-            String baseURI = (String)clientSocket.getPrefixURL(prefix);
-            if(baseURI != null) curie = baseURI + curie.substring(curiePos+1);
-        }
-        return curie;
-    }
-
-    
     public JSONArray createWampErrorArg(String errorURI, String errorDesc) throws Exception {
         JSONObject error = new JSONObject();
         if(errorURI == null) errorURI = WAMP_BASE_URL + "#error";
@@ -228,11 +218,11 @@ public class WampApplication extends WebSocketApplication {
     {
         String callID  = request.getString(1);
         if(callID == null || callID.equals("")) {
-            sendCallResponse(false, callID, createWampErrorArg(null, "CallID not present"), clientSocket);
+            clientSocket.sendCallResponse(false, callID, createWampErrorArg(null, "CallID not present"));
             return;
         }
         
-        String procURI = normalizeURI(clientSocket, request.getString(2));
+        String procURI = clientSocket.normalizeURI(request.getString(2));
         String baseURL = procURI;
         String method  = "";
         
@@ -244,15 +234,16 @@ public class WampApplication extends WebSocketApplication {
                 method = procURI.substring(methodPos+1);
                 module = modules.get(baseURL);
             }
-            if(module == null) throw new Exception("ProcURI not implemented");
         }
         
-        JSONArray args = new JSONArray();
-        for(int i = 3; i < request.length(); i++) {
-            args.put(i-3, request.get(i));
-        }
-
         try {
+            if(module == null) throw new Exception("ProcURI not implemented");
+            
+            JSONArray args = new JSONArray();
+            for(int i = 3; i < request.length(); i++) {
+                args.put(i-3, request.get(i));
+            }           
+            
             JSONArray response = null;
             Object result = module.onCall(clientSocket, method, args);
             if(result == null || result instanceof JSONArray) {
@@ -261,67 +252,14 @@ public class WampApplication extends WebSocketApplication {
                 response = new JSONArray();
                 response.put(result);
             }
-            sendCallResponse(true, callID, response, clientSocket);
+            clientSocket.sendCallResponse(true, callID, response);
         } catch(Exception ex) {
-            sendCallResponse(false, callID, createWampErrorArg(null, "Error calling method " + method + ": " + ex.getMessage()), clientSocket);
+            clientSocket.sendCallResponse(false, callID, createWampErrorArg(null, "Error calling method " + method + ": " + ex.getMessage()));
             logger.log(Level.SEVERE, "Error calling method " + method, ex);
         }
     }
     
-
-    public void sendCallResponse(boolean valid, String callID, JSONArray args, WampSocket clientSocket)
-    {
-        StringBuilder response = new StringBuilder();
-        if(args == null) {
-            args = new JSONArray();
-            args.put((String)null);
-        }
-
-        response.append("[");
-        if(valid) response.append("3");
-        else response.append("4");
-        response.append(",");
-        response.append(encodeJSON(callID));
-        if(!valid) {
-            String errorURI = WAMP_BASE_URL + "#error";
-            try { 
-                errorURI = ((JSONObject)args.get(0)).getString("errorURI"); 
-                ((JSONObject)args.get(0)).remove("errorURI");
-            } catch(Exception ex) { }
-            
-            String errorDesc = "";
-            try { 
-                errorDesc = ((JSONObject)args.get(0)).getString("errorDesc"); 
-                ((JSONObject)args.get(0)).remove("errorDesc");
-            } catch(Exception ex) { }
-            
-            try {
-                if(((JSONObject)args.get(0)).length() == 0) {
-                   args.remove(0);
-                }
-            } catch(Exception ex) { }
-
-            response.append(",");
-            response.append(encodeJSON(errorURI));
-            response.append(",");
-            response.append(encodeJSON(errorDesc));
-        }
-        for(int i = 0; i < args.length(); i++) {
-            response.append(",");
-            try { response.append(args.get(i)); }
-            catch(Exception ex) { response.append("null"); }
-        }
-        response.append("]");
-        clientSocket.sendSafe(response.toString());
-    }
-
-    
-    public WampTopic getTopic(WampSocket clientSocket, String topicName)
-    {
-        String topicFQname = normalizeURI(clientSocket, topicName);
-        return getTopic(topicFQname);
-    }    
-    
+     
     public WampTopic getTopic(String topicFQname)
     {
         return topics.get(topicFQname);
@@ -351,8 +289,8 @@ public class WampApplication extends WebSocketApplication {
 
     public WampTopic subscribeClientWithTopic(WampSocket clientSocket, String topicName)
     {
-        topicName = normalizeURI(clientSocket, topicName);
-        WampTopic topic = getTopic(clientSocket, topicName);
+        topicName = clientSocket.normalizeURI(topicName);
+        WampTopic topic = getTopic(topicName);
         
         if(topic != null) {
             try { 
@@ -370,8 +308,8 @@ public class WampApplication extends WebSocketApplication {
     
     public WampTopic unsubscribeClientFromTopic(WampSocket clientSocket, String topicName)
     {
-        topicName = normalizeURI(clientSocket, topicName);
-        WampTopic topic = getTopic(clientSocket, topicName);
+        topicName = clientSocket.normalizeURI(topicName);
+        WampTopic topic = getTopic(topicName);
         if(topic != null) {
             try { 
                 WampModule module = modules.get(topic.getBaseURI());
@@ -388,46 +326,11 @@ public class WampApplication extends WebSocketApplication {
         return topic;
     }
         
-    
-    /**
-     * Broadcasts the event to subscribed sockets.
-     *
-     * @param user the user name
-     * @param text the text message
-     */
-    public void publishEvent(WampSocket clientSocketFromSender, String topicName, JSONObject event, boolean excludeMe) {
-        logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1}", new Object[]{topicName,event});
-        WampTopic topic = getTopic(clientSocketFromSender, topicName);
-        if(topic != null) {
-            Set<String> excludedSet = new HashSet<String>();
-            if(excludeMe) excludedSet.add(clientSocketFromSender.getSessionId());
-            publishEvent(clientSocketFromSender, topicName, event, excludedSet, null);
-        }
+  
+    public WampModule getModule(String moduleURI) {
+        return modules.get(moduleURI);
     }
-    
-    public void publishEvent(WampSocket clientSocketFromSender, String topicName, JSONObject event, Set<String> excluded, Set<String> eligible) {
-        logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topicName,event});
-        WampTopic topic = getTopic(clientSocketFromSender, topicName);
-        
-        String msg = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
-        
-        if(eligible == null)  eligible = topic.getSocketIds();
-        for (String cid : eligible) {
-            if((excluded==null) || (!excluded.contains(cid))) {
-                WampSocket socket = topic.getSocket(cid);
-                if(socket != null && socket.isConnected() && !excluded.contains(cid)) {
-                    try { 
-                        WampModule module = modules.get(topic.getBaseURI());
-                        if(module != null) module.onPublish(socket, topic, event); 
-                        socket.sendSafe(msg);
-                    } catch(Exception ex) {
-                        logger.log(Level.SEVERE, "Error dispatching event publication to registered module", ex);
-                    }          
- 
-                }
-            }
-        }
-    }    
+
     
     public String encodeJSON(String orig) {
         if(orig == null) return "null";
@@ -478,5 +381,6 @@ public class WampApplication extends WebSocketApplication {
         buffer.append("\"");
         return buffer.toString();
     }
+
 
 }

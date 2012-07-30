@@ -312,7 +312,7 @@ public class Module extends WampModule
             retval.put("app", app.toJSON());
         }
 
-        if(valid) wampApp.publishEvent(socket, getFQtopicURI("apps_event"), retval, true); // exclude Me
+        if(valid) socket.publishEvent(wampApp.getTopic(getFQtopicURI("apps_event")), retval, true); // exclude Me
         return retval;
     }
         
@@ -341,7 +341,7 @@ public class Module extends WampModule
             retval.put("appId", appId);
         }
         
-        if(valid) wampApp.publishEvent(socket, getFQtopicURI("apps_event"), retval, true);  // exclude Me
+        if(valid) socket.publishEvent(wampApp.getTopic(getFQtopicURI("apps_event")), retval, true);  // exclude Me
         return retval;
     }
     
@@ -351,7 +351,7 @@ public class Module extends WampModule
         // check subscribers of "apps_event" topic
         JSONObject list = listApps();
         list.put("cmd", "list_apps");
-        wampApp.publishEvent(socket, getFQtopicURI("apps_event"), list, false);  // don't exclude Me
+        socket.publishEvent(wampApp.getTopic(getFQtopicURI("apps_event")), list, false);  // don't exclude Me
     }
 
     
@@ -427,7 +427,7 @@ public class Module extends WampModule
                     app.addGroup(g);
                     groups.put(g.getGid(), g);
 
-                    wampApp.publishEvent(socket, getFQtopicURI("app_event:" + appId), listGroups(appId), false);  // don't exclude Me
+                    socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:" + appId)), listGroups(appId), false);  // don't exclude Me
 
                     valid = true;
                     created = true;
@@ -467,7 +467,7 @@ public class Module extends WampModule
 
 
             String topicName = getFQtopicURI("group_event:" + g.getGid());
-            WampTopic topic = wampApp.getTopic(socket, topicName);
+            WampTopic topic = wampApp.getTopic(topicName);
             if(topic == null) topic = wampApp.createTopic(topicName);
             wampApp.subscribeClientWithTopic(client.getSocket(), topicName);
             
@@ -544,7 +544,7 @@ public class Module extends WampModule
                     event.put("slot", index);
                     event.put("valid", true);
 
-                    wampApp.publishEvent(socket, getFQtopicURI("group_event:"+g.getGid()), event, true);  // exclude Me
+                    socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), event, true);  // exclude Me
                 }
 
 
@@ -571,7 +571,7 @@ public class Module extends WampModule
             event.put("type", "user");
             event.put("valid", valid);
                     
-            wampApp.publishEvent(socket, getFQtopicURI("group_event:"+g.getGid()), event, true);  // exclude Me
+            socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), event, true);  // exclude Me
         }
         
         return response;
@@ -605,7 +605,7 @@ public class Module extends WampModule
 
         response.put("valid", valid);
 
-        if(valid) wampApp.publishEvent(socket, getFQtopicURI("group_event:"+g.getGid()), response, true);  // exclude Me
+        if(valid) socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, true);  // exclude Me
         return response;
     }
     
@@ -662,7 +662,7 @@ public class Module extends WampModule
 
             response.put("valid", valid);
 
-            if(valid) wampApp.publishEvent(socket, getFQtopicURI("group_event:"+g.getGid()), response, true);  // exclude Me
+            if(valid) socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, true);  // exclude Me
             return response;
     }
     
@@ -723,13 +723,13 @@ public class Module extends WampModule
                     applications.get(appId).removeGroup(g);
 
                     wampApp.deleteTopic(topicName);
-                    wampApp.publishEvent(socket, getFQtopicURI("app_event:"+appId), listGroups(appId), false);  // don't exclude Me
+                    socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+appId)), listGroups(appId), false);  // don't exclude Me
                 }
             }
 
             response.put("valid", valid);
 
-            if(valid) wampApp.publishEvent(socket, getFQtopicURI("group_event:"+gid), response, true); // exclude Me
+            if(valid) socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+gid)), response, true); // exclude Me
             return response;
     }
 

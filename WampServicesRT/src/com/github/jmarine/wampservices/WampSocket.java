@@ -11,6 +11,10 @@ import com.sun.grizzly.websockets.DefaultWebSocket;
 import com.sun.grizzly.websockets.ProtocolHandler;
 import com.sun.grizzly.websockets.WebSocketException;
 import com.sun.grizzly.websockets.WebSocketListener;
+import java.util.HashSet;
+import java.util.Set;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class WampSocket extends DefaultWebSocket
 {
@@ -18,16 +22,19 @@ public class WampSocket extends DefaultWebSocket
     
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
     
+    private WampApplication app;
     private String sessionId;
     private Map    sessionData;
     private Map<String,String> prefixes;
     private Map<String,WampTopic> topics;
 
-    public WampSocket(ProtocolHandler protocolHandler,
+    public WampSocket(WampApplication app,
+                        ProtocolHandler protocolHandler,
                          //HttpRequestPacket request,
                          WebSocketListener... listeners) 
     {
         super(protocolHandler, listeners);
+        this.app    = app;
         sessionId   = UUID.randomUUID().toString();
         sessionData = new ConcurrentHashMap();
         topics      = new ConcurrentHashMap<String,WampTopic>();        
@@ -75,6 +82,16 @@ public class WampSocket extends DefaultWebSocket
     {
         return topics;
     }
+    
+    public String normalizeURI(String curie) {
+        int curiePos = curie.indexOf(":");
+        if(curiePos != -1) {
+            String prefix = curie.substring(0, curiePos);
+            String baseURI = getPrefixURL(prefix);
+            if(baseURI != null) curie = baseURI + curie.substring(curiePos+1);
+        }
+        return curie;
+    }    
 
     /**
      * Send the message in JSON encoding acceptable by browser's javascript.
@@ -90,5 +107,84 @@ public class WampSocket extends DefaultWebSocket
             close(PROTOCOL_ERROR, e.getMessage());
         }
     }
+    
+    
+    public void sendCallResponse(boolean valid, String callID, JSONArray args)
+    {
+        StringBuilder response = new StringBuilder();
+        if(args == null) {
+            args = new JSONArray();
+            args.put((String)null);
+        }
+
+        response.append("[");
+        if(valid) response.append("3");
+        else response.append("4");
+        response.append(",");
+        response.append(app.encodeJSON(callID));
+        if(!valid) {
+            String errorURI = app.WAMP_BASE_URL + "#error";
+            try { 
+                errorURI = ((JSONObject)args.get(0)).getString("errorURI"); 
+                ((JSONObject)args.get(0)).remove("errorURI");
+            } catch(Exception ex) { }
+            
+            String errorDesc = "";
+            try { 
+                errorDesc = ((JSONObject)args.get(0)).getString("errorDesc"); 
+                ((JSONObject)args.get(0)).remove("errorDesc");
+            } catch(Exception ex) { }
+            
+            try {
+                if(((JSONObject)args.get(0)).length() == 0) {
+                   args.remove(0);
+                }
+            } catch(Exception ex) { }
+
+            response.append(",");
+            response.append(app.encodeJSON(errorURI));
+            response.append(",");
+            response.append(app.encodeJSON(errorDesc));
+        }
+        for(int i = 0; i < args.length(); i++) {
+            response.append(",");
+            try { response.append(args.get(i)); }
+            catch(Exception ex) { response.append("null"); }
+        }
+        response.append("]");
+        sendSafe(response.toString());
+    }    
+    
+    /**
+     * Broadcasts the event to subscribed sockets.
+     */
+    public void publishEvent(WampTopic topic, JSONObject event, boolean excludeMe) {
+        logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
+        Set<String> excludedSet = new HashSet<String>();
+        if(excludeMe) excludedSet.add(this.getSessionId());
+        publishEvent(topic, event, excludedSet, null);
+    }
+    
+    public void publishEvent(WampTopic topic, JSONObject event, Set<String> excluded, Set<String> eligible) {
+        logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
+        String msg = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
+        
+        if(eligible == null)  eligible = topic.getSocketIds();
+        for (String cid : eligible) {
+            if((excluded==null) || (!excluded.contains(cid))) {
+                WampSocket socket = topic.getSocket(cid);
+                if(socket != null && socket.isConnected() && !excluded.contains(cid)) {
+                    try { 
+                        WampModule module = app.getModule(topic.getBaseURI());
+                        if(module != null) module.onPublish(socket, topic, event); 
+                        socket.sendSafe(msg);
+                    } catch(Exception ex) {
+                        logger.log(Level.SEVERE, "Error dispatching event publication to registered module", ex);
+                    }          
+ 
+                }
+            }
+        }
+    }    
 
 }
