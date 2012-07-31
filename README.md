@@ -61,15 +61,16 @@ public class MyModule extends WampModule
 }
 ```
 
+
 ### Helper classes ###
 
 ##### WampApplication methods #####
 
 It represents a WAMP application context (uri), and also provides the following methods to help the development of modules:
 
-* **createTopic(String topicFQname)**: allows to dynamically create a topic usable by WAMP clients.
+* **createTopic(String topicFQname)**: dinamically creates a new topic to be used by WAMP clients.
 
-* **getTopic(String topicFQname)**: gets a topic usable by WAMP clients.
+* **getTopic(String topicFQname)**: gets a WampTopic by its fully qualified name.
 
 
 ##### WampSocket methods #####
@@ -81,6 +82,17 @@ It represents a connection with a WAMP client, and provides the following method
 * **publishEvent(WampTopic topic, JSONObject event, boolean excludeMe)**: broadcasts an EVENT message with the "event" object data to all clients subscribed in the topic (with the possibility to exclude the publisher).
 
 * **publishEvent(WampTopic topic, JSONObject event, Set<String> excluded, Set<String> eligible)**: broadcast and EVENT message with the "event" object data to the "eligible" list of clients (sessionIds), with the exception of the clients in the "excluded" list (sessionIds).
+
+
+##### WampTopic methods ######
+
+It represents a topic for PubSub services, and provides the following methods:
+
+* **getURI()**: gets its topicURI.
+
+* **getSocketIds()**: gets a list of sessionId of clients subscribed to the topic.
+
+* **getSocketId(sessionId)**: gets the WebSocket of the client with sessionId in case it is subscribed to the topic.
 
 
 ##### WampException methods ######
