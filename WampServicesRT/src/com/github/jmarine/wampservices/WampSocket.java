@@ -83,6 +83,7 @@ public class WampSocket extends DefaultWebSocket
         return topics;
     }
     
+    
     public String normalizeURI(String curie) {
         int curiePos = curie.indexOf(":");
         if(curiePos != -1) {
@@ -99,7 +100,7 @@ public class WampSocket extends DefaultWebSocket
      * @param user the user name
      * @param text the text message
      */
-    public void sendSafe(String msg) {
+    protected void sendSafe(String msg) {
         try {
             super.send(msg);
         } catch (WebSocketException e) {
@@ -109,7 +110,7 @@ public class WampSocket extends DefaultWebSocket
     }
     
     
-    public void sendCallResponse(boolean valid, String callID, JSONArray args)
+    protected void sendCallResult(String callID, JSONArray args)
     {
         StringBuilder response = new StringBuilder();
         if(args == null) {
@@ -118,42 +119,59 @@ public class WampSocket extends DefaultWebSocket
         }
 
         response.append("[");
-        if(valid) response.append("3");
-        else response.append("4");
+        response.append("3");
         response.append(",");
         response.append(app.encodeJSON(callID));
-        if(!valid) {
-            String errorURI = app.WAMP_BASE_URL + "#error";
-            try { 
-                errorURI = ((JSONObject)args.get(0)).getString("errorURI"); 
-                ((JSONObject)args.get(0)).remove("errorURI");
-            } catch(Exception ex) { }
-            
-            String errorDesc = "";
-            try { 
-                errorDesc = ((JSONObject)args.get(0)).getString("errorDesc"); 
-                ((JSONObject)args.get(0)).remove("errorDesc");
-            } catch(Exception ex) { }
-            
-            try {
-                if(((JSONObject)args.get(0)).length() == 0) {
-                   args.remove(0);
-                }
-            } catch(Exception ex) { }
-
-            response.append(",");
-            response.append(app.encodeJSON(errorURI));
-            response.append(",");
-            response.append(app.encodeJSON(errorDesc));
-        }
         for(int i = 0; i < args.length(); i++) {
             response.append(",");
-            try { response.append(args.get(i)); }
+            try { 
+                Object obj = args.get(i); 
+                if(obj instanceof String) {
+                    response.append("\"");
+                    response.append(app.encodeJSON((String)obj));
+                    response.append("\"");
+                } else {
+                    response.append(obj); 
+                }
+            }
             catch(Exception ex) { response.append("null"); }
         }
         response.append("]");
         sendSafe(response.toString());
     }    
+    
+    
+    protected void sendCallError(String callID, String errorURI, String errorDesc, Object errorDetails)
+    {
+        if(errorURI == null) errorURI = WampException.WAMP_GENERIC_ERROR_URI;
+        if(errorDesc == null) errorDesc = "";
+
+        StringBuilder response = new StringBuilder();
+        response.append("[");
+        response.append("4");
+        response.append(",");
+        response.append(app.encodeJSON(callID));
+
+        response.append(",");
+        response.append(app.encodeJSON(errorURI));
+        response.append(",");
+        response.append(app.encodeJSON(errorDesc));
+        
+        if(errorDetails != null) {
+            response.append(",");
+            if(errorDetails instanceof String) {
+                response.append("\"");
+                response.append(app.encodeJSON((String)errorDetails));
+                response.append("\"");
+            } else {
+                response.append(errorDetails.toString());
+            }
+        }
+
+        response.append("]");
+        sendSafe(response.toString());
+    }    
+    
     
     /**
      * Broadcasts the event to subscribed sockets.
@@ -175,13 +193,12 @@ public class WampSocket extends DefaultWebSocket
                 WampSocket socket = topic.getSocket(cid);
                 if(socket != null && socket.isConnected() && !excluded.contains(cid)) {
                     try { 
-                        WampModule module = app.getModule(topic.getBaseURI());
+                        WampModule module = app.getWampModule(topic.getBaseURI());
                         if(module != null) module.onPublish(socket, topic, event); 
                         socket.sendSafe(msg);
                     } catch(Exception ex) {
                         logger.log(Level.SEVERE, "Error dispatching event publication to registered module", ex);
                     }          
- 
                 }
             }
         }

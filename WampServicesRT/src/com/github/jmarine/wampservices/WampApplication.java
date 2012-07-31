@@ -151,6 +151,11 @@ public class WampApplication extends WebSocketApplication {
         logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
     }
     
+
+    public WampModule getWampModule(String moduleURI) 
+    {
+        return modules.get(moduleURI);
+    }    
     
     public void registerWampModule(Class moduleClass) throws Exception
     {
@@ -203,22 +208,11 @@ public class WampApplication extends WebSocketApplication {
     }
     
    
-    public JSONArray createWampErrorArg(String errorURI, String errorDesc) throws Exception {
-        JSONObject error = new JSONObject();
-        if(errorURI == null) errorURI = WAMP_BASE_URL + "#error";
-        if(errorDesc == null) errorDesc = "";
-        error.put("errorURI", errorURI);
-        error.put("errorDesc", errorDesc);
-        JSONArray retval = new JSONArray();
-        retval.put(error);
-        return retval;
-    }
-
     private void processCallMessage(WampSocket clientSocket, JSONArray request) throws Exception
     {
         String callID  = request.getString(1);
         if(callID == null || callID.equals("")) {
-            clientSocket.sendCallResponse(false, callID, createWampErrorArg(null, "CallID not present"));
+            clientSocket.sendCallError(callID, WampException.WAMP_GENERIC_ERROR_URI, "CallID not present", null);
             return;
         }
         
@@ -252,9 +246,14 @@ public class WampApplication extends WebSocketApplication {
                 response = new JSONArray();
                 response.put(result);
             }
-            clientSocket.sendCallResponse(true, callID, response);
+            clientSocket.sendCallResult(callID, response);
+
+        } catch(WampException ex) {
+            clientSocket.sendCallError(callID, ex.getErrorURI(), ex.getErrorDesc(), null);
+            logger.log(Level.SEVERE, "Error calling method " + method, ex);
+            
         } catch(Exception ex) {
-            clientSocket.sendCallResponse(false, callID, createWampErrorArg(null, "Error calling method " + method + ": " + ex.getMessage()));
+            clientSocket.sendCallError(callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + method, ex.getMessage());
             logger.log(Level.SEVERE, "Error calling method " + method, ex);
         }
     }
@@ -327,11 +326,6 @@ public class WampApplication extends WebSocketApplication {
     }
         
   
-    public WampModule getModule(String moduleURI) {
-        return modules.get(moduleURI);
-    }
-
-    
     public String encodeJSON(String orig) {
         if(orig == null) return "null";
         

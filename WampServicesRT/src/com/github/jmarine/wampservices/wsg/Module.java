@@ -14,6 +14,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 import com.github.jmarine.wampservices.WampApplication;
+import com.github.jmarine.wampservices.WampException;
 import com.github.jmarine.wampservices.WampModule;
 import com.github.jmarine.wampservices.WampSocket;
 import com.github.jmarine.wampservices.WampTopic;
@@ -151,7 +152,7 @@ public class Module extends WampModule
         } else if(method.equals("update_member")) {
             retval = updateMember(socket, args.getJSONObject(0));
         } else {
-            throw new Exception("Method not implemented: " + method);
+            throw new WampException("Method not implemented: " + method);
         }
         return retval;
     }
@@ -190,7 +191,7 @@ public class Module extends WampModule
         usr = getEntityManager().find(User.class, nick);
         em.close();
         
-        if(usr != null) throw new Exception("ws:error:nickexists");
+        if(usr != null) throw new WampException(MODULE_URL + "nickexists", "The nick is reserved by another user");
         
         usr = new User();
         usr.setNick(nick);
@@ -222,7 +223,7 @@ public class Module extends WampModule
             client.setState(ClientState.AUTHENTICATED);
         }
 
-        if(!user_valid) throw new Exception("wsg:login:error");
+        if(!user_valid) throw new WampException(MODULE_URL + "loginerror", "The credentials are not valid");
         return null;
     }
     
@@ -259,10 +260,10 @@ public class Module extends WampModule
 
         boolean valid = false;
         Client client = clients.get(socket.getSessionId());
-        if(client.getState() == ClientState.INVALID) throw new Exception("wsg:error:anonymous");
+        if(client.getState() == ClientState.INVALID) throw new WampException(MODULE_URL + "unknownuser", "The user hasn't logged in");
         
         // TODO: check user is administrator
-        //if(!client.getUser().isAdministrator()) throw new Exception("wsg:error:noadminrole");
+        //if(!client.getUser().isAdministrator()) throw new WampException(MODULE_URL + "adminrequired", "The user is not and administrator");
         
         Application app = new Application();
         app.setAppId(UUID.randomUUID().toString());
@@ -669,7 +670,6 @@ public class Module extends WampModule
     
     private JSONObject exitGroup(WampSocket socket, String gid) throws Exception
     {
-            boolean valid = false;
             Client client = clients.get(socket.getSessionId());
             
             JSONObject response = new JSONObject();
@@ -679,7 +679,6 @@ public class Module extends WampModule
 
             if(g != null) {
                 String appId = g.getApplication().getAppId();
-                valid = true;
                 logger.log(Level.FINE, "open_group: group found: " + gid);
 
                 response.put("gid", g.getGid());
@@ -711,6 +710,8 @@ public class Module extends WampModule
                 }
                 response.put("members", membersArray);
 
+                response.put("valid", true);
+                socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+gid)), response, true); // exclude Me
 
                 client.removeGroup(g);
                 String topicName = getFQtopicURI("group_event:" + g.getGid());
@@ -727,9 +728,7 @@ public class Module extends WampModule
                 }
             }
 
-            response.put("valid", valid);
 
-            if(valid) socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+gid)), response, true); // exclude Me
             return response;
     }
 
