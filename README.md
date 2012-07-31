@@ -65,8 +65,6 @@ public class MyModule extends WampModule
 
 It represents a WAMP application context (uri), and also provides the following methods to help the development of modules:
 
-* **createWampErrorArg(String errorURI, String errorDesc)**: prepares an errorURI and errorDesc arguments for sending a CALLERROR message to the client (see "WampSocket.sendCallResponse" method).
-
 * **createTopic(String topicFQname)**: allows to dynamically create a topic usable by WAMP clients.
 
 * **getTopic(String topicFQname)**: gets a topic usable by WAMP clients.
@@ -76,7 +74,18 @@ It represents a WAMP application context (uri), and also provides the following 
 
 It represents a connection with a WAMP client, and provides the following methods:
 
+* **normalizeURI(String curie)**: converts a CURIE to a fully qualified URI (using PREFIXES registered by the client).
+
 * **publishEvent(WampTopic topic, JSONObject event, boolean excludeMe)**: broadcasts an EVENT message with the "event" object data to all clients subscribed in the topic (with the possibility to exclude the publisher).
 
 * **publishEvent(WampTopic topic, JSONObject event, Set<String> excluded, Set<String> eligible)**: broadcast and EVENT message with the "event" object data to the "eligible" list of clients (sessionIds), with the exception of the clients in the "excluded" list (sessionIds).
+
+
+##### WampException methods ######
+
+It allows to propagate error information to clients (to generate CALLERROR messages from RPCs).
+
+* **WampException(errorURI, errorDesc)**: Constructor with errorURI and errorDesc information.
+
+* **WampException(errorURI, errorDesc, errorDetails)**: Constructor with errorURI, errorDesc and errorDetails information.
 
