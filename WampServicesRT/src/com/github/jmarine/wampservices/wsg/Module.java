@@ -152,7 +152,7 @@ public class Module extends WampModule
         } else if(method.equals("update_member")) {
             retval = updateMember(socket, args.getJSONObject(0));
         } else {
-            throw new WampException("Method not implemented: " + method);
+            throw new WampException(WampException.WAMP_GENERIC_ERROR_URI, "Method not implemented: " + method);
         }
         return retval;
     }

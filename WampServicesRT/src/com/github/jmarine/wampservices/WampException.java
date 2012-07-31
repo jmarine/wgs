@@ -14,16 +14,7 @@ public class WampException extends Exception
     
     private String errorURI;
     
-    public WampException() {
-        super();
-        this.errorURI = WAMP_GENERIC_ERROR_URI;
-    }
-    
-    public WampException(String errorDesc) {
-        super(errorDesc);
-        this.errorURI = WAMP_GENERIC_ERROR_URI;
-    }
-    
+
     public WampException(String errorURI, String errorDesc) {
         super(errorDesc);
         this.errorURI = errorURI;
