@@ -20,14 +20,17 @@ public abstract class WampModule
     public abstract String  getBaseURL();
     
     public void   onConnect(WampSocket clientSocket) throws Exception { }
+    
     public void   onDisconnect(WampSocket clientSocket) throws Exception { }
 
     public Object onCall(WampSocket clientSocket, String method, JSONArray args) throws Exception {
-        throw new Exception("Method not implemented: " + method);
+        throw new WampException(WampException.WAMP_GENERIC_ERROR_URI, "Method not implemented: " + method);
     }
     
     public void   onSubscribe(WampSocket clientSocket, WampTopic topic) throws Exception { }
+
     public void   onUnsubscribe(WampSocket clientSocket, WampTopic topic) throws Exception { }
+    
     public void   onPublish(WampSocket clientSocket, WampTopic topic, JSONObject event) throws Exception { }
     
 }
