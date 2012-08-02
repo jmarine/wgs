@@ -81,7 +81,7 @@ It represents a WAMP application context (URI), and also provides the following 
 
 This is an abstract class that provides interceptor methods for WAMP events:
 
-* **getBaseURL(): it must be overriden to return the base URI of the RPCs / topic events to intercept.
+* **getBaseURL()**: it must be overriden to return the base URI of the RPCs / topic events to intercept.
 
 * **onConnect(WebSocket client)**: called when a client is connected to the application (URI).
 
