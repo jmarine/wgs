@@ -27,6 +27,7 @@ public class WampApplication extends WebSocketApplication {
     private String contextPath;
     private Map<String,WampTopic>  topics;        
     private Map<String,WampModule> modules;
+    private WampModule defaultModule;
     
 
     
@@ -34,6 +35,12 @@ public class WampApplication extends WebSocketApplication {
         this.contextPath = contextPath;
         this.modules = new HashMap<String,WampModule>();
         this.topics = new ConcurrentHashMap<String,WampTopic>();
+        this.defaultModule = new WampModule(this) {
+            @Override
+            public String getBaseURL() {
+                return WAMP_BASE_URL;
+            }
+        };
     }
 
     /**
@@ -54,6 +61,13 @@ public class WampApplication extends WebSocketApplication {
         return contextPath.equals(request.requestURI().toString());
     }
 
+    
+    public WampModule getWampModule(String moduleBaseURI) 
+    {
+        WampModule module = modules.get(moduleBaseURI);
+        if(module == null) module = defaultModule;
+        return module;
+    }        
 
     /**
      * Invoked when the opening handshake has been completed for a specific
@@ -151,11 +165,6 @@ public class WampApplication extends WebSocketApplication {
         logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
     }
     
-
-    public WampModule getWampModule(String moduleURI) 
-    {
-        return modules.get(moduleURI);
-    }    
     
     public void registerWampModule(Class moduleClass) throws Exception
     {
@@ -169,42 +178,6 @@ public class WampApplication extends WebSocketApplication {
         String prefix = request.getString(1);
         String url = request.getString(2);
 	clientSocket.registerPrefixURL(prefix, url);
-    }
-    
-    private void processPublishMessage(WampSocket clientSocket, JSONArray request) throws Exception 
-    {
-        String topicName = clientSocket.normalizeURI(request.getString(1));
-        WampTopic topic = getTopic(topicName);
-        JSONObject event = request.getJSONObject(2);
-        if(request.length() == 3) {
-            clientSocket.publishEvent(topic, event, false);
-        } else if(request.length() == 4) {
-            // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
-            try {
-                boolean excludeMe = request.getBoolean(3);
-                clientSocket.publishEvent(topic, event, excludeMe);
-            } catch(Exception ex) {
-                HashSet<String> excludedSet = new HashSet<String>();
-                JSONArray excludedArray = request.getJSONArray(3);
-                for(int i = 0; i < excludedArray.length(); i++) {
-                    excludedSet.add(excludedArray.getString(i));
-                }
-                clientSocket.publishEvent(topic, event, excludedSet, null);
-            }
-        } else if(request.length() == 5) {
-            HashSet<String> excludedSet = new HashSet<String>();
-            HashSet<String> eligibleSet = new HashSet<String>();
-            JSONArray excludedArray = request.getJSONArray(3);
-            for(int i = 0; i < excludedArray.length(); i++) {
-                excludedSet.add(excludedArray.getString(i));
-            }
-            JSONArray eligibleArray = request.getJSONArray(4);
-            for(int i = 0; i < eligibleArray.length(); i++) {
-                eligibleSet.add(eligibleArray.getString(i));
-            }
-            clientSocket.publishEvent(topic, event, excludedSet, eligibleSet);
-        }
-        
     }
     
    
@@ -226,7 +199,7 @@ public class WampApplication extends WebSocketApplication {
             if(methodPos != -1) {
                 baseURL = procURI.substring(0, methodPos+1);
                 method = procURI.substring(methodPos+1);
-                module = modules.get(baseURL);
+                module = getWampModule(baseURL);
             }
         }
         
@@ -293,10 +266,8 @@ public class WampApplication extends WebSocketApplication {
         
         if(topic != null) {
             try { 
-                WampModule module = modules.get(topic.getBaseURI());
-                if(module != null) module.onSubscribe(clientSocket, topic); 
-                clientSocket.addTopic(topic);
-                topic.addSocket(clientSocket);
+                WampModule module = getWampModule(topic.getBaseURI());
+                module.onSubscribe(clientSocket, topic); 
             } catch(Exception ex) {
                 logger.log(Level.SEVERE, "Error in subscription to topic", ex);
             }          
@@ -311,12 +282,8 @@ public class WampApplication extends WebSocketApplication {
         WampTopic topic = getTopic(topicName);
         if(topic != null) {
             try { 
-                WampModule module = modules.get(topic.getBaseURI());
-                if(module != null) module.onUnsubscribe(clientSocket, topic); 
-                
-                clientSocket.removeTopic(topic);
-                topic.removeSocket(clientSocket);
-                
+                WampModule module = getWampModule(topic.getBaseURI());
+                module.onUnsubscribe(clientSocket, topic); 
             } catch(Exception ex) {
                 logger.log(Level.SEVERE, "Error in unsubscription to topic", ex);
             }          
@@ -324,8 +291,45 @@ public class WampApplication extends WebSocketApplication {
         }
         return topic;
     }
+    
+    
+    private void processPublishMessage(WampSocket clientSocket, JSONArray request) throws Exception 
+    {
+        String topicName = clientSocket.normalizeURI(request.getString(1));
+        WampTopic topic = getTopic(topicName);
+        JSONObject event = request.getJSONObject(2);
+        if(request.length() == 3) {
+            clientSocket.publishEvent(topic, event, false);
+        } else if(request.length() == 4) {
+            // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
+            try {
+                boolean excludeMe = request.getBoolean(3);
+                clientSocket.publishEvent(topic, event, excludeMe);
+            } catch(Exception ex) {
+                HashSet<String> excludedSet = new HashSet<String>();
+                JSONArray excludedArray = request.getJSONArray(3);
+                for(int i = 0; i < excludedArray.length(); i++) {
+                    excludedSet.add(excludedArray.getString(i));
+                }
+                clientSocket.publishEvent(topic, event, excludedSet, null);
+            }
+        } else if(request.length() == 5) {
+            HashSet<String> excludedSet = new HashSet<String>();
+            HashSet<String> eligibleSet = new HashSet<String>();
+            JSONArray excludedArray = request.getJSONArray(3);
+            for(int i = 0; i < excludedArray.length(); i++) {
+                excludedSet.add(excludedArray.getString(i));
+            }
+            JSONArray eligibleArray = request.getJSONArray(4);
+            for(int i = 0; i < eligibleArray.length(); i++) {
+                eligibleSet.add(eligibleArray.getString(i));
+            }
+            clientSocket.publishEvent(topic, event, excludedSet, eligibleSet);
+        }
         
-  
+    }
+    
+    
     public String encodeJSON(String orig) {
         if(orig == null) return "null";
         

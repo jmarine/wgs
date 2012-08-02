@@ -185,22 +185,12 @@ public class WampSocket extends DefaultWebSocket
     
     public void publishEvent(WampTopic topic, JSONObject event, Set<String> excluded, Set<String> eligible) {
         logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
-        String msg = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
-        
-        if(eligible == null)  eligible = topic.getSocketIds();
-        for (String cid : eligible) {
-            if((excluded==null) || (!excluded.contains(cid))) {
-                WampSocket socket = topic.getSocket(cid);
-                if(socket != null && socket.isConnected() && !excluded.contains(cid)) {
-                    try { 
-                        WampModule module = app.getWampModule(topic.getBaseURI());
-                        if(module != null) module.onPublish(socket, topic, event); 
-                        socket.sendSafe(msg);
-                    } catch(Exception ex) {
-                        logger.log(Level.SEVERE, "Error dispatching event publication to registered module", ex);
-                    }          
-                }
-            }
+        if(eligible == null) eligible = topic.getSocketIds();
+        try {
+            WampModule module = app.getWampModule(topic.getBaseURI());
+            module.onPublish(this, topic, event, excluded, eligible);
+        } catch(Exception ex) {
+            logger.log(Level.SEVERE, "Error in publishing event to topic", ex);
         }
     }    
 
