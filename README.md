@@ -70,11 +70,31 @@ public class MyModule extends WampModule
 
 ##### WampApplication methods #####
 
-It represents a WAMP application context (uri), and also provides the following methods to help the development of modules:
+It represents a WAMP application context (URI), and also provides the following methods to help the development of modules:
 
 * **createTopic(String topicFQname)**: dinamically creates a new topic to be used by WAMP clients.
 
 * **getTopic(String topicFQname)**: gets a WampTopic by its fully qualified name.
+
+
+##### WampModule methods #####
+
+This is an abstract class that provides interceptor methods for WAMP events:
+
+* **getBaseURL(): it must be overriden to return the base URI of the RPCs / topic events to intercept.
+
+* **onConnect(WebSocket client)**: called when a client is connected to the application (URI).
+
+* **onDisconnect(WebSocket client)**: called when a client is disconnected from the application (URI).
+
+* **onCall(WebSocket client, String method, JSONArray args)**: it can be overriden to add new RPCs.
+
+* **onSubscribe(WampSocket client, WampTopic topic)**: it can be overriden to intercept subscription requests to the topics. In this case, remember to call the superclass method before/after your business logic.
+(i.e: to send an EVENT to the client, the method should be called before the publication).
+
+* **onUnsubscribe(WampSocket client, WampTopic topic)**: it can be overriden to intercept unsubscription requests to the topics. Also, rembember to cal the superclass method before/after your business logic.
+
+* **onPublish(WampSocket sourceClient, WampTopic topic, JSONObject event, Set<String> excluded, Set<String> eligible)**: it can be overriden to intercept event publications. Remember to call the superclass method before/after your business logic.
 
 
 ##### WampSocket methods #####
@@ -96,7 +116,7 @@ It represents a topic for PubSub services, and provides the following methods:
 
 * **getSocketIds()**: gets a list of sessionId of clients subscribed to the topic.
 
-* **getSocketId(sessionId)**: gets the WebSocket of the client with sessionId in case it is subscribed to the topic.
+* **getSocketId(String sessionId)**: gets the WebSocket of the client with sessionId in case it is subscribed to the topic.
 
 
 ##### WampException methods ######
