@@ -25,7 +25,7 @@ It is very easy to add new functions that can be called by WAMP clients:
 
 2) Overrides the abstract method "getBaseURL" to specify the procURI or the base URI of the procedures that will be implemented (including the "#" separator).
 
-3) To develop new RPCs, define the methods as "public" and with the "WampRPC" annotation (you can use the "name" parameter to change the Java method name for WAMP clients). You can also override the "onCall" method to intercept the RPCs, and add new business logic. 
+3) To develop new RPCs, define the methods as "public" and with the "WampRPC" annotation (you might want to use the "name" parameter to change the Java method name for the WAMP clients). You can also override the "onCall" method to intercept the RPCs, and add new business logic. 
 
 4) Finally, attach the modules to the WAMP application context (uri):
 * In GlassFish 3.1.2+: specify the canonical name of the classes in the "modules" init-param of the WampServlet in web.xml configuration file (separated by ',')
