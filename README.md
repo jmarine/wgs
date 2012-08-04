@@ -25,7 +25,7 @@ It is very easy to add new functions that can be called by WAMP clients:
 
 2) Overrides the abstract method "getBaseURL" to specify the procURI or the base URI of the procedures that will be implemented (including the "#" separator).
 
-3) Override the "onCall" method to develop the business logic of the service.
+3) To develop new RPCs, define the methods as "public" and with the "WampRPC" annotation (you can use the "name" parameter to change the Java method name for WAMP clients). You can also override the "onCall" method to intercept the RPCs, and add new business logic. 
 
 4) Finally, attach the modules to the WAMP application context (uri):
 * In GlassFish 3.1.2+: specify the canonical name of the classes in the "modules" init-param of the WampServlet in web.xml configuration file (separated by ',')
@@ -52,17 +52,38 @@ public class MyModule extends WampModule
     public String getBaseURL() {
         return "http://mycompany.domain/myservice#";
     }
+
+    @WampRPC(name="sum")
+    public int sumArguments( /* WampSocket socket, */ JSONArray args) throws Exception
+    {
+	int sum = 0;
+        for(int i = 0; i < args.length(); i++) {
+           sum += args.getInt(i);
+        }
+        return sum;
+    }
     
     @Override
     public Object onCall(WampSocket socket, String method, JSONArray args) throws Exception 
     {
-        if(method.equals("sum")) return sumArguments(args);
-        else if(method.equals("multiply")) return multiplyArguments(arg);
-        else throw new Exception("method not implemented");
+        if(method.equals("multiply")) return multiplyArguments(arg);
+        else super.onCall(socket, method, args);
     }
 
     ...
 }
+```
+
+Configuration example:
+
+```html
+docroot=../wwwroot
+
+contexts=wamp1
+context.wamp1.uri=/wamp1
+context.wamp1.modules=org.acme.myapp.MyModule
+context.wamp1.topics=https://github.com/jmarine/wampservices#topic1,https://github.com/jmarine/wampservices#topic2
+
 ```
 
 
