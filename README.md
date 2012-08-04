@@ -64,7 +64,8 @@ public class MyModule extends WampModule
         return sum;
     }
 
-    // NOTE: the method is not annotated with WampRPC, but it is invoked from "onCall" interceptor method
+    // NOTE: the method is not public neighter annotated with "WampRPC", 
+    // but "onCall" method can intercept the RPC and invoke it.
     private int multiplyArguments( /* WampSocket socket, */ JSONArray args) throws Exception {
         int retval = args.getInt(0);
         for(int i = 1; i < args.length(); i++) {
@@ -77,7 +78,7 @@ public class MyModule extends WampModule
     @Override
     public Object onCall(WampSocket socket, String method, JSONArray args) throws Exception {
         if(method.equals("multiply")) return multiplyArguments(arg);
-        else super.onCall(socket, method, args);  // to invoke methods annotated with "WampRPC"
+        else return super.onCall(socket, method, args);  // to invoke the methods annotated with "WampRPC"
     }
 
     ...
