@@ -34,6 +34,8 @@ It is very easy to add new functions that can be called by WAMP clients:
 Code example:
 
 ```java
+package org.acme.myapp;
+
 import com.github.jmarine.wampservices.WampApplication;
 import com.github.jmarine.wampservices.WampModule;
 import com.github.jmarine.wampservices.WampSocket;
@@ -54,20 +56,28 @@ public class MyModule extends WampModule
     }
 
     @WampRPC(name="sum")
-    public int sumArguments( /* WampSocket socket, */ JSONArray args) throws Exception
-    {
-	int sum = 0;
+    public int sumArguments( /* WampSocket socket, */ JSONArray args) throws Exception {
+        int sum = 0;
         for(int i = 0; i < args.length(); i++) {
            sum += args.getInt(i);
         }
         return sum;
     }
+
+    // NOTE: the method is not annotated with WampRPC, but it is invoked from "onCall" interceptor method
+    private int multiplyArguments( /* WampSocket socket, */ JSONArray args) throws Exception {
+        int retval = args.getInt(0);
+        for(int i = 1; i < args.length(); i++) {
+           retval *= args.getInt(i);
+        }
+        return retval;
+    }
+
     
     @Override
-    public Object onCall(WampSocket socket, String method, JSONArray args) throws Exception 
-    {
+    public Object onCall(WampSocket socket, String method, JSONArray args) throws Exception {
         if(method.equals("multiply")) return multiplyArguments(arg);
-        else super.onCall(socket, method, args);
+        else super.onCall(socket, method, args);  // to invoke methods annotated with "WampRPC"
     }
 
     ...
