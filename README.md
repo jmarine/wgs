@@ -38,6 +38,7 @@ package org.acme.myapp;
 
 import com.github.jmarine.wampservices.WampApplication;
 import com.github.jmarine.wampservices.WampModule;
+import com.github.jmarine.wampservices.WampRPC;
 import com.github.jmarine.wampservices.WampSocket;
 import org.json.JSONArray;
 
