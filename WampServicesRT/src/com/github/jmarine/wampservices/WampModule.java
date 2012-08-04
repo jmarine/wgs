@@ -48,8 +48,10 @@ public abstract class WampModule
             int argCount = 0;
             ArrayList params = new ArrayList();
             for(Class paramType : method.getParameterTypes()) {
-                if(paramType.isInstance(clientSocket)) {
+                if(paramType.isInstance(clientSocket)) {  // WampSocket parameter info
                     params.add(clientSocket);
+                } else if(paramType.isInstance(app)) {    // WampApplication parameter info
+                    params.add(app);
                 } else if(JSONArray.class.isAssignableFrom(paramType)) {
                     params.add(args);  // TODO: only from argCount to args.length()
                     argCount = args.length();
