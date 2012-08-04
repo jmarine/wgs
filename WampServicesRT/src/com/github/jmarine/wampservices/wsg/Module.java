@@ -16,6 +16,7 @@ import javax.persistence.Persistence;
 import com.github.jmarine.wampservices.WampApplication;
 import com.github.jmarine.wampservices.WampException;
 import com.github.jmarine.wampservices.WampModule;
+import com.github.jmarine.wampservices.WampRPC;
 import com.github.jmarine.wampservices.WampSocket;
 import com.github.jmarine.wampservices.WampTopic;
 import org.json.JSONArray;
@@ -128,6 +129,18 @@ public class Module extends WampModule
     public Object onCall(WampSocket socket, String method, JSONArray args) throws Exception 
     {
         Object retval = null;
+       
+        if(method.equals("list_groups")) {
+            String appId = args.getJSONObject(0).getString("app");
+            wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId));
+            retval = listGroups(appId);
+        } else if(method.equals("exit_group")) {
+            String gid = args.getJSONObject(0).getString("gid");
+            retval = exitGroup(socket, gid);
+        } else {
+            retval = super.onCall(socket, method, args);
+        }
+        /*
         if(method.equals("login")) {
             retval = login(socket, args.getJSONObject(0));
         } else if(method.equals("register")) {
@@ -154,6 +167,7 @@ public class Module extends WampModule
         } else {
             throw new WampException(WampException.WAMP_GENERIC_ERROR_URI, "Method not implemented: " + method);
         }
+        */
         return retval;
     }
 
@@ -178,6 +192,7 @@ public class Module extends WampModule
     }
     
     
+    @WampRPC(name="register")
     public JSONArray registerUser(WampSocket socket, JSONObject data) throws Exception
     {
         boolean user_valid = false;
@@ -207,6 +222,7 @@ public class Module extends WampModule
     }
     
     
+    @WampRPC
     public JSONArray login(WampSocket socket, JSONObject data) throws Exception
     {
         boolean user_valid = false;
@@ -229,7 +245,8 @@ public class Module extends WampModule
     
     
     
-    private JSONObject listApps() throws Exception
+    @WampRPC(name="list_apps")
+    public JSONObject listApps() throws Exception
     {
         // TODO: Filter by domain
         JSONObject retval = new JSONObject();
@@ -254,7 +271,8 @@ public class Module extends WampModule
     }
     
 
-    private JSONObject newApp(WampSocket socket, JSONObject data) throws Exception
+    @WampRPC(name="new_app")
+    public JSONObject newApp(WampSocket socket, JSONObject data) throws Exception
     {
         // TODO: check it doesn't exists
 
@@ -318,7 +336,8 @@ public class Module extends WampModule
     }
         
     
-    private JSONObject deleteApp(WampSocket socket, JSONObject param) throws Exception
+    @WampRPC(name="delete_app")
+    public JSONObject deleteApp(WampSocket socket, JSONObject param) throws Exception
     {
         // TODO: check user is administrator of app
         // TODO: delete groups
@@ -389,7 +408,8 @@ public class Module extends WampModule
     }
     
     
-    private JSONObject openGroup(WampSocket socket, JSONObject data) throws Exception
+    @WampRPC(name="open_group")
+    public JSONObject openGroup(WampSocket socket, JSONObject data) throws Exception
     {
         Group   g = null;
         boolean valid   = false;
@@ -579,7 +599,8 @@ public class Module extends WampModule
     }
     
 
-    private JSONObject updateGroup(WampSocket socket, JSONObject data) throws Exception
+    @WampRPC(name="update_group")
+    public JSONObject updateGroup(WampSocket socket, JSONObject data) throws Exception
     {
         // TODO: change group properties (state, observable, etc)
 
@@ -611,7 +632,8 @@ public class Module extends WampModule
     }
     
     
-    private JSONObject updateMember(WampSocket socket, JSONObject data) throws Exception
+    @WampRPC(name="update_member")
+    public JSONObject updateMember(WampSocket socket, JSONObject data) throws Exception
     {
             boolean valid = false;
             String appId = data.getString("app");
@@ -668,7 +690,8 @@ public class Module extends WampModule
     }
     
     
-    private JSONObject exitGroup(WampSocket socket, String gid) throws Exception
+    @WampRPC(name="exit_group")
+    public JSONObject exitGroup(WampSocket socket, String gid) throws Exception
     {
             Client client = clients.get(socket.getSessionId());
             
