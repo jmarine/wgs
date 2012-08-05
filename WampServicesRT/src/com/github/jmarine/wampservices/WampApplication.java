@@ -10,9 +10,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.sun.grizzly.tcp.Request;
 import com.sun.grizzly.websockets.*;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.json.JSONTokener;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.TextNode;
+
+
 
 /**
  * WebSocket Message Application Protocol implementation
@@ -105,10 +108,10 @@ public class WampApplication extends WebSocketApplication {
             logger.log(Level.FINE, "onMessage.data = {0}", new Object[]{data});
 
 	    WampSocket  clientSocket = (WampSocket)websocket;
-            JSONTokener tokener = new JSONTokener(data);
-            JSONArray   request = new JSONArray(tokener);
+            ObjectMapper mapper = new ObjectMapper();
+            ArrayNode    request = (ArrayNode)mapper.readTree(data);
 
-            int requestType = request.getInt(0);
+            int requestType = request.get(0).asInt();
             logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
 
 	    try {
@@ -120,11 +123,11 @@ public class WampApplication extends WebSocketApplication {
                     processCallMessage(clientSocket, request);
                     break;
                 case 5:
-                    String subscriptionTopicName = request.getString(1);
+                    String subscriptionTopicName = request.get(1).asText();
 		    subscribeClientWithTopic(clientSocket, subscriptionTopicName);
                     break;
 		case 6:
-                    String unsubscriptionTopicName = request.getString(1);
+                    String unsubscriptionTopicName = request.get(1).asText();
 		    unsubscribeClientFromTopic(clientSocket, unsubscriptionTopicName);
                     break;
                 case 7:
@@ -173,23 +176,23 @@ public class WampApplication extends WebSocketApplication {
     }
 
     
-    private void processPrefixMessage(WampSocket clientSocket, JSONArray request) throws Exception
+    private void processPrefixMessage(WampSocket clientSocket, ArrayNode request) throws Exception
     {
-        String prefix = request.getString(1);
-        String url = request.getString(2);
+        String prefix = request.get(1).asText();
+        String url = request.get(2).asText();
 	clientSocket.registerPrefixURL(prefix, url);
     }
     
    
-    private void processCallMessage(WampSocket clientSocket, JSONArray request) throws Exception
+    private void processCallMessage(WampSocket clientSocket, ArrayNode request) throws Exception
     {
-        String callID  = request.getString(1);
+        String callID  = request.get(1).asText();
         if(callID == null || callID.equals("")) {
             clientSocket.sendCallError(callID, WampException.WAMP_GENERIC_ERROR_URI, "CallID not present", null);
             return;
         }
         
-        String procURI = clientSocket.normalizeURI(request.getString(2));
+        String procURI = clientSocket.normalizeURI(request.get(2).asText());
         String baseURL = procURI;
         String method  = "";
         
@@ -206,18 +209,19 @@ public class WampApplication extends WebSocketApplication {
         try {
             if(module == null) throw new Exception("ProcURI not implemented");
             
-            JSONArray args = new JSONArray();
-            for(int i = 3; i < request.length(); i++) {
-                args.put(i-3, request.get(i));
+            ObjectMapper mapper = new ObjectMapper();
+            ArrayNode args = mapper.createArrayNode();
+            for(int i = 3; i < request.size(); i++) {
+                args.add(request.get(i));
             }           
             
-            JSONArray response = null;
+            ArrayNode response = null;
             Object result = module.onCall(clientSocket, method, args);
-            if(result == null || result instanceof JSONArray) {
-                response = (JSONArray)result;
+            if(result == null || result instanceof ArrayNode) {
+                response = (ArrayNode)result;
             } else {
-                response = new JSONArray();
-                response.put(result);
+                response = mapper.createArrayNode();
+                response.add(mapper.valueToTree(result));
             }
             clientSocket.sendCallResult(callID, response);
 
@@ -293,36 +297,36 @@ public class WampApplication extends WebSocketApplication {
     }
     
     
-    private void processPublishMessage(WampSocket clientSocket, JSONArray request) throws Exception 
+    private void processPublishMessage(WampSocket clientSocket, ArrayNode request) throws Exception 
     {
-        String topicName = clientSocket.normalizeURI(request.getString(1));
+        String topicName = clientSocket.normalizeURI(request.get(1).asText());
         WampTopic topic = getTopic(topicName);
-        JSONObject event = request.getJSONObject(2);
-        if(request.length() == 3) {
+        JsonNode event = request.get(2);
+        if(request.size() == 3) {
             clientSocket.publishEvent(topic, event, false);
-        } else if(request.length() == 4) {
+        } else if(request.size() == 4) {
             // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
             try {
-                boolean excludeMe = request.getBoolean(3);
+                boolean excludeMe = request.get(3).asBoolean();
                 clientSocket.publishEvent(topic, event, excludeMe);
             } catch(Exception ex) {
                 HashSet<String> excludedSet = new HashSet<String>();
-                JSONArray excludedArray = request.getJSONArray(3);
-                for(int i = 0; i < excludedArray.length(); i++) {
-                    excludedSet.add(excludedArray.getString(i));
+                ArrayNode excludedArray = (ArrayNode)request.get(3);
+                for(int i = 0; i < excludedArray.size(); i++) {
+                    excludedSet.add(excludedArray.get(i).asText());
                 }
                 clientSocket.publishEvent(topic, event, excludedSet, null);
             }
-        } else if(request.length() == 5) {
+        } else if(request.size() == 5) {
             HashSet<String> excludedSet = new HashSet<String>();
             HashSet<String> eligibleSet = new HashSet<String>();
-            JSONArray excludedArray = request.getJSONArray(3);
-            for(int i = 0; i < excludedArray.length(); i++) {
-                excludedSet.add(excludedArray.getString(i));
+            ArrayNode excludedArray = (ArrayNode)request.get(3);
+            for(int i = 0; i < excludedArray.size(); i++) {
+                excludedSet.add(excludedArray.get(i).asText());
             }
-            JSONArray eligibleArray = request.getJSONArray(4);
-            for(int i = 0; i < eligibleArray.length(); i++) {
-                eligibleSet.add(eligibleArray.getString(i));
+            ArrayNode eligibleArray = (ArrayNode)request.get(4);
+            for(int i = 0; i < eligibleArray.size(); i++) {
+                eligibleSet.add(eligibleArray.get(i).asText());
             }
             clientSocket.publishEvent(topic, event, excludedSet, eligibleSet);
         }

@@ -19,8 +19,10 @@ import com.github.jmarine.wampservices.WampModule;
 import com.github.jmarine.wampservices.WampRPC;
 import com.github.jmarine.wampservices.WampSocket;
 import com.github.jmarine.wampservices.WampTopic;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.ObjectNode;
 
 /*
  * To change this template, choose Tools | Templates
@@ -126,15 +128,15 @@ public class Module extends WampModule
     }
 
     @Override
-    public Object onCall(WampSocket socket, String method, JSONArray args) throws Exception 
+    public Object onCall(WampSocket socket, String method, ArrayNode args) throws Exception 
     {
         Object retval = null;
         if(method.equals("list_groups")) {
-            String appId = args.getJSONObject(0).getString("app");
+            String appId = args.get(0).get("app").asText();
             wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId));
             retval = listGroups(appId);
         } else if(method.equals("exit_group")) {
-            String gid = args.getJSONObject(0).getString("gid");
+            String gid = args.get(0).get("gid").asText();
             retval = exitGroup(socket, gid);
         } else {
             retval = super.onCall(socket, method, args);
@@ -164,14 +166,14 @@ public class Module extends WampModule
     
     
     @WampRPC(name="register")
-    public JSONArray registerUser(WampSocket socket, JSONObject data) throws Exception
+    public ArrayNode registerUser(WampSocket socket, ObjectNode data) throws Exception
     {
         boolean user_valid = false;
         User usr = null;
         
         Client client = clients.get(socket.getSessionId());
 
-        String nick = data.getString("nick");
+        String nick = data.get("nick").asText();
         
         EntityManager em = getEntityManager();
         usr = getEntityManager().find(User.class, nick);
@@ -181,8 +183,8 @@ public class Module extends WampModule
         
         usr = new User();
         usr.setNick(nick);
-        usr.setPassword(data.getString("password"));
-        usr.setEmail(data.getString("email"));
+        usr.setPassword(data.get("password").asText());
+        usr.setEmail(data.get("email").asText());
         usr.setAdministrator(false);
         saveEntity(usr);
 
@@ -194,13 +196,13 @@ public class Module extends WampModule
     
     
     @WampRPC
-    public JSONArray login(WampSocket socket, JSONObject data) throws Exception
+    public ArrayNode login(WampSocket socket, ObjectNode data) throws Exception
     {
         boolean user_valid = false;
         Client client = clients.get(socket.getSessionId());
 
-        String nick = data.getString("nick");
-        String password  = data.getString("password");
+        String nick = data.get("nick").asText();
+        String password  = data.get("password").asText();
 
         EntityManager manager = getEntityManager();
         User usr = manager.find(User.class, nick);
@@ -217,13 +219,14 @@ public class Module extends WampModule
     
     
     @WampRPC(name="list_apps")
-    public JSONObject listApps() throws Exception
+    public ObjectNode listApps() throws Exception
     {
         // TODO: Filter by domain
-        JSONObject retval = new JSONObject();
-        JSONArray appArray = new JSONArray();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode retval = mapper.createObjectNode();
+        ArrayNode appArray = mapper.createArrayNode();
         for(Application app : applications.values()) {
-            appArray.put(app.toJSON());
+            appArray.add(app.toJSON());
         }
         retval.put("apps", appArray);
 
@@ -243,7 +246,7 @@ public class Module extends WampModule
     
 
     @WampRPC(name="new_app")
-    public JSONObject newApp(WampSocket socket, JSONObject data) throws Exception
+    public ObjectNode newApp(WampSocket socket, ObjectNode data) throws Exception
     {
         // TODO: check it doesn't exists
 
@@ -257,19 +260,19 @@ public class Module extends WampModule
         Application app = new Application();
         app.setAppId(UUID.randomUUID().toString());
         app.setAdminUser(client.getUser());
-        app.setName(data.getString("name"));
-        app.setDomain(data.getString("domain"));
-        app.setVersion(data.getInt("version"));
-        app.setMaxGroupMembers(data.getInt("max"));
-        app.setMinGroupMembers(data.getInt("min"));
-        app.setAlliancesAllowed(data.getBoolean("alliances"));
-        app.setDynamicGroup(data.getBoolean("dynamic"));
-        app.setObservableGroup(data.getBoolean("observable"));
-        app.setAIavailable(data.getBoolean("ai_available"));        
+        app.setName(data.get("name").asText());
+        app.setDomain(data.get("domain").asText());
+        app.setVersion(data.get("version").asInt());
+        app.setMaxGroupMembers(data.get("max").asInt());
+        app.setMinGroupMembers(data.get("min").asInt());
+        app.setAlliancesAllowed(data.get("alliances").asBoolean());
+        app.setDynamicGroup(data.get("dynamic").asBoolean());
+        app.setObservableGroup(data.get("observable").asBoolean());
+        app.setAIavailable(data.get("ai_available").asBoolean());
 
-        JSONArray roles = data.getJSONArray("roles");
-        for(int i = 0; i < roles.length(); i++) {
-            String roleName = roles.getString(i);
+        ArrayNode roles = (ArrayNode)data.get("roles");
+        for(int i = 0; i < roles.size(); i++) {
+            String roleName = roles.get(i).asText();
             int roleNameLen = roleName.length();
 
             boolean optional = (roleNameLen > 0) && (roleName.charAt(roleNameLen-1) == '*' || roleName.charAt(roleNameLen-1) == '?');
@@ -296,7 +299,8 @@ public class Module extends WampModule
         broadcastApps(socket);
 
         
-        JSONObject retval = new JSONObject();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode retval = mapper.createObjectNode();
         retval.put("cmd", "new_app");
         if(valid) {
             retval.put("app", app.toJSON());
@@ -308,14 +312,14 @@ public class Module extends WampModule
         
     
     @WampRPC(name="delete_app")
-    public JSONObject deleteApp(WampSocket socket, JSONObject param) throws Exception
+    public ObjectNode deleteApp(WampSocket socket, ObjectNode param) throws Exception
     {
         // TODO: check user is administrator of app
         // TODO: delete groups
         // TODO: store in database
 
         boolean valid = false;
-        String appId = param.getString("app");
+        String appId = param.get("app").asText();
 
         Application app = applications.get(appId);
         if(app != null) {
@@ -326,7 +330,8 @@ public class Module extends WampModule
         }
 
 
-        JSONObject retval = new JSONObject();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode retval = mapper.createObjectNode();
         retval.put("cmd", "delete_app");
         if(valid) {
             retval.put("appId", appId);
@@ -340,23 +345,25 @@ public class Module extends WampModule
     private void broadcastApps(WampSocket socket) throws Exception
     {
         // check subscribers of "apps_event" topic
-        JSONObject list = listApps();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode list = mapper.createObjectNode();        
         list.put("cmd", "list_apps");
         socket.publishEvent(wampApp.getTopic(getFQtopicURI("apps_event")), list, false);  // don't exclude Me
     }
 
     
-    private JSONObject listGroups(String appId) throws Exception
+    private ObjectNode listGroups(String appId) throws Exception
     {
         System.out.println("Listing groups for app: '" + appId + "'");
 
-        JSONObject retval = new JSONObject();
-        JSONArray groupsArray = new JSONArray();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode retval = mapper.createObjectNode();        
+        ArrayNode groupsArray = mapper.createArrayNode();
         Application app = applications.get(appId);
         if(app != null) {
             retval.put("app", app.toJSON());
             for(Group group : app.getGroupsByState(GroupState.OPEN)) {
-                JSONObject obj = new JSONObject();
+                ObjectNode obj = mapper.createObjectNode();
                 obj.put("gid", group.getGid());
                 obj.put("admin", group.getAdminNick());
                 obj.put("num", group.getNumMembers());
@@ -367,7 +374,7 @@ public class Module extends WampModule
                 obj.put("dynamic", group.isDynamicGroup());
                 obj.put("alliances", group.isAlliancesAllowed());
                 obj.put("description", group.getDescription());
-                groupsArray.put(obj);
+                groupsArray.add(obj);
             }   
 
             retval.put("groups", groupsArray);
@@ -380,7 +387,7 @@ public class Module extends WampModule
     
     
     @WampRPC(name="open_group")
-    public JSONObject openGroup(WampSocket socket, JSONObject data) throws Exception
+    public ObjectNode openGroup(WampSocket socket, ObjectNode data) throws Exception
     {
         Group   g = null;
         boolean valid   = false;
@@ -391,7 +398,7 @@ public class Module extends WampModule
         Client client = clients.get(socket.getSessionId());
         // get group/app information
         try {
-            String gid = data.getString("gid");
+            String gid = data.get("gid").asText();
             g = groups.get(gid);
             if(g != null) {
                 logger.log(Level.INFO, "open_group: group found: " + gid);
@@ -401,7 +408,7 @@ public class Module extends WampModule
         } catch(Exception ex) {
 
             try {
-                String appId = data.getString("app");
+                String appId = data.get("app").asText();
                 Application app = applications.get(appId);
                 if(app != null) {
                     g = new Group();
@@ -432,7 +439,8 @@ public class Module extends WampModule
         }
 
         // generate response:
-        JSONObject response = new JSONObject();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode response = mapper.createObjectNode();
         response.put("cmd", "user_joined");
 
         if(valid) {
@@ -450,9 +458,9 @@ public class Module extends WampModule
 
             response.put("app", app.toJSON());
 
-            JSONArray rolesArray = new JSONArray();
+            ArrayNode rolesArray = mapper.createArrayNode();
             for(Role r : app.getRoles()) {
-                rolesArray.put(r.toJSON());
+                rolesArray.add(r.toJSON());
                 if(r.isRequired()) requiredRoles.add(0, r.getName());
             }
             response.put("roles", rolesArray);
@@ -464,16 +472,16 @@ public class Module extends WampModule
             wampApp.subscribeClientWithTopic(client.getSocket(), topicName);
             
             client.addGroup(g);
-            JSONArray conArray = new JSONArray();            
+            ArrayNode conArray = mapper.createArrayNode();
             for(String cid : topic.getSocketIds()) {
                     Client c = clients.get(cid);
                     User u = ((c!=null)? c.getUser() : null);
                     String nick = ((u == null) ? "" : u.getNick());
 
-                    JSONObject con = new JSONObject();
+                    ObjectNode con = mapper.createObjectNode();
                     con.put("nick", nick);
                     con.put("cid", cid);
-                    conArray.put(con);
+                    conArray.add(con);
             }
             response.put("connections", conArray);            
 
@@ -502,7 +510,7 @@ public class Module extends WampModule
                 num_slots++;
             }
 
-            JSONArray membersArray = new JSONArray();
+            ArrayNode membersArray = mapper.createArrayNode();
             for(int index = 0;
                     (index < Math.max(num_slots, g.getMinMembers())) || (requiredRoles.size() > 0);
                     index++) {
@@ -531,7 +539,7 @@ public class Module extends WampModule
                     joined = true;
                     connected = true;
 
-                    JSONObject event = member.toJSON();
+                    ObjectNode event = member.toJSON();
                     event.put("cmd", "user_joined");
                     event.put("slot", index);
                     event.put("valid", true);
@@ -540,11 +548,11 @@ public class Module extends WampModule
                 }
 
 
-                JSONObject memberObj = member.toJSON();
+                ObjectNode memberObj = member.toJSON();
                 memberObj.put("slot", index);
                 memberObj.put("connected", connected);
                 
-                membersArray.put(memberObj);
+                membersArray.add(memberObj);
             }
 
             response.put("members", membersArray);
@@ -556,7 +564,7 @@ public class Module extends WampModule
             String cid = client.getClientId();
             String nickName = ( (u == null) ? "" : u.getNick() );
 
-            JSONObject event = new JSONObject();
+            ObjectNode event = mapper.createObjectNode();
             event.put("cmd", "user_joined");
             event.put("nick", nickName);
             event.put("cid", cid);
@@ -571,15 +579,16 @@ public class Module extends WampModule
     
 
     @WampRPC(name="update_group")
-    public JSONObject updateGroup(WampSocket socket, JSONObject data) throws Exception
+    public ObjectNode updateGroup(WampSocket socket, ObjectNode data) throws Exception
     {
         // TODO: change group properties (state, observable, etc)
 
         boolean valid = false;
-        String appId = data.getString("app");
-        String gid = data.getString("gid");
+        String appId = data.get("app").asText();
+        String gid = data.get("gid").asText();
 
-        JSONObject response = new JSONObject();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode response = mapper.createObjectNode();
         response.put("cmd", "update_group");
         
         
@@ -587,7 +596,8 @@ public class Module extends WampModule
         if(g != null) {
             logger.log(Level.FINE, "open_group: group found: " + gid);
             
-            String state = data.optString("state");
+            JsonNode stateNode = data.get("state");
+            String state = (stateNode!=null && !stateNode.isNull()) ? stateNode.asText() : null;
             if(state != null) {
                 g.setState(GroupState.valueOf(state));
                 response.put("state", state);
@@ -604,20 +614,21 @@ public class Module extends WampModule
     
     
     @WampRPC(name="update_member")
-    public JSONObject updateMember(WampSocket socket, JSONObject data) throws Exception
+    public ObjectNode updateMember(WampSocket socket, ObjectNode data) throws Exception
     {
             boolean valid = false;
-            String appId = data.getString("app");
-            String gid = data.getString("gid");
+            String appId = data.get("app").asText();
+            String gid = data.get("gid").asText();
 
-            int slot = data.getInt("slot");
-            String cid = data.getString("cid");
-            String nick = data.getString("nick");
-            String role = data.getString("role");
-            String usertype = data.getString("type");
-            int team = data.getInt("team");
+            int slot = data.get("slot").asInt();
+            String cid = data.get("cid").asText();
+            String nick = data.get("nick").asText();
+            String role = data.get("role").asText();
+            String usertype = data.get("type").asText();
+            int team = data.get("team").asInt();
 
-            JSONObject response = new JSONObject();
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode response = mapper.createObjectNode();
             response.put("cmd", "user_joined");
 
             Group g = groups.get(gid);
@@ -662,11 +673,12 @@ public class Module extends WampModule
     
     
     @WampRPC(name="exit_group")
-    public JSONObject exitGroup(WampSocket socket, String gid) throws Exception
+    public ObjectNode exitGroup(WampSocket socket, String gid) throws Exception
     {
             Client client = clients.get(socket.getSessionId());
             
-            JSONObject response = new JSONObject();
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode response = mapper.createObjectNode();
             response.put("cmd", "user_unjoined");
 
             Group g = groups.get(gid);
@@ -679,7 +691,7 @@ public class Module extends WampModule
                 response.put("cid", socket.getSessionId());
 
                 int num_members = 0;
-                JSONArray membersArray = new JSONArray();
+                ArrayNode membersArray = mapper.createArrayNode();
                 for(int slot = g.getNumSlots(); slot > 0; ) {
                     slot = slot-1;
                     GroupMember member = g.getMember(slot);
@@ -693,9 +705,9 @@ public class Module extends WampModule
                             member.setUserType("user");
                             g.setMember(slot, member);
                             
-                            JSONObject obj = member.toJSON();
+                            ObjectNode obj = member.toJSON();
                             obj.put("slot", slot);
-                            membersArray.put(obj);
+                            membersArray.add(obj);
 
                         } else {
                             num_members++;

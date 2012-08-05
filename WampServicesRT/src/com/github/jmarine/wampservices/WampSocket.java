@@ -13,8 +13,11 @@ import com.sun.grizzly.websockets.WebSocketException;
 import com.sun.grizzly.websockets.WebSocketListener;
 import java.util.HashSet;
 import java.util.Set;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.TextNode;
+
 
 public class WampSocket extends DefaultWebSocket
 {
@@ -110,25 +113,26 @@ public class WampSocket extends DefaultWebSocket
     }
     
     
-    protected void sendCallResult(String callID, JSONArray args)
+    protected void sendCallResult(String callID, ArrayNode args)
     {
         StringBuilder response = new StringBuilder();
         if(args == null) {
-            args = new JSONArray();
-            args.put((String)null);
+            ObjectMapper mapper = new ObjectMapper();
+            args = mapper.createArrayNode();
+            args.add((String)null);
         }
 
         response.append("[");
         response.append("3");
         response.append(",");
         response.append(app.encodeJSON(callID));
-        for(int i = 0; i < args.length(); i++) {
+        for(int i = 0; i < args.size(); i++) {
             response.append(",");
             try { 
-                Object obj = args.get(i); 
-                if(obj instanceof String) {
+                JsonNode obj = args.get(i); 
+                if(obj instanceof TextNode) {
                     response.append("\"");
-                    response.append(app.encodeJSON((String)obj));
+                    response.append(app.encodeJSON(obj.asText()));
                     response.append("\"");
                 } else {
                     response.append(obj); 
@@ -176,14 +180,14 @@ public class WampSocket extends DefaultWebSocket
     /**
      * Broadcasts the event to subscribed sockets.
      */
-    public void publishEvent(WampTopic topic, JSONObject event, boolean excludeMe) {
+    public void publishEvent(WampTopic topic, JsonNode event, boolean excludeMe) {
         logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         Set<String> excludedSet = new HashSet<String>();
         if(excludeMe) excludedSet.add(this.getSessionId());
         publishEvent(topic, event, excludedSet, null);
     }
     
-    public void publishEvent(WampTopic topic, JSONObject event, Set<String> excluded, Set<String> eligible) {
+    public void publishEvent(WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) {
         logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         if(eligible == null) eligible = topic.getSocketIds();
         try {

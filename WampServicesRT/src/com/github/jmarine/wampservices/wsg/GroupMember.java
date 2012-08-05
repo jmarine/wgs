@@ -4,7 +4,9 @@
  */
 package com.github.jmarine.wampservices.wsg;
 
-import org.json.JSONObject;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ObjectNode;
+
 
 /**
  *
@@ -89,9 +91,10 @@ public class GroupMember
     }
     
     
-    public JSONObject toJSON() throws Exception
+    public ObjectNode toJSON() throws Exception
     {
-        JSONObject obj = new JSONObject();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode obj = mapper.createObjectNode();
         obj.put("cid", ((client!=null)? client.getClientId():""));
         obj.put("nick", ((nick!=null)? nick : "") );
         obj.put("type",userType);

@@ -6,8 +6,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.ObjectNode;
+
 
 
 public abstract class WampModule 
@@ -41,8 +44,9 @@ public abstract class WampModule
     
     public void   onDisconnect(WampSocket clientSocket) throws Exception { }
 
-    public Object onCall(WampSocket clientSocket, String methodName, JSONArray args) throws Exception 
+    public Object onCall(WampSocket clientSocket, String methodName, ArrayNode args) throws Exception 
     {
+        ObjectMapper mapper = new ObjectMapper();
         Method method = rpcs.get(methodName);
         if(method != null) {
             int argCount = 0;
@@ -52,19 +56,13 @@ public abstract class WampModule
                     params.add(clientSocket);
                 } else if(paramType.isInstance(app)) {    // WampApplication parameter info
                     params.add(app);
-                } else if(JSONArray.class.isAssignableFrom(paramType)) {
+                } else if(ArrayNode.class.isAssignableFrom(paramType)) {
                     params.add(args);  // TODO: only from argCount to args.length()
-                    argCount = args.length();
-                } else if(JSONObject.class.isAssignableFrom(paramType)) {
-                    params.add(args.getJSONObject(argCount++));
-                } else if(String.class.isAssignableFrom(paramType)) {
-                    params.add(args.getString(argCount++));
-                } else if(Boolean.class.isAssignableFrom(paramType)) {
-                    params.add(args.getBoolean(argCount++));
-                } else if(Integer.class.isAssignableFrom(paramType)) {
-                    params.add(args.getInt(argCount++));
-                } else if(Double.class.isAssignableFrom(paramType)) {
-                    params.add(args.getDouble(argCount++));
+                    argCount = args.size();
+                } else if(ObjectNode.class.isAssignableFrom(paramType)) {
+                    params.add(args.get(argCount++));
+                } else {
+                    params.add(mapper.readValue(args.get(argCount++), paramType));
                 }
             }
             return method.invoke(this, params.toArray());
@@ -83,7 +81,7 @@ public abstract class WampModule
         topic.removeSocket(clientSocket);
     }
     
-    public void   onPublish(WampSocket clientSocket, WampTopic topic, JSONObject event, Set<String> excluded, Set<String> eligible) throws Exception { 
+    public void   onPublish(WampSocket clientSocket, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
         String msg = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
         for (String cid : eligible) {
             if((excluded==null) || (!excluded.contains(cid))) {

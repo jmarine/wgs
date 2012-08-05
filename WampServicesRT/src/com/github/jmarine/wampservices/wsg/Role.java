@@ -12,7 +12,8 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
-import org.json.JSONObject;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ObjectNode;
 
 /**
  *
@@ -94,9 +95,10 @@ public class Role implements Serializable
         this.application = app;
     }
     
-    public JSONObject toJSON() throws Exception
+    public ObjectNode toJSON() throws Exception
     {
-        JSONObject obj = new JSONObject();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode obj = mapper.createObjectNode();
         obj.put("name", name);
         obj.put("required", required);
         obj.put("multiple", multiple);
