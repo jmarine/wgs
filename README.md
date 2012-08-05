@@ -40,7 +40,7 @@ import com.github.jmarine.wampservices.WampApplication;
 import com.github.jmarine.wampservices.WampModule;
 import com.github.jmarine.wampservices.WampRPC;
 import com.github.jmarine.wampservices.WampSocket;
-import org.json.JSONArray;
+import org.codehaus.jackson.node.ArrayNode;
 
 public class MyModule extends WampModule 
 {
@@ -57,27 +57,27 @@ public class MyModule extends WampModule
     }
 
     @WampRPC(name="sum")
-    public int sumArguments( /* WampSocket socket, */ JSONArray args) throws Exception {
+    public int sumArguments( /* WampSocket socket, */ ArrayNode args) throws Exception {
         int sum = 0;
-        for(int i = 0; i < args.length(); i++) {
-           sum += args.getInt(i);
+        for(int i = 0; i < args.size(); i++) {
+           sum += args.get(i).asInt();
         }
         return sum;
     }
 
     // NOTE: the method is not public neighter annotated with "WampRPC", 
     // but "onCall" method can intercept the RPC and invoke it.
-    private int multiplyArguments( /* WampSocket socket, */ JSONArray args) throws Exception {
-        int retval = args.getInt(0);
-        for(int i = 1; i < args.length(); i++) {
-           retval *= args.getInt(i);
+    private int multiplyArguments( /* WampSocket socket, */ ArrayNode args) throws Exception {
+        int retval = args.get(0).asInt();
+        for(int i = 1; i < args.size(); i++) {
+           retval *= args.get(i).asInt();
         }
         return retval;
     }
 
     
     @Override
-    public Object onCall(WampSocket socket, String method, JSONArray args) throws Exception {
+    public Object onCall(WampSocket socket, String method, ArrayNode args) throws Exception {
         if(method.equals("multiply")) return multiplyArguments(args);
         else return super.onCall(socket, method, args);  // to invoke the methods annotated with "WampRPC"
     }
@@ -113,14 +113,14 @@ This is an abstract class that provides interceptor methods for WAMP events:
 
 * **onDisconnect(WebSocket client)**: called when a client is disconnected from the application (URI).
 
-* **onCall(WebSocket client, String method, JSONArray args)**: it can be overriden to add new RPCs.
+* **onCall(WebSocket client, String method, ArrayNode args)**: it can be overriden to add new RPCs.
 
 * **onSubscribe(WampSocket client, WampTopic topic)**: it can be overriden to intercept subscription requests to the topics. In this case, remember to call the superclass method before/after your business logic.
 (i.e: to send an EVENT to the client, the method should be called before the publication).
 
 * **onUnsubscribe(WampSocket client, WampTopic topic)**: it can be overriden to intercept unsubscription requests to the topics. Also, rembember to cal the superclass method before/after your business logic.
 
-* **onPublish(WampSocket sourceClient, WampTopic topic, JSONObject event, Set<String> excluded, Set<String> eligible)**: it can be overriden to intercept event publications. Remember to call the superclass method before/after your business logic.
+* **onPublish(WampSocket sourceClient, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible)**: it can be overriden to intercept event publications. Remember to call the superclass method before/after your business logic.
 
 
 
@@ -140,9 +140,9 @@ It represents a connection with a WAMP client, and provides the following method
 
 * **normalizeURI(String curie)**: converts a CURIE to a fully qualified URI (using PREFIXES registered by the client).
 
-* **publishEvent(WampTopic topic, JSONObject event, boolean excludeMe)**: broadcasts an EVENT message with the "event" object data to all clients subscribed in the topic (with the possibility to exclude the publisher).
+* **publishEvent(WampTopic topic, JsonNode event, boolean excludeMe)**: broadcasts an EVENT message with the "event" object data to all clients subscribed in the topic (with the possibility to exclude the publisher).
 
-* **publishEvent(WampTopic topic, JSONObject event, Set<String> excluded, Set<String> eligible)**: broadcast and EVENT message with the "event" object data to the "eligible" list of clients (sessionIds), with the exception of the clients in the "excluded" list (sessionIds).
+* **publishEvent(WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible)**: broadcast and EVENT message with the "event" object data to the "eligible" list of clients (sessionIds), with the exception of the clients in the "excluded" list (sessionIds).
 
 
 
