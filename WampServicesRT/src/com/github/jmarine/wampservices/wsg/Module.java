@@ -129,7 +129,6 @@ public class Module extends WampModule
     public Object onCall(WampSocket socket, String method, JSONArray args) throws Exception 
     {
         Object retval = null;
-       
         if(method.equals("list_groups")) {
             String appId = args.getJSONObject(0).getString("app");
             wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId));
@@ -140,34 +139,6 @@ public class Module extends WampModule
         } else {
             retval = super.onCall(socket, method, args);
         }
-        /*
-        if(method.equals("login")) {
-            retval = login(socket, args.getJSONObject(0));
-        } else if(method.equals("register")) {
-            retval = registerUser(socket, args.getJSONObject(0));
-        } else if(method.equals("list_apps")) {
-            retval = listApps();
-        } else if(method.equals("list_groups")) {
-            String appId = args.getJSONObject(0).getString("app");
-            wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId));
-            retval = listGroups(appId);
-        } else if(method.equals("new_app")) {
-            retval = newApp(socket, args.getJSONObject(0));
-        } else if(method.equals("delete_app")) {
-            retval = deleteApp(socket, args.getJSONObject(0));
-        } else if(method.equals("open_group")) {
-            retval = openGroup(socket, args.getJSONObject(0));
-        } else if(method.equals("exit_group")) {
-            String gid = args.getJSONObject(0).getString("gid");
-            retval = exitGroup(socket, gid);
-        } else if(method.equals("update_group")) {
-            retval = updateGroup(socket, args.getJSONObject(0));
-        } else if(method.equals("update_member")) {
-            retval = updateMember(socket, args.getJSONObject(0));
-        } else {
-            throw new WampException(WampException.WAMP_GENERIC_ERROR_URI, "Method not implemented: " + method);
-        }
-        */
         return retval;
     }
 
