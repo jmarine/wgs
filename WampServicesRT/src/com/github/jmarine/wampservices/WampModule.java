@@ -57,7 +57,7 @@ public abstract class WampModule
                 } else if(paramType.isInstance(app)) {    // WampApplication parameter info
                     params.add(app);
                 } else if(ArrayNode.class.isAssignableFrom(paramType)) {
-                    params.add(args);  // TODO: only from argCount to args.length()
+                    params.add(args);  // TODO: only from argCount to args.size()
                     argCount = args.size();
                 } else if(ObjectNode.class.isAssignableFrom(paramType)) {
                     params.add(args.get(argCount++));
