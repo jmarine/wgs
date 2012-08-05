@@ -221,11 +221,10 @@ WsgClient.prototype = {
                 client.debug("call not found: " + call);
             }            
         } else if(arr[0] == 8) {  // EVENT
-            var topic = arr[1];
-            if(client.topics[topic]) {
-                client.topics[topic].forEach(function(callback) {
-                    arr[2].topic = topic;
-                    callback(arr[2]);                
+            var topicURI = arr[1];
+            if(client.topics[topicURI]) {
+                client.topics[topicURI].forEach(function(callback) {
+                    callback(arr[2], topicURI);                
                 });
             } else {
                 // client.debug("topic not found: " + topic);
