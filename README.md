@@ -78,11 +78,10 @@ public class MyModule extends WampModule
     
     @Override
     public Object onCall(WampSocket socket, String method, JSONArray args) throws Exception {
-        if(method.equals("multiply")) return multiplyArguments(arg);
+        if(method.equals("multiply")) return multiplyArguments(args);
         else return super.onCall(socket, method, args);  // to invoke the methods annotated with "WampRPC"
     }
 
-    ...
 }
 ```
 
@@ -107,6 +106,8 @@ context.wamp1.topics=https://github.com/jmarine/wampservices#topic1,https://gith
 This is an abstract class that provides interceptor methods for WAMP events:
 
 * **getBaseURL()**: it must be overriden to return the base URI of the RPCs / topic events to intercept.
+
+* **getWampApplication()**: obtains a reference to the module's application context.
 
 * **onConnect(WebSocket client)**: called when a client is connected to the application (URI).
 
