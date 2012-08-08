@@ -95,7 +95,7 @@ public class GroupMember
     {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode obj = mapper.createObjectNode();
-        obj.put("cid", ((client!=null)? client.getClientId():""));
+        obj.put("sid", ((client!=null)? client.getSessionId():""));
         obj.put("nick", ((nick!=null)? nick : "") );
         obj.put("type",userType);
         obj.put("role",((role!=null)? role.getName():""));

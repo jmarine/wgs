@@ -13,7 +13,7 @@ function WsgClient(u) {
 
 WsgClient.prototype = {
   ws: null,
-  cid: null,
+  sid: null,
   onstatechange: null,
   calls: new Array(),
   topics: new Array(),
@@ -113,7 +113,7 @@ WsgClient.prototype = {
         if(state == WsgState.WELCOMED) {
             var msg = Object();
             msg.nick = nick;
-            msg.password = password;  // hash_sha1(password : this.cid)
+            msg.password = password;  // hash_sha1(password : this.sid)
             this.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
             this.call("wsg:login", msg).then(
                 function(response) {
@@ -196,7 +196,7 @@ WsgClient.prototype = {
         var arr = JSON.parse(e.data);
 
         if (arr[0] == 0) {  // WELCOME
-            client.cid = arr[1];
+            client.sid = arr[1];
             client.onstatechange(WsgState.WELCOMED, arr);
         } else if (arr[0] == 3) {  // CALLRESULT
             var call = arr[1];
@@ -303,12 +303,12 @@ WsgClient.prototype = {
       this.call("wsg:update_group", msg).then(callback, callback);
   },
 
-  updateMember: function(appId, gid, slot, cid, usertype, nick, role, team, callback) {
+  updateMember: function(appId, gid, slot, sid, usertype, nick, role, team, callback) {
       var msg = Object();
       msg.app = appId;
       msg.gid = gid;
       msg.slot = slot;
-      msg.cid = cid;
+      msg.sid = sid;
       msg.nick = nick;
       msg.role = role;
       msg.team = team;

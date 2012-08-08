@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -38,6 +39,7 @@ public class WampApplication extends WebSocketApplication {
         this.contextPath = contextPath;
         this.modules = new HashMap<String,WampModule>();
         this.topics = new ConcurrentHashMap<String,WampTopic>();
+        
         this.defaultModule = new WampModule(this) {
             @Override
             public String getBaseURL() {

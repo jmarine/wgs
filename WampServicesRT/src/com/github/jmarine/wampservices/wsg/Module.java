@@ -473,14 +473,14 @@ public class Module extends WampModule
             
             client.addGroup(g);
             ArrayNode conArray = mapper.createArrayNode();
-            for(String cid : topic.getSocketIds()) {
-                    Client c = clients.get(cid);
+            for(String sid : topic.getSocketIds()) {
+                    Client c = clients.get(sid);
                     User u = ((c!=null)? c.getUser() : null);
                     String nick = ((u == null) ? "" : u.getNick());
 
                     ObjectNode con = mapper.createObjectNode();
                     con.put("nick", nick);
-                    con.put("cid", cid);
+                    con.put("sid", sid);
                     conArray.add(con);
             }
             response.put("connections", conArray);            
@@ -561,13 +561,13 @@ public class Module extends WampModule
         
         if(valid && !created && !joined) {
             User u = client.getUser();
-            String cid = client.getClientId();
+            String sid = client.getSessionId();
             String nickName = ( (u == null) ? "" : u.getNick() );
 
             ObjectNode event = mapper.createObjectNode();
             event.put("cmd", "user_joined");
             event.put("nick", nickName);
-            event.put("cid", cid);
+            event.put("sid", sid);
             event.put("type", "user");
             event.put("valid", valid);
                     
@@ -621,7 +621,7 @@ public class Module extends WampModule
             String gid = data.get("gid").asText();
 
             int slot = data.get("slot").asInt();
-            String cid = data.get("cid").asText();
+            String sid = data.get("sid").asText();
             String nick = data.get("nick").asText();
             String role = data.get("role").asText();
             String usertype = data.get("type").asText();
@@ -636,7 +636,7 @@ public class Module extends WampModule
                 valid = true;
                 logger.log(Level.FINE, "open_group: group found: " + gid);
 
-                Client c = clients.get(cid);
+                Client c = clients.get(sid);
                 if(c!=null) {
                     // when it's not a reservation of a member slot
                     User u = c.getUser();
@@ -656,7 +656,7 @@ public class Module extends WampModule
                 g.setMember(slot, member);
 
 
-                response.put("cid", cid);
+                response.put("sid", sid);
                 response.put("nick", nick);
                 response.put("type", usertype);
                 response.put("slot", slot);
@@ -688,7 +688,7 @@ public class Module extends WampModule
                 logger.log(Level.FINE, "open_group: group found: " + gid);
 
                 response.put("gid", g.getGid());
-                response.put("cid", socket.getSessionId());
+                response.put("sid", socket.getSessionId());
 
                 int num_members = 0;
                 ArrayNode membersArray = mapper.createArrayNode();

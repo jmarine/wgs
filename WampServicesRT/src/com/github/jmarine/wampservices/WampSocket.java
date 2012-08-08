@@ -85,6 +85,7 @@ public class WampSocket extends DefaultWebSocket
     {
         return topics;
     }
+
     
     
     public String normalizeURI(String curie) {
@@ -190,6 +191,7 @@ public class WampSocket extends DefaultWebSocket
     public void publishEvent(WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) {
         logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         if(eligible == null) eligible = topic.getSocketIds();
+        else eligible.retainAll(topic.getSocketIds());
         try {
             WampModule module = app.getWampModule(topic.getBaseURI());
             module.onPublish(this, topic, event, excluded, eligible);

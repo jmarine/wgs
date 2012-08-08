@@ -83,10 +83,10 @@ public abstract class WampModule
     
     public void   onPublish(WampSocket clientSocket, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
         String msg = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
-        for (String cid : eligible) {
-            if((excluded==null) || (!excluded.contains(cid))) {
-                WampSocket socket = topic.getSocket(cid);
-                if(socket != null && socket.isConnected() && !excluded.contains(cid)) {
+        for (String sid : eligible) {
+            if((excluded==null) || (!excluded.contains(sid))) {
+                WampSocket socket = topic.getSocket(sid);
+                if(socket != null && socket.isConnected() && !excluded.contains(sid)) {
                     socket.sendSafe(msg);
                 }
             }

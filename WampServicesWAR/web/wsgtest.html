@@ -250,7 +250,7 @@ function show_group(group) {
                 roleFixed = true;
             }
 
-            append_group_member(false, memberId, memberNick, member.cid, member.type, member.role, currentNickSelected, roleFixed, currentApp.ai);
+            append_group_member(false, memberId, memberNick, member.sid, member.type, member.role, currentNickSelected, roleFixed, currentApp.ai);
 
         });
     }
@@ -272,19 +272,19 @@ function update_member(field, as_previous_client)
     var option = $("#" + field + " option:selected");
     var selectedValue = option.val();
     var userTypePos = selectedValue.indexOf(":");
-    var cid = selectedValue;
+    var sid = selectedValue;
     var usertype = "user";
     if(userTypePos != -1) {
-        cid = cid.substring(1+userTypePos);
+        sid = sid.substring(1+userTypePos);
         usertype = selectedValue.substring(0,userTypePos);
     }
     var nick = option.text();
-    if(cid == "") nick = "";
-    else if(cid == wsgclient.cid) nick = "";
+    if(sid == "") nick = "";
+    else if(sid == wsgclient.sid) nick = "";
     var slot = parseInt(field.substring(6));
     var role = $("#role" + slot + " option:selected").val();
     var team = parseInt($("#team" + slot).val());
-    wsgclient.updateMember(appId, gid, slot, cid, usertype, nick, role, team, update_group);
+    wsgclient.updateMember(appId, gid, slot, sid, usertype, nick, role, team, update_group);
     
 }
 
@@ -292,13 +292,13 @@ function update_member(field, as_previous_client)
 function populate_group_member_fields(added, memberId, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai) {
     var members = "";
     var roles = "";
-    if(added || memberNick == "" || memberCid == wsgclient.cid || (wsgclient.nick == $("#group_admin").val()) ) {
+    if(added || memberNick == "" || memberCid == wsgclient.sid || (wsgclient.nick == $("#group_admin").val()) ) {
         members += '<option value="">Empty</option>';
-        members += '<option value="user:'+wsgclient.cid+'" ' + ((currentNickSelected && memberType=="user")? "selected" : "") + '>Me</option>';
-        if(ai) members += '<option value="computer:'+wsgclient.cid+'" ' + ((currentNickSelected && memberType=="computer")? "selected" : "") + '>MyComputer</option>';
+        members += '<option value="user:'+wsgclient.sid+'" ' + ((currentNickSelected && memberType=="user")? "selected" : "") + '>Me</option>';
+        if(ai) members += '<option value="computer:'+wsgclient.sid+'" ' + ((currentNickSelected && memberType=="computer")? "selected" : "") + '>MyComputer</option>';
     } 
     
-    if(!added && memberNick != "" && memberCid != wsgclient.cid) {
+    if(!added && memberNick != "" && memberCid != wsgclient.sid) {
         var nick = memberNick;
         var val = memberCid;
         if(memberType != "") {
@@ -309,7 +309,7 @@ function populate_group_member_fields(added, memberId, memberNick, memberCid, me
     }
     
     currentGroup.roles.forEach(function(role) {
-        if(!roleFixed || (memberRole==role.name) || memberCid == wsgclient.cid || (wsgclient.nick == $("#group_admin").val()) ) {
+        if(!roleFixed || (memberRole==role.name) || memberCid == wsgclient.sid || (wsgclient.nick == $("#group_admin").val()) ) {
             roles += '<option value="' + role.name + '" ' + ((memberRole==role.name)? "selected" : "") + '>' + role.name + '</option>';
         }
     });    
@@ -369,20 +369,20 @@ function update_group(response) {
                 // append new joined user's nick in selectboxes
                 for(var index = 0; index < num_members; index += 1) {
                     if( (wsgclient.nick == $("#group_admin").val()) 
-                        /* || (wsgclient.cid == $("#member"+index+" option:selected").val()) */
+                        /* || (wsgclient.sid == $("#member"+index+" option:selected").val()) */
                       ) {
                         var val = "";
                         var text = "Empty";
-                        if(response.cid != "") {
-                            val = response.type + ":" + response.cid;
+                        if(response.sid != "") {
+                            val = response.type + ":" + response.sid;
                             text = response.type + ":" + response.nick;
                         
                             if($("#member"+index+" option[value='"+val+"']").size() <= 0) {  // insert user
                                 $("#member"+index).append($("<option>").attr("value", val).text(text));
                             }
                             /*
-                            else if(response.cid != wsgclient.cid) {  // updating usertype
-                                $("#member"+index+" option[value$=':"+response.cid+"']").attr("value", val).text(text);
+                            else if(response.sid != wsgclient.sid) {  // updating usertype
+                                $("#member"+index+" option[value$=':"+response.sid+"']").attr("value", val).text(text);
                             }
                             */
                         }
@@ -396,8 +396,8 @@ function update_group(response) {
                     if(wsgclient.nick == $("#group_admin").val()) {
 
                         var val = "";
-                        if(response.cid != "") {
-                            val = response.type + ":" + response.cid;
+                        if(response.sid != "") {
+                            val = response.type + ":" + response.sid;
                         }
                         $("#member"+memberId+" option[value='"+val+"']").attr("selected", "selected");
                         $("#role"+memberId+" option[value='"+response.role+"']").attr("selected", "selected");
@@ -405,9 +405,9 @@ function update_group(response) {
 
                     } else {
 
-                        var currentNickSelected = (wsgclient.cid == response.cid);
-                        var roleFixed = (response.role != "") && (response.cid != "") && (wsgclient.cid != response.cid);
-                        populate_group_member_fields(false, memberId, response.nick, response.cid, response.type, response.role, currentNickSelected, roleFixed, currentApp.ai);
+                        var currentNickSelected = (wsgclient.sid == response.sid);
+                        var roleFixed = (response.role != "") && (response.sid != "") && (wsgclient.sid != response.sid);
+                        populate_group_member_fields(false, memberId, response.nick, response.sid, response.type, response.role, currentNickSelected, roleFixed, currentApp.ai);
                     }
                 }
 
@@ -415,14 +415,14 @@ function update_group(response) {
 
                 // clear unjoined user's nick from selectboxes
                 for(var index = 0; index < num_members; index += 1) {
-                    $("#member"+index+" option[value$=':"+response.cid+"']").remove();
+                    $("#member"+index+" option[value$=':"+response.sid+"']").remove();
                 }
                 
                 if(response.members) {
                     response.members.forEach(function(member) {
                         var memberId = member.slot;  
                         if(wsgclient.nick != $("#group_admin").val()) {
-                            populate_group_member_fields(false, memberId, member.nick, member.cid, member.type, member.role, false, false, currentApp.ai);
+                            populate_group_member_fields(false, memberId, member.nick, member.sid, member.type, member.role, false, false, currentApp.ai);
                         }
                     });
                 }

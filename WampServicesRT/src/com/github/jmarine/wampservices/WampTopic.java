@@ -50,9 +50,9 @@ public class WampTopic {
         sockets.remove(socket.getSessionId());
     }
     
-    public WampSocket getSocket(String cid)
+    public WampSocket getSocket(String sid)
     {
-        return sockets.get(cid);
+        return sockets.get(sid);
     }
 
     public Set<String> getSocketIds()
