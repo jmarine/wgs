@@ -26,7 +26,11 @@ public class WampServlet extends HttpServlet
         try {
             String uri = config.getInitParameter("uri");
             if(uri == null) throw new ServletException("ServletInitParameter uri is not defined");
-            wampApplication = new WampApplication(contextPath);
+            
+            boolean topicWildcardsEnabled = false;
+            String enableWildcards = config.getInitParameter("enableTopicWildcards");
+            if((enableWildcards != null) && (enableWildcards.toUpperCase().equals("TRUE"))) topicWildcardsEnabled = true;
+            wampApplication = new WampApplication(contextPath, topicWildcardsEnabled);
             
             String topics = config.getInitParameter("topics");
             if(topics != null) {

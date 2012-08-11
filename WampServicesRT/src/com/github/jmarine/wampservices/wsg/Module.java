@@ -133,7 +133,7 @@ public class Module extends WampModule
         Object retval = null;
         if(method.equals("list_groups")) {
             String appId = args.get(0).get("app").asText();
-            wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId));
+            wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId), 0);
             retval = listGroups(appId);
         } else if(method.equals("exit_group")) {
             String gid = args.get(0).get("gid").asText();
@@ -151,7 +151,7 @@ public class Module extends WampModule
         cli.setState(ClientState.INVALID);  // not authenticated
         clients.put(socket.getSessionId(), cli);
         
-        wampApp.subscribeClientWithTopic(socket, getFQtopicURI("apps_event"));
+        wampApp.subscribeClientWithTopic(socket, getFQtopicURI("apps_event"), 0);
     }
     
     @Override
@@ -469,7 +469,7 @@ public class Module extends WampModule
             String topicName = getFQtopicURI("group_event:" + g.getGid());
             WampTopic topic = wampApp.getTopic(topicName);
             if(topic == null) topic = wampApp.createTopic(topicName);
-            wampApp.subscribeClientWithTopic(client.getSocket(), topicName);
+            wampApp.subscribeClientWithTopic(client.getSocket(), topicName, 0);
             
             client.addGroup(g);
             ArrayNode conArray = mapper.createArrayNode();
@@ -721,16 +721,17 @@ public class Module extends WampModule
 
                 client.removeGroup(g);
                 String topicName = getFQtopicURI("group_event:" + g.getGid());
-                WampTopic topic = wampApp.unsubscribeClientFromTopic(socket, topicName);
-                if(topic.getSocketCount() == 0) {
+                for(WampTopic topic : wampApp.unsubscribeClientFromTopic(socket, topicName)) {
+                    if(topic.getSubscriptionCount() == 0) {
 
-                    logger.log(Level.INFO, "closing group {0}: {1}", new Object[]{ g.getGid(), g.getDescription()});
+                        logger.log(Level.INFO, "closing group {0}: {1}", new Object[]{ g.getGid(), g.getDescription()});
 
-                    groups.remove(g.getGid());
-                    applications.get(appId).removeGroup(g);
+                        groups.remove(g.getGid());
+                        applications.get(appId).removeGroup(g);
 
-                    wampApp.deleteTopic(topicName);
-                    socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+appId)), listGroups(appId), false);  // don't exclude Me
+                        wampApp.deleteTopic(topicName);
+                        socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+appId)), listGroups(appId), false);  // don't exclude Me
+                    }
                 }
             }
 

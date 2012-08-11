@@ -263,7 +263,7 @@ public class Application implements Serializable {
     }
     
 
-    public ArrayList<Group> getGroupsByState(GroupState state)
+    public Collection<Group> getGroupsByState(GroupState state)
     {
         ArrayList<Group> retval = new ArrayList<Group>();
         for(Group g : groupsByGid.values()) {

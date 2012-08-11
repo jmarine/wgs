@@ -71,21 +71,19 @@ public abstract class WampModule
         throw new WampException(WampException.WAMP_GENERIC_ERROR_URI, "Method not implemented: " + methodName);
     }
     
-    public void   onSubscribe(WampSocket clientSocket, WampTopic topic) throws Exception { 
-        clientSocket.addTopic(topic);
-        topic.addSocket(clientSocket);
+    public void   onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription) throws Exception { 
+        topic.addSubscription(subscription);
     }
 
-    public void   onUnsubscribe(WampSocket clientSocket, WampTopic topic) throws Exception { 
-        clientSocket.removeTopic(topic);
-        topic.removeSocket(clientSocket);
+    public void   onUnsubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription) throws Exception { 
+        topic.removeSubscription(subscription);
     }
     
     public void   onPublish(WampSocket clientSocket, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
         String msg = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
         for (String sid : eligible) {
             if((excluded==null) || (!excluded.contains(sid))) {
-                WampSocket socket = topic.getSocket(sid);
+                WampSocket socket = topic.getSubscription(sid).getSocket();
                 if(socket != null && socket.isConnected() && !excluded.contains(sid)) {
                     socket.sendSafe(msg);
                 }

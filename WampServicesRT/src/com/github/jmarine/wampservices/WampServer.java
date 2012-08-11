@@ -74,8 +74,12 @@ public class WampServer {
                     String context = tkContexts.nextToken();
                     String uri = wampConfig.getProperty("context." + context + ".uri");
 
+                    boolean topicWildcardsEnabled = false;
+                    String enableWildcards = wampConfig.getProperty("context." + context + ".enableTopicWildcards");
+                    if((enableWildcards != null) && (enableWildcards.toUpperCase().equals("TRUE"))) topicWildcardsEnabled = true;
+                    
                     System.out.println("Creating WAMP context URI: " + uri);
-                    WampApplication wampApplication = new WampApplication(uri);
+                    WampApplication wampApplication = new WampApplication(uri, topicWildcardsEnabled);
 
                     String topics = wampConfig.getProperty("context." + context + ".topics");
                     if(topics != null) {

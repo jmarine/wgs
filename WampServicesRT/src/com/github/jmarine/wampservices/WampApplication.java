@@ -1,20 +1,19 @@
 package com.github.jmarine.wampservices;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.Collections;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.sun.grizzly.tcp.Request;
 import com.sun.grizzly.websockets.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.TextNode;
 
 
 
@@ -29,16 +28,20 @@ public class WampApplication extends WebSocketApplication {
     public  static final String WAMP_BASE_URL = "https://github.com/jmarine/wampservices";
     
     private String contextPath;
-    private Map<String,WampTopic>  topics;        
     private Map<String,WampModule> modules;
+    private TreeMap<String,WampTopic> topics;
+    private TreeMap<String,WampTopicGroup> topicGroups;
     private WampModule defaultModule;
+    private boolean topicWildcardsEnabled;
     
 
     
-    public WampApplication(String contextPath) {
+    public WampApplication(String contextPath, boolean topicWildcardsEnabled) {
         this.contextPath = contextPath;
         this.modules = new HashMap<String,WampModule>();
-        this.topics = new ConcurrentHashMap<String,WampTopic>();
+        this.topics = new TreeMap<String,WampTopic>();
+        this.topicGroups = new TreeMap<String,WampTopicGroup>();
+        this.topicWildcardsEnabled = topicWildcardsEnabled;
         
         this.defaultModule = new WampModule(this) {
             @Override
@@ -73,6 +76,7 @@ public class WampApplication extends WebSocketApplication {
         if(module == null) module = defaultModule;
         return module;
     }        
+    
 
     /**
      * Invoked when the opening handshake has been completed for a specific
@@ -126,7 +130,7 @@ public class WampApplication extends WebSocketApplication {
                     break;
                 case 5:
                     String subscriptionTopicName = request.get(1).asText();
-		    subscribeClientWithTopic(clientSocket, subscriptionTopicName);
+		    subscribeClientWithTopic(clientSocket, subscriptionTopicName, 0);
                     break;
 		case 6:
                     String unsubscriptionTopicName = request.get(1).asText();
@@ -163,8 +167,9 @@ public class WampApplication extends WebSocketApplication {
                 logger.log(Level.SEVERE, "Error disconnecting client:", ex);
             }
         }
-        for(String topicName : clientSocket.getTopics().keySet()) {
-            unsubscribeClientFromTopic(clientSocket, topicName);
+        
+        for(WampSubscription subscription : clientSocket.getSubscriptions()) {
+            unsubscribeClientFromTopic(clientSocket, subscription.getTopicURIs());
         }
         super.onClose(websocket, frame);
         logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
@@ -238,10 +243,7 @@ public class WampApplication extends WebSocketApplication {
     }
     
      
-    public WampTopic getTopic(String topicFQname)
-    {
-        return topics.get(topicFQname);
-    }
+
     
     public WampTopic createTopic(String topicFQname)
     {
@@ -250,52 +252,143 @@ public class WampApplication extends WebSocketApplication {
             topic = new WampTopic();
             topic.setURI(topicFQname);
             topics.put(topicFQname, topic);
+            
+            for(WampTopicGroup group : topicGroups.values()) {
+                String regexp = group.getTopicUriPattern().replace("*", ".*");
+                if(topicFQname.matches(regexp)) {
+                    group.getTopics().add(topic);
+                    for(WampSubscription subscription : group.getSubscriptions()) {
+                        try { 
+                            WampModule module = getWampModule(topic.getBaseURI());
+                            module.onSubscribe(subscription.getSocket(), topic, subscription);
+                        } catch(Exception ex) {
+                            logger.log(Level.FINE, "Error in subscription to topic", ex);
+                        }                      
+                    }
+                }
+            }
+            
         }
         return topic;
     }
-    
     
     public WampTopic deleteTopic(String topicFQname)
     {
         WampTopic topic = topics.get(topicFQname);
         if(topic != null) {
             topics.remove(topicFQname);
+            
+            for(WampTopicGroup group : topicGroups.values()) {
+                String regexp = group.getTopicUriPattern().replace("*", ".*");
+                if(topicFQname.matches(regexp)) {
+                    group.getTopics().remove(topic);
+                    for(WampSubscription subscription : group.getSubscriptions()) {
+                        try { 
+                            WampModule module = getWampModule(topic.getBaseURI());
+                            module.onUnsubscribe(subscription.getSocket(), topic, subscription);
+                        } catch(Exception ex) {
+                            logger.log(Level.FINE, "Error in subscription to topic", ex);
+                        }                      
+                    }
+                }
+            }            
         } 
         return topic;
     }
     
-
-    public WampTopic subscribeClientWithTopic(WampSocket clientSocket, String topicName)
+    
+    public WampTopic getTopic(String topicFQname)
     {
-        topicName = clientSocket.normalizeURI(topicName);
-        WampTopic topic = getTopic(topicName);
-        
-        if(topic != null) {
-            try { 
-                WampModule module = getWampModule(topic.getBaseURI());
-                module.onSubscribe(clientSocket, topic); 
-            } catch(Exception ex) {
-                logger.log(Level.SEVERE, "Error in subscription to topic", ex);
-            }          
-        }
-        
-        return topic;
+        return topics.get(topicFQname);
+    }    
+    
+    public boolean isTopicUriWithWildcards(String topicUrlPattern) {
+        int wildcardPos = topicUrlPattern.indexOf("*");
+        return (topicWildcardsEnabled) && (wildcardPos != -1);
     }
     
-    public WampTopic unsubscribeClientFromTopic(WampSocket clientSocket, String topicName)
+    public Collection<WampTopic> getTopics(String topicUriPattern)
     {
-        topicName = clientSocket.normalizeURI(topicName);
-        WampTopic topic = getTopic(topicName);
-        if(topic != null) {
-            try { 
-                WampModule module = getWampModule(topic.getBaseURI());
-                module.onUnsubscribe(clientSocket, topic); 
-            } catch(Exception ex) {
-                logger.log(Level.SEVERE, "Error in unsubscription to topic", ex);
-            }          
+        WampTopicGroup group = topicGroups.get(topicUriPattern);
+        
+        if(group != null) {
             
+            return group.getTopics();
+            
+        } else {
+        
+            if(isTopicUriWithWildcards(topicUriPattern)) {
+                int wildcardPos = topicUriPattern.indexOf("*");
+                topicUriPattern = topicUriPattern.substring(0, wildcardPos);
+                String topicUriEnd = topicUriPattern + "~";
+                NavigableMap<String,WampTopic> navMap = topics.subMap(topicUriPattern, true, topicUriEnd, false);
+                return navMap.values();
+            } else {                
+                ArrayList<WampTopic> retval = new ArrayList<WampTopic>();
+                WampTopic topic = getTopic(topicUriPattern);
+                if(topic != null) retval.add(topic);
+                return retval;
+            }
         }
-        return topic;
+    }
+    
+
+    public Collection<WampTopic> subscribeClientWithTopic(WampSocket clientSocket, String topicUriPattern, int options)
+    {
+        topicUriPattern = clientSocket.normalizeURI(topicUriPattern);
+        Collection<WampTopic> topics = getTopics(topicUriPattern);
+        WampSubscription subscription = null;
+        
+        if(isTopicUriWithWildcards(topicUriPattern)) {
+            WampTopicGroup topicsGroup = topicGroups.get(topicUriPattern);
+            if(topicsGroup == null) {
+                topicsGroup = new WampTopicGroup(topicUriPattern, topics);
+                topicGroups.put(topicUriPattern, topicsGroup);
+            }
+            if(topics.size() > 0) {
+                subscription = new WampSubscription(clientSocket, topicsGroup, options);
+            }
+        } else {
+            if(topics.size() > 0) {
+                WampTopic topic = topics.iterator().next();
+                subscription = new WampSubscription(clientSocket, topic, options);
+            }
+        }
+        
+        if(topics.size() > 0) {
+            clientSocket.addSubscription(subscription);
+        
+            for(WampTopic topic : topics) {
+                try { 
+                    WampModule module = getWampModule(topic.getBaseURI());
+                    module.onSubscribe(clientSocket, topic, subscription);
+                } catch(Exception ex) {
+                    logger.log(Level.FINE, "Error in subscription to topic", ex);
+                }          
+            }
+        }
+    
+        return topics;
+    }
+    
+    public Collection<WampTopic> unsubscribeClientFromTopic(WampSocket clientSocket, String topicUriPattern)
+    {
+        topicUriPattern = clientSocket.normalizeURI(topicUriPattern);
+        Collection<WampTopic> topics = getTopics(topicUriPattern);
+        
+        for(WampTopic topic : topics) {
+            WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
+            if(subscription != null) {
+                try { 
+                    WampModule module = getWampModule(topic.getBaseURI());
+                    module.onUnsubscribe(clientSocket, topic, subscription);
+                } catch(Exception ex) {
+                    logger.log(Level.FINE, "Error in unsubscription to topic", ex);
+                }          
+            }
+        }
+        
+        return topics;
     }
     
     

@@ -4,6 +4,7 @@
  */
 package com.github.jmarine.wampservices;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class WampTopic {
     private String uri;
-    private Map<String,WampSocket> sockets = new ConcurrentHashMap<String,WampSocket>();
+    private Map<String,WampSubscription> subscriptions = new ConcurrentHashMap<String,WampSubscription>();
 
     /**
      * @return the name
@@ -39,30 +40,31 @@ public class WampTopic {
     /**
      * @return the sockets
      */
-    public void addSocket(WampSocket socket) {
-        sockets.put(socket.getSessionId(), socket);
+    public void addSubscription(WampSubscription subscription) {
+        WampSocket socket = subscription.getSocket();
+        subscriptions.put(socket.getSessionId(), subscription);
     }
 
     /**
      * @param socket the sockets to set
      */
-    public void removeSocket(WampSocket socket) {
-        sockets.remove(socket.getSessionId());
+    public void removeSubscription(WampSubscription subscription) {
+        subscriptions.remove(subscription.getSocket().getSessionId());
     }
     
-    public WampSocket getSocket(String sid)
+    public WampSubscription getSubscription(String sid)
     {
-        return sockets.get(sid);
+        return subscriptions.get(sid);
     }
 
     public Set<String> getSocketIds()
     {
-        return sockets.keySet();
+        return subscriptions.keySet();
     }  
     
-    public int getSocketCount()
+    public int getSubscriptionCount()
     {
-        return sockets.size();
+        return subscriptions.size();
     }    
 
 }

@@ -11,6 +11,7 @@ import com.sun.grizzly.websockets.DefaultWebSocket;
 import com.sun.grizzly.websockets.ProtocolHandler;
 import com.sun.grizzly.websockets.WebSocketException;
 import com.sun.grizzly.websockets.WebSocketListener;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import org.codehaus.jackson.JsonNode;
@@ -29,7 +30,7 @@ public class WampSocket extends DefaultWebSocket
     private String sessionId;
     private Map    sessionData;
     private Map<String,String> prefixes;
-    private Map<String,WampTopic> topics;
+    private Collection<WampSubscription> subscriptions;
 
     public WampSocket(WampApplication app,
                         ProtocolHandler protocolHandler,
@@ -40,7 +41,7 @@ public class WampSocket extends DefaultWebSocket
         this.app    = app;
         sessionId   = UUID.randomUUID().toString();
         sessionData = new ConcurrentHashMap();
-        topics      = new ConcurrentHashMap<String,WampTopic>();        
+        subscriptions = new ArrayList<WampSubscription>();        
         prefixes    = new HashMap<String,String>();
     }
 
@@ -71,19 +72,21 @@ public class WampSocket extends DefaultWebSocket
         return prefixes.get(prefix);
     }
 
-    public void addTopic(WampTopic topic)
+
+
+    public void addSubscription(WampSubscription subscription)
     {
-        topics.put(topic.getURI(), topic);
+        subscriptions.add(subscription);
     }
     
-    public void removeTopic(WampTopic topic)
+    public void removeSubscription(WampSubscription subscription)
     {
-        topics.remove(topic.getURI());
+        subscriptions.remove(subscription);
     }
     
-    public Map<String,WampTopic> getTopics()
+    public Collection<WampSubscription> getSubscriptions()
     {
-        return topics;
+        return subscriptions;
     }
 
     
