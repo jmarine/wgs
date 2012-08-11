@@ -8,6 +8,10 @@
             <param-value>/wsgservice</param-value>
         </init-param>
         <init-param>
+            <param-name>enableTopicWildcards</param-name>
+            <param-value>TRUE</param-value>
+        </init-param>        
+        <init-param>
             <param-name>topics</param-name>
             <param-value></param-value>
         </init-param>        
