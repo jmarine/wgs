@@ -24,8 +24,7 @@ import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
 
 /**
  * Standalone Java WAMP implementation.
- * Server expects to get the path to webapp as command line parameter
- *
+  *
  * @author Jordi Mariné Fort
  */
 public class WampServer {
