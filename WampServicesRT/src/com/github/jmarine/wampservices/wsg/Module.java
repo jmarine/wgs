@@ -387,22 +387,29 @@ public class Module extends WampModule
     
     
     @WampRPC(name="open_group")
-    public ObjectNode openGroup(WampSocket socket, ObjectNode data) throws Exception
+    public synchronized ObjectNode openGroup(WampSocket socket, ObjectNode data) throws Exception
     {
         Group   g = null;
         boolean valid   = false;
         boolean created = false;
         boolean joined  = false;
+        boolean autoMatch = false;
 
 
         Client client = clients.get(socket.getSessionId());
         // get group/app information
         try {
             String gid = data.get("gid").asText();
-            g = groups.get(gid);
-            if(g != null) {
-                logger.log(Level.INFO, "open_group: group found: " + gid);
-                valid = true;
+            if(gid.equals("automatch")) {
+                autoMatch = true;
+                logger.log(Level.INFO, "open_group: search group for automatch");
+                throw new Exception("automatch");
+            } else {
+                g = groups.get(gid);
+                if(g != null) {
+                    logger.log(Level.INFO, "open_group: group found: " + gid);
+                    valid = true;
+                } 
             }
 
         } catch(Exception ex) {
@@ -410,7 +417,14 @@ public class Module extends WampModule
             try {
                 String appId = data.get("app").asText();
                 Application app = applications.get(appId);
-                if(app != null) {
+                
+                if(app != null && autoMatch) {
+                    g = app.getNextAutoMatchGroup();
+                    if(g != null) valid = true;
+                }
+                
+                if(app != null && g == null) {
+                    logger.log(Level.FINE, "open_group: creating new group");
                     g = new Group();
                     g.setGid(UUID.randomUUID().toString());
                     g.setDescription(client.getUser().getNick() + ": " + g.getGid());
@@ -422,6 +436,8 @@ public class Module extends WampModule
                     g.setMaxMembers(app.getMaxGroupMembers());
                     g.setMinMembers(app.getMinGroupMembers());
                     g.setAdminNick(client.getUser().getNick());
+                    g.setAutoMatchEnabled(autoMatch);
+                    g.setAutoMatchCompleted(false);
 
                     app.addGroup(g);
                     groups.put(g.getGid(), g);
@@ -506,6 +522,11 @@ public class Module extends WampModule
                     avail_slots++;
                 }
             }
+            
+            if(!reserved && avail_slots == 1 && g.getState()==GroupState.OPEN) {
+                g.setAutoMatchCompleted(true);
+            }
+                
             if(!reserved && avail_slots == 0 && num_slots < g.getMaxMembers()) {
                 num_slots++;
             }
@@ -704,6 +725,11 @@ public class Module extends WampModule
                             member.setNick(null);
                             member.setUserType("user");
                             g.setMember(slot, member);
+                            
+                            if(g.isAutoMatchEnabled() && g.isAutoMatchCompleted()) {
+                                g.setAutoMatchCompleted(false);
+                                g.getApplication().addAutoMatchGroup(g);
+                            }                            
                             
                             ObjectNode obj = member.toJSON();
                             obj.put("slot", slot);

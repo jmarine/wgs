@@ -7,12 +7,14 @@ import java.util.Set;
 import com.github.jmarine.wampservices.WampTopic;
 
 
-class Group {
+public class Group {
     private GroupState state;
     private int  minMembers;
     private int  maxMembers;
     private String adminNick;
 
+    private boolean autoMatchEnabled;
+    private boolean autoMatchCompleted;
     private boolean dynamicGroup;
     private boolean alliancesAllowed;
     private boolean observableGroup;
@@ -80,7 +82,37 @@ class Group {
     public void setAdminNick(String adminNick) {
         this.adminNick = adminNick;
     }
+    
+    /**
+     * @return the autoMatchEnabled property
+     */
+    public boolean isAutoMatchEnabled() {
+        return autoMatchEnabled;
+    }
 
+    /**
+     * @param autoMatchEnabled set the autoMatchEnabled property
+     */
+    public void setAutoMatchEnabled(boolean autoMatchEnabled) {
+        this.autoMatchEnabled = autoMatchEnabled;
+    }    
+    
+
+    /**
+     * @return the autoMatchCompleted property
+     */
+    public boolean isAutoMatchCompleted() {
+        return autoMatchCompleted;
+    }
+
+    /**
+     * @param autoMatchCompleted set the autoMatchCompleted property
+     */
+    public void setAutoMatchCompleted(boolean autoMatchCompleted) {
+        this.autoMatchCompleted = autoMatchCompleted;
+    }   
+    
+    
     /**
      * @return the dynamicGroup
      */

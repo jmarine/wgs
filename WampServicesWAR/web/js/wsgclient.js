@@ -14,6 +14,7 @@ function WsgClient(u) {
 WsgClient.prototype = {
   ws: null,
   sid: null,
+  apps: null,
   onstatechange: null,
   calls: new Array(),
   topics: new Array(),
@@ -238,12 +239,33 @@ WsgClient.prototype = {
 
   },
   
+  _update_apps: function(response) {
+      var client = this;
+      this.apps = new Array();
+      if(response.apps) {
+          response.apps.forEach(function(app) {
+              client.apps[app.appId] = app;
+          });
+      }
+  },
+  
+  getAppFromCache: function(appId) {
+      return this.apps[appId];
+  },  
   
   listApps: function(filterByDomain, callback) {
+      var client = this;
       var msg = Object();
       if(filterByDomain) msg.domain = document.domain.toString();
-          
-      this.call("wsg:list_apps", msg).then(callback, callback);
+
+      this.subscribe("https://github.com/jmarine/wampservices/wsgservice#apps_event", this._update_apps, true);
+      this.call("wsg:list_apps", msg).then(function(response) {
+          client._update_apps(response);
+          callback(response);
+        }, function(response) {
+          client._update_apps(response);
+          callback(response);
+        });
   },
   
   listGroups: function(appId, callback) {
@@ -251,8 +273,8 @@ WsgClient.prototype = {
       msg.app = appId;
           
       this.call("wsg:list_groups", msg).then(callback, callback);
-  },  
-  
+  },
+
   newApp: function(name, domain, version, min, max, observable, dynamic, alliances, ai_available, roles, callback) {
       var msg = Object();
       msg.name = name;
