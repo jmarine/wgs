@@ -197,7 +197,7 @@ public class WampSocket extends DefaultWebSocket
         else eligible.retainAll(topic.getSocketIds());
         try {
             WampModule module = app.getWampModule(topic.getBaseURI());
-            module.onPublish(this, topic, event, excluded, eligible);
+            module.onEvent(this, topic, event, excluded, eligible);
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "Error in publishing event to topic", ex);
         }

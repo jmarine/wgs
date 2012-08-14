@@ -396,36 +396,12 @@ public class WampApplication extends WebSocketApplication {
     {
         String topicName = clientSocket.normalizeURI(request.get(1).asText());
         WampTopic topic = getTopic(topicName);
-        JsonNode event = request.get(2);
-        if(request.size() == 3) {
-            clientSocket.publishEvent(topic, event, false);
-        } else if(request.size() == 4) {
-            // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
-            try {
-                boolean excludeMe = request.get(3).asBoolean();
-                clientSocket.publishEvent(topic, event, excludeMe);
-            } catch(Exception ex) {
-                HashSet<String> excludedSet = new HashSet<String>();
-                ArrayNode excludedArray = (ArrayNode)request.get(3);
-                for(int i = 0; i < excludedArray.size(); i++) {
-                    excludedSet.add(excludedArray.get(i).asText());
-                }
-                clientSocket.publishEvent(topic, event, excludedSet, null);
-            }
-        } else if(request.size() == 5) {
-            HashSet<String> excludedSet = new HashSet<String>();
-            HashSet<String> eligibleSet = new HashSet<String>();
-            ArrayNode excludedArray = (ArrayNode)request.get(3);
-            for(int i = 0; i < excludedArray.size(); i++) {
-                excludedSet.add(excludedArray.get(i).asText());
-            }
-            ArrayNode eligibleArray = (ArrayNode)request.get(4);
-            for(int i = 0; i < eligibleArray.size(); i++) {
-                eligibleSet.add(eligibleArray.get(i).asText());
-            }
-            clientSocket.publishEvent(topic, event, excludedSet, eligibleSet);
-        }
-        
+        try {
+            WampModule module = getWampModule(topic.getBaseURI());
+            module.onPublish(clientSocket, topic, request);
+        } catch(Exception ex) {
+            logger.log(Level.FINE, "Error in publishing to topic", ex);
+        }  
     }
     
     

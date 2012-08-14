@@ -79,7 +79,41 @@ public abstract class WampModule
         topic.removeSubscription(subscription);
     }
     
-    public void   onPublish(WampSocket clientSocket, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
+    public void   onPublish(WampSocket clientSocket, WampTopic topic, ArrayNode request) throws Exception 
+    {
+        JsonNode event = request.get(2);
+        if(request.size() == 3) {
+            clientSocket.publishEvent(topic, event, false);
+        } else if(request.size() == 4) {
+            // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
+            try {
+                boolean excludeMe = request.get(3).asBoolean();
+                clientSocket.publishEvent(topic, event, excludeMe);
+            } catch(Exception ex) {
+                HashSet<String> excludedSet = new HashSet<String>();
+                ArrayNode excludedArray = (ArrayNode)request.get(3);
+                for(int i = 0; i < excludedArray.size(); i++) {
+                    excludedSet.add(excludedArray.get(i).asText());
+                }
+                clientSocket.publishEvent(topic, event, excludedSet, null);
+            }
+        } else if(request.size() == 5) {
+            HashSet<String> excludedSet = new HashSet<String>();
+            HashSet<String> eligibleSet = new HashSet<String>();
+            ArrayNode excludedArray = (ArrayNode)request.get(3);
+            for(int i = 0; i < excludedArray.size(); i++) {
+                excludedSet.add(excludedArray.get(i).asText());
+            }
+            ArrayNode eligibleArray = (ArrayNode)request.get(4);
+            for(int i = 0; i < eligibleArray.size(); i++) {
+                eligibleSet.add(eligibleArray.get(i).asText());
+            }
+            clientSocket.publishEvent(topic, event, excludedSet, eligibleSet);
+        }
+        
+    }
+    
+    public void   onEvent(WampSocket clientSocket, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
         String msg = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
         for (String sid : eligible) {
             if((excluded==null) || (!excluded.contains(sid))) {
