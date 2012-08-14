@@ -120,7 +120,9 @@ This is an abstract class that provides interceptor methods for WAMP events:
 
 * **onUnsubscribe(WampSocket client, WampTopic topic)**: it can be overriden to intercept unsubscription requests to the topics. Also, rembember to cal the superclass method before/after your business logic.
 
-* **onPublish(WampSocket sourceClient, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible)**: it can be overriden to intercept event publications. Remember to call the superclass method before/after your business logic.
+* **onPublish(WampSocket sourceClient, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible)**: it can be overriden to intercept publish messages from clients. Remember to call the superclass method before/after your business logic.
+
+* **onEvent(WampSocket sourceClient, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible)**: it can be overriden to intercept event message multicasting. Remember to call the superclass method before/after your business logic.
 
 
 
