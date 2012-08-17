@@ -30,7 +30,7 @@ public class WampSocket extends DefaultWebSocket
     private String sessionId;
     private Map    sessionData;
     private Map<String,String> prefixes;
-    private Collection<WampSubscription> subscriptions;
+    private Map<String,WampSubscription> subscriptions;
 
     public WampSocket(WampApplication app,
                         ProtocolHandler protocolHandler,
@@ -41,7 +41,7 @@ public class WampSocket extends DefaultWebSocket
         this.app    = app;
         sessionId   = UUID.randomUUID().toString();
         sessionData = new ConcurrentHashMap();
-        subscriptions = new ArrayList<WampSubscription>();        
+        subscriptions = new ConcurrentHashMap<String,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
     }
 
@@ -76,17 +76,17 @@ public class WampSocket extends DefaultWebSocket
 
     public void addSubscription(WampSubscription subscription)
     {
-        subscriptions.add(subscription);
+        subscriptions.put(subscription.getTopicURIs(), subscription);
     }
     
-    public void removeSubscription(WampSubscription subscription)
+    public void removeSubscription(String topicUriOrPattern)
     {
-        subscriptions.remove(subscription);
+        subscriptions.remove(topicUriOrPattern);
     }
     
     public Collection<WampSubscription> getSubscriptions()
     {
-        return subscriptions;
+        return subscriptions.values();
     }
 
     
