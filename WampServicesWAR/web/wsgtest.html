@@ -204,7 +204,7 @@ function open_group(gid) {
     else $("#back_section").val("group_list");
     wsgclient.openGroup(appId, gid, function(response) {
        if(response.valid) {
-            if(response.gid != "") wsgclient.subscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + response.gid, update_group, true);
+            if(response.gid != "") wsgclient.subscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + response.gid, update_group_callback, true);
             show_group(response); 
        }
     });
@@ -235,7 +235,7 @@ function show_group(group) {
             var roleFixed = false;
             var currentNickSelected = false;
             
-            if((member.nick=="" || member.nick==currentNick)) {
+            if(member.sid==wsgclient.sid) {
                 var selected = "";
                 if(currentNickIsOfflineMember && (!member.connected) && member.nick==currentNick) {
                     currentNickSelected = true;;
@@ -286,7 +286,7 @@ function update_member(field, as_previous_client)
     var slot = parseInt(field.substring(6));
     var role = $("#role" + slot + " option:selected").val();
     var team = parseInt($("#team" + slot).val());
-    wsgclient.updateMember(appId, gid, slot, sid, usertype, nick, role, team, update_group);
+    wsgclient.updateMember(appId, gid, slot, sid, usertype, nick, role, team, update_group_callback);
     
 }
 
@@ -352,12 +352,21 @@ function remove_last_member(memberId) {
     $("button.remove_member:last").show();
 }
 
-function update_group(response) {
+function update_group_callback(response) {
         if(response.valid) {  // TODO: check it is currentGroup gid
             var isMember = isFinite(response.slot);
             var num_members = $("#group_params table[id='members'] tbody tr").size();
 
-            if(response.cmd == "user_joined") {
+            if(response.cmd == "update_group") {
+             
+                if(response.state == "STARTED") {
+                    for(var index = 0; index < num_members; index += 1) {
+                        $("#member"+index+" option[selected!='selected']").remove();
+                        $("#role"+index+" option[selected!='selected']").remove();
+                    }
+                };
+                
+            } else if(response.cmd == "user_joined") {
 
                 // create UI fields for new member slots:
                 if(isMember) {
@@ -436,7 +445,21 @@ function update_group(response) {
         }    
 }
 
+function update_group(state, data) {
+    var appId = $("#apps option:selected").attr("value");
+    var gid = $("#group_gid").val();
+    var automatch = $("#grp_automatch").is(':checked');
+    var observable = $("#grp_observable").is(':checked');
+    var dynamic = $("#grp_dynamic").is(':checked');
+    var alliances = $("#grp_alliances").is(':checked');
+
+    wsgclient.updateGroup(appId, gid, state, data, automatch, observable, dynamic, alliances, function(response) {
+        if(response.valid) update_group_callback(response);
+    });
+}
+
 function start_group() {
+    update_group("STARTED", null);
 }
 
 
@@ -451,7 +474,7 @@ function exit_group(toOfflineMode) {
     var gid = $("#group_gid").val();
     
     wsgclient.exitGroup(appId, gid, function(response) {
-        wsgclient.unsubscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + gid, update_group, true);
+        wsgclient.unsubscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + gid, update_group_callback, true);
     });
 }
 
@@ -607,6 +630,7 @@ function toggle_connect(create_user) {
       <tbody>
       </tbody>
     </table>
+    <label for="grp_automatch">Auto-Match:</label><input type="checkbox" name="grp_automatch" id="grp_automatch" /><br/>
     <label for="grp_dynamic">Dynamic:</label><input type="checkbox" name="grp_dynamic" id="grp_dynamic" /><br/>
     <label for="grp_alliances">Alliances:</label><input type="checkbox" name="grp_alliances" id="grp_dynamic" /><br/>
     <label for="grp_observable">Observable:</label><input type="checkbox" name="grp_observable" id="grp_observable" /><br/>

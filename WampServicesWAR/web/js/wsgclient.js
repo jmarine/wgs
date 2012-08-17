@@ -314,13 +314,16 @@ WsgClient.prototype = {
       this.call("wsg:exit_group", msg).then(callback, callback);
   },
 
-  updateGroup: function(appId, gid, observable, dynamic, alliances, callback) {
+  updateGroup: function(appId, gid, state, data, automatch, observable, dynamic, alliances, callback) {
       var msg = Object();
       msg.app = appId;
       msg.gid = gid;
+      msg.automatch = automatch;
       msg.observable = observable;
       msg.dynamic = dynamic;
       msg.alliances = alliances;      
+      if(state) msg.state = state;
+      if(data) msg.data  = data;
      
       this.call("wsg:update_group", msg).then(callback, callback);
   },
