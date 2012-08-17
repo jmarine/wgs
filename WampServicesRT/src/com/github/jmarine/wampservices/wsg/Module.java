@@ -477,7 +477,7 @@ public class Module extends WampModule
             ArrayNode rolesArray = mapper.createArrayNode();
             for(Role r : app.getRoles()) {
                 rolesArray.add(r.toJSON());
-                if(r.isRequired()) requiredRoles.add(0, r.getName());
+                if(r.isRequired()) requiredRoles.add(r.getName());
             }
             response.put("roles", rolesArray);
 
@@ -541,18 +541,18 @@ public class Module extends WampModule
                 GroupMember member = g.getMember(index);
                 if(member == null) member = new GroupMember();
                 
-                boolean connected = (member.getClient() != null);
-                String roleName = (member.getRole() != null) ? member.getRole().toString() : "";
-                if(roleName.length() > 0) {
-                    requiredRoles.remove(roleName);
+                Role role = member.getRole();
+                if(role != null) {
+                    requiredRoles.remove(role.toString());
                 } else if(requiredRoles.size() > 0) {
-                    roleName = requiredRoles.remove(0);
+                    String roleName = requiredRoles.remove(0);
+                    member.setRole(g.getApplication().getRoleByName(roleName));
                 }
 
+                boolean connected = (member.getClient() != null);
                 if(!connected && !joined && (!reserved || index == reservedSlot)) {
                     member.setClient(client);
                     member.setNick(client.getUser().getNick());
-                    member.setRole(g.getApplication().getRoleByName(roleName));
                     member.setUserType("user");
                     member.setTeam(1+index);
                     g.setMember(index, member);
@@ -600,13 +600,13 @@ public class Module extends WampModule
     
 
     @WampRPC(name="update_group")
-    public ObjectNode updateGroup(WampSocket socket, ObjectNode data) throws Exception
+    public ObjectNode updateGroup(WampSocket socket, ObjectNode node) throws Exception
     {
         // TODO: change group properties (state, observable, etc)
 
         boolean valid = false;
-        String appId = data.get("app").asText();
-        String gid = data.get("gid").asText();
+        String appId = node.get("app").asText();
+        String gid = node.get("gid").asText();
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode response = mapper.createObjectNode();
@@ -617,13 +617,20 @@ public class Module extends WampModule
         if(g != null) {
             logger.log(Level.FINE, "open_group: group found: " + gid);
             
-            JsonNode stateNode = data.get("state");
+            JsonNode stateNode = node.get("state");
             String state = (stateNode!=null && !stateNode.isNull()) ? stateNode.asText() : null;
             if(state != null) {
                 g.setState(GroupState.valueOf(state));
                 response.put("state", state);
             }
-                    
+
+            JsonNode dataNode = node.get("data");
+            String data = (dataNode!=null && !dataNode.isNull()) ? dataNode.asText() : null;
+            if(data != null) {
+                g.setData(data);
+                response.put("data", data);
+            }
+            
             valid = true;
         }
 
