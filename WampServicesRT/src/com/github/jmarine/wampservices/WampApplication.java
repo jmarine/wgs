@@ -368,7 +368,15 @@ public class WampApplication extends WebSocketApplication {
     {
         topicUriOrPattern = clientSocket.normalizeURI(topicUriOrPattern);
         Collection<WampTopic> topics = getTopics(topicUriOrPattern);
-        clientSocket.removeSubscription(topicUriOrPattern);
+        if(isTopicUriWithWildcards(topicUriOrPattern)) {
+            clientSocket.removeSubscription(topicUriOrPattern);
+            /**
+            WampTopicPattern topicPattern = topicPatterns.get(topicUriOrPattern);
+            if(topicPattern.getSubscriptions().size() == 0) {
+                topicPatterns.remove(topicUriOrPattern);
+            }
+            */
+        }
         
         for(WampTopic topic : topics) {
             WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
