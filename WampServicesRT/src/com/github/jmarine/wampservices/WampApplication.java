@@ -30,7 +30,7 @@ public class WampApplication extends WebSocketApplication {
     private String contextPath;
     private Map<String,WampModule> modules;
     private TreeMap<String,WampTopic> topics;
-    private TreeMap<String,WampTopicGroup> topicGroups;
+    private TreeMap<String,WampTopicPattern> topicPatterns;
     private WampModule defaultModule;
     private boolean topicWildcardsEnabled;
     
@@ -40,7 +40,7 @@ public class WampApplication extends WebSocketApplication {
         this.contextPath = contextPath;
         this.modules = new HashMap<String,WampModule>();
         this.topics = new TreeMap<String,WampTopic>();
-        this.topicGroups = new TreeMap<String,WampTopicGroup>();
+        this.topicPatterns = new TreeMap<String,WampTopicPattern>();
         this.topicWildcardsEnabled = topicWildcardsEnabled;
         
         this.defaultModule = new WampModule(this) {
@@ -169,7 +169,7 @@ public class WampApplication extends WebSocketApplication {
         }
         
         for(WampSubscription subscription : clientSocket.getSubscriptions()) {
-            unsubscribeClientFromTopic(clientSocket, subscription.getTopicURIs());
+            unsubscribeClientFromTopic(clientSocket, subscription.getTopicUriOrPattern());
         }
         super.onClose(websocket, frame);
         logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
@@ -253,11 +253,11 @@ public class WampApplication extends WebSocketApplication {
             topic.setURI(topicFQname);
             topics.put(topicFQname, topic);
             
-            for(WampTopicGroup group : topicGroups.values()) {
-                String regexp = group.getTopicUriPattern().replace("*", ".*");
+            for(WampTopicPattern topicPattern : topicPatterns.values()) {
+                String regexp = topicPattern.getTopicUriPattern().replace("*", ".*");
                 if(topicFQname.matches(regexp)) {
-                    group.getTopics().add(topic);
-                    for(WampSubscription subscription : group.getSubscriptions()) {
+                    topicPattern.getTopics().add(topic);
+                    for(WampSubscription subscription : topicPattern.getSubscriptions()) {
                         try { 
                             WampModule module = getWampModule(topic.getBaseURI());
                             module.onSubscribe(subscription.getSocket(), topic, subscription);
@@ -278,11 +278,11 @@ public class WampApplication extends WebSocketApplication {
         if(topic != null) {
             topics.remove(topicFQname);
             
-            for(WampTopicGroup group : topicGroups.values()) {
-                String regexp = group.getTopicUriPattern().replace("*", ".*");
+            for(WampTopicPattern topicPattern : topicPatterns.values()) {
+                String regexp = topicPattern.getTopicUriPattern().replace("*", ".*");
                 if(topicFQname.matches(regexp)) {
-                    group.getTopics().remove(topic);
-                    for(WampSubscription subscription : group.getSubscriptions()) {
+                    topicPattern.getTopics().remove(topic);
+                    for(WampSubscription subscription : topicPattern.getSubscriptions()) {
                         try { 
                             WampModule module = getWampModule(topic.getBaseURI());
                             module.onUnsubscribe(subscription.getSocket(), topic, subscription);
@@ -309,11 +309,11 @@ public class WampApplication extends WebSocketApplication {
     
     public Collection<WampTopic> getTopics(String topicUriPattern)
     {
-        WampTopicGroup group = topicGroups.get(topicUriPattern);
+        WampTopicPattern topicPattern = topicPatterns.get(topicUriPattern);
         
-        if(group != null) {
+        if(topicPattern != null) {
             
-            return group.getTopics();
+            return topicPattern.getTopics();
             
         } else {
         
@@ -333,33 +333,26 @@ public class WampApplication extends WebSocketApplication {
     }
     
 
-    public Collection<WampTopic> subscribeClientWithTopic(WampSocket clientSocket, String topicUriPattern, int options)
+    public Collection<WampTopic> subscribeClientWithTopic(WampSocket clientSocket, String topicUriOrPattern, int options)
     {
-        topicUriPattern = clientSocket.normalizeURI(topicUriPattern);
-        Collection<WampTopic> topics = getTopics(topicUriPattern);
-        WampSubscription subscription = null;
+        topicUriOrPattern = clientSocket.normalizeURI(topicUriOrPattern);
+        Collection<WampTopic> topics = getTopics(topicUriOrPattern);
         
-        if(isTopicUriWithWildcards(topicUriPattern)) {
-            WampTopicGroup topicsGroup = topicGroups.get(topicUriPattern);
-            if(topicsGroup == null) {
-                topicsGroup = new WampTopicGroup(topicUriPattern, topics);
-                topicGroups.put(topicUriPattern, topicsGroup);
+        if(isTopicUriWithWildcards(topicUriOrPattern)) {
+            WampSubscription subscription = new WampSubscription(clientSocket, topicUriOrPattern, options);
+            clientSocket.addSubscription(subscription);
+
+            WampTopicPattern topicPattern = topicPatterns.get(topicUriOrPattern);
+            if(topicPattern == null) {
+                topicPattern = new WampTopicPattern(topicUriOrPattern, topics);
+                topicPatterns.put(topicUriOrPattern, topicPattern);
             }
-            if(topics.size() > 0) {
-                subscription = new WampSubscription(clientSocket, topicsGroup, options);
-            }
-        } else {
-            if(topics.size() > 0) {
-                WampTopic topic = topics.iterator().next();
-                subscription = new WampSubscription(clientSocket, topic, options);
-            }
-        }
+        } 
         
         if(topics.size() > 0) {
-            clientSocket.addSubscription(subscription);
-        
             for(WampTopic topic : topics) {
                 try { 
+                    WampSubscription subscription = new WampSubscription(clientSocket, topic.getURI(), options);
                     WampModule module = getWampModule(topic.getBaseURI());
                     module.onSubscribe(clientSocket, topic, subscription);
                 } catch(Exception ex) {
@@ -371,11 +364,11 @@ public class WampApplication extends WebSocketApplication {
         return topics;
     }
     
-    public Collection<WampTopic> unsubscribeClientFromTopic(WampSocket clientSocket, String topicUriPattern)
+    public Collection<WampTopic> unsubscribeClientFromTopic(WampSocket clientSocket, String topicUriOrPattern)
     {
-        topicUriPattern = clientSocket.normalizeURI(topicUriPattern);
-        Collection<WampTopic> topics = getTopics(topicUriPattern);
-        clientSocket.removeSubscription(topicUriPattern);
+        topicUriOrPattern = clientSocket.normalizeURI(topicUriOrPattern);
+        Collection<WampTopic> topics = getTopics(topicUriOrPattern);
+        clientSocket.removeSubscription(topicUriOrPattern);
         
         for(WampTopic topic : topics) {
             WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());

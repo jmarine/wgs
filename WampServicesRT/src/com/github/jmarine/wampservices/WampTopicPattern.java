@@ -1,27 +1,21 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package com.github.jmarine.wampservices;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- *
- * @author jordi
- */
-public class WampTopicGroup {
-    
+
+public class WampTopicPattern 
+{
     private String     topicUriPattern;
     
     private Collection<WampTopic> topics;
     
     private Map<String,WampSubscription> subscriptions;
 
-    public WampTopicGroup(String topicUriPattern, Collection<WampTopic> topics) 
+    
+    public WampTopicPattern(String topicUriPattern, Collection<WampTopic> topics) 
     {
         this.topicUriPattern = topicUriPattern;
         this.topics = topics;
@@ -52,7 +46,5 @@ public class WampTopicGroup {
     {
         return subscriptions.values();
     }    
-    
-
     
 }

@@ -76,7 +76,7 @@ public class WampSocket extends DefaultWebSocket
 
     public void addSubscription(WampSubscription subscription)
     {
-        subscriptions.put(subscription.getTopicURIs(), subscription);
+        subscriptions.put(subscription.getTopicUriOrPattern(), subscription);
     }
     
     public void removeSubscription(String topicUriOrPattern)

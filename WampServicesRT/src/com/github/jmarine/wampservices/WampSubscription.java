@@ -17,25 +17,14 @@ public class WampSubscription
     
     private WampSocket client;
     
-    private WampTopic  topic;
-    
-    private WampTopicGroup topicGroup;
+    private String     topicUrlOrPattern;
     
     
-    public WampSubscription(WampSocket client, WampTopic topic, int options) 
+    public WampSubscription(WampSocket client, String topicUrlOrPattern, int options) 
     {
         this.options = options;
         this.client = client;
-        this.topic = topic;
-        this.topicGroup = null;
-    }
-    
-    public WampSubscription(WampSocket client, WampTopicGroup topicGroup, int options) 
-    {
-        this.options = options;
-        this.client = client;
-        this.topic = null;
-        this.topicGroup = topicGroup;
+        this.topicUrlOrPattern = topicUrlOrPattern;
     }
     
     public int getOptions()
@@ -48,22 +37,9 @@ public class WampSubscription
         return client;
     }
     
-    public WampTopic getTopic()
+    public String getTopicUriOrPattern() 
     {
-        return topic;
-    }
-    
-    public WampTopicGroup getTopicGroup()
-    {
-        return topicGroup;
-    }
-    
-    public String getTopicURIs() {
-        if(topicGroup != null) {
-            return topicGroup.getTopicUriPattern();
-        } else {
-            return topic.getURI();
-        }
+        return topicUrlOrPattern;
     }
     
     

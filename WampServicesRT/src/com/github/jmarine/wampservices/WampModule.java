@@ -73,10 +73,12 @@ public abstract class WampModule
     
     public void   onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription) throws Exception { 
         topic.addSubscription(subscription);
+        clientSocket.addSubscription(subscription);
     }
 
     public void   onUnsubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription) throws Exception { 
         topic.removeSubscription(subscription);
+        clientSocket.removeSubscription(subscription.getTopicUriOrPattern());
     }
     
     public void   onPublish(WampSocket clientSocket, WampTopic topic, ArrayNode request) throws Exception 
