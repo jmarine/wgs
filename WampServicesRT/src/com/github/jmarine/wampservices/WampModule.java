@@ -71,13 +71,14 @@ public abstract class WampModule
         throw new WampException(WampException.WAMP_GENERIC_ERROR_URI, "Method not implemented: " + methodName);
     }
     
-    public void   onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription) throws Exception { 
-        topic.addSubscription(subscription);
-        clientSocket.addSubscription(subscription);
+    public void   onSubscribe(WampSocket clientSocket, WampTopic topic, int options) throws Exception { 
+        WampSubscription topicSubscription = new WampSubscription(clientSocket, topic.getURI(), options);
+        topic.addSubscription(topicSubscription);
+        clientSocket.addSubscription(topicSubscription);
     }
 
-    public void   onUnsubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription) throws Exception { 
-        topic.removeSubscription(subscription);
+    public void   onUnsubscribe(WampSocket clientSocket, WampTopic topic) throws Exception { 
+        WampSubscription subscription = topic.removeSubscription(clientSocket.getSessionId());
         clientSocket.removeSubscription(subscription.getTopicUriOrPattern());
     }
     

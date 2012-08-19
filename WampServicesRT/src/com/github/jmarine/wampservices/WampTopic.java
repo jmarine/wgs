@@ -49,8 +49,8 @@ public class WampTopic {
     /**
      * @param socket the sockets to set
      */
-    public void removeSubscription(WampSubscription subscription) {
-        subscriptions.remove(subscription.getSocket().getSessionId());
+    public WampSubscription removeSubscription(String sessionId) {
+        return subscriptions.remove(sessionId);
     }
     
     public WampSubscription getSubscription(String sessionId)
