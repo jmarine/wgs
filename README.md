@@ -98,9 +98,9 @@ context.wamp1.topics=https://github.com/jmarine/wampservices#topic1,https://gith
 ```
 
 
-------------------------------
 
 ### API classes: ###
+------------------------------
 
 ##### WampModule methods #####
 
