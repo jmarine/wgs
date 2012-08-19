@@ -193,8 +193,8 @@ public class WampSocket extends DefaultWebSocket
     
     public void publishEvent(WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) {
         logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
-        if(eligible == null) eligible = topic.getSocketIds();
-        else eligible.retainAll(topic.getSocketIds());
+        if(eligible == null) eligible = topic.getSessionIds();
+        else eligible.retainAll(topic.getSessionIds());
         try {
             WampModule module = app.getWampModule(topic.getBaseURI());
             module.onEvent(this, topic, event, excluded, eligible);

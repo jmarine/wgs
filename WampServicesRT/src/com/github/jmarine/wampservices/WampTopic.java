@@ -5,6 +5,7 @@
 package com.github.jmarine.wampservices;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,15 +53,20 @@ public class WampTopic {
         subscriptions.remove(subscription.getSocket().getSessionId());
     }
     
-    public WampSubscription getSubscription(String sid)
+    public WampSubscription getSubscription(String sessionId)
     {
-        return subscriptions.get(sid);
+        return subscriptions.get(sessionId);
+    }
+    
+    public Collection<WampSubscription> getSubscriptions()
+    {
+        return subscriptions.values();
     }
 
-    public Set<String> getSocketIds()
+    public Set<String> getSessionIds()
     {
         return subscriptions.keySet();
-    }  
+    } 
     
     public int getSubscriptionCount()
     {

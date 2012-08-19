@@ -24,15 +24,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/**
- *
- * @author jordi
- */
 public class Module extends WampModule 
 {
     private static final Logger logger = Logger.getLogger(Module.class.toString());
@@ -465,6 +457,7 @@ public class Module extends WampModule
             
             response.put("created", created);
             response.put("gid", g.getGid());
+            response.put("state", g.getState().toString());
             response.put("admin", g.getAdminNick());
             response.put("min", g.getMinMembers());
             response.put("max", g.getMaxMembers());
@@ -489,7 +482,7 @@ public class Module extends WampModule
             
             client.addGroup(g);
             ArrayNode conArray = mapper.createArrayNode();
-            for(String sid : topic.getSocketIds()) {
+            for(String sid : topic.getSessionIds()) {
                     Client c = clients.get(sid);
                     User u = ((c!=null)? c.getUser() : null);
                     String nick = ((u == null) ? "" : u.getNick());

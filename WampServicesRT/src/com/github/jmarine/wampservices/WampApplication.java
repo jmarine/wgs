@@ -1,3 +1,9 @@
+/**
+ * WebSocket Message Application Protocol implementation
+ *
+ * @author Jordi Marine Fort 
+ */
+
 package com.github.jmarine.wampservices;
 
 import java.util.HashMap;
@@ -17,12 +23,8 @@ import org.codehaus.jackson.node.ArrayNode;
 
 
 
-/**
- * WebSocket Message Application Protocol implementation
- *
- * @author Jordi Marine Fort 
- */
-public class WampApplication extends WebSocketApplication {
+public class WampApplication extends WebSocketApplication 
+{
     private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
 
     public  static final String WAMP_BASE_URL = "https://github.com/jmarine/wampservices";
@@ -36,7 +38,8 @@ public class WampApplication extends WebSocketApplication {
     
 
     
-    public WampApplication(String contextPath, boolean topicWildcardsEnabled) {
+    public WampApplication(String contextPath, boolean topicWildcardsEnabled) 
+    {
         this.contextPath = contextPath;
         this.modules = new HashMap<String,WampModule>();
         this.topics = new TreeMap<String,WampTopic>();
@@ -59,13 +62,15 @@ public class WampApplication extends WebSocketApplication {
     @Override
     public WebSocket createWebSocket(ProtocolHandler handler,
                                   //HttpRequestPacket request,
-                                  WebSocketListener... listeners) {
+                                  WebSocketListener... listeners) 
+    {
         WampSocket socket = new WampSocket(this, handler, listeners);
         return socket;
     }
 
     @Override
-    public boolean isApplicationRequest(Request request) {
+    public boolean isApplicationRequest(Request request) 
+    {
         return contextPath.equals(request.requestURI().toString());
     }
 
@@ -108,8 +113,8 @@ public class WampApplication extends WebSocketApplication {
      * @throws IOException
      */
     @Override
-    public void onMessage(WebSocket websocket, String data) {
-
+    public void onMessage(WebSocket websocket, String data) 
+    {
         try {
             logger.log(Level.FINE, "onMessage.data = {0}", new Object[]{data});
 
@@ -153,12 +158,14 @@ public class WampApplication extends WebSocketApplication {
            logger.log(Level.SEVERE, "Invalid WAMP request", ex);
         }
     }
+    
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void onClose(WebSocket websocket, DataFrame frame) {
+    public void onClose(WebSocket websocket, DataFrame frame) 
+    {
         WampSocket clientSocket = (WampSocket)websocket;
         for(WampModule module : modules.values()) {
             try { 
@@ -167,10 +174,19 @@ public class WampApplication extends WebSocketApplication {
                 logger.log(Level.SEVERE, "Error disconnecting client:", ex);
             }
         }
+
+        // First remove subscriptions to topic patterns:
+        for(WampSubscription subscription : clientSocket.getSubscriptions()) {
+            if(isTopicUriWithWildcards(subscription.getTopicUriOrPattern())) {
+                unsubscribeClientFromTopic(clientSocket, subscription.getTopicUriOrPattern());
+            }
+        }
         
+        // Second, remove remaining subscriptions to single topics:
         for(WampSubscription subscription : clientSocket.getSubscriptions()) {
             unsubscribeClientFromTopic(clientSocket, subscription.getTopicUriOrPattern());
-        }
+        }        
+        
         super.onClose(websocket, frame);
         logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
     }
@@ -257,10 +273,11 @@ public class WampApplication extends WebSocketApplication {
                 String regexp = topicPattern.getTopicUriPattern().replace("*", ".*");
                 if(topicFQname.matches(regexp)) {
                     topicPattern.getTopics().add(topic);
-                    for(WampSubscription subscription : topicPattern.getSubscriptions()) {
+                    for(WampSubscription patternSubscription : topicPattern.getSubscriptions()) {
                         try { 
+                            WampSubscription topicSubscription = new WampSubscription(patternSubscription.getSocket(), topic.getURI(), patternSubscription.getOptions());
                             WampModule module = getWampModule(topic.getBaseURI());
-                            module.onSubscribe(subscription.getSocket(), topic, subscription);
+                            module.onSubscribe(topicSubscription.getSocket(), topic, topicSubscription);
                         } catch(Exception ex) {
                             logger.log(Level.FINE, "Error in subscription to topic", ex);
                         }                      
@@ -272,24 +289,26 @@ public class WampApplication extends WebSocketApplication {
         return topic;
     }
     
+    
     public WampTopic deleteTopic(String topicFQname)
     {
         WampTopic topic = topics.get(topicFQname);
         if(topic != null) {
             topics.remove(topicFQname);
             
+            WampModule module = getWampModule(topic.getBaseURI());
+            for(WampSubscription subscription : topic.getSubscriptions()) {
+                try { 
+                    module.onUnsubscribe(subscription.getSocket(), topic, subscription);
+                } catch(Exception ex) {
+                    logger.log(Level.FINE, "Error in unsubscription to topic", ex);
+                }                      
+            }
+            
             for(WampTopicPattern topicPattern : topicPatterns.values()) {
                 String regexp = topicPattern.getTopicUriPattern().replace("*", ".*");
                 if(topicFQname.matches(regexp)) {
                     topicPattern.getTopics().remove(topic);
-                    for(WampSubscription subscription : topicPattern.getSubscriptions()) {
-                        try { 
-                            WampModule module = getWampModule(topic.getBaseURI());
-                            module.onUnsubscribe(subscription.getSocket(), topic, subscription);
-                        } catch(Exception ex) {
-                            logger.log(Level.FINE, "Error in subscription to topic", ex);
-                        }                      
-                    }
                 }
             }            
         } 
@@ -302,7 +321,8 @@ public class WampApplication extends WebSocketApplication {
         return topics.get(topicFQname);
     }    
     
-    public boolean isTopicUriWithWildcards(String topicUrlPattern) {
+    public boolean isTopicUriWithWildcards(String topicUrlPattern) 
+    {
         int wildcardPos = topicUrlPattern.indexOf("*");
         return (topicWildcardsEnabled) && (wildcardPos != -1);
     }
@@ -319,9 +339,9 @@ public class WampApplication extends WebSocketApplication {
         
             if(isTopicUriWithWildcards(topicUriPattern)) {
                 int wildcardPos = topicUriPattern.indexOf("*");
-                topicUriPattern = topicUriPattern.substring(0, wildcardPos);
-                String topicUriEnd = topicUriPattern + "~";
-                NavigableMap<String,WampTopic> navMap = topics.subMap(topicUriPattern, true, topicUriEnd, false);
+                String topicUriBegin = topicUriPattern.substring(0, wildcardPos);
+                String topicUriEnd = topicUriBegin + "~";
+                NavigableMap<String,WampTopic> navMap = topics.subMap(topicUriBegin, true, topicUriEnd, false);
                 return navMap.values();
             } else {                
                 ArrayList<WampTopic> retval = new ArrayList<WampTopic>();
@@ -349,20 +369,19 @@ public class WampApplication extends WebSocketApplication {
             }
         } 
         
-        if(topics.size() > 0) {
-            for(WampTopic topic : topics) {
-                try { 
-                    WampSubscription subscription = new WampSubscription(clientSocket, topic.getURI(), options);
-                    WampModule module = getWampModule(topic.getBaseURI());
-                    module.onSubscribe(clientSocket, topic, subscription);
-                } catch(Exception ex) {
-                    logger.log(Level.FINE, "Error in subscription to topic", ex);
-                }          
-            }
+        for(WampTopic topic : topics) {
+            try { 
+                WampSubscription subscription = new WampSubscription(clientSocket, topic.getURI(), options);
+                WampModule module = getWampModule(topic.getBaseURI());
+                module.onSubscribe(clientSocket, topic, subscription);
+            } catch(Exception ex) {
+                logger.log(Level.FINE, "Error in subscription to topic", ex);
+            }          
         }
     
         return topics;
     }
+    
     
     public Collection<WampTopic> unsubscribeClientFromTopic(WampSocket clientSocket, String topicUriOrPattern)
     {
@@ -407,7 +426,8 @@ public class WampApplication extends WebSocketApplication {
     }
     
     
-    public String encodeJSON(String orig) {
+    public String encodeJSON(String orig) 
+    {
         if(orig == null) return "null";
         
         StringBuilder buffer = new StringBuilder(orig.length());

@@ -47,4 +47,9 @@ public class WampTopicPattern
         return subscriptions.values();
     }    
     
+    public Collection<String> getSessionIds()
+    {
+        return subscriptions.keySet();
+    }        
+    
 }
