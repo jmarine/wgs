@@ -162,7 +162,7 @@ It represents a topic for PubSub services, and provides the following methods:
 
 * **getSocketIds()**: gets a list of sessionId of clients subscribed to the topic.
 
-* **getSocketId(String sessionId)**: gets the WebSocket of the client with sessionId in case it is subscribed to the topic.
+* **getSubscription(String sessionId)**: gets subscription information for the client with the specified sessionId.
 
 
 ------------------------------
