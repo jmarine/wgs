@@ -138,6 +138,8 @@ It represents a WAMP application context (URI), and also provides the following 
 
 * **removeTopic(String topicFQname)**: dinamically removes a topic.
 
+* **publishEvent(String publisherId, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible)**: broadcast and EVENT message with the "event" object data to the "eligible" list of clients (sessionIds), with the exception of the clients in the "excluded" list (sessionIds).
+
 
 ------------------------------
 
@@ -148,8 +150,6 @@ It represents a connection with a WAMP client, and provides the following method
 * **normalizeURI(String curie)**: converts a CURIE to a fully qualified URI (using PREFIXES registered by the client).
 
 * **publishEvent(WampTopic topic, JsonNode event, boolean excludeMe)**: broadcasts an EVENT message with the "event" object data to all clients subscribed in the topic (with the possibility to exclude the publisher).
-
-* **publishEvent(WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible)**: broadcast and EVENT message with the "event" object data to the "eligible" list of clients (sessionIds), with the exception of the clients in the "excluded" list (sessionIds).
 
 
 ------------------------------
