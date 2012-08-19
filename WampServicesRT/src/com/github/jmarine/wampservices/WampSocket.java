@@ -109,9 +109,9 @@ public class WampSocket extends DefaultWebSocket
      */
     protected void sendSafe(String msg) {
         try {
-            super.send(msg);
-        } catch (WebSocketException e) {
-            logger.log(Level.SEVERE, "Removing wamp client: " + e.getMessage(), e);
+            if(this.isConnected()) super.send(msg);
+        } catch(Exception e) {
+            logger.log(Level.SEVERE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
             close(PROTOCOL_ERROR, e.getMessage());
         }
     }
@@ -188,19 +188,8 @@ public class WampSocket extends DefaultWebSocket
         logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         Set<String> excludedSet = new HashSet<String>();
         if(excludeMe) excludedSet.add(this.getSessionId());
-        publishEvent(topic, event, excludedSet, null);
+        app.publishEvent(this.getSessionId(), topic, event, excludedSet, null);
     }
     
-    public void publishEvent(WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) {
-        logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
-        if(eligible == null) eligible = topic.getSessionIds();
-        else eligible.retainAll(topic.getSessionIds());
-        try {
-            WampModule module = app.getWampModule(topic.getBaseURI());
-            module.onEvent(this, topic, event, excluded, eligible);
-        } catch(Exception ex) {
-            logger.log(Level.SEVERE, "Error in publishing event to topic", ex);
-        }
-    }    
 
 }

@@ -13,9 +13,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 
@@ -78,7 +80,11 @@ public class WampApplication extends WebSocketApplication
         WampModule module = modules.get(moduleBaseURI);
         if(module == null) module = defaultModule;
         return module;
-    }        
+    }
+    
+    public String getServerId() {
+        return "wsAppManager";
+    }
     
 
     /**
@@ -99,7 +105,7 @@ public class WampApplication extends WebSocketApplication
                 logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
             }
         }        
-        clientSocket.sendSafe("[0,\"" + clientSocket.getSessionId() + "\", 1, \"wsAppManager\" ]"); 
+        clientSocket.sendSafe("[0,\"" + clientSocket.getSessionId() + "\", 1, \"" + getServerId() +"\" ]"); 
     }
 
 
@@ -424,6 +430,20 @@ public class WampApplication extends WebSocketApplication
             logger.log(Level.FINE, "Error in publishing to topic", ex);
         }  
     }
+    
+    
+    public void publishEvent(String publisherId, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) 
+    {
+        logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
+        if(eligible == null) eligible = topic.getSessionIds();
+        else eligible.retainAll(topic.getSessionIds());
+        try {
+            WampModule module = getWampModule(topic.getBaseURI());
+            module.onEvent(publisherId, topic, event, excluded, eligible);
+        } catch(Exception ex) {
+            logger.log(Level.SEVERE, "Error in publishing event to topic", ex);
+        }
+    }     
     
     
     public String encodeJSON(String orig) 

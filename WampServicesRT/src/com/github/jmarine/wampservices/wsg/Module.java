@@ -12,7 +12,9 @@ import com.github.jmarine.wampservices.WampException;
 import com.github.jmarine.wampservices.WampModule;
 import com.github.jmarine.wampservices.WampRPC;
 import com.github.jmarine.wampservices.WampSocket;
+import com.github.jmarine.wampservices.WampSubscriptionOptions;
 import com.github.jmarine.wampservices.WampTopic;
+import com.github.jmarine.wampservices.WampTopicOptions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -483,8 +485,14 @@ public class Module extends WampModule
 
             String topicName = getFQtopicURI("group_event:" + g.getGid());
             WampTopic topic = wampApp.getTopic(topicName);
-            if(topic == null) topic = wampApp.createTopic(topicName, null);
-            wampApp.subscribeClientWithTopic(client.getSocket(), topicName, null);
+            if(topic == null) {
+                WampTopicOptions topicOptions = new WampTopicOptions();
+                topicOptions.setPublisherIdRevelationEnabled(true);
+                topic = wampApp.createTopic(topicName, topicOptions);
+            }
+            WampSubscriptionOptions subscriptionOptions = new WampSubscriptionOptions();
+            subscriptionOptions.setPublisherIdRequested(true);
+            wampApp.subscribeClientWithTopic(client.getSocket(), topicName, subscriptionOptions);
             
             client.addGroup(g);
             ArrayNode conArray = mapper.createArrayNode();

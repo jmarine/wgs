@@ -98,7 +98,7 @@ public abstract class WampModule
                 for(int i = 0; i < excludedArray.size(); i++) {
                     excludedSet.add(excludedArray.get(i).asText());
                 }
-                clientSocket.publishEvent(topic, event, excludedSet, null);
+                app.publishEvent(clientSocket.getSessionId(), topic, event, excludedSet, null);
             }
         } else if(request.size() == 5) {
             HashSet<String> excludedSet = new HashSet<String>();
@@ -111,18 +111,27 @@ public abstract class WampModule
             for(int i = 0; i < eligibleArray.size(); i++) {
                 eligibleSet.add(eligibleArray.get(i).asText());
             }
-            clientSocket.publishEvent(topic, event, excludedSet, eligibleSet);
+            app.publishEvent(clientSocket.getSessionId(), topic, event, excludedSet, eligibleSet);
         }
         
     }
     
-    public void   onEvent(WampSocket clientSocket, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
-        String msg = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
+    public void   onEvent(String publisherId, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
+        String msgV1 = null;
+        String msgV2 = null;
         for (String sid : eligible) {
             if((excluded==null) || (!excluded.contains(sid))) {
-                WampSocket socket = topic.getSubscription(sid).getSocket();
+                WampSubscription subscription = topic.getSubscription(sid);
+                WampSocket socket = subscription.getSocket();
                 if(socket != null && socket.isConnected() && !excluded.contains(sid)) {
-                    socket.sendSafe(msg);
+                    if( (topic.getOptions().isPublisherIdRevelationEnabled())
+                            && (subscription.getOptions().isPublisherIdRequested())) {
+                        if(msgV2 == null) msgV2 = "[8,\"" + topic.getURI() + "\", " + event.toString() + ",\"" + publisherId +"\"]";
+                        socket.sendSafe(msgV2);
+                    } else {
+                        if(msgV1 == null) msgV1 = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
+                        socket.sendSafe(msgV1);
+                    }
                 }
             }
         }      

@@ -21,7 +21,13 @@ public class WampTopic {
 
     
     public WampTopic(WampTopicOptions options) {
+        if(options == null) options = new WampTopicOptions(); // default values
         this.options = options;
+    }
+    
+    public WampTopicOptions getOptions()
+    {
+        return options;
     }
     
     /**

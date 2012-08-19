@@ -3,16 +3,16 @@ package com.github.jmarine.wampservices;
 
 public class WampSubscriptionOptions 
 {
-    private boolean publisherIdRevealed;
+    private boolean publisherIdRequested;
     private int     numberEventsToSendOnSubscription;
 
 
-    public boolean isPublisherIdRevealed() {
-        return publisherIdRevealed;
+    public boolean isPublisherIdRequested() {
+        return publisherIdRequested;
     }
 
-    public void setPublisherIdRevealed(boolean publisherIdRevealed) {
-        this.publisherIdRevealed = publisherIdRevealed;
+    public void setPublisherIdRequested(boolean publisherIdRevealed) {
+        this.publisherIdRequested = publisherIdRevealed;
     }
     
 

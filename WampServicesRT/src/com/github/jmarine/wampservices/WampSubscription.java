@@ -17,6 +17,7 @@ public class WampSubscription
     
     public WampSubscription(WampSocket client, String topicUrlOrPattern, WampSubscriptionOptions options) 
     {
+        if(options == null) options = new WampSubscriptionOptions();
         this.options = options;
         this.client = client;
         this.topicUrlOrPattern = topicUrlOrPattern;
