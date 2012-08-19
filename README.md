@@ -14,6 +14,12 @@ The code is divided in two projects (compatible with [NetBeans 7.2](http://www.n
 * WampServicesWAR: This is a JavaEE web application with examples that can be integrated with GlassFish 3.1.2+ application server (remember to enable websockets support with the command "asadmin set configs.config.server-config.network-config.protocols.protocol.http-listener-1.http.websockets-support-enabled=true")
 
 
+Extra services
+--------------
+
+* Game services (wsg): provides user registration/authentication and group joining/communications services for multi-player online games.
+
+
 Development guide
 -----------------
 
