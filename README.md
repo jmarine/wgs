@@ -116,7 +116,7 @@ This is an abstract class that provides interceptor methods for WAMP events:
 
 * **onCall(WebSocket client, String method, ArrayNode args)**: it can be overriden to add new RPCs.
 
-* **onSubscribe(WampSocket client, WampTopic topic, int options)**: it can be overriden to intercept subscription requests to the topics. In this case, remember to call the superclass method before/after your business logic.
+* **onSubscribe(WampSocket client, WampTopic topic, WampSubscriptionOptions options)**: it can be overriden to intercept subscription requests to the topics. In this case, remember to call the superclass method before/after your business logic.
 (i.e: to send an EVENT to the client, the method should be called before the publication).
 
 * **onUnsubscribe(WampSocket client, WampTopic topic)**: it can be overriden to intercept unsubscription requests to the topics. Also, rembember to cal the superclass method before/after your business logic.
@@ -132,9 +132,11 @@ This is an abstract class that provides interceptor methods for WAMP events:
 
 It represents a WAMP application context (URI), and also provides the following methods to help the development of modules:
 
-* **createTopic(String topicFQname)**: dinamically creates a new topic to be used by WAMP clients.
+* **createTopic(String topicFQname, WampTopicOptions options)**: dinamically creates a new topic to be used by WAMP clients.
 
 * **getTopic(String topicFQname)**: gets a WampTopic by its fully qualified name.
+
+* **removeTopic(String topicFQname)**: dinamically removes a topic.
 
 
 ------------------------------
