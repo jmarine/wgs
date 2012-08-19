@@ -15,5 +15,5 @@ It also implements the following services:
 
 Documentation
 -------------
-Visit the project's [wiki](https://github.com/jmarine/wampservices/wiki)
+Visit the project's [wiki](https://github.com/jmarine/wampservices/wiki) at https://github.com/jmarine/wampservices/wiki
 
