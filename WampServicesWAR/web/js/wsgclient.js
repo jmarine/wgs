@@ -54,16 +54,21 @@ WsgClient.prototype = {
       this.send(JSON.stringify(arr));
   },
  
-  call: function(cmd, msg) {
+  call: function(cmd, args, isOnlyOneArrayArg) {
       var dfd = $.Deferred();
-      var arr = [];
-      arr[0] = 2;  // CALL
-      arr[1] = this._newid();
-      arr[2] = cmd;
-      arr[3] = msg;
-      msg.cmd = cmd;
-      this.calls[arr[1]] = dfd;
-      this.send(JSON.stringify(arr));
+      var msg = [];
+      msg[0] = 2;  // CALL
+      msg[1] = this._newid();
+      msg[2] = cmd;
+      if(args && (args instanceof Array) && (!isOnlyOneArrayArg)) {
+          for(var i = 0; i < args.length; i++) {
+              msg[3+i] = args[i];
+          }
+      } else {
+          msg[3] = args;
+      }
+      this.calls[msg[1]] = dfd;
+      this.send(JSON.stringify(msg));
       return dfd.promise();
   },  
   
@@ -269,10 +274,7 @@ WsgClient.prototype = {
   },
   
   listGroups: function(appId, callback) {
-      var msg = Object();
-      msg.app = appId;
-          
-      this.call("wsg:list_groups", msg).then(callback, callback);
+      this.call("wsg:list_groups", appId).then(callback, callback);
   },
 
   newApp: function(name, domain, version, min, max, observable, dynamic, alliances, ai_available, roles, callback) {
@@ -299,19 +301,15 @@ WsgClient.prototype = {
   },  
   
   openGroup: function(appId, gid, callback) {
-      var msg = Object();
-      if(gid) msg.gid = gid;
-      if(appId) msg.app = appId;
+      var args = Array();
+      args[0] = appId? appId : null;
+      args[1] = gid? gid : null;
       
-      this.call("wsg:open_group", msg).then(callback, callback);
+      this.call("wsg:open_group", args).then(callback, callback);
   },
   
-  exitGroup: function(appId, gid, callback) {
-      var msg = Object();
-      msg.gid = gid;
-      msg.app = appId;
-           
-      this.call("wsg:exit_group", msg).then(callback, callback);
+  exitGroup: function(gid, callback) {
+      this.call("wsg:exit_group", gid).then(callback, callback);
   },
 
   updateGroup: function(appId, gid, state, data, automatch, observable, dynamic, alliances, callback) {

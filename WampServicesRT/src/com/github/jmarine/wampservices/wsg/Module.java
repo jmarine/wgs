@@ -132,12 +132,9 @@ public class Module extends WampModule
     {
         Object retval = null;
         if(method.equals("list_groups")) {
-            String appId = args.get(0).get("app").asText();
+            String appId = args.get(0).asText();
             wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId), null);
             retval = listGroups(appId);
-        } else if(method.equals("exit_group")) {
-            String gid = args.get(0).get("gid").asText();
-            retval = exitGroup(socket, gid);
         } else {
             retval = super.onCall(socket, method, args);
         }
@@ -387,23 +384,25 @@ public class Module extends WampModule
     
     
     @WampRPC(name="open_group")
-    public synchronized ObjectNode openGroup(WampSocket socket, ObjectNode data) throws Exception
+    public synchronized ObjectNode openGroup(WampSocket socket, String appId, String gid) throws Exception
     {
         Group   g = null;
         boolean valid   = false;
         boolean created = false;
         boolean joined  = false;
-        boolean autoMatch = false;
-
+        boolean autoMatchMode = false;
 
         Client client = clients.get(socket.getSessionId());
-        // get group/app information
-        try {
-            String gid = data.get("gid").asText();
+        
+        if(gid != null) {
             if(gid.equals("automatch")) {
-                autoMatch = true;
+                Application app = applications.get(appId);
+                if(app != null) {
+                    autoMatchMode = true;
+                    g = app.getNextAutoMatchGroup();
+                    if(g != null) valid = true;
+                }                
                 logger.log(Level.INFO, "open_group: search group for automatch");
-                throw new Exception("automatch");
             } else {
                 g = groups.get(gid);
                 if(g != null) {
@@ -411,42 +410,34 @@ public class Module extends WampModule
                     valid = true;
                 } 
             }
-
-        } catch(Exception ex) {
-
+        } 
+        
+        
+        if(g == null) {  // create group
             try {
-                String appId = data.get("app").asText();
+                logger.log(Level.FINE, "open_group: creating new group");
                 Application app = applications.get(appId);
-                
-                if(app != null && autoMatch) {
-                    g = app.getNextAutoMatchGroup();
-                    if(g != null) valid = true;
-                }
-                
-                if(app != null && g == null) {
-                    logger.log(Level.FINE, "open_group: creating new group");
-                    g = new Group();
-                    g.setGid(UUID.randomUUID().toString());
-                    g.setDescription(client.getUser().getNick() + ": " + g.getGid());
-                    g.setApplication(app);
-                    g.setState(GroupState.OPEN);
-                    g.setObservableGroup(app.isObservableGroup());
-                    g.setDynamicGroup(app.isDynamicGroup());
-                    g.setAlliancesAllowed(app.isAlliancesAllowed());
-                    g.setMaxMembers(app.getMaxGroupMembers());
-                    g.setMinMembers(app.getMinGroupMembers());
-                    g.setAdminNick(client.getUser().getNick());
-                    g.setAutoMatchEnabled(autoMatch);
-                    g.setAutoMatchCompleted(false);
+                g = new Group();
+                g.setGid(UUID.randomUUID().toString());
+                g.setDescription(client.getUser().getNick() + ": " + g.getGid());
+                g.setApplication(app);
+                g.setState(GroupState.OPEN);
+                g.setObservableGroup(app.isObservableGroup());
+                g.setDynamicGroup(app.isDynamicGroup());
+                g.setAlliancesAllowed(app.isAlliancesAllowed());
+                g.setMaxMembers(app.getMaxGroupMembers());
+                g.setMinMembers(app.getMinGroupMembers());
+                g.setAdminNick(client.getUser().getNick());
+                g.setAutoMatchEnabled(autoMatchMode);
+                g.setAutoMatchCompleted(false);
 
-                    app.addGroup(g);
-                    groups.put(g.getGid(), g);
+                app.addGroup(g);
+                groups.put(g.getGid(), g);
 
-                    socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:" + appId)), listGroups(appId), false);  // don't exclude Me
+                socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:" + appId)), listGroups(appId), false);  // don't exclude Me
 
-                    valid = true;
-                    created = true;
-                }
+                valid = true;
+                created = true;
 
             } catch(Exception err) {
                 // valid = false;

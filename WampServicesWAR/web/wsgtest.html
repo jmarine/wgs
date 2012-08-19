@@ -470,10 +470,8 @@ function exit_group(toOfflineMode) {
         $("#" + back_section).slideDown(500);
     }
     
-    var appId = $("#apps option:selected").attr("value");
     var gid = $("#group_gid").val();
-    
-    wsgclient.exitGroup(appId, gid, function(response) {
+    wsgclient.exitGroup(gid, function(response) {
         wsgclient.unsubscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + gid, update_group_callback, true);
     });
 }
