@@ -1,7 +1,9 @@
 WAMP services provider for Java
 ===============================
 
-Status: alpha
+Version: | 0.1 ||
+Status:  | alpha ||
+[Project status]
 
 
 About
