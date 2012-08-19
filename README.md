@@ -99,9 +99,10 @@ context.wamp1.topics=https://github.com/jmarine/wampservices#topic1,https://gith
 
 
 
-### Helper classes: ###
+### API classes: ###
 
 ##### WampModule methods #####
+------------------------------
 
 This is an abstract class that provides interceptor methods for WAMP events:
 
