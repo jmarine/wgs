@@ -1,5 +1,5 @@
 /**
- * WebSocket Game service implementation
+ * WebSocket Game services implementation
  *
  * @author Jordi Marine Fort 
  */
@@ -42,7 +42,8 @@ public class Module extends WampModule
     private Map<String, Application> applications = new ConcurrentHashMap<String,Application>();
     private Map<String, Group> groups = new ConcurrentHashMap<String,Group>();
     
-    public Module(WampApplication app) {
+    public Module(WampApplication app)
+    {
         super(app);
         this.wampApp = app;
         
