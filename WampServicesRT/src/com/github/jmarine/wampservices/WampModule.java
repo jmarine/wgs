@@ -71,7 +71,7 @@ public abstract class WampModule
         throw new WampException(WampException.WAMP_GENERIC_ERROR_URI, "Method not implemented: " + methodName);
     }
     
-    public void   onSubscribe(WampSocket clientSocket, WampTopic topic, int options) throws Exception { 
+    public void   onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
         WampSubscription topicSubscription = new WampSubscription(clientSocket, topic.getURI(), options);
         topic.addSubscription(topicSubscription);
         clientSocket.addSubscription(topicSubscription);

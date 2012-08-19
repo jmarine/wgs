@@ -16,8 +16,14 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class WampTopic {
     private String uri;
+    private WampTopicOptions options;
     private Map<String,WampSubscription> subscriptions = new ConcurrentHashMap<String,WampSubscription>();
 
+    
+    public WampTopic(WampTopicOptions options) {
+        this.options = options;
+    }
+    
     /**
      * @return the name
      */

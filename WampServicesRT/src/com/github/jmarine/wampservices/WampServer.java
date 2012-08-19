@@ -1,32 +1,24 @@
-package com.github.jmarine.wampservices;
-
-import java.io.FileReader;
-import java.util.Enumeration;
-import java.util.Properties;
-import java.util.StringTokenizer;
-
-import com.sun.grizzly.websockets.WebSocketEngine;
-import com.sun.grizzly.config.GrizzlyConfig;
-import com.sun.grizzly.tcp.StaticResourcesAdapter;
-import java.io.FileOutputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.util.Hashtable;
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
-import javax.naming.spi.InitialContextFactory;
-
-import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
-
-
-
 /**
  * Standalone Java WAMP implementation.
   *
  * @author Jordi Mariné Fort
  */
+
+package com.github.jmarine.wampservices;
+
+import com.sun.grizzly.config.GrizzlyConfig;
+import com.sun.grizzly.tcp.StaticResourcesAdapter;
+import com.sun.grizzly.websockets.WebSocketEngine;
+import java.io.FileReader;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.Properties;
+import java.util.StringTokenizer;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
+
+
 public class WampServer {
 
     
@@ -86,7 +78,7 @@ public class WampServer {
                         while(tkTopics.hasMoreTokens()) {
                             String topic = tkTopics.nextToken();
                             System.out.println("> Creating topic at "+uri+": " + topic);
-                            wampApplication.createTopic(topic);
+                            wampApplication.createTopic(topic, null);
                         }
                     }                    
                     

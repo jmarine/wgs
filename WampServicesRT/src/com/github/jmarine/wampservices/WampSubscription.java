@@ -8,26 +8,21 @@ import java.util.Collections;
 
 public class WampSubscription 
 {
-    public static final int OPTION_PUBLISHER_ID      = 1;
-    public static final int OPTION_EVENT_PERSISTENCE = 2;
-    public static final int OPTION_EVENT_HISTORY     = 4;
-    
-
-    private int        options;
-    
     private WampSocket client;
     
     private String     topicUrlOrPattern;
+
+    private WampSubscriptionOptions options;
     
     
-    public WampSubscription(WampSocket client, String topicUrlOrPattern, int options) 
+    public WampSubscription(WampSocket client, String topicUrlOrPattern, WampSubscriptionOptions options) 
     {
         this.options = options;
         this.client = client;
         this.topicUrlOrPattern = topicUrlOrPattern;
     }
     
-    public int getOptions()
+    public WampSubscriptionOptions getOptions()
     {
         return options;
     }
@@ -41,6 +36,5 @@ public class WampSubscription
     {
         return topicUrlOrPattern;
     }
-    
     
 }

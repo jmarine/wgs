@@ -1,3 +1,9 @@
+/**
+ * Servlet implementation for WAMP services.
+  *
+ * @author Jordi Mariné Fort
+ */
+
 package com.github.jmarine.wampservices;
 
 import com.sun.grizzly.websockets.*;
@@ -37,7 +43,7 @@ public class WampServlet extends HttpServlet
                 StringTokenizer tokenizer = new StringTokenizer(topics,",");
                 while(tokenizer.hasMoreTokens()) {
                     String topic = tokenizer.nextToken();
-                    wampApplication.createTopic(topic);
+                    wampApplication.createTopic(topic, null);
                 }
             }
             

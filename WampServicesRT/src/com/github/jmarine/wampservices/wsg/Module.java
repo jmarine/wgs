@@ -1,3 +1,9 @@
+/**
+ * WebSocket Game service implementation
+ *
+ * @author Jordi Marine Fort 
+ */
+
 package com.github.jmarine.wampservices.wsg;
 
 
@@ -41,7 +47,7 @@ public class Module extends WampModule
         super(app);
         this.wampApp = app;
         
-        wampApp.createTopic(getFQtopicURI("apps_event"));
+        wampApp.createTopic(getFQtopicURI("apps_event"), null);
 
         try {
             List<Application> apps = findEntities(Application.class, "wsg.findAllApps");
@@ -125,7 +131,7 @@ public class Module extends WampModule
         Object retval = null;
         if(method.equals("list_groups")) {
             String appId = args.get(0).get("app").asText();
-            wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId), 0);
+            wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId), null);
             retval = listGroups(appId);
         } else if(method.equals("exit_group")) {
             String gid = args.get(0).get("gid").asText();
@@ -143,7 +149,7 @@ public class Module extends WampModule
         cli.setState(ClientState.INVALID);  // not authenticated
         clients.put(socket.getSessionId(), cli);
         
-        wampApp.subscribeClientWithTopic(socket, getFQtopicURI("apps_event"), 0);
+        wampApp.subscribeClientWithTopic(socket, getFQtopicURI("apps_event"), null);
     }
     
     @Override
@@ -227,12 +233,12 @@ public class Module extends WampModule
     
     
     private void registerApplication(Application app) {
-        wampApp.createTopic(getFQtopicURI("app_event:"+app.getAppId()));
+        wampApp.createTopic(getFQtopicURI("app_event:"+app.getAppId()), null);
         applications.put(app.getAppId(), app);
     }
     
     private void unregisterApplication(Application app) {
-        wampApp.deleteTopic(getFQtopicURI("app_event:"+app.getAppId()));
+        wampApp.removeTopic(getFQtopicURI("app_event:"+app.getAppId()));
         applications.remove(app.getAppId());
     }
     
@@ -477,8 +483,8 @@ public class Module extends WampModule
 
             String topicName = getFQtopicURI("group_event:" + g.getGid());
             WampTopic topic = wampApp.getTopic(topicName);
-            if(topic == null) topic = wampApp.createTopic(topicName);
-            wampApp.subscribeClientWithTopic(client.getSocket(), topicName, 0);
+            if(topic == null) topic = wampApp.createTopic(topicName, null);
+            wampApp.subscribeClientWithTopic(client.getSocket(), topicName, null);
             
             client.addGroup(g);
             ArrayNode conArray = mapper.createArrayNode();
@@ -755,7 +761,7 @@ public class Module extends WampModule
                         groups.remove(g.getGid());
                         applications.get(appId).removeGroup(g);
 
-                        wampApp.deleteTopic(topicName);
+                        wampApp.removeTopic(topicName);
                         socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+appId)), listGroups(appId), false);  // don't exclude Me
                     }
                 }
