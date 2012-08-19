@@ -6,18 +6,16 @@
 
 package com.github.jmarine.wampservices;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import com.sun.grizzly.tcp.Request;
 import com.sun.grizzly.websockets.*;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import org.codehaus.jackson.JsonNode;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 

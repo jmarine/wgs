@@ -7,8 +7,13 @@
 package com.github.jmarine.wampservices.wsg;
 
 
+import com.github.jmarine.wampservices.WampApplication;
+import com.github.jmarine.wampservices.WampException;
+import com.github.jmarine.wampservices.WampModule;
+import com.github.jmarine.wampservices.WampRPC;
+import com.github.jmarine.wampservices.WampSocket;
+import com.github.jmarine.wampservices.WampTopic;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -19,12 +24,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
-import com.github.jmarine.wampservices.WampApplication;
-import com.github.jmarine.wampservices.WampException;
-import com.github.jmarine.wampservices.WampModule;
-import com.github.jmarine.wampservices.WampRPC;
-import com.github.jmarine.wampservices.WampSocket;
-import com.github.jmarine.wampservices.WampTopic;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
