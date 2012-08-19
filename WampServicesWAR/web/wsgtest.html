@@ -336,7 +336,7 @@ function append_group_member(added, memberId, memberNick, memberCid, memberType,
         }
     });
     html += '</select></td>';
-    html += '<td><input type="number" size="4" id="team' + memberId + '" min="0" value="' + (1+memberId) + '"/></td>';
+    html += '<td><input type="number" size="5" id="team' + memberId + '" min="0" max="99999" value="' + (1+memberId) + '"/></td>';
     if(added) html += '<td><button class="remove_member" onclick="remove_last_member()">X</button></td>';
     html += '</tr>';
     
@@ -571,9 +571,9 @@ function toggle_connect(create_user) {
       <legend>Application registration</legend>
     <label for="app_name">Name:</label><input type="text" name="app_name" id="app_name"/><br/>
     <label for="app_domain">Domain:</label><input type="text" name="app_domain" id="app_domain"/><br/>
-    <label for="app_version">Version:</label><input type="number" name="app_version" id="app_version" min="1" value="1"/><br/>
-    <label for="app_min">Min:</label><input type="number" size="5" name="app_min" id="app_min" min="1" value="2"/><br/>
-    <label for="app_max">Max:</label><input type="number" size="5" name="app_max" id="app_max" min="0" value="2"/><br/>
+    <label for="app_version">Version:</label><input type="number" size="5" name="app_version" id="app_version" min="1" max="99999" value="1"/><br/>
+    <label for="app_min">Min:</label><input type="number" size="5" name="app_min" id="app_min" min="1" max="99999" value="2"/><br/>
+    <label for="app_max">Max:</label><input type="number" size="5" name="app_max" id="app_max" min="0" max="99999" value="2"/><br/>
     <label for="app_observable">Observable:</label><input type="checkbox" name="app_observable" id="app_observable" /><br/>
     <label for="app_dynamic">Dynamic:</label><input type="checkbox" name="app_dynamic" id="app_dynamic" /><br/>
     <label for="app_alliances">Alliances:</label><input type="checkbox" name="app_alliances" id="app_alliances" /><br/>
