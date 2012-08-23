@@ -9,6 +9,7 @@ import java.util.Set;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.NullNode;
 import org.codehaus.jackson.node.ObjectNode;
 
 
@@ -59,10 +60,10 @@ public abstract class WampModule
                 } else if(ArrayNode.class.isAssignableFrom(paramType)) {
                     params.add(args);  // TODO: only from argCount to args.size()
                     argCount = args.size();
-                } else if(ObjectNode.class.isAssignableFrom(paramType)) {
-                    params.add(args.get(argCount++));
                 } else {
-                    params.add(mapper.readValue(args.get(argCount++), paramType));
+                    JsonNode val = args.get(argCount++);
+                    if(val instanceof NullNode) params.add(null);
+                    else params.add(mapper.readValue(val, paramType));
                 }
             }
             return method.invoke(this, params.toArray());
