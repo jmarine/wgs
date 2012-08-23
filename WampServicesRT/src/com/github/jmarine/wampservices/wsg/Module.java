@@ -384,7 +384,7 @@ public class Module extends WampModule
     
     
     @WampRPC(name="open_group")
-    public synchronized ObjectNode openGroup(WampSocket socket, String appId, String gid) throws Exception
+    public synchronized ObjectNode openGroup(WampSocket socket, String appId, String gid, ObjectNode options) throws Exception
     {
         Group   g = null;
         boolean valid   = false;
@@ -430,6 +430,11 @@ public class Module extends WampModule
                 g.setAdminNick(client.getUser().getNick());
                 g.setAutoMatchEnabled(autoMatchMode);
                 g.setAutoMatchCompleted(false);
+                if(options != null) {
+                    String password = options.get("password").asText();
+                    g.setPassword( (password!=null && password.length()>0)? password : null);
+                    g.setHidden(options.get("hidden").asBoolean(false));
+                }
 
                 app.addGroup(g);
                 groups.put(g.getGid(), g);

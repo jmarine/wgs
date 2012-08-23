@@ -300,10 +300,11 @@ WsgClient.prototype = {
       this.call("wsg:delete_app", msg).then(callback, callback);
   },  
   
-  openGroup: function(appId, gid, callback) {
+  openGroup: function(appId, gid, options, callback) {
       var args = Array();
       args[0] = appId? appId : null;
       args[1] = gid? gid : null;
+      args[2] = options;
       
       this.call("wsg:open_group", args).then(callback, callback);
   },
@@ -312,11 +313,12 @@ WsgClient.prototype = {
       this.call("wsg:exit_group", gid).then(callback, callback);
   },
 
-  updateGroup: function(appId, gid, state, data, automatch, observable, dynamic, alliances, callback) {
+  updateGroup: function(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, callback) {
       var msg = Object();
       msg.app = appId;
       msg.gid = gid;
       msg.automatch = automatch;
+      msg.hidden = hidden;
       msg.observable = observable;
       msg.dynamic = dynamic;
       msg.alliances = alliances;      

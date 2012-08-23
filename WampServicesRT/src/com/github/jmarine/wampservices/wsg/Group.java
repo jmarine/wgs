@@ -18,10 +18,12 @@ public class Group {
     private boolean dynamicGroup;
     private boolean alliancesAllowed;
     private boolean observableGroup;
+    private boolean hidden;
 
     private String gid;
     private String description;
     private String data;
+    private String password;
 
     private ArrayList<GroupMember> members = new ArrayList<GroupMember>();
 
@@ -258,8 +260,35 @@ public class Group {
         }
         members.set(index, member);
     }
-    
-    
+
+    /**
+     * @return the hidden
+     */
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    /**
+     * @param hidden the hidden to set
+     */
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
+    }
+
+    /**
+     * @return the password
+     */
+    public String getPassword() {
+        return password;
+    }
+
+    /**
+     * @param password the password to set
+     */
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
 }
 
 
