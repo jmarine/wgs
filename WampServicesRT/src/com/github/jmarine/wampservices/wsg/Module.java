@@ -342,8 +342,7 @@ public class Module extends WampModule
     private void broadcastApps(WampSocket socket) throws Exception
     {
         // check subscribers of "apps_event" topic
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode list = mapper.createObjectNode();        
+        ObjectNode list = listApps();
         list.put("cmd", "list_apps");
         socket.publishEvent(wampApp.getTopic(getFQtopicURI("apps_event")), list, false);  // don't exclude Me
     }
