@@ -36,12 +36,20 @@ public class WampServer {
         if(args.length > 0) configFileName = args[0];
         
         GrizzlyConfig grizzlyConfig = null;
+
+        FileReader configReader = null;
+        Properties wampConfig = new Properties();
+        try {
+            configReader = new FileReader(configFileName);
+            wampConfig.load(configReader);
+        } finally {
+            if(configReader != null) {
+                configReader.close(); 
+                configReader=null;
+            }            
+        }
         
-        try(FileReader reader = new FileReader(configFileName)) {
-            Properties wampConfig = new Properties();
-            wampConfig.load(reader);
-            reader.close();
-            
+        try {
             DocRootAdapter.setDocRoot(wampConfig.getProperty("docroot"));
             grizzlyConfig = new GrizzlyConfig("grizzly-config.xml");
             grizzlyConfig.setupNetwork();            
