@@ -7,6 +7,8 @@
 package com.github.jmarine.wampservices;
 
 import com.sun.grizzly.config.GrizzlyConfig;
+import com.sun.grizzly.tcp.Request;
+import com.sun.grizzly.tcp.Response;
 import com.sun.grizzly.tcp.StaticResourcesAdapter;
 import com.sun.grizzly.websockets.WebSocketEngine;
 import java.io.FileReader;
@@ -145,10 +147,14 @@ public class WampServer {
         public DocRootAdapter()
         {
             super(docRoot);
+            
+            // SSL fix for Grizzly 1.9 (it is not required for Grizzly 2.x):
+            if(System.getProperty("os.name").equalsIgnoreCase("linux")) {
+                this.setUseSendFile(false);  
+            }
         }
 
     }
-    
     
     
 }
