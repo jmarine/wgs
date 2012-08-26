@@ -624,6 +624,10 @@ public class Module extends WampModule
             if(state != null) {
                 g.setState(GroupState.valueOf(state));
                 response.put("state", state);
+                
+                if(g.getState() == GroupState.STARTED) {
+                    response.put("members", getMembers(gid,0));
+                }
             }
 
             JsonNode dataNode = node.get("data");
@@ -640,6 +644,29 @@ public class Module extends WampModule
 
         if(valid) socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, true);  // exclude Me
         return response;
+    }
+    
+    
+    @WampRPC(name="list_members")
+    public ArrayNode getMembers(String gid, int team) throws Exception 
+    {
+        Group g = groups.get(gid);
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode membersArray = mapper.createArrayNode();
+             
+        for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
+            GroupMember member = g.getMember(slot);
+            if( (member != null) && (team==0 || team==member.getTeam()) ) {
+                boolean connected = (member.getClient() != null);
+
+                ObjectNode obj = member.toJSON();
+                obj.put("slot", slot);
+                obj.put("connected", connected);
+                
+                membersArray.add(obj);
+            }
+        }
+        return membersArray;        
     }
     
     
