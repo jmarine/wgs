@@ -61,14 +61,44 @@ label { display: block; float: left; width: 90px; clear: left; }
 
 <script language="javascript">
 var wsgclient = null;
-var currentApp = null;
+var currentAppAI = null;
 var currentGroup = null;
+
+$(document).ready(function(){
+    $('#apps').click(function() {
+        var c =  $("#apps > option:selected").size();
+        $('#btn_automatch_group').each(function() {
+          this.disabled = (c==0);
+        });
+        $('#btn_select_app').each(function() {
+          this.disabled = (c==0);
+        });
+        $('#btn_delete_app').each(function() {
+          this.disabled = (c==0);
+        });
+    });
+    
+    $('#groups').click(function() {
+        var c =  $("#groups > option:selected").size();
+        $('#btn_select_group').each(function() {
+          this.disabled = (c==0);
+        });
+
+    });
+    
+});
 
 function enable_network() {
     $("#group_params").hide();
     $("#login").slideDown(500);
     $("#enable_network").hide();
     $("#exit_group").show();
+    
+    $("#server_url").removeAttr("disabled");
+    $("#nick").removeAttr("disabled");
+    $("#password").removeAttr("disabled");
+    $("#register").removeAttr("disabled");
+    
 }
 
 function authentication(state, msg) {
@@ -90,6 +120,10 @@ function authentication(state, msg) {
 function update_apps(response) {
     if(response.apps) {
         $("#apps option").remove();            
+        $('#btn_automatch_group').attr("disabled", "true");
+        $('#btn_select_app').attr("disabled", "true");
+        $('#btn_delete_app').attr("disabled", "true");
+        
         response.apps.forEach(function(item) {
             $("#apps").append($('<option>').attr('value',item.appId).text(item.name));
         });
@@ -132,6 +166,8 @@ function hide_new_group_params() {
 
 function update_groups(response) {
     $("#groups option").remove();
+    $('#btn_select_group').attr("disabled", "true");
+        
     if(response.groups) {
         response.groups.forEach(function(item) {
             $("#groups").append($('<option>').attr('value',item.gid).text(item.description));
@@ -151,7 +187,6 @@ function list_groups() {
     $("#groups option").remove();
     wsgclient.listGroups(appId, function(response) {
         if(response.valid) {
-            //currentApp = response.app;
             wsgclient.subscribe("https://github.com/jmarine/wampservices/wsgservice#app_event:" + appId, update_groups, true);
             update_groups(response);
             $("#app_list").hide();
@@ -165,7 +200,13 @@ function delete_app() {
     var appId = $("#apps option:selected").attr("value");
     if(confirm("Do you really want to delete the application?")) {
         wsgclient.deleteApp(appId, function(response) {
-            if(!response.valid) alert("Error deleting application.");
+            if(!response.valid) {
+                alert("Error deleting application.");
+            } else {
+                $('#btn_automatch_group').attr("disabled", "true");
+                $('#btn_select_app').attr("disabled", "true");
+                $('#btn_delete_app').attr("disabled", "true");                
+            }
         });
     }
 } 
@@ -206,7 +247,6 @@ function delete_role() {
 }
 
 function new_group() {
-    $("#back_section").val("group_list");
     var gid = $("#new_grp_automatch").is(":checked") ? "automatch" : "";
     var options = new Object();
     options.hidden = $("#new_grp_hidden").is(":checked");
@@ -217,11 +257,11 @@ function new_group() {
 
 function open_group(gid, options) {
     var appId = $("#apps option:selected").attr("value");
-    currentApp = wsgclient.getAppFromCache(appId);
-    if(options || gid == "automatch") $("#back_section").val("app_list");
+    if(gid == "automatch") $("#back_section").val("app_list");
     else $("#back_section").val("group_list");
     wsgclient.openGroup(appId, gid, options, function(response) {
        if(response.valid) {
+            currentAppAI = response.app.ai;
             if(response.gid != "") wsgclient.subscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + response.gid, update_group_callback, true);
             show_group(response); 
        }
@@ -270,7 +310,7 @@ function show_group(group) {
                 roleFixed = true;
             }
 
-            append_group_member(false, memberId, memberNick, member.sid, member.type, member.role, currentNickSelected, roleFixed, currentApp.ai);
+            append_group_member(false, memberId, memberNick, member.sid, member.type, member.role, currentNickSelected, roleFixed, currentAppAI);
 
         });
     }
@@ -283,7 +323,7 @@ function show_group(group) {
 
 function add_group_member(added) {
     var members = $("#group_params table[id='members'] tbody tr");
-    append_group_member(added, members.size(), "", "", "user", "", "", false, currentApp.ai);
+    append_group_member(added, members.size(), "", "", "user", "", "", false, currentAppAI);
 }
 
 function update_member(field, as_previous_client) 
@@ -437,7 +477,7 @@ function update_group_callback(response) {
 
                         var currentNickSelected = (wsgclient.sid == response.sid);
                         var roleFixed = (response.role != "") && (response.sid != "") && (wsgclient.sid != response.sid);
-                        populate_group_member_fields(false, memberId, response.nick, response.sid, response.type, response.role, currentNickSelected, roleFixed, currentApp.ai);
+                        populate_group_member_fields(false, memberId, response.nick, response.sid, response.type, response.role, currentNickSelected, roleFixed, currentAppAI);
                     }
                 }
 
@@ -452,7 +492,7 @@ function update_group_callback(response) {
                     response.members.forEach(function(member) {
                         var memberId = member.slot;  
                         if(wsgclient.nick != $("#group_admin").val()) {
-                            populate_group_member_fields(false, memberId, member.nick, member.sid, member.type, member.role, false, false, currentApp.ai);
+                            populate_group_member_fields(false, memberId, member.nick, member.sid, member.type, member.role, false, false, currentAppAI);
                         }
                     });
                 }
@@ -537,6 +577,8 @@ function disconnect() {
     $("#group_list").hide(500);
     
     $("#group_params").slideDown(500);   
+    
+    enable_network();
 }
 
 function toggle_connect(create_user) {
@@ -579,10 +621,10 @@ function toggle_connect(create_user) {
       <legend>Application</legend>
     <select id="apps" name="apps" size="8" style="width: 100%">
     </select><br>
-    <button id="automatch_group" onclick="open_group('automatch');">Auto-Match</button>
-    <button id="select_app" onclick="list_groups();">Show groups</button>
-    <button id="new_app" onclick="show_app_params();">New</button>
-    <button id="delete_app" onclick="delete_app();">Delete</button>
+    <button id="btn_automatch_group" onclick="open_group('automatch');" disabled >Auto-Match</button>
+    <button id="btn_select_app" onclick="list_groups();" disabled >Show groups</button>
+    <button id="btn_new_app" onclick="show_app_params();">New</button>
+    <button id="btn_delete_app" onclick="delete_app();" disabled >Delete</button>
     </fieldset>
   </div>
 
@@ -622,9 +664,9 @@ function toggle_connect(create_user) {
       <legend>Groups</legend>
     <select id="groups" name="groups" size="8" style="width: 100%">
     </select><br>
-    <button id="select_group" onclick="open_group($('#groups option:selected').attr('value'));">Select</button>
-    <button id="new_group" onclick="show_new_group_params();">New</button>
-    <button id="hide_group" onclick="hide_group_list();">Exit</button>
+    <button id="btn_select_group" onclick="open_group($('#groups option:selected').attr('value'));" disabled>Select</button>
+    <button id="btn_new_group" onclick="show_new_group_params();">New</button>
+    <button id="btn_hide_group" onclick="hide_group_list();">Exit</button>
     </fieldset>
   </div>
 
@@ -659,7 +701,7 @@ function toggle_connect(create_user) {
       <tbody>
       </tbody>
     </table>
-    <label for="grp_automatch">Auto-match:</label><input type="checkbox" name="grp_automatch" id="grp_automatch" /><br/>
+    <label for="grp_automatch">Auto-match:</label><input type="checkbox" name="grp_automatch" id="grp_automatch"/><br/>
     <label for="grp_hidden">Hidden:</label><input type="checkbox" name="grp_hidden" id="grp_hidden" /><br/>
     <label for="grp_dynamic">Dynamic:</label><input type="checkbox" name="grp_dynamic" id="grp_dynamic" /><br/>
     <label for="grp_alliances">Alliances:</label><input type="checkbox" name="grp_alliances" id="grp_dynamic" /><br/>

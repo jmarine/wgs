@@ -254,7 +254,7 @@ WsgClient.prototype = {
       }
   },
   
-  getAppFromCache: function(appId) {
+  _app_info_cache: function(appId) {
       return this.apps[appId];
   },  
   
