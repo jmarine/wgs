@@ -244,31 +244,14 @@ WsgClient.prototype = {
 
   },
   
-  _update_apps: function(response) {
-      var client = this;
-      this.apps = new Array();
-      if(response.apps) {
-          response.apps.forEach(function(app) {
-              client.apps[app.appId] = app;
-          });
-      }
-  },
-  
-  _app_cache: function(appId) {
-      return this.apps[appId];
-  },  
-  
   listApps: function(filterByDomain, callback) {
       var client = this;
       var msg = Object();
       if(filterByDomain) msg.domain = document.domain.toString();
 
-      this.subscribe("https://github.com/jmarine/wampservices/wsgservice#apps_event", this._update_apps, true);
       this.call("wsg:list_apps", msg).then(function(response) {
-          client._update_apps(response);
           callback(response);
         }, function(response) {
-          client._update_apps(response);
           callback(response);
         });
   },
