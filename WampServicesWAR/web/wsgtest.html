@@ -357,6 +357,12 @@ function populate_group_member_fields(added, memberId, memberNick, memberCid, me
         members += '<option value="">Empty</option>';
         members += '<option value="user:'+wsgclient.sid+'" ' + ((currentNickSelected && memberType=="user")? "selected" : "") + '>Me</option>';
         if(ai) members += '<option value="computer:'+wsgclient.sid+'" ' + ((currentNickSelected && memberType=="computer")? "selected" : "") + '>MyComputer</option>';
+        var connections = wsgclient.getGroupConnections(currentGroup.gid);
+        for(var sid in connections) {
+            if( (wsgclient.nick == $("#group_admin").val()) && (sid != wsgclient.sid) && (memberCid != sid) ) {
+                members += '<option value="user:'+sid+'" ' + ((sid==memberCid && memberType=="user")? "selected" : "") + '>user:'+connections[sid]+'</option>';
+            }
+        }
     } 
     
     if(!added && memberNick != "" && memberCid != wsgclient.sid) {

@@ -14,8 +14,8 @@ function WsgClient(u) {
 WsgClient.prototype = {
   ws: null,
   sid: null,
-  apps: null,
   onstatechange: null,
+  groups: new Array(),
   calls: new Array(),
   topics: new Array(),
   
@@ -284,17 +284,43 @@ WsgClient.prototype = {
   },  
   
   openGroup: function(appId, gid, options, callback) {
+      var client = this;
       var args = Array();
       args[0] = appId? appId : null;
       args[1] = gid? gid : null;
       args[2] = options;
-      
-      this.call("wsg:open_group", args).then(callback, callback);
+
+      this.subscribe("wsg:group_event#" + gid, this._update_group_users, true);
+      this.call("wsg:open_group", args).then(function(response) {
+          client._update_group_users(response);
+          callback(response);
+      }, callback);
   },
   
   exitGroup: function(gid, callback) {
       this.call("wsg:exit_group", gid).then(callback, callback);
+      this.unsubscribe("wsg:group_event#" + gid, this._update_group_users, true);
+      delete this.groups[gid];
   },
+
+  getGroupConnections: function(gid) {
+      return this.groups[gid];
+  },
+  
+  _update_group_users: function(msg) {
+      var client = this;
+      if(msg.connections) {
+          client.groups[msg.gid] = new Array();
+          msg.connections.forEach(function(con) { 
+              client.groups[msg.gid][con.sid] = con.nick;
+          });
+      } else if(msg.cmd == "user_joined") {
+          client.groups[msg.gid][msg.sid] = msg.nick;
+      } else if(msg.cmd == "user_unjoined") {
+          delete client.groups[msg.gid][msg.sid];
+      }
+  },
+  
 
   updateGroup: function(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, callback) {
       var msg = Object();
