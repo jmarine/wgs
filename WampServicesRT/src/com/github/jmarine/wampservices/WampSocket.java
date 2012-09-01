@@ -111,7 +111,7 @@ public class WampSocket extends DefaultWebSocket
         try {
             if(this.isConnected()) super.send(msg);
         } catch(Exception e) {
-            logger.log(Level.SEVERE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
+            logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
             close(PROTOCOL_ERROR, e.getMessage());
         }
     }

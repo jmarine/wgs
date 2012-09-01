@@ -172,6 +172,9 @@ public class WampApplication extends WebSocketApplication
     @Override
     public void onClose(WebSocket websocket, DataFrame frame) 
     {
+        super.onClose(websocket, frame);        
+        websocket.setClosed();
+        
         WampSocket clientSocket = (WampSocket)websocket;
         for(WampModule module : modules.values()) {
             try { 
@@ -192,8 +195,7 @@ public class WampApplication extends WebSocketApplication
         for(WampSubscription subscription : clientSocket.getSubscriptions()) {
             unsubscribeClientFromTopic(clientSocket, subscription.getTopicUriOrPattern());
         }        
-        
-        super.onClose(websocket, frame);
+
         logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
     }
     
