@@ -254,12 +254,16 @@ public class WampApplication extends WebSocketApplication
             }
             clientSocket.sendCallResult(callID, response);
 
-        } catch(WampException ex) {
-            clientSocket.sendCallError(callID, ex.getErrorURI(), ex.getErrorDesc(), ex.getErrorDetails());
-            logger.log(Level.SEVERE, "Error calling method " + method, ex);
+        } catch(Throwable ex) {
             
-        } catch(Exception ex) {
-            clientSocket.sendCallError(callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + method, new Object[] { ex.getMessage() });
+            if(ex instanceof java.lang.reflect.InvocationTargetException) ex = ex.getCause();
+            
+            if(ex instanceof WampException) {
+                WampException wex = (WampException)ex;
+                clientSocket.sendCallError(callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
+            } else {
+                clientSocket.sendCallError(callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + method, ex.getMessage());
+            }
             logger.log(Level.SEVERE, "Error calling method " + method, ex);
         }
     }
