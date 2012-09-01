@@ -564,6 +564,7 @@ public class Module extends WampModule
 
                     ObjectNode event = member.toJSON();
                     event.put("cmd", "user_joined");
+                    event.put("gid", g.getGid());
                     event.put("slot", index);
                     event.put("valid", true);
 
@@ -589,6 +590,7 @@ public class Module extends WampModule
 
             ObjectNode event = mapper.createObjectNode();
             event.put("cmd", "user_joined");
+            event.put("gid", g.getGid());
             event.put("nick", nickName);
             event.put("sid", sid);
             event.put("type", "user");
@@ -713,6 +715,7 @@ public class Module extends WampModule
                 g.setMember(slot, member);
 
 
+                response.put("gid", g.getGid());
                 response.put("sid", sid);
                 response.put("nick", nick);
                 response.put("type", usertype);

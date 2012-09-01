@@ -290,35 +290,41 @@ WsgClient.prototype = {
       args[1] = gid? gid : null;
       args[2] = options;
 
-      this.subscribe("wsg:group_event#" + gid, this._update_group_users, true);
       this.call("wsg:open_group", args).then(function(response) {
-          client._update_group_users(response);
+          var _update_group_users = function(msg, topicURI) {
+                if(msg.connections) {
+                    client.groups[msg.gid] = new Object();
+                    client.groups[msg.gid].connections = new Array();
+                    client.groups[msg.gid].members = msg.members;
+                    msg.connections.forEach(function(con) { 
+                        client.groups[msg.gid].connections[con.sid] = con.nick;
+                    });
+                } else if(msg.cmd == "user_joined") {
+                    client.groups[msg.gid].connections[msg.sid] = msg.nick;
+                    if(msg.slot) client.groups[msg.gid].members[msg.slot] = msg;
+                } else if(msg.cmd == "user_unjoined") {
+                    delete client.groups[msg.gid].connections[msg.sid];
+                    if(msg.members) {
+                        msg.members.forEach(function(member) {
+                            client.groups[msg.gid].members[member.slot] = null;
+                        });
+                    }
+                }
+            };
+          client.subscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + response.gid, _update_group_users, true);
+          _update_group_users(response);
           callback(response);
       }, callback);
   },
   
   exitGroup: function(gid, callback) {
       this.call("wsg:exit_group", gid).then(callback, callback);
-      this.unsubscribe("wsg:group_event#" + gid, this._update_group_users, true);
+      this.unsubscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + gid, this._update_group_users, true);
       delete this.groups[gid];
   },
 
   getGroupConnections: function(gid) {
-      return this.groups[gid];
-  },
-  
-  _update_group_users: function(msg) {
-      var client = this;
-      if(msg.connections) {
-          client.groups[msg.gid] = new Array();
-          msg.connections.forEach(function(con) { 
-              client.groups[msg.gid][con.sid] = con.nick;
-          });
-      } else if(msg.cmd == "user_joined") {
-          client.groups[msg.gid][msg.sid] = msg.nick;
-      } else if(msg.cmd == "user_unjoined") {
-          delete client.groups[msg.gid][msg.sid];
-      }
+      return this.groups[gid].connections;
   },
   
 
