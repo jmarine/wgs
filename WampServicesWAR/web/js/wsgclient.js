@@ -221,6 +221,8 @@ WsgClient.prototype = {
                 var args = arr[4];
                 if(!args) args = {};
                 args.valid = false;
+                args.errorURI = arr[2];
+                args.errorDetails = arr[3];
                 client.calls[call].reject(args);
                 delete client.calls[call];
             } else {

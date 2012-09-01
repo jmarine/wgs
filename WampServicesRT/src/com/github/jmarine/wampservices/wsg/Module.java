@@ -209,7 +209,7 @@ public class Module extends WampModule
             client.setState(ClientState.AUTHENTICATED);
         }
 
-        if(!user_valid) throw new WampException(MODULE_URL + "loginerror", "The credentials are not valid");
+        if(!user_valid) throw new WampException(MODULE_URL + "loginerror", "Login credentials are not valid");
         return null;
     }
     
@@ -411,8 +411,15 @@ public class Module extends WampModule
             }
         } 
         
-        
-        if(g == null) {  // create group
+        if(g != null) {
+            String pwd = g.getPassword();
+            if( (pwd != null) && (pwd.length()>0) ) {
+                String pwd2 = (options!=null)? options.get("password").asText() : "";
+                if(!pwd.equals(pwd2)) throw new WampException(MODULE_URL + "incorrectpassword", "Incorrect password");
+            }
+            
+        } else {  
+            // create group
             try {
                 logger.log(Level.FINE, "open_group: creating new group");
                 Application app = applications.get(appId);

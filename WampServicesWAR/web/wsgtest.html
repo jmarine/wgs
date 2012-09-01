@@ -264,6 +264,13 @@ function open_group(gid, options) {
             currentAppAI = response.app.ai;
             if(response.gid != "") wsgclient.subscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + response.gid, update_group_callback, true);
             show_group(response); 
+       } else if(response.errorURI == "https://github.com/jmarine/wampservices/wsgservice#incorrectpassword") {
+            var password = prompt("Introduce the password to access the group:");
+            if(password) {
+                if(!options) options = {};
+                options.password = password;
+                open_group(gid, options);
+            }
        }
     });
 }
