@@ -143,6 +143,7 @@ public class Module extends WampModule
 
     @Override
     public void onConnect(WampSocket socket) throws Exception {
+        super.onConnect(socket);
         Client cli = new Client();
         cli.setSocket(socket);
         cli.setState(ClientState.INVALID);  // not authenticated
@@ -159,6 +160,7 @@ public class Module extends WampModule
             exitGroup(socket, gid);
         }
         clients.remove(socket.getSessionId());
+        super.onDisconnect(socket);
     }
     
     
