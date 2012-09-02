@@ -127,7 +127,7 @@ WsgClient.prototype = {
                     client.onstatechange(WsgState.AUTHENTICATED);
                 }, 
                 function(response) {
-                    client.onstatechange(WsgState.ERROR, "error:login");
+                    client.onstatechange(WsgState.ERROR, response);
                 });
         } else {
             onstatechange(state, msg);
@@ -151,7 +151,7 @@ WsgClient.prototype = {
                     client.onstatechange(WsgState.AUTHENTICATED);
                 }, 
                 function(response) {
-                    client.onstatechange(WsgState.ERROR, "error:register");
+                    client.onstatechange(WsgState.ERROR, response);
                 });
         } else {
             onstatechange(state, msg);
@@ -222,7 +222,7 @@ WsgClient.prototype = {
                 if(!args) args = {};
                 args.valid = false;
                 args.errorURI = arr[2];
-                args.errorDetails = arr[3];
+                args.errorDesc = arr[3];
                 client.calls[call].reject(args);
                 delete client.calls[call];
             } else {

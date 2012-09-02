@@ -112,7 +112,7 @@ function authentication(state, msg) {
           
           list_apps();
       } else if(state == WsgState.ERROR) {
-          alert("Error: " + msg);
+          alert("Error: " + msg.errorDesc);
       }
 }
 
@@ -201,7 +201,7 @@ function delete_app() {
     if(confirm("Do you really want to delete the application?")) {
         wsgclient.deleteApp(appId, function(response) {
             if(!response.valid) {
-                alert("Error deleting application.");
+                alert("Error deleting application:"+response.errorDesc);
             } else {
                 $('#btn_automatch_group').attr("disabled", "true");
                 $('#btn_select_app').attr("disabled", "true");
@@ -226,7 +226,7 @@ function create_app() {
     
     wsgclient.newApp(name, domain, version, min, max, observable, dynamic, alliances, ai_available, roles, function(response) {
         if(response.valid) hide_app_params();
-        else alert("Error creating application.");
+        else alert("Error creating application:"+response.errorDesc);
     });
 }
 
@@ -249,6 +249,7 @@ function delete_role() {
 function new_group() {
     var gid = $("#new_grp_automatch").is(":checked") ? "automatch" : "";
     var options = new Object();
+    options.automatch = $("#new_grp_automatch").is(":checked");
     options.hidden = $("#new_grp_hidden").is(":checked");
     options.password = $("#new_grp_password").val();
     
@@ -276,7 +277,6 @@ function open_group(gid, options) {
 }
 
 function show_group(group) {
-    //alert(JSON.stringify(group));
     var tbody = $("#group_params table[id='members'] tbody");
     tbody.find("tr").remove();
     
@@ -513,7 +513,7 @@ function update_group_callback(response) {
             }
 
         } else {
-            alert("Error joining user:" + response.message);
+            alert("Error joining user:" + response.errorDesc);
         }    
 }
 
