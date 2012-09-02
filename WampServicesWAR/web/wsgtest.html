@@ -79,9 +79,13 @@ $(document).ready(function(){
     });
     
     $('#groups').click(function() {
-        var c =  $("#groups > option:selected").size();
-        $('#btn_select_group').each(function() {
+        var groups = $("#groups > option:selected");
+        var c =  groups.size();
+        $('#btn_play_group').each(function() {
           this.disabled = (c==0);
+        });
+        $('#btn_view_group').each(function() {
+          this.disabled = (c==0) || (groups[0].attributes['observable'].value != "true");
         });
 
     });
@@ -166,11 +170,15 @@ function hide_new_group_params() {
 
 function update_groups(response) {
     $("#groups option").remove();
-    $('#btn_select_group').attr("disabled", "true");
+    $('#btn_play_group').attr("disabled", "true");
+    $('#btn_view_group').attr("disabled", "true");
         
     if(response.groups) {
         response.groups.forEach(function(item) {
-            $("#groups").append($('<option>').attr('value',item.gid).text(item.description));
+            var opt = $('<option>')
+            opt.attr('value',item.gid).text(item.description);
+            opt.attr('observable', item.observable);
+            $("#groups").append(opt);
         });
     }    
 }
@@ -253,6 +261,13 @@ function new_group() {
     options.hidden = $("#new_grp_hidden").is(":checked");
     options.password = $("#new_grp_password").val();
     
+    open_group(gid, options);
+}
+
+function view_group() {
+    var gid = $('#groups option:selected').attr('value');
+    var options = new Object();
+    options.spectator = true;
     open_group(gid, options);
 }
 
@@ -677,7 +692,8 @@ function toggle_connect(create_user) {
       <legend>Groups</legend>
     <select id="groups" name="groups" size="8" style="width: 100%">
     </select><br>
-    <button id="btn_select_group" onclick="open_group($('#groups option:selected').attr('value'));" disabled>Select</button>
+    <button id="btn_play_group" onclick="open_group($('#groups option:selected').attr('value'));" disabled>Play</button>
+    <button id="btn_view_group" onclick="view_group();" disabled>View</button>
     <button id="btn_new_group" onclick="show_new_group_params();">New</button>
     <button id="btn_hide_group" onclick="hide_group_list();">Exit</button>
     </fieldset>

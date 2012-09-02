@@ -393,7 +393,11 @@ public class Module extends WampModule
         boolean created = false;
         boolean joined  = false;
         boolean autoMatchMode = false;
-
+        boolean spectator = false;
+        if( (options != null) && (options.has("spectator")) ) {
+            spectator = options.get("spectator").asBoolean(false);
+        }
+        
         Client client = clients.get(socket.getSessionId());
         
         if(gid != null) {
@@ -421,7 +425,7 @@ public class Module extends WampModule
                 if(!pwd.equals(pwd2)) throw new WampException(MODULE_URL + "incorrectpassword", "Incorrect password");
             }
             
-        } else {  
+        } else if(!spectator) {  
             // create group
             try {
                 logger.log(Level.FINE, "open_group: creating new group");
@@ -522,33 +526,35 @@ public class Module extends WampModule
             response.put("connections", conArray);            
 
             boolean reserved = false;
-            int  reservedSlot = 0;
-            int  num_slots = g.getNumSlots();
-            int  avail_slots = 0;
-            User currentUser = client.getUser();
-            for(int index = 0;
-                    (index < Math.max(num_slots, g.getMinMembers()));
-                    index++) {
-                
-                GroupMember member = null;
-                member = g.getMember(index);
-                boolean connected = (member != null) && (member.getClient() != null);
-                String nickName = ((member == null || member.getNick() == null) ? "" : member.getNick() );
-                if(!connected && nickName == currentUser.getNick()) {
-                    reserved = true;
-                    reservedSlot = index;
-                    break;
-                } else if(!connected) {
-                    avail_slots++;
+            int reservedSlot = 0;
+            int num_slots = g.getNumSlots();
+            if(!spectator) {
+                int  avail_slots = 0;
+                User currentUser = client.getUser();
+                for(int index = 0;
+                        (index < Math.max(num_slots, g.getMinMembers()));
+                        index++) {
+
+                    GroupMember member = null;
+                    member = g.getMember(index);
+                    boolean connected = (member != null) && (member.getClient() != null);
+                    String nickName = ((member == null || member.getNick() == null) ? "" : member.getNick() );
+                    if(!connected && nickName == currentUser.getNick()) {
+                        reserved = true;
+                        reservedSlot = index;
+                        break;
+                    } else if(!connected) {
+                        avail_slots++;
+                    }
                 }
-            }
-            
-            if(!reserved && avail_slots == 1 && g.getState()==GroupState.OPEN) {
-                g.setAutoMatchCompleted(true);
-            }
-                
-            if(!reserved && avail_slots == 0 && num_slots < g.getMaxMembers()) {
-                num_slots++;
+
+                if(!reserved && avail_slots == 1 && g.getState()==GroupState.OPEN) {
+                    g.setAutoMatchCompleted(true);
+                }
+
+                if(!reserved && avail_slots == 0 && num_slots < g.getMaxMembers()) {
+                    num_slots++;
+                }
             }
 
             ArrayNode membersArray = mapper.createArrayNode();
@@ -570,7 +576,7 @@ public class Module extends WampModule
                 }
 
                 boolean connected = (member.getClient() != null);
-                if(!connected && !joined && (!reserved || index == reservedSlot)) {
+                if(!spectator && !connected && !joined && (!reserved || index == reservedSlot)) {
                     member.setClient(client);
                     member.setNick(client.getUser().getNick());
                     member.setUserType("user");
