@@ -361,6 +361,7 @@ public class Module extends WampModule
         if(app != null) {
             retval.put("app", app.toJSON());
             for(Group group : app.getGroupsByState(GroupState.OPEN)) {
+                if(group.isHidden()) continue;
                 ObjectNode obj = mapper.createObjectNode();
                 obj.put("gid", group.getGid());
                 obj.put("admin", group.getAdminNick());
@@ -439,11 +440,19 @@ public class Module extends WampModule
                 g.setAutoMatchEnabled(autoMatchMode);
                 g.setAutoMatchCompleted(false);
                 if(options != null) {
-                    String password = options.get("password").asText();
-                    g.setPassword( (password!=null && password.length()>0)? password : null);
-                    g.setHidden(options.get("hidden").asBoolean(false));
+                    if(options.has("automatch")) {
+                        autoMatchMode = options.get("automatch").asBoolean();
+                        g.setAutoMatchEnabled(autoMatchMode);
+                    } 
+                    if(options.has("hidden")) {
+                        g.setHidden(options.get("hidden").asBoolean(false));
+                    }
+                    if(!autoMatchMode && options.has("password")) {
+                        String password = options.get("password").asText();
+                        g.setPassword( (password!=null && password.length()>0)? password : null);
+                    }
                 }
-
+                
                 app.addGroup(g);
                 groups.put(g.getGid(), g);
 
