@@ -263,10 +263,12 @@ public class WampApplication extends WebSocketApplication
             if(ex instanceof WampException) {
                 WampException wex = (WampException)ex;
                 clientSocket.sendCallError(callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
+                logger.log(Level.FINE, "Error calling method " + method + ": " + wex.getErrorDesc());
             } else {
                 clientSocket.sendCallError(callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + method, ex.getMessage());
+                logger.log(Level.SEVERE, "Error calling method " + method, ex);
             }
-            logger.log(Level.SEVERE, "Error calling method " + method, ex);
+            
         }
     }
     
