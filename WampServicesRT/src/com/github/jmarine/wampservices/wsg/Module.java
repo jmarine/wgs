@@ -264,6 +264,7 @@ public class Module extends WampModule
         app.setVersion(data.get("version").asInt());
         app.setMaxGroupMembers(data.get("max").asInt());
         app.setMinGroupMembers(data.get("min").asInt());
+        app.setMultipleMembers(data.get("multiple").asInt());
         app.setAlliancesAllowed(data.get("alliances").asBoolean());
         app.setDynamicGroup(data.get("dynamic").asBoolean());
         app.setObservableGroup(data.get("observable").asBoolean());
@@ -368,6 +369,7 @@ public class Module extends WampModule
                 obj.put("num", group.getNumMembers());
                 obj.put("min", group.getMinMembers());
                 obj.put("max", group.getMaxMembers());
+                obj.put("multiple", group.getMultipleMembers());
                 obj.put("avail", group.getAvailSlots());
                 obj.put("observable", group.isObservableGroup());
                 obj.put("dynamic", group.isDynamicGroup());
@@ -440,6 +442,7 @@ public class Module extends WampModule
                 g.setAlliancesAllowed(app.isAlliancesAllowed());
                 g.setMaxMembers(app.getMaxGroupMembers());
                 g.setMinMembers(app.getMinGroupMembers());
+                g.setMultipleMembers(app.getMultipleMembers());
                 g.setAdminNick(client.getUser().getNick());
                 g.setAutoMatchEnabled(autoMatchMode);
                 g.setAutoMatchCompleted(false);
@@ -486,6 +489,7 @@ public class Module extends WampModule
             response.put("admin", g.getAdminNick());
             response.put("min", g.getMinMembers());
             response.put("max", g.getMaxMembers());
+            response.put("multiple", g.getMultipleMembers());
             response.put("observable", g.isObservableGroup());
             response.put("dynamic", g.isDynamicGroup());
             response.put("alliances", g.isAlliancesAllowed());

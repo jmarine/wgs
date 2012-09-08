@@ -107,7 +107,6 @@ function enable_network() {
 
 function authentication(state, msg) {
       if(state == WsgState.AUTHENTICATED) {
-          //alert("Authenticated");
           $("#server_url").attr("disabled", "disabled");
           $("#nick").attr("disabled", "disabled");
           $("#password").attr("disabled", "disabled");
@@ -116,7 +115,7 @@ function authentication(state, msg) {
           
           list_apps();
       } else if(state == WsgState.ERROR) {
-          alert("Error: " + msg.errorDesc);
+          alert(msg);
       }
 }
 
@@ -225,6 +224,7 @@ function create_app() {
     var version = $("#app_version").val();
     var min = $("#app_min").val();
     var max = $("#app_max").val();
+    var multiple = $("#app_multiple").val();
     var observable = $("#app_observable").is(':checked');
     var dynamic = $("#app_dynamic").is(':checked');
     var alliances = $("#app_alliances").is(':checked');
@@ -232,7 +232,7 @@ function create_app() {
     var roles = [];
     $("#app_roles option").each(function() { roles[roles.length] = $(this).attr("value"); });
     
-    wsgclient.newApp(name, domain, version, min, max, observable, dynamic, alliances, ai_available, roles, function(response) {
+    wsgclient.newApp(name, domain, version, min, max, multiple, observable, dynamic, alliances, ai_available, roles, function(response) {
         if(response.valid) hide_app_params();
         else alert("Error creating application:"+response.errorDesc);
     });
@@ -664,6 +664,7 @@ function toggle_connect(create_user) {
     <label for="app_version">Version:</label><input type="number" size="5" name="app_version" id="app_version" min="1" max="99999" value="1"/><br/>
     <label for="app_min">Min:</label><input type="number" size="5" name="app_min" id="app_min" min="1" max="99999" value="2"/><br/>
     <label for="app_max">Max:</label><input type="number" size="5" name="app_max" id="app_max" min="0" max="99999" value="2"/><br/>
+    <label for="app_multiple">Multiple:</label><input type="number" size="5" name="app_multiple" id="app_multiple" min="0" max="99999" value="1"/><br/>
     <label for="app_observable">Observable:</label><input type="checkbox" name="app_observable" id="app_observable" /><br/>
     <label for="app_dynamic">Dynamic:</label><input type="checkbox" name="app_dynamic" id="app_dynamic" /><br/>
     <label for="app_alliances">Alliances:</label><input type="checkbox" name="app_alliances" id="app_alliances" /><br/>

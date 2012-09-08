@@ -127,7 +127,8 @@ WsgClient.prototype = {
                     client.onstatechange(WsgState.AUTHENTICATED);
                 }, 
                 function(response) {
-                    client.onstatechange(WsgState.ERROR, response);
+                    var errorCode = response.errorURI;
+                    client.onstatechange(WsgState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 });
         } else {
             onstatechange(state, msg);
@@ -151,7 +152,8 @@ WsgClient.prototype = {
                     client.onstatechange(WsgState.AUTHENTICATED);
                 }, 
                 function(response) {
-                    client.onstatechange(WsgState.ERROR, response);
+                    var errorCode = response.errorURI;
+                    client.onstatechange(WsgState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 });
         } else {
             onstatechange(state, msg);
@@ -262,13 +264,14 @@ WsgClient.prototype = {
       this.call("wsg:list_groups", appId).then(callback, callback);
   },
 
-  newApp: function(name, domain, version, min, max, observable, dynamic, alliances, ai_available, roles, callback) {
+  newApp: function(name, domain, version, min, max, multiple, observable, dynamic, alliances, ai_available, roles, callback) {
       var msg = Object();
       msg.name = name;
       msg.domain = domain;
       msg.version = version;
       msg.min = min;
       msg.max = max;
+      msg.multiple = multiple;
       msg.observable = observable;      
       msg.dynamic = dynamic;
       msg.alliances = alliances;

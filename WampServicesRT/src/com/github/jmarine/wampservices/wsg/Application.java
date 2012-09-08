@@ -26,7 +26,8 @@ import org.codehaus.jackson.node.ObjectNode;
 @Entity
 @NamedQueries({
     @NamedQuery(name="wsg.findAllApps",query="SELECT OBJECT(a) FROM Application a"),
-    @NamedQuery(name="wsg.findAppById",query="SELECT OBJECT(a) FROM Application a WHERE a.id = :id")
+    @NamedQuery(name="wsg.findAppById",query="SELECT OBJECT(a) FROM Application a WHERE a.id = :id"),
+    @NamedQuery(name="wsg.findAppBySpec",query="SELECT OBJECT(a) FROM Application a WHERE a.name = :name AND a.domain = :domain AND a.version = :version")
 })
 public class Application implements Serializable {
     
@@ -58,6 +59,9 @@ public class Application implements Serializable {
     
     @Column(name="maxMembers")
     private int     maxGroupMembers;
+    
+    @Column(name="multipleMembers")
+    private int multipleMembers;
     
     @Column(name="dyn")
     private boolean dynamicGroup;
@@ -197,6 +201,20 @@ public class Application implements Serializable {
     public void setMaxGroupMembers(int maxGroupMembers) {
         this.maxGroupMembers = maxGroupMembers;
     }
+    
+    /**
+     * @return the multipleMembers
+     */
+    public int getMultipleMembers() {
+        return multipleMembers;
+    }
+
+    /**
+     * @param multipleMembers the multipleMembers to set
+     */
+    public void setMultipleMembers(int multipleMembers) {
+        this.multipleMembers = multipleMembers;
+    }    
 
     /**
      * @return the dynamicGroup

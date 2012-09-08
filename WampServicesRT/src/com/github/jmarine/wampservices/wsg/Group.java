@@ -7,10 +7,12 @@ import java.util.Set;
 import com.github.jmarine.wampservices.WampTopic;
 
 
-public class Group {
+public class Group 
+{
     private GroupState state;
     private int  minMembers;
     private int  maxMembers;
+    private int  multipleMembers;
     private String adminNick;
 
     private boolean autoMatchEnabled;
@@ -71,6 +73,20 @@ public class Group {
         this.maxMembers = maxMembers;
     }
 
+    /**
+     * @return the multipleMembers
+     */
+    public int getMultipleMembers() {
+        return multipleMembers;
+    }
+
+    /**
+     * @param multipleMembers the multipleMembers to set
+     */
+    public void setMultipleMembers(int multipleMembers) {
+        this.multipleMembers = multipleMembers;
+    }    
+    
     /**
      * @return the adminNick
      */
