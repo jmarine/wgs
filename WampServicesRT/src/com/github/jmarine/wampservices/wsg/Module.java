@@ -16,8 +16,10 @@ import com.github.jmarine.wampservices.WampSubscriptionOptions;
 import com.github.jmarine.wampservices.WampTopic;
 import com.github.jmarine.wampservices.WampTopicOptions;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -262,8 +264,8 @@ public class Module extends WampModule
         app.setName(data.get("name").asText());
         app.setDomain(data.get("domain").asText());
         app.setVersion(data.get("version").asInt());
-        app.setMaxGroupMembers(data.get("max").asInt());
-        app.setMinGroupMembers(data.get("min").asInt());
+        app.setMaxMembers(data.get("max").asInt());
+        app.setMinMembers(data.get("min").asInt());
         app.setMultipleMembers(data.get("multiple").asInt());
         app.setAlliancesAllowed(data.get("alliances").asBoolean());
         app.setDynamicGroup(data.get("dynamic").asBoolean());
@@ -440,8 +442,8 @@ public class Module extends WampModule
                 g.setObservableGroup(app.isObservableGroup());
                 g.setDynamicGroup(app.isDynamicGroup());
                 g.setAlliancesAllowed(app.isAlliancesAllowed());
-                g.setMaxMembers(app.getMaxGroupMembers());
-                g.setMinMembers(app.getMinGroupMembers());
+                g.setMaxMembers(app.getMaxMembers());
+                g.setMinMembers(app.getMinMembers());
                 g.setMultipleMembers(app.getMultipleMembers());
                 g.setAdminNick(client.getUser().getNick());
                 g.setAutoMatchEnabled(autoMatchMode);
@@ -539,7 +541,7 @@ public class Module extends WampModule
                         (index < Math.max(num_slots, g.getMinMembers()));
                         index++) {
 
-                    GroupMember member = null;
+                    Member member = null;
                     member = g.getMember(index);
                     boolean connected = (member != null) && (member.getClient() != null);
                     String nickName = ((member == null || member.getNick() == null) ? "" : member.getNick() );
@@ -568,8 +570,8 @@ public class Module extends WampModule
                 String usertype = "user";
                 int team = 1+index;
 
-                GroupMember member = g.getMember(index);
-                if(member == null) member = new GroupMember();
+                Member member = g.getMember(index);
+                if(member == null) member = new Member();
                 
                 Role role = member.getRole();
                 if(role != null) {
@@ -582,6 +584,7 @@ public class Module extends WampModule
                 boolean connected = (member.getClient() != null);
                 if(!spectator && !connected && !joined && (!reserved || index == reservedSlot)) {
                     member.setClient(client);
+                    member.setState(MemberState.READY);
                     member.setNick(client.getUser().getNick());
                     member.setUserType("user");
                     member.setTeam(1+index);
@@ -685,7 +688,7 @@ public class Module extends WampModule
         ArrayNode membersArray = mapper.createArrayNode();
              
         for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
-            GroupMember member = g.getMember(slot);
+            Member member = g.getMember(slot);
             if( (member != null) && (team==0 || team==member.getTeam()) ) {
                 boolean connected = (member.getClient() != null);
 
@@ -733,9 +736,10 @@ public class Module extends WampModule
                 Role r = g.getApplication().getRoleByName(role);
 
                 // TODO: check "slot" is valid
-                GroupMember member = g.getMember(slot);
-                if(member == null) member = new GroupMember();
+                Member member = g.getMember(slot);
+                if(member == null) member = new Member();
                 member.setClient(c);
+                member.setState( (c!=null)? MemberState.READY : MemberState.EMPTY );
                 member.setNick(nick);
                 member.setUserType(usertype);
                 member.setRole(r);
@@ -759,6 +763,61 @@ public class Module extends WampModule
             return response;
     }
     
+
+    @WampRPC(name="send_group_message")
+    public void sendGroupMessage(WampSocket socket, String gid, JsonNode data) throws Exception
+    {
+        Group g = groups.get(gid);
+        if(g != null) {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode event = mapper.createObjectNode();
+            event.put("cmd", "group_message");
+            event.put("message", data);
+            socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+gid)), event, false); // don't exclude Me
+        }
+    }
+    
+    @WampRPC(name="send_team_message")
+    public void sendTeamMessage(WampSocket socket, String gid, JsonNode data) throws Exception
+    {
+        Group g = groups.get(gid);
+        if(g != null) {
+            int team = 0;
+        
+            // Search team of caller
+            for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
+                Member member = g.getMember(slot);
+                if(member != null) {
+                    Client c = member.getClient();
+                    if( (c != null) && (socket.getSessionId().equals(c.getSessionId())) ) {
+                        team = slot;
+                        break;
+                    }
+                }
+            }        
+
+            if(team != 0) {
+                ObjectMapper mapper = new ObjectMapper();
+                ObjectNode event = mapper.createObjectNode();
+                event.put("cmd", "team_message");
+                event.put("message", data); 
+                
+                Set<String> eligibleSet = new HashSet<String>();
+
+                for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
+                    Member member = g.getMember(slot);
+                    if( (member != null) && (member.getTeam() == team) ) {
+                        Client c = member.getClient();
+                        if(c != null) eligibleSet.add(c.getSessionId());
+                    }
+                }
+
+                if(eligibleSet.size() > 0) {
+                    wampApp.publishEvent(socket.getSessionId(), wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), event, null, eligibleSet);
+                }
+            }
+        }
+    }
     
     @WampRPC(name="exit_group")
     public ObjectNode exitGroup(WampSocket socket, String gid) throws Exception
@@ -782,13 +841,14 @@ public class Module extends WampModule
                 ArrayNode membersArray = mapper.createArrayNode();
                 for(int slot = g.getNumSlots(); slot > 0; ) {
                     slot = slot-1;
-                    GroupMember member = g.getMember(slot);
+                    Member member = g.getMember(slot);
                     boolean connected = (member.getClient() != null);
                     if(connected) {
                         if(client == member.getClient()) {
                             logger.log(Level.INFO, "clearing slot " + slot);
 
                             member.setClient(null);
+                            member.setState(MemberState.EMPTY);
                             member.setNick(null);
                             member.setUserType("user");
                             g.setMember(slot, member);

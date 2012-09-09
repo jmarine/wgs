@@ -55,10 +55,10 @@ public class Application implements Serializable {
     private boolean aiAvailable;
    
     @Column(name="minMembers")
-    private int     minGroupMembers;
+    private int     minMembers;
     
     @Column(name="maxMembers")
-    private int     maxGroupMembers;
+    private int     maxMembers;
     
     @Column(name="multipleMembers")
     private int multipleMembers;
@@ -175,31 +175,31 @@ public class Application implements Serializable {
     }
 
     /**
-     * @return the minGroupMembers
+     * @return the minMembers
      */
-    public int getMinGroupMembers() {
-        return minGroupMembers;
+    public int getMinMembers() {
+        return minMembers;
     }
 
     /**
-     * @param minGroupMembers the minGroupMembers to set
+     * @param minMembers the minMembers to set
      */
-    public void setMinGroupMembers(int minGroupMembers) {
-        this.minGroupMembers = minGroupMembers;
+    public void setMinMembers(int minMembers) {
+        this.minMembers = minMembers;
     }
 
     /**
      * @return the maxGroupMembers
      */
-    public int getMaxGroupMembers() {
-        return maxGroupMembers;
+    public int getMaxMembers() {
+        return maxMembers;
     }
 
     /**
-     * @param maxGroupMembers the maxGroupMembers to set
+     * @param maxMembers the maxMembers to set
      */
-    public void setMaxGroupMembers(int maxGroupMembers) {
-        this.maxGroupMembers = maxGroupMembers;
+    public void setMaxMembers(int maxMembers) {
+        this.maxMembers = maxMembers;
     }
     
     /**

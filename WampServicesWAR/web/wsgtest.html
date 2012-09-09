@@ -298,6 +298,7 @@ function show_group(group) {
     currentGroup = group;
     $("#group_gid").attr("value", group.gid);
     $("#group_admin").attr("value", group.admin);
+    $("#group_params fieldset legend").html("Group members: " + group.app.name);
     
     if(group.members) {
         var currentNick = $("#nick").val();
@@ -339,7 +340,9 @@ function show_group(group) {
 
     $("#app_list").hide();
     $("#group_list").hide();
-    $("#new_group_params").hide();    
+    $("#new_group_params").hide(); 
+    if(wsgclient.nick == $("#group_admin").val()) $("#group_options").show();
+    else $("#group_options").hide();
     $("#group_params").slideDown(500);
 }
 
@@ -423,7 +426,7 @@ function append_group_member(added, memberId, memberNick, memberCid, memberType,
         }
     });
     html += '</select></td>';
-    html += '<td><input type="number" size="5" id="team' + memberId + '" min="0" max="99999" value="' + (1+memberId) + '"/></td>';
+    html += '<td><input type="number" size="5" id="team' + memberId + '" min="0" max="99999" value="' + (1+memberId) + '" onchange="javascript:update_member(\'member'+memberId+'\')"/></td>';
     if(added) html += '<td><button class="remove_member" onclick="remove_last_member()">X</button></td>';
     html += '</tr>';
     
@@ -466,9 +469,7 @@ function update_group_callback(response) {
 
                 // append new joined user's nick in selectboxes
                 for(var index = 0; index < num_members; index += 1) {
-                    if( (wsgclient.nick == $("#group_admin").val()) 
-                        /* || (wsgclient.sid == $("#member"+index+" option:selected").val()) */
-                      ) {
+                    if( (wsgclient.nick == $("#group_admin").val()) ) {
                         var val = "";
                         var text = "Empty";
                         if(response.sid != "") {
@@ -478,11 +479,6 @@ function update_group_callback(response) {
                             if($("#member"+index+" option[value='"+val+"']").size() <= 0) {  // insert user
                                 $("#member"+index).append($("<option>").attr("value", val).text(text));
                             }
-                            /*
-                            else if(response.sid != wsgclient.sid) {  // updating usertype
-                                $("#member"+index+" option[value$=':"+response.sid+"']").attr("value", val).text(text);
-                            }
-                            */
                         }
 
                     }
@@ -491,6 +487,8 @@ function update_group_callback(response) {
                 // update UI fields with new member values:
                 if(isMember) {                        
                     var memberId = response.slot;                        
+                    $("#team"+memberId).val(response.team);
+                    
                     if(wsgclient.nick == $("#group_admin").val()) {
 
                         var val = "";
@@ -499,7 +497,6 @@ function update_group_callback(response) {
                         }
                         $("#member"+memberId+" option[value='"+val+"']").attr("selected", "selected");
                         $("#role"+memberId+" option[value='"+response.role+"']").attr("selected", "selected");
-                        $("#team"+memberId).val(response.team);
 
                     } else {
 
@@ -519,9 +516,7 @@ function update_group_callback(response) {
                 if(response.members) {
                     response.members.forEach(function(member) {
                         var memberId = member.slot;  
-                        if(wsgclient.nick != $("#group_admin").val()) {
-                            populate_group_member_fields(false, memberId, member.nick, member.sid, member.type, member.role, false, false, currentAppAI);
-                        }
+                        populate_group_member_fields(false, memberId, member.nick, member.sid, member.type, member.role, false, false, currentAppAI);
                     });
                 }
                 
@@ -723,7 +718,7 @@ function toggle_connect(create_user) {
 
   <div id="group_params" class="section hidden">
     <fieldset>
-      <legend>Users</legend>
+      <legend>Members</legend>
     <table id="members">
       <thead>
       <tr><th></th><th>nick</th><th>role</th><th>team</th></tr>
@@ -731,14 +726,16 @@ function toggle_connect(create_user) {
       <tbody>
       </tbody>
     </table>
-    <label for="grp_automatch">Auto-match:</label><input type="checkbox" name="grp_automatch" id="grp_automatch"/><br/>
-    <label for="grp_hidden">Hidden:</label><input type="checkbox" name="grp_hidden" id="grp_hidden" /><br/>
-    <label for="grp_dynamic">Dynamic:</label><input type="checkbox" name="grp_dynamic" id="grp_dynamic" /><br/>
-    <label for="grp_alliances">Alliances:</label><input type="checkbox" name="grp_alliances" id="grp_dynamic" /><br/>
-    <label for="grp_observable">Observable:</label><input type="checkbox" name="grp_observable" id="grp_observable" /><br/>
-    <input type="hidden" id="group_gid" name="group_gid" value="" />
-    <input type="hidden" id="group_admin" name="group_admin" value="" />
-    <input type="hidden" id="back_section" name="group_list" value="" />
+    <div id="group_options">
+        <label for="grp_automatch">Auto-match:</label><input type="checkbox" name="grp_automatch" id="grp_automatch"/><br/>
+        <label for="grp_hidden">Hidden:</label><input type="checkbox" name="grp_hidden" id="grp_hidden" /><br/>
+        <label for="grp_dynamic">Dynamic:</label><input type="checkbox" name="grp_dynamic" id="grp_dynamic" /><br/>
+        <label for="grp_alliances">Alliances:</label><input type="checkbox" name="grp_alliances" id="grp_dynamic" /><br/>
+        <label for="grp_observable">Observable:</label><input type="checkbox" name="grp_observable" id="grp_observable" /><br/>
+        <input type="hidden" id="group_gid" name="group_gid" value="" />
+        <input type="hidden" id="group_admin" name="group_admin" value="" />
+        <input type="hidden" id="back_section" name="group_list" value="" />
+    </div>
     <button id="start_group" onclick="start_group();">Start</button>
     <button id="add_group_member" onclick="add_group_member(true);">Add</button>
     <button id="exit_group" class="hidden" onclick="exit_group();">Exit</button>

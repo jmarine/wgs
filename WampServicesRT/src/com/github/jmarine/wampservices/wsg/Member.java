@@ -1,25 +1,25 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package com.github.jmarine.wampservices.wsg;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
 
 
-/**
- *
- * @author jordi
- */
-public class GroupMember
+public class Member
 {
     private Client client;
     private String userType;
     private String nick;
     private Role   role;
     private int    team;
+    private MemberState state;
 
+    
+    public Member()
+    {
+        state = MemberState.EMPTY;
+    }
+    
     /**
      * @return the client
      */
@@ -90,6 +90,20 @@ public class GroupMember
         this.team = team;
     }
     
+    /**
+     * @return the state
+     */
+    public MemberState getState() {
+        return state;
+    }
+
+    /**
+     * @param state the state to set
+     */
+    public void setState(MemberState state) {
+        this.state = state;
+    }    
+    
     
     public ObjectNode toJSON() throws Exception
     {
@@ -98,6 +112,7 @@ public class GroupMember
         obj.put("sid", ((client!=null)? client.getSessionId():""));
         obj.put("nick", ((nick!=null)? nick : "") );
         obj.put("type",userType);
+        obj.put("state",String.valueOf(state));
         obj.put("role",((role!=null)? role.getName():""));
         obj.put("team",team);
         return obj;

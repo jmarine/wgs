@@ -27,7 +27,7 @@ public class Group
     private String data;
     private String password;
 
-    private ArrayList<GroupMember> members = new ArrayList<GroupMember>();
+    private ArrayList<Member> members = new ArrayList<Member>();
 
     private Application app;
 
@@ -235,7 +235,7 @@ public class Group
     {
         int count = 0;
         for(int i = 0; i < members.size(); i++) {
-            GroupMember member = getMember(i);
+            Member member = getMember(i);
             if(member != null) count++;
         }
         return count;
@@ -260,7 +260,7 @@ public class Group
 
     
     
-    GroupMember getMember(int index) 
+    Member getMember(int index) 
     {
         if(index < getNumSlots()) {
             return members.get(index);
@@ -269,7 +269,7 @@ public class Group
         }
     }
 
-    void setMember(int index, GroupMember member) 
+    void setMember(int index, Member member) 
     {
         while(index >= members.size()) {
             members.add(null);
