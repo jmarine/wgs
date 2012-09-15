@@ -1,4 +1,3 @@
-
 package com.github.jmarine.wampservices.wsg;
 
 import java.util.ArrayList;
@@ -12,7 +11,7 @@ public class Group
     private GroupState state;
     private int  minMembers;
     private int  maxMembers;
-    private int  multipleMembers;
+    private int  deltaMembers;
     private String adminNick;
 
     private boolean autoMatchEnabled;
@@ -76,15 +75,15 @@ public class Group
     /**
      * @return the multipleMembers
      */
-    public int getMultipleMembers() {
-        return multipleMembers;
+    public int getDeltaMembers() {
+        return deltaMembers;
     }
 
     /**
-     * @param multipleMembers the multipleMembers to set
+     * @param deltaMembers the multipleMembers to set
      */
-    public void setMultipleMembers(int multipleMembers) {
-        this.multipleMembers = multipleMembers;
+    public void setDeltaMembers(int deltaMembers) {
+        this.deltaMembers = deltaMembers;
     }    
     
     /**

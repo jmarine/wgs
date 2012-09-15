@@ -60,8 +60,8 @@ public class Application implements Serializable {
     @Column(name="maxMembers")
     private int     maxMembers;
     
-    @Column(name="multipleMembers")
-    private int multipleMembers;
+    @Column(name="deltaMembers")
+    private int deltaMembers;
     
     @Column(name="dyn")
     private boolean dynamicGroup;
@@ -203,17 +203,17 @@ public class Application implements Serializable {
     }
     
     /**
-     * @return the multipleMembers
+     * @return the deltaMembers
      */
-    public int getMultipleMembers() {
-        return multipleMembers;
+    public int getDeltaMembers() {
+        return deltaMembers;
     }
 
     /**
-     * @param multipleMembers the multipleMembers to set
+     * @param deltaMembers the deltaMembers to set
      */
-    public void setMultipleMembers(int multipleMembers) {
-        this.multipleMembers = multipleMembers;
+    public void setDeltaMembers(int deltaMembers) {
+        this.deltaMembers = deltaMembers;
     }    
 
     /**

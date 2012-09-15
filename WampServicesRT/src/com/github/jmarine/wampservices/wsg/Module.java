@@ -266,7 +266,7 @@ public class Module extends WampModule
         app.setVersion(data.get("version").asInt());
         app.setMaxMembers(data.get("max").asInt());
         app.setMinMembers(data.get("min").asInt());
-        app.setMultipleMembers(data.get("multiple").asInt());
+        app.setDeltaMembers(data.get("delta").asInt());
         app.setAlliancesAllowed(data.get("alliances").asBoolean());
         app.setDynamicGroup(data.get("dynamic").asBoolean());
         app.setObservableGroup(data.get("observable").asBoolean());
@@ -371,7 +371,7 @@ public class Module extends WampModule
                 obj.put("num", group.getNumMembers());
                 obj.put("min", group.getMinMembers());
                 obj.put("max", group.getMaxMembers());
-                obj.put("multiple", group.getMultipleMembers());
+                obj.put("delta", group.getDeltaMembers());
                 obj.put("avail", group.getAvailSlots());
                 obj.put("observable", group.isObservableGroup());
                 obj.put("dynamic", group.isDynamicGroup());
@@ -444,7 +444,7 @@ public class Module extends WampModule
                 g.setAlliancesAllowed(app.isAlliancesAllowed());
                 g.setMaxMembers(app.getMaxMembers());
                 g.setMinMembers(app.getMinMembers());
-                g.setMultipleMembers(app.getMultipleMembers());
+                g.setDeltaMembers(app.getDeltaMembers());
                 g.setAdminNick(client.getUser().getNick());
                 g.setAutoMatchEnabled(autoMatchMode);
                 g.setAutoMatchCompleted(false);
@@ -491,7 +491,7 @@ public class Module extends WampModule
             response.put("admin", g.getAdminNick());
             response.put("min", g.getMinMembers());
             response.put("max", g.getMaxMembers());
-            response.put("multiple", g.getMultipleMembers());
+            response.put("delta", g.getDeltaMembers());
             response.put("observable", g.isObservableGroup());
             response.put("dynamic", g.isDynamicGroup());
             response.put("alliances", g.isAlliancesAllowed());
@@ -558,8 +558,10 @@ public class Module extends WampModule
                     g.setAutoMatchCompleted(true);
                 }
 
-                if(!reserved && avail_slots == 0 && num_slots < g.getMaxMembers()) {
-                    num_slots++;
+                if(!reserved && avail_slots == 0) {
+                    int step = g.getDeltaMembers();
+                    if(step < 1) step = 1;
+                    num_slots = Math.min(num_slots+step, g.getMaxMembers());
                 }
             }
 
