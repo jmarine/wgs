@@ -120,16 +120,32 @@ function authentication(state, msg) {
 }
 
 
+function getAppDescription(app) {
+    return app.name + " (Open:" + app.open + ", Started:" + app.started + ")";
+}
+
 function update_apps(response) {
-    if(response.apps) {
-        $("#apps option").remove();            
+    if(response.apps) { 
+        // listApps:
         $('#btn_automatch_group').attr("disabled", "true");
         $('#btn_select_app').attr("disabled", "true");
         $('#btn_delete_app').attr("disabled", "true");
         
+        $("#apps option").remove();            
         response.apps.forEach(function(item) {
-            $("#apps").append($('<option>').attr('value',item.appId).text(item.name));
+            $("#apps").append($('<option>').attr('value',item.appId).text(getAppDescription(item)));
         });
+        
+    } else if(response.cmd == "app_updated") {
+        
+        if($("#apps option[value='"+response.appId+"']").size() <= 0) {  // insert user
+            $("#apps").append($("<option>").attr("value", response.appId));
+        }
+        $("#apps option[value='"+response.appId+"']").text(getAppDescription(response));
+        
+    } else if(response.cmd == "app_deleted") {
+        
+        $("#apps option[value='"+response.appId+"']").remove();
     }
 }
 
@@ -212,7 +228,8 @@ function delete_app() {
             } else {
                 $('#btn_automatch_group').attr("disabled", "true");
                 $('#btn_select_app').attr("disabled", "true");
-                $('#btn_delete_app').attr("disabled", "true");                
+                $('#btn_delete_app').attr("disabled", "true");
+                update_apps(response);
             }
         });
     }
@@ -233,8 +250,12 @@ function create_app() {
     $("#app_roles option").each(function() { roles[roles.length] = $(this).attr("value"); });
     
     wsgclient.newApp(name, domain, version, min, max, delta, observable, dynamic, alliances, ai_available, roles, function(response) {
-        if(response.valid) hide_app_params();
-        else alert("Error creating application:"+response.errorDesc);
+        if(!response.valid) {
+            alert("Error creating application:"+response.errorDesc);
+        } else {
+            update_apps(response);
+            hide_app_params();
+        }
     });
 }
 

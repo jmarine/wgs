@@ -124,14 +124,16 @@ public abstract class WampModule
             if((excluded==null) || (!excluded.contains(sid))) {
                 WampSubscription subscription = topic.getSubscription(sid);
                 WampSocket socket = subscription.getSocket();
-                if(socket != null && socket.isConnected() && !excluded.contains(sid)) {
-                    if( (topic.getOptions().isPublisherIdRevelationEnabled())
-                            && (subscription.getOptions().isPublisherIdRequested())) {
-                        if(msgV2 == null) msgV2 = "[8,\"" + topic.getURI() + "\", " + event.toString() + ",\"" + publisherId +"\"]";
-                        socket.sendSafe(msgV2);
-                    } else {
-                        if(msgV1 == null) msgV1 = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
-                        socket.sendSafe(msgV1);
+                synchronized(socket) {
+                    if(socket != null && socket.isConnected() && !excluded.contains(sid)) {
+                        if( (topic.getOptions().isPublisherIdRevelationEnabled())
+                                && (subscription.getOptions().isPublisherIdRequested())) {
+                            if(msgV2 == null) msgV2 = "[8,\"" + topic.getURI() + "\", " + event.toString() + ",\"" + publisherId +"\"]";
+                            socket.sendSafe(msgV2);
+                        } else {
+                            if(msgV1 == null) msgV1 = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
+                            socket.sendSafe(msgV1);
+                        }
                     }
                 }
             }

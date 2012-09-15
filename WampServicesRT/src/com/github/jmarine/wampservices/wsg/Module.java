@@ -298,18 +298,8 @@ public class Module extends WampModule
         valid = true;
 
         // TODO:  broadcast new application to subscribed clients
-        broadcastApps(socket);
-
-        
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode retval = mapper.createObjectNode();
-        retval.put("cmd", "new_app");
-        if(valid) {
-            retval.put("app", app.toJSON());
-        }
-
-        if(valid) socket.publishEvent(wampApp.getTopic(getFQtopicURI("apps_event")), retval, true); // exclude Me
-        return retval;
+        ObjectNode event = updateAppInfo(socket, app, "app_updated", true);
+        return event;
     }
         
     
@@ -318,38 +308,30 @@ public class Module extends WampModule
     {
         // TODO: check user is administrator of app
         // TODO: delete groups
-        // TODO: store in database
-
-        boolean valid = false;
+        
+        ObjectNode event = null;
         String appId = param.get("app").asText();
 
         Application app = applications.get(appId);
         if(app != null) {
             removeEntity(app);
             unregisterApplication(app);
-            broadcastApps(socket);
-            valid = true;
+            event = updateAppInfo(socket, app, "app_deleted", true);
+            return event;
+        } else {
+            throw new WampException(Module.MODULE_URL + "#appidnotfound", "AppId " + appId + " doesn't exist");
         }
-
-
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode retval = mapper.createObjectNode();
-        retval.put("cmd", "delete_app");
-        if(valid) {
-            retval.put("appId", appId);
-        }
-        
-        if(valid) socket.publishEvent(wampApp.getTopic(getFQtopicURI("apps_event")), retval, true);  // exclude Me
-        return retval;
     }
     
     
-    private void broadcastApps(WampSocket socket) throws Exception
+    private ObjectNode updateAppInfo(WampSocket socket, Application app, String cmd, boolean excludeMe) throws Exception
     {
         // check subscribers of "apps_event" topic
-        ObjectNode list = listApps();
-        list.put("cmd", "list_apps");
-        socket.publishEvent(wampApp.getTopic(getFQtopicURI("apps_event")), list, false);  // don't exclude Me
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode event = app.toJSON();
+        event.put("cmd", cmd);
+        socket.publishEvent(wampApp.getTopic(getFQtopicURI("apps_event")), event, excludeMe);  // don't exclude Me
+        return event;
     }
 
     
@@ -363,7 +345,7 @@ public class Module extends WampModule
         Application app = applications.get(appId);
         if(app != null) {
             retval.put("app", app.toJSON());
-            for(Group group : app.getGroupsByState(GroupState.OPEN)) {
+            for(Group group : app.getGroupsByState(null)) {
                 if(group.isHidden()) continue;
                 ObjectNode obj = mapper.createObjectNode();
                 obj.put("gid", group.getGid());
@@ -465,6 +447,7 @@ public class Module extends WampModule
                 app.addGroup(g);
                 groups.put(g.getGid(), g);
 
+                updateAppInfo(socket, app, "app_updated", false);
                 socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:" + appId)), listGroups(appId), false);  // don't exclude Me
 
                 valid = true;
@@ -663,6 +646,8 @@ public class Module extends WampModule
                 if(g.getState() == GroupState.STARTED) {
                     response.put("members", getMembers(gid,0));
                 }
+                
+                updateAppInfo(socket, g.getApplication(), "app_updated", false);
             }
 
             JsonNode dataNode = node.get("data");
@@ -883,6 +868,8 @@ public class Module extends WampModule
 
                         groups.remove(g.getGid());
                         applications.get(appId).removeGroup(g);
+                        
+                        updateAppInfo(socket, applications.get(appId), "app_updated", false);
 
                         wampApp.removeTopic(topicName);
                         socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+appId)), listGroups(appId), false);  // don't exclude Me

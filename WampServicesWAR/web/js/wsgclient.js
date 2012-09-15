@@ -264,14 +264,14 @@ WsgClient.prototype = {
       this.call("wsg:list_groups", appId).then(callback, callback);
   },
 
-  newApp: function(name, domain, version, min, max, multiple, observable, dynamic, alliances, ai_available, roles, callback) {
+  newApp: function(name, domain, version, min, max, delta, observable, dynamic, alliances, ai_available, roles, callback) {
       var msg = Object();
       msg.name = name;
       msg.domain = domain;
       msg.version = version;
       msg.min = min;
       msg.max = max;
-      msg.multiple = multiple;
+      msg.delta = delta;
       msg.observable = observable;      
       msg.dynamic = dynamic;
       msg.alliances = alliances;

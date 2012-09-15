@@ -311,7 +311,7 @@ public class Application implements Serializable {
     {
         ArrayList<Group> retval = new ArrayList<Group>();
         for(Group g : groupsByGid.values()) {
-            if(state==GroupState.OPEN || state==g.getState()) {
+            if(state==null || state==g.getState()) {
                 retval.add(g);
             }
         }
@@ -360,6 +360,9 @@ public class Application implements Serializable {
             obj.put("domain", getDomain());
             obj.put("ai", isAIavailable());
             obj.put("version", getVersion());
+            obj.put("open", getGroupsByState(GroupState.OPEN).size());
+            obj.put("started", getGroupsByState(GroupState.STARTED).size());
+            
         } catch(Exception ex) { }
         return obj;
     }

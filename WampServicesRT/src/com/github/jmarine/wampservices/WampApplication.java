@@ -246,16 +246,18 @@ public class WampApplication extends WebSocketApplication
                 args.add(request.get(i));
             }           
             
-            ArrayNode response = null;
-            Object result = module.onCall(clientSocket, method, args);
-            if(result == null || result instanceof ArrayNode) {
-                response = (ArrayNode)result;
-            } else {
-                response = mapper.createArrayNode();
-                response.add(mapper.valueToTree(result));
+            synchronized(clientSocket) {
+                ArrayNode response = null;
+                Object result = module.onCall(clientSocket, method, args);
+                if(result == null || result instanceof ArrayNode) {
+                    response = (ArrayNode)result;
+                } else {
+                    response = mapper.createArrayNode();
+                    response.add(mapper.valueToTree(result));
+                }
+                clientSocket.sendCallResult(callID, response);
             }
-            clientSocket.sendCallResult(callID, response);
-
+            
         } catch(Throwable ex) {
             
             if(ex instanceof java.lang.reflect.InvocationTargetException) ex = ex.getCause();
