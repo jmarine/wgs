@@ -360,8 +360,9 @@ public class Application implements Serializable {
             obj.put("domain", getDomain());
             obj.put("ai", isAIavailable());
             obj.put("version", getVersion());
-            obj.put("open", getGroupsByState(GroupState.OPEN).size());
-            obj.put("started", getGroupsByState(GroupState.STARTED).size());
+            
+            // obj.put("open", getGroupsByState(GroupState.OPEN).size());
+            // obj.put("started", getGroupsByState(GroupState.STARTED).size());
             
         } catch(Exception ex) { }
         return obj;

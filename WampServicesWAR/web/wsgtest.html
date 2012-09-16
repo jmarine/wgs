@@ -121,7 +121,7 @@ function authentication(state, msg) {
 
 
 function getAppDescription(app) {
-    return app.name + " (Open:" + app.open + ", Started:" + app.started + ")";
+    return app.name; // " (Open:" + app.open + ", Started:" + app.started + ")";
 }
 
 function update_apps(response) {
@@ -136,7 +136,7 @@ function update_apps(response) {
             $("#apps").append($('<option>').attr('value',item.appId).text(getAppDescription(item)));
         });
         
-    } else if(response.cmd == "app_updated") {
+    } else if(response.cmd == "app_created" || response.cmd == "app_updated") {
         
         if($("#apps option[value='"+response.appId+"']").size() <= 0) {  // insert user
             $("#apps").append($("<option>").attr("value", response.appId));

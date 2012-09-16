@@ -298,7 +298,7 @@ public class Module extends WampModule
         valid = true;
 
         // TODO:  broadcast new application to subscribed clients
-        ObjectNode event = updateAppInfo(socket, app, "app_updated", true);
+        ObjectNode event = updateAppInfo(socket, app, "app_created", true);
         return event;
     }
         
@@ -447,7 +447,7 @@ public class Module extends WampModule
                 app.addGroup(g);
                 groups.put(g.getGid(), g);
 
-                updateAppInfo(socket, app, "app_updated", false);
+                //updateAppInfo(socket, app, "app_updated", false);
                 socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:" + appId)), listGroups(appId), false);  // don't exclude Me
 
                 valid = true;
@@ -647,7 +647,7 @@ public class Module extends WampModule
                     response.put("members", getMembers(gid,0));
                 }
                 
-                updateAppInfo(socket, g.getApplication(), "app_updated", false);
+                //updateAppInfo(socket, g.getApplication(), "app_updated", false);
             }
 
             JsonNode dataNode = node.get("data");
@@ -869,7 +869,7 @@ public class Module extends WampModule
                         groups.remove(g.getGid());
                         applications.get(appId).removeGroup(g);
                         
-                        updateAppInfo(socket, applications.get(appId), "app_updated", false);
+                        //updateAppInfo(socket, applications.get(appId), "app_updated", false);
 
                         wampApp.removeTopic(topicName);
                         socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+appId)), listGroups(appId), false);  // don't exclude Me
