@@ -732,6 +732,7 @@ public class Module extends WampModule
                 response.put("slot", slot);
                 response.put("role", role);
                 response.put("team", team);
+                response.put("state", String.valueOf(member.getState()));
 
             }
 

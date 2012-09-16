@@ -143,7 +143,7 @@ function update_apps(response) {
         
     } else if(response.cmd == "app_created" || response.cmd == "app_updated") {
         
-        if($("#apps option[value='"+response.appId+"']").size() <= 0) {  // insert user
+        if($("#apps option[value='"+response.appId+"']").size() <= 0) {  // insert app
             $("#apps").append($("<option>").attr("value", response.appId));
         }
         $("#apps option[value='"+response.appId+"']").text(getAppDescription(response));
@@ -202,7 +202,7 @@ function update_groups(response) {
         });
     } else if(response.cmd == "group_created" || response.cmd == "group_updated") {
         
-        if($("#groups option[value='"+response.gid+"']").size() <= 0) {  // insert user
+        if($("#groups option[value='"+response.gid+"']").size() <= 0) {  // insert group
             $("#groups").append($("<option>").attr("value", response.gid));
         }
         $("#groups option[value='"+response.gid+"']").text(getGroupDescription(response));
@@ -369,7 +369,7 @@ function show_group(group) {
                 roleFixed = true;
             }
 
-            append_group_member(false, memberId, memberNick, member.sid, member.type, member.role, currentNickSelected, roleFixed, currentAppAI);
+            append_group_member(false, memberId, member.state, memberNick, member.sid, member.type, member.role, currentNickSelected, roleFixed, currentAppAI);
 
         });
     }
@@ -384,7 +384,7 @@ function show_group(group) {
 
 function add_group_member(added) {
     var members = $("#group_params table[id='members'] tbody tr");
-    append_group_member(added, members.size(), "", "", "user", "", "", false, currentAppAI);
+    append_group_member(added, members.size(), "empty", "", "", "user", "", "", false, currentAppAI);
 }
 
 function update_member(field, as_previous_client) 
@@ -411,7 +411,7 @@ function update_member(field, as_previous_client)
 }
 
 
-function populate_group_member_fields(added, memberId, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai) {
+function populate_group_member_fields(added, memberId, memberState, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai) {
     var members = "";
     var roles = "";
     if(added || memberNick == "" || memberCid == wsgclient.sid || (wsgclient.nick == $("#group_admin").val()) ) {
@@ -447,12 +447,15 @@ function populate_group_member_fields(added, memberId, memberNick, memberCid, me
     
     $("#role" + memberId+ " option").remove();
     $("#role" + memberId).append(roles);
+    
+    $("#state" + memberId).attr("src", "icons/" + memberState.toLowerCase() + ".png");
 }
 
-function append_group_member(added, memberId, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai) {
+function append_group_member(added, memberId, memberState, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai) {
     var tbody = $("#group_params table[id='members'] tbody");
     
     var html = '<tr><td align="left"><label for="member' + memberId + '">User ' + (1+memberId) + ':</label><input type="hidden" id="added' + memberId + '" value="' + added + '"/></td>';
+    html += '<td align="left"><img id="state' + memberId + '" src="icons/empty.png" border="0" /></td>';
     html += '<td><select id="member' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
 
     html += '</select></td><td><select id="role' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
@@ -469,7 +472,7 @@ function append_group_member(added, memberId, memberNick, memberCid, memberType,
     $("button.remove_member").hide();
     tbody.append(html);
     
-    populate_group_member_fields(added, memberId, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai);
+    populate_group_member_fields(added, memberId, memberState, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai);
 
 }
 
@@ -533,12 +536,13 @@ function update_group_callback(response) {
                         }
                         $("#member"+memberId+" option[value='"+val+"']").attr("selected", "selected");
                         $("#role"+memberId+" option[value='"+response.role+"']").attr("selected", "selected");
+                        $("#state" + memberId).attr("src", "icons/" + response.state.toLowerCase() + ".png");
 
                     } else {
 
                         var currentNickSelected = (wsgclient.sid == response.sid);
                         var roleFixed = (response.role != "") && (response.sid != "") && (wsgclient.sid != response.sid);
-                        populate_group_member_fields(false, memberId, response.nick, response.sid, response.type, response.role, currentNickSelected, roleFixed, currentAppAI);
+                        populate_group_member_fields(false, memberId, response.state, response.nick, response.sid, response.type, response.role, currentNickSelected, roleFixed, currentAppAI);
                     }
                 }
 
@@ -552,7 +556,7 @@ function update_group_callback(response) {
                 if(response.members) {
                     response.members.forEach(function(member) {
                         var memberId = member.slot;  
-                        populate_group_member_fields(false, memberId, member.nick, member.sid, member.type, member.role, false, false, currentAppAI);
+                        populate_group_member_fields(false, memberId, member.state, member.nick, member.sid, member.type, member.role, false, false, currentAppAI);
                     });
                 }
                 
@@ -757,7 +761,7 @@ function toggle_connect(create_user) {
       <legend>Members</legend>
     <table id="members">
       <thead>
-      <tr><th></th><th>nick</th><th>role</th><th>team</th></tr>
+      <tr><th></th><th></th><th>nick</th><th>role</th><th>team</th></tr>
       </thead>
       <tbody>
       </tbody>
