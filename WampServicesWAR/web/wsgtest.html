@@ -124,6 +124,11 @@ function getAppDescription(app) {
     return app.name; // " (Open:" + app.open + ", Started:" + app.started + ")";
 }
 
+
+function getGroupDescription(group) {
+    return group.state + " (" + group.num + "/" + group.max + "): " + group.description;
+}
+
 function update_apps(response) {
     if(response.apps) { 
         // listApps:
@@ -191,11 +196,21 @@ function update_groups(response) {
     if(response.groups) {
         response.groups.forEach(function(item) {
             var opt = $('<option>')
-            opt.attr('value',item.gid).text(item.description);
+            opt.attr('value',item.gid).text(getGroupDescription(item));
             opt.attr('observable', item.observable);
             $("#groups").append(opt);
         });
-    }    
+    } else if(response.cmd == "group_created" || response.cmd == "group_updated") {
+        
+        if($("#groups option[value='"+response.gid+"']").size() <= 0) {  // insert user
+            $("#groups").append($("<option>").attr("value", response.gid));
+        }
+        $("#groups option[value='"+response.gid+"']").text(getGroupDescription(response));
+        
+    } else if(response.cmd == "group_deleted") {
+        
+        $("#groups option[value='"+response.gid+"']").remove();
+    } 
 }
 
 function hide_group_list() {

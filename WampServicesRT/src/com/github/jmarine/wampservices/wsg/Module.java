@@ -330,10 +330,21 @@ public class Module extends WampModule
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode event = app.toJSON();
         event.put("cmd", cmd);
-        socket.publishEvent(wampApp.getTopic(getFQtopicURI("apps_event")), event, excludeMe);  // don't exclude Me
+        socket.publishEvent(wampApp.getTopic(getFQtopicURI("apps_event")), event, excludeMe);
         return event;
     }
 
+    private ObjectNode updateGroupInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
+    {
+        // check subscribers of "apps_event" topic
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode event = g.toJSON();
+        event.put("cmd", cmd);
+        if(!g.isHidden()) {
+            socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+g.getApplication().getAppId())), event, excludeMe);
+        }
+        return event;
+    }
     
     private ObjectNode listGroups(String appId) throws Exception
     {
@@ -347,18 +358,7 @@ public class Module extends WampModule
             retval.put("app", app.toJSON());
             for(Group group : app.getGroupsByState(null)) {
                 if(group.isHidden()) continue;
-                ObjectNode obj = mapper.createObjectNode();
-                obj.put("gid", group.getGid());
-                obj.put("admin", group.getAdminNick());
-                obj.put("num", group.getNumMembers());
-                obj.put("min", group.getMinMembers());
-                obj.put("max", group.getMaxMembers());
-                obj.put("delta", group.getDeltaMembers());
-                obj.put("avail", group.getAvailSlots());
-                obj.put("observable", group.isObservableGroup());
-                obj.put("dynamic", group.isDynamicGroup());
-                obj.put("alliances", group.isAlliancesAllowed());
-                obj.put("description", group.getDescription());
+                ObjectNode obj = group.toJSON();
                 groupsArray.add(obj);
             }   
 
@@ -448,7 +448,6 @@ public class Module extends WampModule
                 groups.put(g.getGid(), g);
 
                 //updateAppInfo(socket, app, "app_updated", false);
-                socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:" + appId)), listGroups(appId), false);  // don't exclude Me
 
                 valid = true;
                 created = true;
@@ -461,7 +460,7 @@ public class Module extends WampModule
 
         // generate response:
         ObjectMapper mapper = new ObjectMapper();
-        ObjectNode response = mapper.createObjectNode();
+        ObjectNode response = (g!=null)? g.toJSON() : mapper.createObjectNode();
         response.put("cmd", "user_joined");
 
         if(valid) {
@@ -469,16 +468,6 @@ public class Module extends WampModule
             ArrayList<String> requiredRoles = new ArrayList<String>();
             
             response.put("created", created);
-            response.put("gid", g.getGid());
-            response.put("state", g.getState().toString());
-            response.put("admin", g.getAdminNick());
-            response.put("min", g.getMinMembers());
-            response.put("max", g.getMaxMembers());
-            response.put("delta", g.getDeltaMembers());
-            response.put("observable", g.isObservableGroup());
-            response.put("dynamic", g.isDynamicGroup());
-            response.put("alliances", g.isAlliancesAllowed());
-
             response.put("app", app.toJSON());
 
             ArrayNode rolesArray = mapper.createArrayNode();
@@ -596,6 +585,8 @@ public class Module extends WampModule
             }
 
             response.put("members", membersArray);
+            
+            updateGroupInfo(socket, g, created? "group_created" : "group_updated", false);
         }
 
         
@@ -860,10 +851,11 @@ public class Module extends WampModule
                 socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+gid)), response, true); // exclude Me
 
                 client.removeGroup(g);
+                
                 String topicName = getFQtopicURI("group_event:" + g.getGid());
                 for(WampTopic topic : wampApp.unsubscribeClientFromTopic(socket, topicName)) {
+                    boolean deleted = false;
                     if(topic.getSubscriptionCount() == 0) {
-
                         logger.log(Level.INFO, "closing group {0}: {1}", new Object[]{ g.getGid(), g.getDescription()});
 
                         groups.remove(g.getGid());
@@ -872,8 +864,9 @@ public class Module extends WampModule
                         //updateAppInfo(socket, applications.get(appId), "app_updated", false);
 
                         wampApp.removeTopic(topicName);
-                        socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+appId)), listGroups(appId), false);  // don't exclude Me
+                        deleted = true;
                     }
+                    updateGroupInfo(socket, g, deleted? "group_deleted" : "group_updated", false);                    
                 }
             }
 

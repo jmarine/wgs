@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import com.github.jmarine.wampservices.WampTopic;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ObjectNode;
 
 
 public class Group 
@@ -235,7 +237,7 @@ public class Group
         int count = 0;
         for(int i = 0; i < members.size(); i++) {
             Member member = getMember(i);
-            if(member != null) count++;
+            if( (member != null) && (member.getClient() != null)) count++;
         }
         return count;
     }
@@ -303,7 +305,26 @@ public class Group
     public void setPassword(String password) {
         this.password = password;
     }
+    
+    public ObjectNode toJSON()
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode obj = mapper.createObjectNode();
+        obj.put("gid", getGid());
+        obj.put("admin", getAdminNick());
+        obj.put("hidden", isHidden());
+        obj.put("num", getNumMembers());
+        obj.put("min", getMinMembers());
+        obj.put("max", getMaxMembers());
+        obj.put("delta", getDeltaMembers());
+        obj.put("avail", getAvailSlots());
+        obj.put("observable", isObservableGroup());
+        obj.put("dynamic", isDynamicGroup());
+        obj.put("alliances", isAlliancesAllowed());
+        obj.put("description", getDescription());        
+        obj.put("state", String.valueOf(getState()));
+        return obj;
+    }
 
 }
-
 
