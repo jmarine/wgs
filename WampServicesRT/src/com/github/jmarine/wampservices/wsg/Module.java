@@ -558,7 +558,7 @@ public class Module extends WampModule
                 boolean connected = (member.getClient() != null);
                 if(!spectator && !connected && !joined && (!reserved || index == reservedSlot)) {
                     member.setClient(client);
-                    member.setState(MemberState.READY);
+                    member.setState(MemberState.RESERVED);
                     member.setNick(client.getUser().getNick());
                     member.setUserType("user");
                     member.setTeam(1+index);
@@ -621,7 +621,7 @@ public class Module extends WampModule
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode response = mapper.createObjectNode();
-        response.put("cmd", "update_group");
+        response.put("cmd", "group_updated");
         
         
         Group g = groups.get(gid);
@@ -685,55 +685,80 @@ public class Module extends WampModule
     public ObjectNode updateMember(WampSocket socket, ObjectNode data) throws Exception
     {
             boolean valid = false;
-            String appId = data.get("app").asText();
             String gid = data.get("gid").asText();
-
-            int slot = data.get("slot").asInt();
-            String sid = data.get("sid").asText();
-            String nick = data.get("nick").asText();
-            String role = data.get("role").asText();
-            String usertype = data.get("type").asText();
-            int team = data.get("team").asInt();
 
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode response = mapper.createObjectNode();
-            response.put("cmd", "user_joined");
+            response.put("cmd", "user_updated");
 
             Group g = groups.get(gid);
             if(g != null) {
-                valid = true;
                 logger.log(Level.FINE, "open_group: group found: " + gid);
-
-                Client c = clients.get(sid);
-                if(c!=null) {
-                    // when it's not a reservation of a member slot
-                    User u = c.getUser();
-                    if(u!=null) nick = u.getNick();
-                }
-
-                Role r = g.getApplication().getRoleByName(role);
-
-                // TODO: check "slot" is valid
-                Member member = g.getMember(slot);
-                if(member == null) member = new Member();
-                member.setClient(c);
-                member.setState( (c!=null)? MemberState.READY : MemberState.EMPTY );
-                member.setNick(nick);
-                member.setUserType(usertype);
-                member.setRole(r);
-                member.setTeam(team);
-                g.setMember(slot, member);
-
-
+                
                 response.put("gid", g.getGid());
-                response.put("sid", sid);
-                response.put("nick", nick);
-                response.put("type", usertype);
-                response.put("slot", slot);
-                response.put("role", role);
-                response.put("team", team);
-                response.put("state", String.valueOf(member.getState()));
+                if(data.has("slot")) {
+                    
+                    // UPDATE MEMBER SLOT
+                    String sid = data.get("sid").asText();
+                    
+                    int slot = data.get("slot").asInt();
+                    String nick = data.get("nick").asText();
+                    String role = data.get("role").asText();
+                    String usertype = data.get("type").asText();
+                    int team = data.get("team").asInt();
 
+                    Client c = clients.get(sid);
+                    if(c!=null) {
+                        // when it's not a reservation of a member slot
+                        User u = c.getUser();
+                        if(u!=null) nick = u.getNick();
+                    }
+
+                    Role r = g.getApplication().getRoleByName(role);
+
+                    // TODO: check "slot" is valid
+                    Member member = g.getMember(slot);
+                    if(member == null) member = new Member();
+                    member.setClient(c);
+                    member.setState( (c!=null)? MemberState.RESERVED : MemberState.EMPTY );
+                    member.setNick(nick);
+                    member.setUserType(usertype);
+                    member.setRole(r);
+                    member.setTeam(team);
+                    g.setMember(slot, member);
+
+
+                    response.put("sid", sid);
+                    response.put("nick", nick);
+                    response.put("type", usertype);
+                    response.put("slot", slot);
+                    response.put("role", role);
+                    response.put("team", team);
+                    response.put("state", String.valueOf(member.getState()));
+                    valid = true;
+                    
+                } else {
+                    // UPDATE CLIENT STATE ("reserved" <--> "ready")
+                    String sid = socket.getSessionId();
+                    ArrayNode membersArray = mapper.createArrayNode();
+                    JsonNode stateNode = data.get("state");
+                    String state = (stateNode!=null && !stateNode.isNull()) ? stateNode.asText() : null;
+                    if(state != null) {
+                        for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
+                            Member member = g.getMember(slot);
+                            if( (member != null) && (member.getClient() != null) && (member.getClient().getSessionId().equals(sid)) ) {
+                                boolean connected = (member.getClient() != null);
+                                member.setState(MemberState.valueOf(state));
+                                ObjectNode obj = member.toJSON();
+                                obj.put("slot", slot);
+                                obj.put("connected", connected);
+                                membersArray.add(obj);
+                            }
+                        }
+                        response.put("updates", membersArray);
+                    }
+                    valid = true;
+                }
             }
 
             response.put("valid", valid);

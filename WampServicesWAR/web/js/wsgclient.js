@@ -304,7 +304,7 @@ WsgClient.prototype = {
                     msg.connections.forEach(function(con) { 
                         client.groups[msg.gid].connections[con.sid] = con.nick;
                     });
-                } else if(msg.cmd == "user_joined") {
+                } else if(msg.cmd == "user_joined" || msg.cmd == "user_updated") {
                     client.groups[msg.gid].connections[msg.sid] = msg.nick;
                     if(msg.slot) client.groups[msg.gid].members[msg.slot] = msg;
                 } else if(msg.cmd == "user_unjoined") {
@@ -348,17 +348,19 @@ WsgClient.prototype = {
       this.call("wsg:update_group", msg).then(callback, callback);
   },
 
-  updateMember: function(appId, gid, slot, sid, usertype, nick, role, team, callback) {
+  updateMember: function(appId, gid, state, slot, sid, usertype, nick, role, team, callback) {
       var msg = Object();
       msg.app = appId;
       msg.gid = gid;
-      msg.slot = slot;
-      msg.sid = sid;
-      msg.nick = nick;
-      msg.role = role;
-      msg.team = team;
-      msg.type = usertype;
-     
+      msg.state = state;
+      if(slot) {
+        msg.slot = slot;
+        msg.sid = sid;
+        msg.nick = nick;
+        msg.role = role;
+        msg.team = team;
+        msg.type = usertype;
+      }
       this.call("wsg:update_member", msg).then(callback, callback);
   }
 

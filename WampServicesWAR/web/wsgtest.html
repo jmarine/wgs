@@ -406,8 +406,26 @@ function update_member(field, as_previous_client)
     var slot = parseInt(field.substring(6));
     var role = $("#role" + slot + " option:selected").val();
     var team = parseInt($("#team" + slot).val());
-    wsgclient.updateMember(appId, gid, slot, sid, usertype, nick, role, team, update_group_callback);
+    wsgclient.updateMember(appId, gid, "RESERVED", slot, sid, usertype, nick, role, team, update_group_callback);
     
+}
+
+function update_client_state(state)
+{
+    var appId = $("#apps option:selected").attr("value");
+    var gid = $("#group_gid").val();
+    wsgclient.updateMember(appId, gid, state, false, false, false, false, false, false, update_group_callback);
+}
+
+function toggle_client_state()
+{
+    if($("#toggle_client_state").html().toUpperCase()=="READY") {
+        $("#toggle_client_state").html("BUSY");
+        update_client_state("READY")
+    } else {
+        $("#toggle_client_state").html("READY");
+        update_client_state("RESERVED");
+    }
 }
 
 
@@ -486,7 +504,7 @@ function update_group_callback(response) {
             var isMember = isFinite(response.slot);
             var num_members = $("#group_params table[id='members'] tbody tr").size();
 
-            if(response.cmd == "update_group") {
+            if(response.cmd == "group_updated") {
              
                 if(response.state == "STARTED") {
                     for(var index = 0; index < num_members; index += 1) {
@@ -495,56 +513,69 @@ function update_group_callback(response) {
                     }
                 };
                 
-            } else if(response.cmd == "user_joined") {
+            } else if(response.cmd == "user_joined" || response.cmd == "user_updated") {
 
-                // create UI fields for new member slots:
-                if(isMember) {
-                    var memberId = response.slot;
-                    while(num_members <= memberId) {
-                        add_group_member(false);
-                        num_members += 1;
-                    }                        
+                if(!response.updates) { 
+                    // single user_joined
+                    response.updates = [ response ];
                 }
 
-                // append new joined user's nick in selectboxes
-                for(var index = 0; index < num_members; index += 1) {
-                    if( (wsgclient.nick == $("#group_admin").val()) ) {
-                        var val = "";
-                        var text = "Empty";
-                        if(response.sid != "") {
-                            val = response.type + ":" + response.sid;
-                            text = response.type + ":" + response.nick;
-                        
-                            if($("#member"+index+" option[value='"+val+"']").size() <= 0) {  // insert user
-                                $("#member"+index).append($("<option>").attr("value", val).text(text));
-                            }
-                        }
+                response.updates.forEach(function(member) {
+                    var isMember = isFinite(member.slot);
 
+                    if(isMember && member.sid == wsgclient.sid && member.state == "RESERVED") {
+                        $("#toggle_client_state").html("READY");
                     }
-                }
-
-                // update UI fields with new member values:
-                if(isMember) {                        
-                    var memberId = response.slot;                        
-                    $("#team"+memberId).val(response.team);
                     
-                    if(wsgclient.nick == $("#group_admin").val()) {
-
-                        var val = "";
-                        if(response.sid != "") {
-                            val = response.type + ":" + response.sid;
-                        }
-                        $("#member"+memberId+" option[value='"+val+"']").attr("selected", "selected");
-                        $("#role"+memberId+" option[value='"+response.role+"']").attr("selected", "selected");
-                        $("#state" + memberId).attr("src", "images/" + response.state.toLowerCase() + ".png");
-
-                    } else {
-
-                        var currentNickSelected = (wsgclient.sid == response.sid);
-                        var roleFixed = (response.role != "") && (response.sid != "") && (wsgclient.sid != response.sid);
-                        populate_group_member_fields(false, memberId, response.state, response.nick, response.sid, response.type, response.role, currentNickSelected, roleFixed, currentAppAI);
+                    // create UI fields for new member slots:
+                    if(isMember) {
+                        var memberId = member.slot;
+                        while(num_members <= memberId) {
+                            add_group_member(false);
+                            num_members += 1;
+                        }                        
                     }
-                }
+
+                    // append new joined user's nick in selectboxes
+                    for(var index = 0; index < num_members; index += 1) {
+                        if( (wsgclient.nick == $("#group_admin").val()) ) {
+                            var val = "";
+                            var text = "Empty";
+                            if(member.sid != "") {
+                                val = member.type + ":" + member.sid;
+                                text = member.type + ":" + member.nick;
+
+                                if($("#member"+index+" option[value='"+val+"']").size() <= 0) {  // insert user
+                                    $("#member"+index).append($("<option>").attr("value", val).text(text));
+                                }
+                            }
+
+                        }
+                    }
+
+                    // update UI fields with new member values:
+                    if(isMember) {                        
+                        var memberId = member.slot;                        
+                        $("#team"+memberId).val(member.team);
+
+                        if(wsgclient.nick == $("#group_admin").val()) {
+
+                            var val = "";
+                            if(member.sid != "") {
+                                val = member.type + ":" + member.sid;
+                            }
+                            $("#member"+memberId+" option[value='"+val+"']").attr("selected", "selected");
+                            $("#role"+memberId+" option[value='"+member.role+"']").attr("selected", "selected");
+                            $("#state" + memberId).attr("src", "images/" + member.state.toLowerCase() + ".png");
+
+                        } else {
+
+                            var currentNickSelected = (wsgclient.sid == member.sid);
+                            var roleFixed = (member.role != "") && (member.sid != "") && (wsgclient.sid != member.sid);
+                            populate_group_member_fields(false, memberId, member.state, member.nick, member.sid, member.type, member.role, currentNickSelected, roleFixed, currentAppAI);
+                        }
+                    }
+                });
 
             } else if(response.cmd == "user_unjoined") {
 
@@ -777,6 +808,7 @@ function toggle_connect(create_user) {
         <input type="hidden" id="back_section" name="group_list" value="" />
     </div>
     <button id="start_group" onclick="start_group();">Start</button>
+    <button id="toggle_client_state" onclick="toggle_client_state();">READY</button>
     <button id="add_group_member" onclick="add_group_member(true);">Add</button>
     <button id="exit_group" class="hidden" onclick="exit_group();">Exit</button>
     <button id="enable_network" onclick="enable_network();">Enable network</button>
