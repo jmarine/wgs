@@ -448,14 +448,14 @@ function populate_group_member_fields(added, memberId, memberState, memberNick, 
     $("#role" + memberId+ " option").remove();
     $("#role" + memberId).append(roles);
     
-    $("#state" + memberId).attr("src", "icons/" + memberState.toLowerCase() + ".png");
+    $("#state" + memberId).attr("src", "images/" + memberState.toLowerCase() + ".png");
 }
 
 function append_group_member(added, memberId, memberState, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai) {
     var tbody = $("#group_params table[id='members'] tbody");
     
     var html = '<tr><td align="left"><label for="member' + memberId + '">User ' + (1+memberId) + ':</label><input type="hidden" id="added' + memberId + '" value="' + added + '"/></td>';
-    html += '<td align="left"><img id="state' + memberId + '" src="icons/empty.png" border="0" /></td>';
+    html += '<td align="left"><img id="state' + memberId + '" src="images/empty.png" border="0" /></td>';
     html += '<td><select id="member' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
 
     html += '</select></td><td><select id="role' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
@@ -536,7 +536,7 @@ function update_group_callback(response) {
                         }
                         $("#member"+memberId+" option[value='"+val+"']").attr("selected", "selected");
                         $("#role"+memberId+" option[value='"+response.role+"']").attr("selected", "selected");
-                        $("#state" + memberId).attr("src", "icons/" + response.state.toLowerCase() + ".png");
+                        $("#state" + memberId).attr("src", "images/" + response.state.toLowerCase() + ".png");
 
                     } else {
 
