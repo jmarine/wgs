@@ -362,6 +362,22 @@ WsgClient.prototype = {
         msg.type = usertype;
       }
       this.call("wsg:update_member", msg).then(callback, callback);
-  }
+  },
+  
+  sendGroupMessage: function(gid, data, callback) {
+      var args = Array();
+      args[0] = gid;
+      args[1] = data;
+      
+      this.call("wsg:send_group_message", args).then(callback, callback);
+  },
 
+  sendTeamMessage: function(gid, data, callback) {
+      var args = Array();
+      args[0] = gid;
+      args[1] = data;
+      
+      this.call("wsg:send_team_message", args).then(callback, callback);
+  }
+  
 }
