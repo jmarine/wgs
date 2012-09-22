@@ -377,6 +377,8 @@ function show_group(group) {
     $("#app_list").hide();
     $("#group_list").hide();
     $("#new_group_params").hide(); 
+    $("#toggle_client_state").html("Ready");
+    
     if(wsgclient.nick == $("#group_admin").val()) $("#group_options").show();
     else $("#group_options").hide();
     $("#group_params").slideDown(500);
@@ -420,10 +422,10 @@ function update_client_state(state)
 function toggle_client_state()
 {
     if($("#toggle_client_state").html().toUpperCase()=="READY") {
-        $("#toggle_client_state").html("BUSY");
+        $("#toggle_client_state").html("Busy");
         update_client_state("READY")
     } else {
-        $("#toggle_client_state").html("READY");
+        $("#toggle_client_state").html("Ready");
         update_client_state("RESERVED");
     }
 }
@@ -524,7 +526,7 @@ function update_group_callback(response) {
                     var isMember = isFinite(member.slot);
 
                     if(isMember && member.sid == wsgclient.sid && member.state == "RESERVED") {
-                        $("#toggle_client_state").html("READY");
+                        $("#toggle_client_state").html("Ready");
                     }
                     
                     // create UI fields for new member slots:
@@ -808,7 +810,7 @@ function toggle_connect(create_user) {
         <input type="hidden" id="back_section" name="group_list" value="" />
     </div>
     <button id="start_group" onclick="start_group();">Start</button>
-    <button id="toggle_client_state" onclick="toggle_client_state();">READY</button>
+    <button id="toggle_client_state" onclick="toggle_client_state();">Ready</button>
     <button id="add_group_member" onclick="add_group_member(true);">Add</button>
     <button id="exit_group" class="hidden" onclick="exit_group();">Exit</button>
     <button id="enable_network" onclick="enable_network();">Enable network</button>
