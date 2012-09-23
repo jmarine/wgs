@@ -32,7 +32,7 @@ public class WampServer {
         ctx.createSubcontext("jdbc");
        
         
-        String configFileName = "wamp.properties";
+        String configFileName = "wampservices.properties";
         if(args.length > 0) configFileName = args[0];
         
         GrizzlyConfig grizzlyConfig = null;
