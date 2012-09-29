@@ -416,7 +416,7 @@ function update_client_state(state)
 {
     var appId = $("#apps option:selected").attr("value");
     var gid = $("#group_gid").val();
-    wsgclient.updateMember(appId, gid, state, false, false, false, false, false, false, update_group_callback);
+    wsgclient.updateMember(appId, gid, state, NaN, false, false, false, false, false, update_group_callback);
 }
 
 function toggle_client_state()

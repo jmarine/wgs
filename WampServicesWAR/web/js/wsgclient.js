@@ -353,9 +353,9 @@ WsgClient.prototype = {
       msg.app = appId;
       msg.gid = gid;
       msg.state = state;
-      if(slot) {
+      if(!isNaN(slot)) {
         msg.slot = slot;
-        msg.sid = sid;
+        msg.sid  = sid;
         msg.nick = nick;
         msg.role = role;
         msg.team = team;
