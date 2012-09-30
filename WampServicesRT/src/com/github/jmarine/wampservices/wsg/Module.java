@@ -635,7 +635,13 @@ public class Module extends WampModule
                 response.put("state", state);
                 
                 if(g.getState() == GroupState.STARTED) {
-                    response.put("members", getMembers(gid,0));
+                    for(int slot = 0; slot < g.getNumMembers(); slot++) {
+                        Member member = g.getMember(slot);
+                        if(member.getClient() != null && socket.getSessionId().equals(member.getClient().getSessionId())) {
+                            member.setState(MemberState.READY);
+                        }
+                    }
+                    response.put("updates", getMembers(gid,0));
                 }
                 
                 //updateAppInfo(socket, g.getApplication(), "app_updated", false);
