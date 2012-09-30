@@ -379,8 +379,18 @@ function show_group(group) {
     $("#new_group_params").hide(); 
     $("#toggle_client_state").html("Ready");
     
-    if(wsgclient.nick == $("#group_admin").val()) $("#group_options").show();
-    else $("#group_options").hide();
+    if(wsgclient.nick == $("#group_admin").val()) {
+        $("#start_group").show();
+        $("#toggle_client_state").hide();
+        $("#add_group_member").show();
+        $("#group_options").show();
+    }
+    else {
+        $("#start_group").hide();
+        $("#toggle_client_state").show();
+        $("#add_group_member").hide();        
+        $("#group_options").hide();
+    }
     $("#group_params").slideDown(500);
 }
 
@@ -469,13 +479,14 @@ function populate_group_member_fields(added, memberId, memberState, memberNick, 
     $("#role" + memberId).append(roles);
     
     $("#state" + memberId).attr("src", "images/" + memberState.toLowerCase() + ".png");
+    $("#state" + memberId).attr("title", memberState);
 }
 
 function append_group_member(added, memberId, memberState, memberNick, memberCid, memberType, memberRole, currentNickSelected, roleFixed, ai) {
     var tbody = $("#group_params table[id='members'] tbody");
     
     var html = '<tr><td align="left"><label for="member' + memberId + '">User ' + (1+memberId) + ':</label><input type="hidden" id="added' + memberId + '" value="' + added + '"/></td>';
-    html += '<td align="left"><img id="state' + memberId + '" src="images/empty.png" border="0" /></td>';
+    html += '<td align="left"><img title="EMPTY" id="state' + memberId + '" src="images/empty.png" border="0" /></td>';
     html += '<td><select id="member' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
 
     html += '</select></td><td><select id="role' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
@@ -506,16 +517,7 @@ function update_group_callback(response) {
             var isMember = isFinite(response.slot);
             var num_members = $("#group_params table[id='members'] tbody tr").size();
 
-            if(response.cmd == "group_updated") {
-             
-                if(response.state == "STARTED") {
-                    for(var index = 0; index < num_members; index += 1) {
-                        $("#member"+index+" option[selected!='selected']").remove();
-                        $("#role"+index+" option[selected!='selected']").remove();
-                    }
-                };
-                
-            } else if(response.cmd == "user_joined" || response.cmd == "user_updated") {
+            if(response.cmd == "user_joined" || response.cmd == "user_updated" || response.cmd == "group_updated") {
 
                 if(!response.updates) { 
                     // single user_joined
@@ -569,6 +571,7 @@ function update_group_callback(response) {
                             $("#member"+memberId+" option[value='"+val+"']").attr("selected", "selected");
                             $("#role"+memberId+" option[value='"+member.role+"']").attr("selected", "selected");
                             $("#state" + memberId).attr("src", "images/" + member.state.toLowerCase() + ".png");
+                            $("#state" + memberId).attr("title", member.state);
 
                         } else {
 
@@ -593,6 +596,13 @@ function update_group_callback(response) {
                     });
                 }
                 
+            }
+
+            if(response.cmd == "group_updated" && response.state == "STARTED") {
+                for(var index = 0; index < num_members; index += 1) {
+                    $("#member"+index+" option[selected!='selected']").remove();
+                    $("#role"+index+" option[selected!='selected']").remove();
+                }
             }
 
         } else {
@@ -811,7 +821,7 @@ function toggle_connect(create_user) {
     </div>
     <button id="start_group" onclick="start_group();">Start</button>
     <button id="toggle_client_state" onclick="toggle_client_state();">Ready</button>
-    <button id="add_group_member" onclick="add_group_member(true);">Add</button>
+    <button id="add_group_member" class="hidden" onclick="add_group_member(true);">Add</button>
     <button id="exit_group" class="hidden" onclick="exit_group();">Exit</button>
     <button id="enable_network" onclick="enable_network();">Enable network</button>
     </fieldset>

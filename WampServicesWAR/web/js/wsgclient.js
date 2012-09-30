@@ -305,8 +305,12 @@ WsgClient.prototype = {
                         client.groups[msg.gid].connections[con.sid] = con.nick;
                     });
                 } else if(msg.cmd == "user_joined" || msg.cmd == "user_updated") {
-                    client.groups[msg.gid].connections[msg.sid] = msg.nick;
-                    if(msg.slot) client.groups[msg.gid].members[msg.slot] = msg;
+                    var gid = msg.gid;
+                    if(!msg.updates) msg.updates = [ msg ];
+                    msg.updates.forEach(function(item) {
+                        client.groups[gid].connections[item.sid] = item.nick;
+                        if(item.slot) client.groups[gid].members[item.slot] = item;
+                    });
                 } else if(msg.cmd == "user_unjoined") {
                     delete client.groups[msg.gid].connections[msg.sid];
                     if(msg.members) {
