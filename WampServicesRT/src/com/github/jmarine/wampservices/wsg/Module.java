@@ -616,6 +616,8 @@ public class Module extends WampModule
         // TODO: change group properties (state, observable, etc)
 
         boolean valid = false;
+        boolean broadcastAppInfo = false;
+        boolean broadcastGroupInfo = false;
         String appId = node.get("app").asText();
         String gid = node.get("gid").asText();
 
@@ -626,18 +628,55 @@ public class Module extends WampModule
         
         Group g = groups.get(gid);
         if(g != null) {
+            response = g.toJSON();
+            response.put("cmd", "group_updated");
+            
             logger.log(Level.FINE, "open_group: group found: " + gid);
             
-            JsonNode stateNode = node.get("state");
-            String state = (stateNode!=null && !stateNode.isNull()) ? stateNode.asText() : null;
-            if(state != null) {
+            response.put("gid", g.getGid());
+            
+            if(node.has("automatch")) {
+                boolean autoMatchMode = node.get("automatch").asBoolean();
+                g.setAutoMatchEnabled(autoMatchMode);
+                g.getApplication().addAutoMatchGroup(g);
+            } 
+
+            if(node.has("dynamic")) {
+                boolean dynamic = node.get("dynamic").asBoolean();
+                g.setDynamicGroup(dynamic);
+                response.put("dynamic", g.isDynamicGroup());
+            }
+
+            if(node.has("hidden")) {
+                boolean hidden = node.get("hidden").asBoolean();
+                g.setHidden(hidden);
+                response.put("hidden", g.isHidden());
+                broadcastAppInfo = true;
+            }            
+            
+            if(node.has("observable")) {
+                boolean observable = node.get("observable").asBoolean();
+                g.setObservableGroup(observable);
+                response.put("observable", g.isObservableGroup());
+                broadcastAppInfo = true;
+            }                                 
+            
+            if(node.has("data")) {
+                String data = node.get("data").asText();
+                g.setData(data);
+                response.put("data", data);
+                broadcastGroupInfo = true;
+            }
+            
+            if(node.has("state")) {
+                String state = node.get("state").asText();
                 g.setState(GroupState.valueOf(state));
                 response.put("state", state);
                 
                 if(g.getState() == GroupState.STARTED) {
-                    for(int slot = 0; slot < g.getNumMembers(); slot++) {
+                    for(int slot = 0; slot < g.getNumSlots(); slot++) {
                         Member member = g.getMember(slot);
-                        if(member.getClient() != null && socket.getSessionId().equals(member.getClient().getSessionId())) {
+                        if(member != null && member.getClient() != null && socket.getSessionId().equals(member.getClient().getSessionId())) {
                             member.setState(MemberState.READY);
                         }
                     }
@@ -645,13 +684,8 @@ public class Module extends WampModule
                 }
                 
                 //updateAppInfo(socket, g.getApplication(), "app_updated", false);
-            }
-
-            JsonNode dataNode = node.get("data");
-            String data = (dataNode!=null && !dataNode.isNull()) ? dataNode.asText() : null;
-            if(data != null) {
-                g.setData(data);
-                response.put("data", data);
+                broadcastAppInfo = true;
+                broadcastGroupInfo = true;
             }
             
             valid = true;
@@ -659,7 +693,8 @@ public class Module extends WampModule
 
         response.put("valid", valid);
 
-        if(valid) socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, true);  // exclude Me
+        if(broadcastAppInfo)  socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+g.getApplication().getAppId())), response, true);  // exclude Me
+        if(broadcastGroupInfo) socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, true);  // exclude Me
         return response;
     }
     
@@ -852,7 +887,7 @@ public class Module extends WampModule
                 for(int slot = g.getNumSlots(); slot > 0; ) {
                     slot = slot-1;
                     Member member = g.getMember(slot);
-                    boolean connected = (member.getClient() != null);
+                    boolean connected = (member!=null && member.getClient() != null);
                     if(connected) {
                         if(client == member.getClient()) {
                             logger.log(Level.INFO, "clearing slot " + slot);

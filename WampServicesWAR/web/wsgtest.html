@@ -202,10 +202,15 @@ function update_groups(response) {
         });
     } else if(response.cmd == "group_created" || response.cmd == "group_updated") {
         
-        if($("#groups option[value='"+response.gid+"']").size() <= 0) {  // insert group
-            $("#groups").append($("<option>").attr("value", response.gid));
+        if(response.hidden) {
+            $("#groups option[value='"+response.gid+"']").remove();
+        } else {
+            if($("#groups option[value='"+response.gid+"']").size() <= 0) {  // insert group
+                $("#groups").append($("<option>").attr("value", response.gid));
+            }
+            $("#groups option[value='"+response.gid+"']").text(getGroupDescription(response));
+            $("#groups option[value='"+response.gid+"']").attr("observable", response.observable);
         }
-        $("#groups option[value='"+response.gid+"']").text(getGroupDescription(response));
         
     } else if(response.cmd == "group_deleted") {
         
@@ -545,7 +550,7 @@ function update_group_callback(response) {
                         if( (wsgclient.nick == $("#group_admin").val()) ) {
                             var val = "";
                             var text = "Empty";
-                            if(member.sid != "") {
+                            if(member.sid && member.sid != "") {
                                 val = member.type + ":" + member.sid;
                                 text = member.type + ":" + member.nick;
 
@@ -602,6 +607,7 @@ function update_group_callback(response) {
                 for(var index = 0; index < num_members; index += 1) {
                     $("#member"+index+" option[selected!='selected']").remove();
                     $("#role"+index+" option[selected!='selected']").remove();
+                    // $("#team"+index).attr("disabled","disabled");
                 }
             }
 
@@ -810,11 +816,11 @@ function toggle_connect(create_user) {
       </tbody>
     </table>
     <div id="group_options">
-        <label for="grp_automatch">Auto-match:</label><input type="checkbox" name="grp_automatch" id="grp_automatch"/><br/>
-        <label for="grp_hidden">Hidden:</label><input type="checkbox" name="grp_hidden" id="grp_hidden" /><br/>
-        <label for="grp_dynamic">Dynamic:</label><input type="checkbox" name="grp_dynamic" id="grp_dynamic" /><br/>
-        <label for="grp_alliances">Alliances:</label><input type="checkbox" name="grp_alliances" id="grp_dynamic" /><br/>
-        <label for="grp_observable">Observable:</label><input type="checkbox" name="grp_observable" id="grp_observable" /><br/>
+        <label for="grp_automatch">Auto-match:</label><input type="checkbox" name="grp_automatch" id="grp_automatch" onchange="javascript:update_group()"/><br/>
+        <label for="grp_hidden">Hidden:</label><input type="checkbox" name="grp_hidden" id="grp_hidden" onchange="javascript:update_group()"/><br/>
+        <label for="grp_dynamic">Dynamic:</label><input type="checkbox" name="grp_dynamic" id="grp_dynamic" onchange="javascript:update_group()"/><br/>
+        <label for="grp_alliances">Alliances:</label><input type="checkbox" name="grp_alliances" id="grp_dynamic" onchange="javascript:update_group()"/><br/>
+        <label for="grp_observable">Observable:</label><input type="checkbox" name="grp_observable" id="grp_observable" onchange="javascript:update_group()"/><br/>
         <input type="hidden" id="group_gid" name="group_gid" value="" />
         <input type="hidden" id="group_admin" name="group_admin" value="" />
         <input type="hidden" id="back_section" name="group_list" value="" />
