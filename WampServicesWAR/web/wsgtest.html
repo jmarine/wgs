@@ -200,6 +200,7 @@ function update_groups(response) {
             opt.attr('observable', item.observable);
             $("#groups").append(opt);
         });
+        
     } else if(response.cmd == "group_created" || response.cmd == "group_updated") {
         
         if(response.hidden) {
