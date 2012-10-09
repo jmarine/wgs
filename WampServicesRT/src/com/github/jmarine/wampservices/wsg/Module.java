@@ -760,8 +760,9 @@ public class Module extends WampModule
                     // TODO: check "slot" is valid
                     Member member = g.getMember(slot);
                     if(member == null) member = new Member();
+                    if(c==null) member.setState(MemberState.EMPTY);
+                    else if(c != member.getClient()) member.setState(MemberState.RESERVED);
                     member.setClient(c);
-                    member.setState( (c!=null)? MemberState.RESERVED : MemberState.EMPTY );
                     member.setNick(nick);
                     member.setUserType(usertype);
                     member.setRole(r);
