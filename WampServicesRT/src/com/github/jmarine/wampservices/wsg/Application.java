@@ -13,6 +13,7 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.JoinColumns;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
@@ -45,7 +46,10 @@ public class Application implements Serializable {
     private int     version;
     
     @ManyToOne(fetch= FetchType.EAGER)
-    @JoinColumn(name="adminuser")
+    @JoinColumns({
+        @JoinColumn(name="adminuser", referencedColumnName = "nick"),
+        @JoinColumn(name="admindomain", referencedColumnName = "domain")
+    })    
     private User  adminUser;
     
     @Column(name="description", length=100)

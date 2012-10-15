@@ -39,6 +39,7 @@ public class Module extends WampModule
     private static final Logger logger = Logger.getLogger(Module.class.toString());
     private static final String MODULE_URL = WampApplication.WAMP_BASE_URL + "/wsgservice#";
     private static final String PU_NAME = "WsgPU";
+    private static final String LOCAL_DOMAIN = ".";
     
     private WampApplication wampApp = null;
     private EntityManagerFactory emf = Persistence.createEntityManagerFactory(PU_NAME);        
@@ -175,15 +176,20 @@ public class Module extends WampModule
         Client client = clients.get(socket.getSessionId());
 
         String nick = data.get("nick").asText();
+        UserId userId = new UserId(nick, LOCAL_DOMAIN);
         
         EntityManager em = getEntityManager();
-        usr = getEntityManager().find(User.class, nick);
+        usr = getEntityManager().find(User.class, userId);
         em.close();
         
         if(usr != null) throw new WampException(MODULE_URL + "nickexists", "The nick is reserved by another user");
         
         usr = new User();
+        usr.setExpires(0);
         usr.setNick(nick);
+        usr.setDomain(LOCAL_DOMAIN);
+        if(nick.length() == 0) usr.setName("");
+        else usr.setName(Character.toUpperCase(nick.charAt(0)) + nick.substring(1));
         usr.setPassword(data.get("password").asText());
         usr.setEmail(data.get("email").asText());
         usr.setAdministrator(false);
@@ -206,7 +212,8 @@ public class Module extends WampModule
         String password  = data.get("password").asText();
 
         EntityManager manager = getEntityManager();
-        User usr = manager.find(User.class, nick);
+        UserId userId = new UserId(nick, LOCAL_DOMAIN);
+        User usr = manager.find(User.class, userId);
         if( (usr != null) && (password.equals(usr.getPassword())) ) {
             user_valid = true;
             client.setUser(usr);
