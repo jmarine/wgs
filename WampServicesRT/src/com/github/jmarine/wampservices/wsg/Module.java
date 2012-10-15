@@ -39,7 +39,7 @@ public class Module extends WampModule
     private static final Logger logger = Logger.getLogger(Module.class.toString());
     private static final String MODULE_URL = WampApplication.WAMP_BASE_URL + "/wsgservice#";
     private static final String PU_NAME = "WsgPU";
-    private static final String LOCAL_DOMAIN = ".";
+    private static final String LOCAL_USER_DOMAIN = ".";
     
     private WampApplication wampApp = null;
     private EntityManagerFactory emf = Persistence.createEntityManagerFactory(PU_NAME);        
@@ -176,7 +176,7 @@ public class Module extends WampModule
         Client client = clients.get(socket.getSessionId());
 
         String nick = data.get("nick").asText();
-        UserId userId = new UserId(nick, LOCAL_DOMAIN);
+        UserId userId = new UserId(nick, LOCAL_USER_DOMAIN);
         
         EntityManager em = getEntityManager();
         usr = getEntityManager().find(User.class, userId);
@@ -187,7 +187,7 @@ public class Module extends WampModule
         usr = new User();
         usr.setExpires(0);
         usr.setNick(nick);
-        usr.setDomain(LOCAL_DOMAIN);
+        usr.setDomain(LOCAL_USER_DOMAIN);
         if(nick.length() == 0) usr.setName("");
         else usr.setName(Character.toUpperCase(nick.charAt(0)) + nick.substring(1));
         usr.setPassword(data.get("password").asText());
@@ -212,7 +212,7 @@ public class Module extends WampModule
         String password  = data.get("password").asText();
 
         EntityManager manager = getEntityManager();
-        UserId userId = new UserId(nick, LOCAL_DOMAIN);
+        UserId userId = new UserId(nick, LOCAL_USER_DOMAIN);
         User usr = manager.find(User.class, userId);
         if( (usr != null) && (password.equals(usr.getPassword())) ) {
             user_valid = true;
