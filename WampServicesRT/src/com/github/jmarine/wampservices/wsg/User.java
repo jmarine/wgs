@@ -8,6 +8,7 @@ import javax.persistence.IdClass;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+import javax.persistence.TemporalType;
 
 
 @Entity
@@ -36,8 +37,9 @@ public class User implements Serializable
     @Column(name="is_admin")
     private boolean administrator;
 
-    @Column(name="expires")
-    private long expires;
+    @javax.persistence.Temporal(TemporalType.TIMESTAMP)
+    @Column(name="profile_caducity")
+    private java.util.Calendar profileCaducity;
     
     @Column(name="email",unique=false)
     private String email;
@@ -123,15 +125,15 @@ public class User implements Serializable
         /**
      * @return the expiration date of the user
      */
-    public long getExpires() {
-        return expires;
+    public java.util.Calendar getProfileCaducity() {
+        return profileCaducity;
     }
 
     /**
-     * @param expires the expiration date to set
+     * @param profileCaducity the caducity timestamp for the profile data to set
      */
-    public void setExpires(long expires) {
-        this.expires = expires;
+    public void setProfileCaducity(java.util.Calendar profileCaducity) {
+        this.profileCaducity = profileCaducity;
     }    
 
     

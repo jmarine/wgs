@@ -185,7 +185,7 @@ public class Module extends WampModule
         if(usr != null) throw new WampException(MODULE_URL + "nickexists", "The nick is reserved by another user");
         
         usr = new User();
-        usr.setExpires(0);
+        usr.setProfileCaducity(null);
         usr.setNick(nick);
         usr.setOpenIdProviderUrl(LOCAL_USER_DOMAIN);
         if(nick.length() == 0) usr.setName("");
