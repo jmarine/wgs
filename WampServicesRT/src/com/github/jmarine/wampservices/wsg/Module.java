@@ -39,7 +39,7 @@ public class Module extends WampModule
     private static final Logger logger = Logger.getLogger(Module.class.toString());
     private static final String MODULE_URL = WampApplication.WAMP_BASE_URL + "/wsgservice#";
     private static final String PU_NAME = "WsgPU";
-    private static final String LOCAL_USER_DOMAIN = ".";
+    private static final String LOCAL_USER_DOMAIN = "";
     
     private WampApplication wampApp = null;
     private EntityManagerFactory emf = Persistence.createEntityManagerFactory(PU_NAME);        

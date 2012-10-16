@@ -24,11 +24,8 @@ public class User implements Serializable
     private String nick;
     
     @Id
-    @Column(name="domain")
+    @Column(name="domain_url")
     private String domain;
-    
-    @Column(name="expires")
-    private long expires;
     
     @Column(name="name",nullable=false)
     private String name;   
@@ -38,23 +35,16 @@ public class User implements Serializable
     
     @Column(name="adminrole")
     private boolean administrator;
+
+    @Column(name="expires")
+    private long expires;
     
     @Column(name="email",unique=false)
     private String email;
+    
+    @Column(name="picture")
+    private String picture;    
 
-    /**
-     * @return the email
-     */
-    public String getEmail() {
-        return email;
-    }
-
-    /**
-     * @param email the email to set
-     */
-    public void setEmail(String email) {
-        this.email = email;
-    }
 
     /**
      * @return the nick
@@ -84,20 +74,6 @@ public class User implements Serializable
     public void setDomain(String domain) {
         this.domain = domain;
     }
-    
-    /**
-     * @return the expiration date of the user
-     */
-    public long getExpires() {
-        return expires;
-    }
-
-    /**
-     * @param expires the expiration date to set
-     */
-    public void setExpires(long expires) {
-        this.expires = expires;
-    }    
     
     
     /**
@@ -142,5 +118,50 @@ public class User implements Serializable
     public void setAdministrator(boolean administrator) {
         this.administrator = administrator;
     }
+
+    
+        /**
+     * @return the expiration date of the user
+     */
+    public long getExpires() {
+        return expires;
+    }
+
+    /**
+     * @param expires the expiration date to set
+     */
+    public void setExpires(long expires) {
+        this.expires = expires;
+    }    
+
+    
+    /**
+     * @return the email
+     */
+    public String getEmail() {
+        return email;
+    }
+
+    /**
+     * @param email the email to set
+     */
+    public void setEmail(String email) {
+        this.email = email;
+    }
+    
+    
+    /**
+     * @return the URL of the picture
+     */
+    public String getPicture() {
+        return picture;
+    }
+
+    /**
+     * @param picture the URL of the picture to set
+     */
+    public void setPicture(String picture) {
+        this.picture = picture;
+    }    
     
 }

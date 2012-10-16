@@ -1,19 +1,12 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.github.jmarine.wampservices.wsg;
 
 
-/**
- *
- * @author jordi
- */
 public class UserId implements java.io.Serializable
 {
     private String nick;
     private String domain;    
     
+    public UserId() { }
     
     public UserId(String nick, String domain) 
     {
