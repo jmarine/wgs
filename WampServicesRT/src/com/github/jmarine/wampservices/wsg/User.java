@@ -33,7 +33,7 @@ public class User implements Serializable
     @Column(name="password",nullable=false)
     private String password;
     
-    @Column(name="adminrole")
+    @Column(name="has_admin_role")
     private boolean administrator;
 
     @Column(name="expires")
