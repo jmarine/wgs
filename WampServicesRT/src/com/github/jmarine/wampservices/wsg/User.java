@@ -24,8 +24,8 @@ public class User implements Serializable
     private String nick;
     
     @Id
-    @Column(name="domain_url")
-    private String domain;
+    @Column(name="oid_provider")
+    private String openIdProviderUrl;
     
     @Column(name="name",nullable=false)
     private String name;   
@@ -33,7 +33,7 @@ public class User implements Serializable
     @Column(name="password",nullable=false)
     private String password;
     
-    @Column(name="has_admin_role")
+    @Column(name="is_admin")
     private boolean administrator;
 
     @Column(name="expires")
@@ -62,17 +62,17 @@ public class User implements Serializable
     
     
     /**
-     * @return the domain
+     * @return the OpenId Connect Provider
      */
-    public String getDomain() {
-        return domain;
+    public String getOpenIdProviderUrl() {
+        return openIdProviderUrl;
     }
 
     /**
-     * @param domain the domain to set
+     * @param openIdProvider the URL of the issuer to set
      */
-    public void setDomain(String domain) {
-        this.domain = domain;
+    public void setOpenIdProviderUrl(String openIdProviderUrl) {
+        this.openIdProviderUrl = openIdProviderUrl;
     }
     
     

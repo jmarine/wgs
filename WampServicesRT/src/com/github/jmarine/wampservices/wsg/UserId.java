@@ -4,14 +4,14 @@ package com.github.jmarine.wampservices.wsg;
 public class UserId implements java.io.Serializable
 {
     private String nick;
-    private String domain;    
+    private String openIdProviderUrl;    
     
     public UserId() { }
     
-    public UserId(String nick, String domain) 
+    public UserId(String nick, String openIdProviderUrl) 
     {
         this.nick = nick;
-        this.domain = domain;
+        this.openIdProviderUrl = openIdProviderUrl;
     }
     
     /**
@@ -32,29 +32,29 @@ public class UserId implements java.io.Serializable
     /**
      * @return the domain
      */
-    public String getDomain() {
-        return domain;
+    public String getOpenIdProviderUrl() {
+        return openIdProviderUrl;
     }
 
     /**
      * @param domain the domain to set
      */
-    public void setDomain(String domain) {
-        this.domain = domain;
+    public void setOpenIdProviderUrl(String openIdProviderUrl) {
+        this.openIdProviderUrl = openIdProviderUrl;
     }
     
 
     public boolean equals(Object o) { 
         if( (o != null) && (o instanceof UserId) ) {
             UserId uid = (UserId)o;
-            return nick.equals(uid.getNick()) && domain.equals(uid.getDomain());
+            return nick.equals(uid.getNick()) && openIdProviderUrl.equals(uid.getOpenIdProviderUrl());
         } else {
             return false;
         }
     }
 
     public int hashCode() { 
-        return (domain + "#" + nick).hashCode(); 
+        return (openIdProviderUrl + "#" + nick).hashCode(); 
     }
     
 }

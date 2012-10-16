@@ -187,7 +187,7 @@ public class Module extends WampModule
         usr = new User();
         usr.setExpires(0);
         usr.setNick(nick);
-        usr.setDomain(LOCAL_USER_DOMAIN);
+        usr.setOpenIdProviderUrl(LOCAL_USER_DOMAIN);
         if(nick.length() == 0) usr.setName("");
         else usr.setName(Character.toUpperCase(nick.charAt(0)) + nick.substring(1));
         usr.setPassword(data.get("password").asText());
