@@ -15,14 +15,14 @@ import javax.persistence.TemporalType;
 @IdClass(UserId.class)
 @Table(name="USR")
 @NamedQueries({
-    @NamedQuery(name="wsg.findUserByNick",query="SELECT OBJECT(u) FROM User u WHERE u.nick = :nick"),
+    @NamedQuery(name="wsg.findUserByUid",query="SELECT OBJECT(u) FROM User u WHERE u.uid = :uid"),
     @NamedQuery(name="wsg.findUserByEmail",query="SELECT OBJECT(u) FROM User u WHERE u.email = :email")
 })
 public class User implements Serializable 
 {
     @Id
-    @Column(name="nick")
-    private String nick;
+    @Column(name="uid")
+    private String uid;
     
     @Id
     @Column(name="oid_provider")
@@ -49,17 +49,17 @@ public class User implements Serializable
 
 
     /**
-     * @return the nick
+     * @return the uid
      */
-    public String getNick() {
-        return nick;
+    public String getUid() {
+        return uid;
     }
 
     /**
-     * @param nick the nick to set
+     * @param uid the uid to set
      */
-    public void setNick(String nick) {
-        this.nick = nick;
+    public void setUid(String uid) {
+        this.uid = uid;
     }
     
     
@@ -122,7 +122,7 @@ public class User implements Serializable
     }
 
     
-        /**
+    /**
      * @return the expiration date of the user
      */
     public java.util.Calendar getProfileCaducity() {

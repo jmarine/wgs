@@ -9,7 +9,7 @@ public class Member
 {
     private Client client;
     private String userType;
-    private String nick;
+    private String uid;
     private Role   role;
     private int    team;
     private MemberState state;
@@ -51,15 +51,15 @@ public class Member
     /**
      * @return the user
      */
-    public String getNick() {
-        return nick;
+    public String getUid() {
+        return uid;
     }
 
     /**
      * @param user the user to set
      */
-    public void setNick(String nick) {
-        this.nick = nick;
+    public void setUid(String uid) {
+        this.uid = uid;
     }
 
     /**
@@ -110,7 +110,7 @@ public class Member
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode obj = mapper.createObjectNode();
         obj.put("sid", ((client!=null)? client.getSessionId():""));
-        obj.put("nick", ((nick!=null)? nick : "") );
+        obj.put("uid", ((uid!=null)? uid : "") );
         obj.put("type",userType);
         obj.put("state",String.valueOf(state));
         obj.put("role",((role!=null)? role.getName():""));

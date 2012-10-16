@@ -113,17 +113,17 @@ WsgClient.prototype = {
   }, 
   
   
-  login: function(nick, password, onstatechange) {
+  login: function(uid, password, onstatechange) {
       var client = this;
       this._connect(function(state, msg) {
         if(state == WsgState.WELCOMED) {
             var msg = Object();
-            msg.nick = nick;
+            msg.uid = uid;
             msg.password = password;  // hash_sha1(password : this.sid)
             this.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
             this.call("wsg:login", msg).then(
                 function(response) {
-                    client.nick = nick;
+                    client.uid = uid;
                     client.onstatechange(WsgState.AUTHENTICATED);
                 }, 
                 function(response) {
@@ -137,18 +137,18 @@ WsgClient.prototype = {
   },
   
   
-  register: function(nick, password, email, onstatechange) {
+  register: function(uid, password, email, onstatechange) {
       var client = this;
       this._connect(function(state, msg) {
         if(state == WsgState.WELCOMED) {
             var msg = Object();
-            msg.nick = nick;
+            msg.uid = uid;
             msg.password = password;  // hash_sha1(password)
             msg.email = email;
             this.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
             this.call("wsg:register", msg).then(
                 function(response) {
-                    client.nick = nick;
+                    client.uid = uid;
                     client.onstatechange(WsgState.AUTHENTICATED);
                 }, 
                 function(response) {
@@ -302,13 +302,13 @@ WsgClient.prototype = {
                     client.groups[msg.gid].connections = new Array();
                     client.groups[msg.gid].members = msg.members;
                     msg.connections.forEach(function(con) { 
-                        client.groups[msg.gid].connections[con.sid] = con.nick;
+                        client.groups[msg.gid].connections[con.sid] = con.uid;
                     });
                 } else if(msg.cmd == "user_joined" || msg.cmd == "user_updated") {
                     var gid = msg.gid;
                     if(!msg.updates) msg.updates = [ msg ];
                     msg.updates.forEach(function(item) {
-                        client.groups[gid].connections[item.sid] = item.nick;
+                        client.groups[gid].connections[item.sid] = item.uid;
                         if(item.slot) client.groups[gid].members[item.slot] = item;
                     });
                 } else if(msg.cmd == "user_unjoined") {
@@ -352,7 +352,7 @@ WsgClient.prototype = {
       this.call("wsg:update_group", msg).then(callback, callback);
   },
 
-  updateMember: function(appId, gid, state, slot, sid, usertype, nick, role, team, callback) {
+  updateMember: function(appId, gid, state, slot, sid, usertype, uid, role, team, callback) {
       var msg = Object();
       msg.app = appId;
       msg.gid = gid;
@@ -360,7 +360,7 @@ WsgClient.prototype = {
       if(!isNaN(slot)) {
         msg.slot = slot;
         msg.sid  = sid;
-        msg.nick = nick;
+        msg.uid = uid;
         msg.role = role;
         msg.team = team;
         msg.type = usertype;

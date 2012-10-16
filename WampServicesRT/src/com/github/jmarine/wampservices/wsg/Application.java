@@ -47,7 +47,7 @@ public class Application implements Serializable {
     
     @ManyToOne(fetch= FetchType.EAGER)
     @JoinColumns({
-        @JoinColumn(name="admin_nick", referencedColumnName = "nick"),
+        @JoinColumn(name="admin_uid", referencedColumnName = "uid"),
         @JoinColumn(name="admin_oid_provider", referencedColumnName = "oid_provider")
     })    
     private User  adminUser;
@@ -144,7 +144,7 @@ public class Application implements Serializable {
     }
 
     /**
-     * @param admin_nick the admin_nick to set
+     * @param admin_uid the admin_uid to set
      */
     public void setAdminUser(User adminUser) {
         this.adminUser = adminUser;
