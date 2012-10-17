@@ -15,7 +15,7 @@ import javax.persistence.TemporalType;
 @IdClass(UserId.class)
 @Table(name="USR")
 @NamedQueries({
-    @NamedQuery(name="wsg.findUserByUid",query="SELECT OBJECT(u) FROM User u WHERE u.uid = :uid"),
+    @NamedQuery(name="wsg.findUserByUid",query="SELECT OBJECT(u) FROM User u WHERE u.uid = :uid AND u.openIdConnectProviderUrl = :provider"),
     @NamedQuery(name="wsg.findUserByEmail",query="SELECT OBJECT(u) FROM User u WHERE u.email = :email")
 })
 public class User implements Serializable 
@@ -25,8 +25,8 @@ public class User implements Serializable
     private String uid;
     
     @Id
-    @Column(name="oid_provider")
-    private String openIdProviderUrl;
+    @Column(name="oic_provider")
+    private String openIdConnectProviderUrl;
     
     @Column(name="name",nullable=false)
     private String name;   
@@ -66,15 +66,15 @@ public class User implements Serializable
     /**
      * @return the OpenId Connect Provider
      */
-    public String getOpenIdProviderUrl() {
-        return openIdProviderUrl;
+    public String getOpenIdConnectProviderUrl() {
+        return openIdConnectProviderUrl;
     }
 
     /**
      * @param openIdProvider the URL of the issuer to set
      */
-    public void setOpenIdProviderUrl(String openIdProviderUrl) {
-        this.openIdProviderUrl = openIdProviderUrl;
+    public void setOpenIdConnectProviderUrl(String openIdConnectProviderUrl) {
+        this.openIdConnectProviderUrl = openIdConnectProviderUrl;
     }
     
     
@@ -165,5 +165,16 @@ public class User implements Serializable
     public void setPicture(String picture) {
         this.picture = picture;
     }    
+    
+    
+    @Override
+    public String toString()
+    {
+        if( (openIdConnectProviderUrl != null) && (openIdConnectProviderUrl.length() > 0) ) {
+            return openIdConnectProviderUrl + "#" + uid;
+        } else {
+            return uid;
+        }
+    }
     
 }

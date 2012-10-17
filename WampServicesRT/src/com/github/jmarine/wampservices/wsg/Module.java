@@ -187,7 +187,7 @@ public class Module extends WampModule
         usr = new User();
         usr.setProfileCaducity(null);
         usr.setUid(uid);
-        usr.setOpenIdProviderUrl(LOCAL_USER_DOMAIN);
+        usr.setOpenIdConnectProviderUrl(LOCAL_USER_DOMAIN);
         if(uid.length() == 0) usr.setName("");
         else usr.setName(Character.toUpperCase(uid.charAt(0)) + uid.substring(1));
         usr.setPassword(data.get("password").asText());
@@ -523,8 +523,8 @@ public class Module extends WampModule
                     Member member = null;
                     member = g.getMember(index);
                     boolean connected = (member != null) && (member.getClient() != null);
-                    String uidName = ((member == null || member.getUid() == null) ? "" : member.getUid() );
-                    if(!connected && uidName == currentUser.getUid()) {
+                    String user = ((member == null || member.getUser() == null) ? "" : member.getUser().toString() );
+                    if(!connected && user.equals(currentUser.toString())) {
                         reserved = true;
                         reservedSlot = index;
                         break;
@@ -566,7 +566,7 @@ public class Module extends WampModule
                 if(!spectator && !connected && !joined && (!reserved || index == reservedSlot)) {
                     member.setClient(client);
                     member.setState(MemberState.RESERVED);
-                    member.setUid(client.getUser().getUid());
+                    member.setUser(client.getUser().toString());
                     member.setUserType("user");
                     member.setTeam(1+index);
                     g.setMember(index, member);
@@ -770,7 +770,7 @@ public class Module extends WampModule
                     if(c==null) member.setState(MemberState.EMPTY);
                     else if(c != member.getClient()) member.setState(MemberState.RESERVED);
                     member.setClient(c);
-                    member.setUid(uid);
+                    member.setUser(uid);
                     member.setUserType(usertype);
                     member.setRole(r);
                     member.setTeam(team);
@@ -902,7 +902,7 @@ public class Module extends WampModule
 
                             member.setClient(null);
                             member.setState(MemberState.EMPTY);
-                            member.setUid(null);
+                            member.setUser(null);
                             member.setUserType("user");
                             g.setMember(slot, member);
                             

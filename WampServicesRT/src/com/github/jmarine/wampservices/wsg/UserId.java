@@ -4,14 +4,14 @@ package com.github.jmarine.wampservices.wsg;
 public class UserId implements java.io.Serializable
 {
     private String uid;
-    private String openIdProviderUrl;    
+    private String openIdConnectProviderUrl;    
     
     public UserId() { }
     
-    public UserId(String uid, String openIdProviderUrl) 
+    public UserId(String uid, String openIdConnectProviderUrl) 
     {
         this.uid = uid;
-        this.openIdProviderUrl = openIdProviderUrl;
+        this.openIdConnectProviderUrl = openIdConnectProviderUrl;
     }
     
     /**
@@ -30,31 +30,31 @@ public class UserId implements java.io.Serializable
     
     
     /**
-     * @return the domain
+     * @return the openIdConnectProviderUrl
      */
-    public String getOpenIdProviderUrl() {
-        return openIdProviderUrl;
+    public String getOpenIdConnectProviderUrl() {
+        return openIdConnectProviderUrl;
     }
 
     /**
-     * @param domain the domain to set
+     * @param openIdConnectProviderUrl the openIdConnectProviderUrl to set
      */
-    public void setOpenIdProviderUrl(String openIdProviderUrl) {
-        this.openIdProviderUrl = openIdProviderUrl;
+    public void setOpenIdConnectProviderUrl(String openIdConnectProviderUrl) {
+        this.openIdConnectProviderUrl = openIdConnectProviderUrl;
     }
     
 
     public boolean equals(Object o) { 
         if( (o != null) && (o instanceof UserId) ) {
             UserId pk = (UserId)o;
-            return uid.equals(pk.getUid()) && openIdProviderUrl.equals(pk.getOpenIdProviderUrl());
+            return uid.equals(pk.getUid()) && openIdConnectProviderUrl.equals(pk.getOpenIdConnectProviderUrl());
         } else {
             return false;
         }
     }
 
     public int hashCode() { 
-        return (openIdProviderUrl + "#" + uid).hashCode(); 
+        return (openIdConnectProviderUrl + "#" + uid).hashCode(); 
     }
     
 }

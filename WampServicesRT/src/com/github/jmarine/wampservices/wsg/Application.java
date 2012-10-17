@@ -48,7 +48,7 @@ public class Application implements Serializable {
     @ManyToOne(fetch= FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name="admin_uid", referencedColumnName = "uid"),
-        @JoinColumn(name="admin_oid_provider", referencedColumnName = "oid_provider")
+        @JoinColumn(name="admin_oic_provider", referencedColumnName = "oic_provider")
     })    
     private User  adminUser;
     
