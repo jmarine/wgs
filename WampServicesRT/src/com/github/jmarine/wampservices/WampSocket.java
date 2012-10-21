@@ -167,13 +167,11 @@ public class WampSocket extends DefaultWebSocket
         
         if(errorDetails != null) {
             response.append(",");
-            response.append("\"");
             if(errorDetails instanceof String) {
                 response.append(app.encodeJSON((String)errorDetails));
             } else {
-                response.append(errorDetails.toString());
+                response.append(app.encodeJSON(errorDetails.toString()));
             }
-            response.append("\"");
         }
 
         response.append("]");

@@ -20,6 +20,27 @@
             <param-value>com.github.jmarine.wampservices.wsg.Module</param-value>
         </init-param>        
         
+        <init-param>
+            <param-name>openIdConnect.defaultProvider.userInfoEndpointUrl</param-name>
+            <param-value>http://localhost:3000/user_info</param-value>
+        </init-param>         
+        <init-param>
+            <param-name>openIdConnect.defaultProvider.accessTokenEndpointUrl</param-name>
+            <param-value>http://localhost:3000/access_tokens</param-value>
+        </init-param>                 
+        <init-param>
+            <param-name>openIdConnect.defaultProvider.clientId</param-name>
+            <param-value>baa143594505f996a5467e4ae00af220</param-value>
+        </init-param>                         
+        <init-param>
+            <param-name>openIdConnect.defaultProvider.clientSecret</param-name>
+            <param-value>74d6ea4819831f5eaef5df4a215bc2a506cf8f53c48f810d1c709391b</param-value>
+        </init-param>                                 
+        <init-param>
+            <param-name>openIdConnect.defaultProvider.redirectUri</param-name>
+            <param-value>http://localhost:8080/wsgtest.html</param-value>
+        </init-param>                                         
+        
         <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>

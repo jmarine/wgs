@@ -14,7 +14,7 @@ public class Group
     private int  minMembers;
     private int  maxMembers;
     private int  deltaMembers;
-    private String adminUid;
+    private String adminUser;
 
     private boolean autoMatchEnabled;
     private boolean autoMatchCompleted;
@@ -89,17 +89,17 @@ public class Group
     }    
     
     /**
-     * @return the adminUid
+     * @return the adminUser
      */
-    public String getAdminUid() {
-        return adminUid;
+    public String getAdminUser() {
+        return adminUser;
     }
 
     /**
-     * @param adminUid the adminUid to set
+     * @param adminUser the adminUser to set
      */
-    public void setAdminUid(String adminUid) {
-        this.adminUid = adminUid;
+    public void setAdminUser(String adminUser) {
+        this.adminUser = adminUser;
     }
     
     /**
@@ -311,7 +311,7 @@ public class Group
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode obj = mapper.createObjectNode();
         obj.put("gid", getGid());
-        obj.put("admin", getAdminUid());
+        obj.put("admin", getAdminUser());
         obj.put("hidden", isHidden());
         obj.put("num", getNumMembers());
         obj.put("min", getMinMembers());

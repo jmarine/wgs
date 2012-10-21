@@ -15,7 +15,7 @@ import javax.persistence.TemporalType;
 @IdClass(UserId.class)
 @Table(name="USR")
 @NamedQueries({
-    @NamedQuery(name="wsg.findUserByUid",query="SELECT OBJECT(u) FROM User u WHERE u.uid = :uid AND u.openIdConnectProviderUrl = :provider"),
+    @NamedQuery(name="wsg.findUserByUser",query="SELECT OBJECT(u) FROM User u WHERE u.uid = :userId AND u.openIdConnectProviderUrl = :provider"),
     @NamedQuery(name="wsg.findUserByEmail",query="SELECT OBJECT(u) FROM User u WHERE u.email = :email")
 })
 public class User implements Serializable 
@@ -47,20 +47,35 @@ public class User implements Serializable
     @Column(name="picture")
     private String picture;    
 
-
+    
     /**
-     * @return the uid
+     * @return the user id
      */
     public String getUid() {
         return uid;
     }
 
     /**
-     * @param uid the uid to set
+     * @param uid the user id to set
      */
     public void setUid(String uid) {
         this.uid = uid;
+    }    
+    
+
+    /**
+     * @return the user
+     */
+    public String getFQuser() {
+        if( (openIdConnectProviderUrl != null) && (openIdConnectProviderUrl.length() > 0) ) {
+            return openIdConnectProviderUrl + "#" + uid;
+        } else {
+            return uid;
+        }
     }
+
+    
+
     
     
     /**
@@ -169,12 +184,8 @@ public class User implements Serializable
     
     @Override
     public String toString()
-    {
-        if( (openIdConnectProviderUrl != null) && (openIdConnectProviderUrl.length() > 0) ) {
-            return openIdConnectProviderUrl + "#" + uid;
-        } else {
-            return uid;
-        }
+    {   
+        return getFQuser();
     }
     
 }

@@ -99,7 +99,7 @@ function enable_network() {
     $("#exit_group").show();
     
     $("#server_url").removeAttr("disabled");
-    $("#uid").removeAttr("disabled");
+    $("#user").removeAttr("disabled");
     $("#password").removeAttr("disabled");
     $("#register").removeAttr("disabled");
     
@@ -108,7 +108,7 @@ function enable_network() {
 function authentication(state, msg) {
       if(state == WsgState.AUTHENTICATED) {
           $("#server_url").attr("disabled", "disabled");
-          $("#uid").attr("disabled", "disabled");
+          $("#user").attr("disabled", "disabled");
           $("#password").attr("disabled", "disabled");
           $("#register").attr("disabled", "disabled");
           $("#toggle_connect").html("Disconnect");          
@@ -343,39 +343,39 @@ function show_group(group) {
     $("#group_params fieldset legend").html("Group members: " + group.app.name);
     
     if(group.members) {
-        var currentUid = $("#uid").val();
-        var currentUidIsOnlineMember = false;
-        var currentUidIsOfflineMember = false;
+        var currentUser = $("#user").val();
+        var currentUserIsOnlineMember = false;
+        var currentUserIsOfflineMember = false;
         group.members.forEach(function(member, index) {
-            if(!member.connected && member.uid==currentUid) {
-                currentUidIsOfflineMember = true;
+            if(!member.connected && member.user==currentUser) {
+                currentUserIsOfflineMember = true;
             }
         });
         group.members.forEach(function(member, index) {
             var memberId = index;
-            var memberUid = "";
+            var memberUser = "";
             var selected = "";
             var roleFixed = false;
-            var currentUidSelected = false;
+            var currentUserSelected = false;
             
             if(member.sid==wsgclient.sid) {
                 var selected = "";
-                if(currentUidIsOfflineMember && (!member.connected) && member.uid==currentUid) {
-                    currentUidSelected = true;;
-                    currentUidIsOnlineMember = true;
-                    currentUidIsOfflineMember = false;
+                if(currentUserIsOfflineMember && (!member.connected) && member.user==currentUser) {
+                    currentUserSelected = true;;
+                    currentUserIsOnlineMember = true;
+                    currentUserIsOfflineMember = false;
                     roleFixed = true;
                 }
-                if(!currentUidIsOfflineMember && !currentUidIsOnlineMember) {
-                    currentUidSelected = true;
-                    currentUidIsOnlineMember = true;
+                if(!currentUserIsOfflineMember && !currentUserIsOnlineMember) {
+                    currentUserSelected = true;
+                    currentUserIsOnlineMember = true;
                 }
             } else {
-                memberUid = member.uid;
+                memberUser = member.user;
                 roleFixed = true;
             }
 
-            append_group_member(false, memberId, member.state, memberUid, member.sid, member.type, member.role, currentUidSelected, roleFixed, currentAppAI);
+            append_group_member(false, memberId, member.state, memberUser, member.name, member.sid, member.type, member.role, currentUserSelected, roleFixed, currentAppAI);
 
         });
     }
@@ -385,7 +385,7 @@ function show_group(group) {
     $("#new_group_params").hide(); 
     $("#toggle_client_state").html("Ready");
     
-    if(wsgclient.uid == $("#group_admin").val()) {
+    if(wsgclient.user == $("#group_admin").val()) {
         $("#start_group").show();
         $("#toggle_client_state").hide();
         $("#add_group_member").show();
@@ -402,7 +402,7 @@ function show_group(group) {
 
 function add_group_member(added) {
     var members = $("#group_params table[id='members'] tbody tr");
-    append_group_member(added, members.size(), "empty", "", "", "user", "", "", false, currentAppAI);
+    append_group_member(added, members.size(), "empty", "", "", "", "user", "", "", false, currentAppAI);
 }
 
 function update_member(field, as_previous_client) 
@@ -418,13 +418,13 @@ function update_member(field, as_previous_client)
         sid = sid.substring(1+userTypePos);
         usertype = selectedValue.substring(0,userTypePos);
     }
-    var uid = option.text();
-    if(sid == "") uid = "";
-    else if(sid == wsgclient.sid) uid = "";
+    var user = option.text();
+    if(sid == "") user = "";
+    else if(sid == wsgclient.sid) user = "";
     var slot = parseInt(field.substring(6));
     var role = $("#role" + slot + " option:selected").val();
     var team = parseInt($("#team" + slot).val());
-    wsgclient.updateMember(appId, gid, "RESERVED", slot, sid, usertype, uid, role, team, update_group_callback);
+    wsgclient.updateMember(appId, gid, "RESERVED", slot, sid, usertype, user, role, team, update_group_callback);
     
 }
 
@@ -447,33 +447,33 @@ function toggle_client_state()
 }
 
 
-function populate_group_member_fields(added, memberId, memberState, memberUid, memberCid, memberType, memberRole, currentUidSelected, roleFixed, ai) {
+function populate_group_member_fields(added, memberId, memberState, memberUser, memberName, memberSid, memberType, memberRole, currentUserSelected, roleFixed, ai) {
     var members = "";
     var roles = "";
-    if(added || memberUid == "" || memberCid == wsgclient.sid || (wsgclient.uid == $("#group_admin").val()) ) {
+    if(added || memberUser == "" || memberSid == wsgclient.sid || (wsgclient.user == $("#group_admin").val()) ) {
         members += '<option value="">Empty</option>';
-        members += '<option value="user:'+wsgclient.sid+'" ' + ((currentUidSelected && memberType=="user")? "selected" : "") + '>Me</option>';
-        if(ai) members += '<option value="computer:'+wsgclient.sid+'" ' + ((currentUidSelected && memberType=="computer")? "selected" : "") + '>MyComputer</option>';
+        members += '<option value="user:'+wsgclient.sid+'" ' + ((currentUserSelected && memberType=="user")? "selected" : "") + '>Me</option>';
+        if(ai) members += '<option value="computer:'+wsgclient.sid+'" ' + ((currentUserSelected && memberType=="computer")? "selected" : "") + '>MyComputer</option>';
         var connections = wsgclient.getGroupConnections(currentGroup.gid);
         for(var sid in connections) {
-            if( (wsgclient.uid == $("#group_admin").val()) && (sid != wsgclient.sid) && (memberCid != sid) ) {
-                members += '<option value="user:'+sid+'" ' + ((sid==memberCid && memberType=="user")? "selected" : "") + '>user:'+connections[sid]+'</option>';
+            if( (wsgclient.user == $("#group_admin").val()) && (sid != wsgclient.sid) && (memberSid != sid) ) {
+                members += '<option value="user:'+sid+'" ' + ((sid==memberSid && memberType=="user")? "selected" : "") + '>user:'+connections[sid].name+'</option>';
             }
         }
     } 
     
-    if(!added && memberUid != "" && memberCid != wsgclient.sid) {
-        var uid = memberUid;
-        var val = memberCid;
+    if(!added && memberUser != "" && memberSid != wsgclient.sid) {
+        var user = memberUser;
+        var val = memberSid;
         if(memberType != "") {
             val = memberType + ":" + val;
-            uid = memberType + ":" + uid;
+            user = memberType + ":" + memberName;
         }
-        members += '<option value="'+val+'" selected>' + uid + '</option>';
+        members += '<option value="'+val+'" selected>' + user + '</option>';
     }
     
     currentGroup.roles.forEach(function(role) {
-        if(!roleFixed || (memberRole==role.name) || memberCid == wsgclient.sid || (wsgclient.uid == $("#group_admin").val()) ) {
+        if(!roleFixed || (memberRole==role.name) || memberSid == wsgclient.sid || (wsgclient.user == $("#group_admin").val()) ) {
             roles += '<option value="' + role.name + '" ' + ((memberRole==role.name)? "selected" : "") + '>' + role.name + '</option>';
         }
     });    
@@ -488,7 +488,7 @@ function populate_group_member_fields(added, memberId, memberState, memberUid, m
     $("#state" + memberId).attr("title", memberState);
 }
 
-function append_group_member(added, memberId, memberState, memberUid, memberCid, memberType, memberRole, currentUidSelected, roleFixed, ai) {
+function append_group_member(added, memberId, memberState, memberUser, memberName, memberSid, memberType, memberRole, currentUserSelected, roleFixed, ai) {
     var tbody = $("#group_params table[id='members'] tbody");
     
     var html = '<tr><td align="left"><label for="member' + memberId + '">User ' + (1+memberId) + ':</label><input type="hidden" id="added' + memberId + '" value="' + added + '"/></td>';
@@ -509,7 +509,7 @@ function append_group_member(added, memberId, memberState, memberUid, memberCid,
     $("button.remove_member").hide();
     tbody.append(html);
     
-    populate_group_member_fields(added, memberId, memberState, memberUid, memberCid, memberType, memberRole, currentUidSelected, roleFixed, ai);
+    populate_group_member_fields(added, memberId, memberState, memberUser, memberName, memberSid, memberType, memberRole, currentUserSelected, roleFixed, ai);
 
 }
 
@@ -546,14 +546,14 @@ function update_group_callback(response) {
                         }                        
                     }
 
-                    // append new joined user's uid in selectboxes
+                    // append new joined user's user in selectboxes
                     for(var index = 0; index < num_members; index += 1) {
-                        if( (wsgclient.uid == $("#group_admin").val()) ) {
+                        if( (wsgclient.user == $("#group_admin").val()) ) {
                             var val = "";
                             var text = "Empty";
                             if(member.sid && member.sid != "") {
                                 val = member.type + ":" + member.sid;
-                                text = member.type + ":" + member.uid;
+                                text = member.type + ":" + member.name;
 
                                 if($("#member"+index+" option[value='"+val+"']").size() <= 0) {  // insert user
                                     $("#member"+index).append($("<option>").attr("value", val).text(text));
@@ -568,7 +568,7 @@ function update_group_callback(response) {
                         var memberId = member.slot;                        
                         $("#team"+memberId).val(member.team);
 
-                        if(wsgclient.uid == $("#group_admin").val()) {
+                        if(wsgclient.user == $("#group_admin").val()) {
 
                             var val = "";
                             if(member.sid != "") {
@@ -581,16 +581,16 @@ function update_group_callback(response) {
 
                         } else {
 
-                            var currentUidSelected = (wsgclient.sid == member.sid);
+                            var currentUserSelected = (wsgclient.sid == member.sid);
                             var roleFixed = (member.role != "") && (member.sid != "") && (wsgclient.sid != member.sid);
-                            populate_group_member_fields(false, memberId, member.state, member.uid, member.sid, member.type, member.role, currentUidSelected, roleFixed, currentAppAI);
+                            populate_group_member_fields(false, memberId, member.state, member.user, member.name, member.sid, member.type, member.role, currentUserSelected, roleFixed, currentAppAI);
                         }
                     }
                 });
 
             } else if(response.cmd == "user_unjoined") {
 
-                // clear unjoined user's uid from selectboxes
+                // clear unjoined user's user from selectboxes
                 for(var index = 0; index < num_members; index += 1) {
                     $("#member"+index+" option[value$=':"+response.sid+"']").remove();
                 }
@@ -598,7 +598,7 @@ function update_group_callback(response) {
                 if(response.members) {
                     response.members.forEach(function(member) {
                         var memberId = member.slot;  
-                        populate_group_member_fields(false, memberId, member.state, member.uid, member.sid, member.type, member.role, false, false, currentAppAI);
+                        populate_group_member_fields(false, memberId, member.state, member.user, member.name, member.sid, member.type, member.role, false, false, currentAppAI);
                     });
                 }
                 
@@ -674,7 +674,7 @@ function disconnect() {
     exit_group(true);
     wsgclient.close();
     $("#server_url").removeAttr("disabled");
-    $("#uid").removeAttr("disabled");
+    $("#user").removeAttr("disabled");
     $("#password").removeAttr("disabled");
     $("#register").removeAttr("disabled");
     $("#toggle_connect").html("Connect");
@@ -694,18 +694,40 @@ function disconnect() {
     enable_network();
 }
 
+function my_openid_connect(login) {
+    if(login) {
+        var oicAuthEndpointUrl = "http://localhost:3000/authorizations/new";
+        var clientId = "baa143594505f996a5467e4ae00af220";
+        var queryPos = document.location.href.indexOf("?");
+        if(queryPos == -1) queryPos = document.location.href.length;
+        document.location.href = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + clientId + "&redirect_uri=" + document.location.href.substring(0,queryPos);
+    } else {
+        var codePos = document.location.href.indexOf("&code=");
+        if(codePos == -1) codePos = document.location.href.indexOf("?code=");
+        if(codePos != -1) {
+            var code = document.location.href.substring(codePos+6);
+            codePos = code.indexOf("&");
+            if(codePos != -1) code = code.substring(0, codePos);
+            alert("Code: " + code);
+            var url = $("#server_url").val();
+            wsgclient = new WsgClient(url);            
+            wsgclient.openIdConnect("defaultProvider", code, authentication);
+        }
+    }
+}
+
 function toggle_connect(create_user) {
     if ($("#server_url").attr("disabled") != "disabled") {
         var url = $("#server_url").val();
-        var uid = $("#uid").val();
+        var user = $("#user").val();
         var pass = $("#password").val();
 
         wsgclient = new WsgClient(url);
         if(create_user) {
             var email = prompt("Enter e-mail:");
-            if(email) wsgclient.register(uid, pass, email, authentication);
+            if(email) wsgclient.register(user, pass, email, authentication);
         } else {
-            wsgclient.login(uid, pass, authentication);
+            wsgclient.login(user, pass, authentication);
         }
     } else {
         disconnect();
@@ -716,14 +738,15 @@ function toggle_connect(create_user) {
 </script>
 
         </head>
-<body onload="javascript:enable_network();">
+<body onload="javascript:enable_network();my_openid_connect(false)">
 <div id="wrapper" style="width: 370px">
   <div id="login" class="section hidden">
     <fieldset>
       <legend>Login</legend>
     <label for="server_url">Server:</label><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wsgservice" /><br/>
-    <label for="uid">Login:</label><input type="text" name="uid" id="uid" value="guest" /><br/>
+    <label for="user">Login:</label><input type="text" name="user" id="user" value="guest" /><br/>
     <label for="password">Password:</label><input type="password" name="password" id="password" value="guest" /><br/>
+    <button id="oic_connect" onclick="my_openid_connect(true);">OpenId Connect</button>
     <button id="toggle_connect" onclick="toggle_connect(false);">Connect</button>
     <button id="register" onclick="toggle_connect(true);">Register</button>
     </fieldset>
@@ -811,7 +834,7 @@ function toggle_connect(create_user) {
       <legend>Members</legend>
     <table id="members">
       <thead>
-      <tr><th></th><th></th><th>uid</th><th>role</th><th>team</th></tr>
+      <tr><th></th><th></th><th>user</th><th>role</th><th>team</th></tr>
       </thead>
       <tbody>
       </tbody>

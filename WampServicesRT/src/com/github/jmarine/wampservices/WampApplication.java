@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
@@ -35,11 +36,12 @@ public class WampApplication extends WebSocketApplication
     private TreeMap<String,WampTopicPattern> topicPatterns;
     private WampModule defaultModule;
     private boolean topicWildcardsEnabled;
-    
+    private Properties wampConfig;
 
     
-    public WampApplication(String contextPath, boolean topicWildcardsEnabled) 
+    public WampApplication(Properties wampConfig, String contextPath, boolean topicWildcardsEnabled) 
     {
+        this.wampConfig = wampConfig;
         this.contextPath = contextPath;
         this.modules = new HashMap<String,WampModule>();
         this.topics = new TreeMap<String,WampTopic>();
@@ -52,6 +54,11 @@ public class WampApplication extends WebSocketApplication
                 return WAMP_BASE_URL;
             }
         };
+    }
+    
+    public Properties getWampConfig()
+    {
+        return this.wampConfig;
     }
 
     /**

@@ -12,6 +12,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Enumeration;
+import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,7 +30,15 @@ public class WampServlet extends HttpServlet
     @Override
     public void init(ServletConfig config) throws ServletException  {
         super.init(config);
-        
+
+        Properties appConfig = new Properties();
+        Enumeration e = config.getInitParameterNames();
+        while(e.hasMoreElements()) {
+            String name = (String)e.nextElement();
+            String value = config.getInitParameter(name);
+            appConfig.put(name, value);
+        }
+            
         try {
             String uri = config.getInitParameter("uri");
             if(uri == null) throw new ServletException("ServletInitParameter uri is not defined");
@@ -36,7 +46,7 @@ public class WampServlet extends HttpServlet
             boolean topicWildcardsEnabled = false;
             String enableWildcards = config.getInitParameter("enableTopicWildcards");
             if((enableWildcards != null) && (enableWildcards.toUpperCase().equals("TRUE"))) topicWildcardsEnabled = true;
-            wampApplication = new WampApplication(contextPath, topicWildcardsEnabled);
+            wampApplication = new WampApplication(appConfig, contextPath, topicWildcardsEnabled);
             
             String topics = config.getInitParameter("topics");
             if(topics != null) {

@@ -144,7 +144,7 @@ public class Application implements Serializable {
     }
 
     /**
-     * @param admin_uid the admin_uid to set
+     * @param admin_user the admin_user to set
      */
     public void setAdminUser(User adminUser) {
         this.adminUser = adminUser;

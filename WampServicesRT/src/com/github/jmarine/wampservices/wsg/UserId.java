@@ -8,21 +8,34 @@ public class UserId implements java.io.Serializable
     
     public UserId() { }
     
-    public UserId(String uid, String openIdConnectProviderUrl) 
+    public UserId(String fqUser) 
     {
-        this.uid = uid;
+        int pos = fqUser.indexOf("#");
+        if(pos == -1) {
+            this.openIdConnectProviderUrl = "";
+            this.uid = fqUser;
+        } else {
+            this.openIdConnectProviderUrl = fqUser.substring(0, pos);
+            this.uid = fqUser.substring(pos+1);
+        }
+    }
+    
+    public UserId(String openIdConnectProviderUrl, String uid) 
+    {
+        if(openIdConnectProviderUrl == null) openIdConnectProviderUrl = "";
         this.openIdConnectProviderUrl = openIdConnectProviderUrl;
+        this.uid = uid;
     }
     
     /**
-     * @return the uid
+     * @return the user
      */
     public String getUid() {
         return uid;
     }
 
     /**
-     * @param uid the uid to set
+     * @param uid the user to set
      */
     public void setUid(String uid) {
         this.uid = uid;
@@ -44,6 +57,7 @@ public class UserId implements java.io.Serializable
     }
     
 
+    @Override
     public boolean equals(Object o) { 
         if( (o != null) && (o instanceof UserId) ) {
             UserId pk = (UserId)o;
@@ -52,9 +66,18 @@ public class UserId implements java.io.Serializable
             return false;
         }
     }
+    
 
+    @Override
     public int hashCode() { 
-        return (openIdConnectProviderUrl + "#" + uid).hashCode(); 
+        return toString().hashCode(); 
+    }
+    
+    
+    @Override
+    public String toString()
+    {
+        return (openIdConnectProviderUrl + "#" + uid);
     }
     
 }
