@@ -110,7 +110,7 @@ public class Member
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode obj = mapper.createObjectNode();
         obj.put("sid", ((client!=null)? client.getSessionId():""));
-        obj.put("user", ((user!=null)? user.getFQuser() : "") );
+        obj.put("user", ((user!=null)? user.getFQid() : "") );
         obj.put("name", ((user!=null)? user.getName() : "") );
         obj.put("type",userType);
         obj.put("state",String.valueOf(state));

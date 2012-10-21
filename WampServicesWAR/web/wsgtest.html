@@ -708,7 +708,7 @@ function my_openid_connect(login) {
             var code = document.location.href.substring(codePos+6);
             codePos = code.indexOf("&");
             if(codePos != -1) code = code.substring(0, codePos);
-            alert("Code: " + code);
+            
             var url = $("#server_url").val();
             wsgclient = new WsgClient(url);            
             wsgclient.openIdConnect("defaultProvider", code, authentication);

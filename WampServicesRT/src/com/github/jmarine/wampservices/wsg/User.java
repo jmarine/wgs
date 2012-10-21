@@ -2,6 +2,7 @@ package com.github.jmarine.wampservices.wsg;
 
 import java.io.Serializable;
 import javax.persistence.Column;
+import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
@@ -12,21 +13,14 @@ import javax.persistence.TemporalType;
 
 
 @Entity
-@IdClass(UserId.class)
 @Table(name="USR")
 @NamedQueries({
-    @NamedQuery(name="wsg.findUserByUser",query="SELECT OBJECT(u) FROM User u WHERE u.uid = :userId AND u.openIdConnectProviderUrl = :provider"),
-    @NamedQuery(name="wsg.findUserByEmail",query="SELECT OBJECT(u) FROM User u WHERE u.email = :email")
+    @NamedQuery(name="wsg.findUsersByEmail",query="SELECT OBJECT(u) FROM User u WHERE u.email = :email")
 })
 public class User implements Serializable 
 {
-    @Id
-    @Column(name="uid")
-    private String uid;
-    
-    @Id
-    @Column(name="oic_provider")
-    private String openIdConnectProviderUrl;
+    @EmbeddedId
+    private UserId id;
     
     @Column(name="name",nullable=false)
     private String name;   
@@ -49,49 +43,25 @@ public class User implements Serializable
 
     
     /**
-     * @return the user id
+     * @return the UserPK
      */
-    public String getUid() {
-        return uid;
+    public UserId getId() {
+        return id;
     }
 
     /**
-     * @param uid the user id to set
+     * @param id the userId to set
      */
-    public void setUid(String uid) {
-        this.uid = uid;
+    public void setId(UserId id) {
+        this.id = id;
     }    
     
-
     /**
-     * @return the user
+     * @return the UserPK
      */
-    public String getFQuser() {
-        if( (openIdConnectProviderUrl != null) && (openIdConnectProviderUrl.length() > 0) ) {
-            return openIdConnectProviderUrl + "#" + uid;
-        } else {
-            return uid;
-        }
-    }
-
-    
-
-    
-    
-    /**
-     * @return the OpenId Connect Provider
-     */
-    public String getOpenIdConnectProviderUrl() {
-        return openIdConnectProviderUrl;
-    }
-
-    /**
-     * @param openIdProvider the URL of the issuer to set
-     */
-    public void setOpenIdConnectProviderUrl(String openIdConnectProviderUrl) {
-        this.openIdConnectProviderUrl = openIdConnectProviderUrl;
-    }
-    
+    public String getFQid() {
+        return id.toString();
+    }    
     
     /**
      * @return the name
@@ -185,7 +155,7 @@ public class User implements Serializable
     @Override
     public String toString()
     {   
-        return getFQuser();
+        return id.toString();
     }
     
 }

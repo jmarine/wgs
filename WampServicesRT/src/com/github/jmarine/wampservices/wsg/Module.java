@@ -18,6 +18,7 @@ import com.github.jmarine.wampservices.WampSubscriptionOptions;
 import com.github.jmarine.wampservices.WampTopic;
 import com.github.jmarine.wampservices.WampTopicOptions;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -189,8 +190,7 @@ public class Module extends WampModule
         
         usr = new User();
         usr.setProfileCaducity(null);
-        usr.setUid(user);
-        usr.setOpenIdConnectProviderUrl(LOCAL_USER_DOMAIN);
+        usr.setId(userId);
         if(user.length() == 0) usr.setName("");
         else usr.setName(Character.toUpperCase(user.charAt(0)) + user.substring(1));
         usr.setPassword(data.get("password").asText());
@@ -234,68 +234,83 @@ public class Module extends WampModule
     public ObjectNode openIdConnect(WampSocket socket, ObjectNode data) throws Exception
     {
         ObjectNode retval = null;
-        boolean user_valid = false;
         Client client = clients.get(socket.getSessionId());
 
-        String code = data.get("code").asText();
-        String oicProvider = data.has("provider") ? data.get("provider").asText() : "defaultProvider";
-        
-	String accessToken = null;
-        OpenIdConnect oic = OpenIdConnect.getClient(wampApp.getWampConfig(), oicProvider);
-        ObjectNode response = oic.getAccessTokenResponse(code);
-        
-        if(response != null && response.has("id_token") && !response.get("id_token").isNull()) {
-            String idToken = response.get("id_token").asText();
-            System.out.println("Encoded ID token: " + idToken);
-            int pos1 = idToken.indexOf(".")+1;
-            int pos2 = idToken.indexOf(".", pos1);
-            String jwt = idToken.substring(pos1, pos2);
-            while((jwt.length() % 4) != 0) jwt = jwt + "=";
-            //System.out.println(jwt);
-            jwt = Base64.decodeBase64ToString(jwt);
-            System.out.println("Decoded ID token: " + jwt);
-          
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode   idTokenData = (ObjectNode)mapper.readTree(jwt);          
-
-            EntityManager manager = getEntityManager();
-            UserId userId = new UserId(idTokenData.get("iss").asText(), idTokenData.get("user_id").asText());
-            User usr = manager.find(User.class, userId);
-            manager.close();
+        try {
+            String code = data.get("code").asText();
+            String provider = data.has("provider") ? data.get("provider").asText() : "defaultProvider";
             
-            if(usr != null)  {
-                logger.fine("Cached OIC User: " + usr);
-                user_valid = true;
-                retval = idTokenData;
-                client.setUser(usr);
-                client.setState(ClientState.AUTHENTICATED);
-            } else if(response.has("access_token")) {
-                accessToken = response.get("access_token").asText();
-                System.out.println("Access token: " + accessToken);
+            OpenIdConnect oic = OpenIdConnect.getClient(wampApp.getWampConfig(), provider);
 
-                String userInfo = oic.getUserInfo(accessToken);
+            String accessTokenResponse = oic.getAccessTokenResponse(code);
+            logger.fine("AccessToken endpoint response: " + accessTokenResponse);
 
-                ObjectNode userInfoNode = (ObjectNode)mapper.readTree(userInfo);
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode   response = (ObjectNode)mapper.readTree(accessTokenResponse);
 
-                usr = new User();
-                usr.setProfileCaducity(null);
-                usr.setUid(userId.getUid());
-                usr.setOpenIdConnectProviderUrl(userId.getOpenIdConnectProviderUrl());
-                usr.setName(userInfoNode.get("name").asText());
-                usr.setPassword("");
-                if(userInfoNode.has("email")) usr.setEmail(userInfoNode.get("email").asText());
-                if(userInfoNode.has("picture")) usr.setPicture(userInfoNode.get("picture").asText());
-                usr.setAdministrator(false);
-                usr = saveEntity(usr);
+            if(response != null && response.has("id_token") && !response.get("id_token").isNull()) {
+                String idTokenJWT = response.get("id_token").asText();
+                //System.out.println("Encoded id_token: " + idToken);
 
-                user_valid = true;
-                retval = idTokenData;                
-                client.setUser(usr);
-                client.setState(ClientState.AUTHENTICATED);
-            } 
+                int pos1 = idTokenJWT.indexOf(".")+1;
+                int pos2 = idTokenJWT.indexOf(".", pos1);
+                String idTokenData = idTokenJWT.substring(pos1, pos2);
+                while((idTokenData.length() % 4) != 0) idTokenData = idTokenData + "=";
+                idTokenData = Base64.decodeBase64ToString(idTokenData);
+                logger.fine("Decoded id_token: " + idTokenData);
+
+                ObjectNode   idTokenNode = (ObjectNode)mapper.readTree(idTokenData);          
+
+                EntityManager manager = getEntityManager();
+                UserId userId = new UserId(idTokenNode.get("iss").asText(), idTokenNode.get("user_id").asText());
+                User usr = manager.find(User.class, userId);
+                manager.close();
+
+                Calendar now = Calendar.getInstance();
+                if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
+                    // Use cached UserInfo from local database
+                    logger.fine("Cached OIC User: " + usr);
+                    client.setUser(usr);
+                    client.setState(ClientState.AUTHENTICATED);
+                    retval = idTokenNode;
+
+                } else if(response.has("access_token")) {
+                    // Get UserInfo from OpenId Connect Provider
+                    String accessToken = response.get("access_token").asText();
+                    System.out.println("Access token: " + accessToken);
+
+                    String userInfo = oic.getUserInfo(accessToken);
+                    logger.fine("OIC UserInfo: " + userInfo);
+
+                    ObjectNode userInfoNode = (ObjectNode)mapper.readTree(userInfo);
+
+                    usr = new User();
+                    usr.setId(userId);
+                    usr.setName(userInfoNode.get("name").asText());
+                    usr.setPassword("");
+                    usr.setAdministrator(false);
+
+                    if(userInfoNode.has("email")) usr.setEmail(userInfoNode.get("email").asText());
+                    if(userInfoNode.has("picture")) usr.setPicture(userInfoNode.get("picture").asText());
+                    if(idTokenNode.has("exp")) {
+                        Calendar caducity = Calendar.getInstance();
+                        caducity.setTimeInMillis(idTokenNode.get("exp").asLong()*1000l);
+                        usr.setProfileCaducity(caducity);
+                    }
+
+                    usr = saveEntity(usr);
+
+                    client.setUser(usr);
+                    client.setState(ClientState.AUTHENTICATED);
+                    retval = idTokenNode;                
+                } 
+            }
+            
+        } catch(Exception ex) {
+            logger.log(Level.SEVERE, "OpenID Connect error: " + ex.getClass().getName() + ":" + ex.getMessage(), ex);
         }
 
-        if(!user_valid) throw new WampException(MODULE_URL + "oic_error", "OpenID Connect error");
+        if(retval == null) throw new WampException(MODULE_URL + "oic_error", "OpenID Connect protocol error");
         return retval;
     }    
     
@@ -509,7 +524,7 @@ public class Module extends WampModule
                 g.setMaxMembers(app.getMaxMembers());
                 g.setMinMembers(app.getMinMembers());
                 g.setDeltaMembers(app.getDeltaMembers());
-                g.setAdminUser(client.getUser().getFQuser());
+                g.setAdminUser(client.getUser().getFQid());
                 g.setAutoMatchEnabled(autoMatchMode);
                 g.setAutoMatchCompleted(false);
                 if(options != null) {
@@ -576,7 +591,7 @@ public class Module extends WampModule
             for(String sid : topic.getSessionIds()) {
                     Client c = clients.get(sid);
                     User u = ((c!=null)? c.getUser() : null);
-                    String user = ((u == null) ? "" : u.getFQuser());
+                    String user = ((u == null) ? "" : u.getFQid());
                     String name = ((u == null) ? "" : u.getName());
 
                     ObjectNode con = mapper.createObjectNode();
@@ -600,8 +615,8 @@ public class Module extends WampModule
                     Member member = null;
                     member = g.getMember(index);
                     boolean connected = (member != null) && (member.getClient() != null);
-                    String user = ((member == null || member.getUser() == null) ? "" : member.getUser().getFQuser() );
-                    if(!connected && user.equals(currentUser.getFQuser())) {
+                    String user = ((member == null || member.getUser() == null) ? "" : member.getUser().getFQid() );
+                    if(!connected && user.equals(currentUser.getFQid())) {
                         reserved = true;
                         reservedSlot = index;
                         break;
@@ -654,7 +669,7 @@ public class Module extends WampModule
                     ObjectNode event = member.toJSON();
                     event.put("cmd", "user_joined");
                     event.put("sid", client.getSessionId());
-                    event.put("user", member.getUser().getFQuser());
+                    event.put("user", member.getUser().getFQid());
                     event.put("name", member.getUser().getName());
                     event.put("gid", g.getGid());
                     event.put("slot", index);
@@ -680,7 +695,7 @@ public class Module extends WampModule
         if(valid && !created && !joined) {
             User u = client.getUser();
             String sid = client.getSessionId();
-            String user = ( (u == null) ? "" : u.getFQuser() );
+            String user = ( (u == null) ? "" : u.getFQid() );
 
             ObjectNode event = mapper.createObjectNode();
             event.put("cmd", "user_joined");
@@ -840,7 +855,7 @@ public class Module extends WampModule
                     if(c!=null) {
                         // when it's not a reservation of a member slot
                         User u = c.getUser();
-                        if(u!=null) userId = u.getFQuser();
+                        if(u!=null) userId = u.getFQid();
                     }
 
                     Role r = g.getApplication().getRoleByName(role);

@@ -109,7 +109,7 @@ public class OpenIdConnect
     
     
 
-    public ObjectNode getAccessTokenResponse(String authorization_code) throws Exception
+    public String getAccessTokenResponse(String authorization_code) throws Exception
     {
         URL url = new URL(getAccessTokenEndpointUrl());
         URLConnection connection = url.openConnection();
@@ -127,21 +127,16 @@ public class OpenIdConnect
         StringBuffer data = new StringBuffer();
         while ((decodedString = in.readLine()) != null) {
 	    data.append(decodedString);
-            //System.out.println(decodedString);
         }
         in.close();
 
-        System.out.println("Token response: " + data.toString());
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode   response = (ObjectNode)mapper.readTree(data.toString());
-        return response;
+        return data.toString();
     }
     
     
     public String getUserInfo(String accessToken) throws Exception
     {
         StringBuffer retval = new StringBuffer();
- 	System.out.println("UserInfo endpoint response: ");	
         URL url = new URL(getUserInfoEndpointUrl() + "?schema=openid");
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setRequestProperty("Authorization", "Bearer " + accessToken);

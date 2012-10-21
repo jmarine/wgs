@@ -1,9 +1,17 @@
 package com.github.jmarine.wampservices.wsg;
 
+import javax.persistence.Column;
+import javax.persistence.Embeddable;
+import javax.persistence.Id;
 
+
+@Embeddable
 public class UserId implements java.io.Serializable
 {
+    @Column(name="uid", nullable = false)    
     private String uid;
+    
+    @Column(name="oic_provider", nullable = false)    
     private String openIdConnectProviderUrl;    
     
     public UserId() { }
@@ -77,7 +85,11 @@ public class UserId implements java.io.Serializable
     @Override
     public String toString()
     {
-        return (openIdConnectProviderUrl + "#" + uid);
+        if(openIdConnectProviderUrl == null || openIdConnectProviderUrl.length() == 0) {
+            return uid;
+        } else {
+            return openIdConnectProviderUrl + "#" + uid;
+        }
     }
     
 }
