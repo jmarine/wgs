@@ -304,6 +304,11 @@ public class Module extends WampModule
                     client.setState(ClientState.AUTHENTICATED);
                     retval = idTokenNode;                
                 } 
+                
+                if(retval != null) {
+                    retval.put("name", usr.getName());
+                    retval.put("picture", usr.getPicture());
+                }
             }
             
         } catch(Exception ex) {
@@ -593,10 +598,12 @@ public class Module extends WampModule
                     User u = ((c!=null)? c.getUser() : null);
                     String user = ((u == null) ? "" : u.getFQid());
                     String name = ((u == null) ? "" : u.getName());
+                    String picture = ((u == null) ? null : u.getPicture());
 
                     ObjectNode con = mapper.createObjectNode();
                     con.put("user", user);
                     con.put("name", name);
+                    con.put("picture", picture);
                     con.put("sid", sid);
                     conArray.add(con);
             }
@@ -671,6 +678,7 @@ public class Module extends WampModule
                     event.put("sid", client.getSessionId());
                     event.put("user", member.getUser().getFQid());
                     event.put("name", member.getUser().getName());
+                    event.put("picture", member.getUser().getPicture());
                     event.put("gid", g.getGid());
                     event.put("slot", index);
                     event.put("valid", true);
@@ -877,14 +885,13 @@ public class Module extends WampModule
                     g.setMember(slot, member);
 
 
-                    response.put("sid", sid);
-                    response.put("user", userId);
-                    response.put("name", user.getName());
-                    response.put("type", usertype);
-                    response.put("slot", slot);
-                    response.put("role", role);
-                    response.put("team", team);
-                    response.put("state", String.valueOf(member.getState()));
+                    boolean connected = (member.getClient() != null);
+                    ArrayNode membersArray = mapper.createArrayNode();                    
+                    ObjectNode obj = member.toJSON();
+                    obj.put("slot", slot);
+                    obj.put("connected", connected);
+                    membersArray.add(obj);                    
+                    response.put("updates", membersArray);
                     valid = true;
                     
                 } else {

@@ -112,6 +112,7 @@ public class Member
         obj.put("sid", ((client!=null)? client.getSessionId():""));
         obj.put("user", ((user!=null)? user.getFQid() : "") );
         obj.put("name", ((user!=null)? user.getName() : "") );
+        obj.put("picture", ((user!=null)? user.getPicture() : null) );
         obj.put("type",userType);
         obj.put("state",String.valueOf(state));
         obj.put("role",((role!=null)? role.getName():""));
