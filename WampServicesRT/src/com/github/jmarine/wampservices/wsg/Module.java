@@ -710,6 +710,7 @@ public class Module extends WampModule
             event.put("gid", g.getGid());
             event.put("user", user);
             event.put("name", ((u == null)? "" : u.getName()) );
+            event.put("picture", ((u == null)? null : u.getPicture()) );
             event.put("sid", sid);
             event.put("type", "user");
             event.put("valid", valid);
