@@ -384,7 +384,7 @@ function show_group(group) {
                 roleFixed = true;
             }
 
-            append_group_member(false, memberId, member.state, memberUser, member.name, member.sid, member.type, member.role, currentUserSelected, roleFixed, currentAppAI);
+            append_group_member(false, memberId, member, currentUserSelected, roleFixed, currentAppAI);
 
         });
     }
@@ -411,7 +411,7 @@ function show_group(group) {
 
 function add_group_member(added) {
     var members = $("#group_params table[id='members'] tbody tr");
-    append_group_member(added, members.size(), "empty", "", "", "", "user", "", "", false, currentAppAI);
+    append_group_member(added, members.size(), {}, false, currentAppAI);
 }
 
 function update_member(field, as_previous_client) 
@@ -456,7 +456,13 @@ function toggle_client_state()
 }
 
 
-function populate_group_member_fields(added, memberId, memberState, memberUser, memberName, memberSid, memberType, memberRole, currentUserSelected, roleFixed, ai) {
+function populate_group_member_fields(added, memberId, member, currentUserSelected, roleFixed, ai) {
+    var memberState = member.state;
+    var memberUser = member.user;
+    var memberName = member.name;
+    var memberSid = member.sid;
+    var memberType = member.type;
+    var memberRole = member.role;
     var members = "";
     var roles = "";
     if(added || memberUser == "" || memberSid == wsgclient.sid || (wsgclient.user == $("#group_admin").val()) ) {
@@ -497,7 +503,13 @@ function populate_group_member_fields(added, memberId, memberState, memberUser, 
     $("#state" + memberId).attr("title", memberState);
 }
 
-function append_group_member(added, memberId, memberState, memberUser, memberName, memberSid, memberType, memberRole, currentUserSelected, roleFixed, ai) {
+function append_group_member(added, memberId, member, currentUserSelected, roleFixed, ai) {
+    var memberState = member.state ? member.state : "empty";
+    var memberUser  = member.user  ? member.user  : "";
+    var memberName  = member.name  ? member.name  : "";
+    var memberSid   = member.sid   ? member.sid   : "";
+    var memberType  = member.type  ? member.type  : "user";
+    var memberRole  = member.role  ? member.role  : "";
     var tbody = $("#group_params table[id='members'] tbody");
     
     var html = '<tr><td align="left"><label for="member' + memberId + '">User ' + (1+memberId) + ':</label><input type="hidden" id="added' + memberId + '" value="' + added + '"/></td>';
@@ -518,7 +530,7 @@ function append_group_member(added, memberId, memberState, memberUser, memberNam
     $("button.remove_member").hide();
     tbody.append(html);
     
-    populate_group_member_fields(added, memberId, memberState, memberUser, memberName, memberSid, memberType, memberRole, currentUserSelected, roleFixed, ai);
+    populate_group_member_fields(added, memberId, member, currentUserSelected, roleFixed, ai);
 
 }
 
@@ -592,7 +604,7 @@ function update_group_callback(response) {
 
                             var currentUserSelected = (wsgclient.sid == member.sid);
                             var roleFixed = (member.role != "") && (member.sid != "") && (wsgclient.sid != member.sid);
-                            populate_group_member_fields(false, memberId, member.state, member.user, member.name, member.sid, member.type, member.role, currentUserSelected, roleFixed, currentAppAI);
+                            populate_group_member_fields(false, memberId, member, currentUserSelected, roleFixed, currentAppAI);
                         }
                     }
                 });
@@ -607,7 +619,7 @@ function update_group_callback(response) {
                 if(response.members) {
                     response.members.forEach(function(member) {
                         var memberId = member.slot;  
-                        populate_group_member_fields(false, memberId, member.state, member.user, member.name, member.sid, member.type, member.role, false, false, currentAppAI);
+                        populate_group_member_fields(false, memberId, member, false, false, currentAppAI);
                     });
                 }
                 
@@ -679,6 +691,55 @@ function chat_message(message,sender) {
     $("#messages").prop({ scrollTop: $("#messages").prop("scrollHeight")  });
 }
 
+function my_openid_connect(login) {
+    if(login) {
+        var oicAuthEndpointUrl = "http://localhost:3000/authorizations/new";
+        var clientId = "baa143594505f996a5467e4ae00af220";
+        var queryPos = document.location.href.indexOf("?");
+        if(queryPos == -1) queryPos = document.location.href.length;
+        document.location.href = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + clientId + "&redirect_uri=" + document.location.href.substring(0,queryPos);
+    } else {
+        var codePos = document.location.href.indexOf("&code=");
+        if(codePos == -1) codePos = document.location.href.indexOf("?code=");
+        if(codePos != -1) {
+            var code = document.location.href.substring(codePos+6);
+            codePos = code.indexOf("&");
+            if(codePos != -1) code = code.substring(0, codePos);
+            
+            var url = $("#server_url").val();
+            var oicProvider = "defaultProvider";
+            
+            wsgclient = new WsgClient(url);
+            wsgclient.openIdConnect(oicProvider, code, authentication);
+        }
+    }
+}
+
+function clear_openid_connect_params() {
+    // Clear OpenId Connect's authentication code 
+    var url = document.location.href;
+    var codePos = url.indexOf("&code=");
+    if(codePos == -1) codePos = url.indexOf("?code=");
+    if(codePos != -1) {
+        var codeEnd = url.indexOf("&", codePos+1);
+        var otherParams = (codeEnd != -1)? url.substring(codeEnd+1) : "";
+        var offset = (otherParams.length==0)? 0 : 1;
+        url = url.substring(0, codePos+offset) + otherParams;
+        
+        // Clear OpenId Connect's authentication state
+        var statePos = url.indexOf("&state=")
+        if(statePos == -1) statePos = url.indexOf("?state=");
+        if(statePos != -1) {
+            var stateEnd = url.indexOf("&", statePos+1);
+            otherParams = (stateEnd != -1)? url.substring(stateEnd+1) : "";
+            offset = (otherParams.length==0)? 0 : 1;
+            url = url.substring(0, statePos+offset) + otherParams;
+        }
+        
+        document.location.href = url;
+    }
+}
+
 function disconnect() {
     exit_group(true);
     wsgclient.close();
@@ -701,29 +762,10 @@ function disconnect() {
     $("#group_params").slideDown(500);  
     
     enable_network();
+    clear_openid_connect_params();
+    
 }
 
-function my_openid_connect(login) {
-    if(login) {
-        var oicAuthEndpointUrl = "http://localhost:3000/authorizations/new";
-        var clientId = "baa143594505f996a5467e4ae00af220";
-        var queryPos = document.location.href.indexOf("?");
-        if(queryPos == -1) queryPos = document.location.href.length;
-        document.location.href = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + clientId + "&redirect_uri=" + document.location.href.substring(0,queryPos);
-    } else {
-        var codePos = document.location.href.indexOf("&code=");
-        if(codePos == -1) codePos = document.location.href.indexOf("?code=");
-        if(codePos != -1) {
-            var code = document.location.href.substring(codePos+6);
-            codePos = code.indexOf("&");
-            if(codePos != -1) code = code.substring(0, codePos);
-            
-            var url = $("#server_url").val();
-            wsgclient = new WsgClient(url);            
-            wsgclient.openIdConnect("defaultProvider", code, authentication);
-        }
-    }
-}
 
 function toggle_connect(create_user) {
     if ($("#server_url").attr("disabled") != "disabled") {
