@@ -10,6 +10,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import javax.persistence.TemporalType;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ObjectNode;
 
 
 @Entity
@@ -157,5 +159,14 @@ public class User implements Serializable
     {   
         return id.toString();
     }
-    
+
+    public ObjectNode toJSON() 
+    {
+        ObjectMapper mapper = new ObjectMapper();        
+        ObjectNode retval = mapper.createObjectNode();
+        retval.put("user", id.toString());
+        retval.put("name", getName());
+        retval.put("picture", getPicture());    
+        return retval;
+    }
 }

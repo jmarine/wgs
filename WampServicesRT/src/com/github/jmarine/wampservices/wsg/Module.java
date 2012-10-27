@@ -172,7 +172,7 @@ public class Module extends WampModule
     
     
     @WampRPC(name="register")
-    public ArrayNode registerUser(WampSocket socket, ObjectNode data) throws Exception
+    public ObjectNode registerUser(WampSocket socket, ObjectNode data) throws Exception
     {
         boolean user_valid = false;
         User usr = null;
@@ -201,12 +201,12 @@ public class Module extends WampModule
         client.setUser(usr);
         client.setState(ClientState.AUTHENTICATED);
 
-        return null;
+        return usr.toJSON();
     }
     
     
     @WampRPC
-    public ArrayNode login(WampSocket socket, ObjectNode data) throws Exception
+    public ObjectNode login(WampSocket socket, ObjectNode data) throws Exception
     {
         boolean user_valid = false;
         Client client = clients.get(socket.getSessionId());
@@ -226,14 +226,15 @@ public class Module extends WampModule
         }
 
         if(!user_valid) throw new WampException(MODULE_URL + "loginerror", "Login credentials are not valid");
-        return null;
+        
+        return usr.toJSON();
     }
     
     
     @WampRPC(name="openid_connect")
     public ObjectNode openIdConnect(WampSocket socket, ObjectNode data) throws Exception
     {
-        ObjectNode retval = null;
+        User usr = null;
         Client client = clients.get(socket.getSessionId());
 
         try {
@@ -263,7 +264,7 @@ public class Module extends WampModule
 
                 EntityManager manager = getEntityManager();
                 UserId userId = new UserId(idTokenNode.get("iss").asText(), idTokenNode.get("user_id").asText());
-                User usr = manager.find(User.class, userId);
+                usr = manager.find(User.class, userId);
                 manager.close();
 
                 Calendar now = Calendar.getInstance();
@@ -272,7 +273,6 @@ public class Module extends WampModule
                     logger.fine("Cached OIC User: " + usr);
                     client.setUser(usr);
                     client.setState(ClientState.AUTHENTICATED);
-                    retval = idTokenNode;
 
                 } else if(response.has("access_token")) {
                     // Get UserInfo from OpenId Connect Provider
@@ -302,21 +302,16 @@ public class Module extends WampModule
 
                     client.setUser(usr);
                     client.setState(ClientState.AUTHENTICATED);
-                    retval = idTokenNode;                
                 } 
                 
-                if(retval != null) {
-                    retval.put("name", usr.getName());
-                    retval.put("picture", usr.getPicture());
-                }
             }
             
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "OpenID Connect error: " + ex.getClass().getName() + ":" + ex.getMessage(), ex);
         }
 
-        if(retval == null) throw new WampException(MODULE_URL + "oic_error", "OpenID Connect protocol error");
-        return retval;
+        if(usr == null) throw new WampException(MODULE_URL + "oic_error", "OpenID Connect protocol error");
+        return usr.toJSON();
     }    
     
     
@@ -399,7 +394,6 @@ public class Module extends WampModule
         registerApplication(app);
         valid = true;
 
-        // TODO:  broadcast new application to subscribed clients
         ObjectNode event = updateAppInfo(socket, app, "app_created", true);
         return event;
     }
@@ -428,7 +422,6 @@ public class Module extends WampModule
     
     private ObjectNode updateAppInfo(WampSocket socket, Application app, String cmd, boolean excludeMe) throws Exception
     {
-        // check subscribers of "apps_event" topic
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode event = app.toJSON();
         event.put("cmd", cmd);
@@ -438,7 +431,6 @@ public class Module extends WampModule
 
     private ObjectNode updateGroupInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
     {
-        // check subscribers of "apps_event" topic
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode event = g.toJSON();
         event.put("cmd", cmd);
@@ -465,7 +457,6 @@ public class Module extends WampModule
             }   
 
             retval.put("groups", groupsArray);
-            
         }
 
         return retval;
@@ -1053,7 +1044,6 @@ public class Module extends WampModule
                     updateGroupInfo(socket, g, deleted? "group_deleted" : "group_updated", false);                    
                 }
             }
-
 
             return response;
     }

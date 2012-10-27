@@ -103,6 +103,11 @@ function enable_network() {
     $("#password").removeAttr("disabled");
     $("#register").removeAttr("disabled");
     
+    $("#user").val("");
+    $("#password").val("");
+    $("#password").show();
+    $("#lbl_password").show();
+    
 }
 
 function authentication(state, msg) {
@@ -113,6 +118,10 @@ function authentication(state, msg) {
           $("#register").attr("disabled", "disabled");
           $("#toggle_connect").html("Disconnect");          
           
+          $("#user").val(msg.name);
+          $("#lbl_password").hide();
+          $("#password").hide();
+                    
           list_apps();
       } else if(state == WsgState.ERROR) {
           alert(msg);
@@ -343,7 +352,7 @@ function show_group(group) {
     $("#group_params fieldset legend").html("Group members: " + group.app.name);
     
     if(group.members) {
-        var currentUser = $("#user").val();
+        var currentUser = wsgclient.user;
         var currentUserIsOnlineMember = false;
         var currentUserIsOfflineMember = false;
         group.members.forEach(function(member, index) {
@@ -689,7 +698,7 @@ function disconnect() {
     $("#new_group_params").hide();
     $("#group_list").hide(500);
     
-    $("#group_params").slideDown(500);   
+    $("#group_params").slideDown(500);  
     
     enable_network();
 }
@@ -745,7 +754,7 @@ function toggle_connect(create_user) {
       <legend>Login</legend>
     <label for="server_url">Server:</label><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wsgservice" /><br/>
     <label for="user">Login:</label><input type="text" name="user" id="user" value="guest" /><br/>
-    <label for="password">Password:</label><input type="password" name="password" id="password" value="guest" /><br/>
+    <label for="password" id="lbl_password">Password:</label><input type="password" name="password" id="password" value="guest" /><br/>
     <button id="oic_connect" onclick="my_openid_connect(true);">OpenId Connect</button>
     <button id="toggle_connect" onclick="toggle_connect(false);">Connect</button>
     <button id="register" onclick="toggle_connect(true);">Register</button>

@@ -14,7 +14,6 @@ function WsgClient(u) {
 WsgClient.prototype = {
   ws: null,
   sid: null,
-  onstatechange: null,
   groups: new Array(),
   calls: new Array(),
   topics: new Array(),
@@ -115,22 +114,20 @@ WsgClient.prototype = {
   
   openIdConnect: function(provider, code, onstatechange) {
       var client = this;
-      this._connect(function(state, msg) {
+      client._connect(function(state, msg) {
         if(state == WsgState.WELCOMED) {
             var msg = Object();
             msg.provider = provider;
             msg.code = code;
-            this.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
-            this.call("wsg:openid_connect", msg).then(
+            client.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
+            client.call("wsg:openid_connect", msg).then(
                 function(response) {
-                    client.user = response.iss + "#" + response.user_id;
-                    $("#user").val(client.user);
-                    $("#password").val("");
-                    client.onstatechange(WsgState.AUTHENTICATED);
+                    client.user = response.user;
+                    onstatechange(WsgState.AUTHENTICATED, response);
                 }, 
                 function(response) {
                     var errorCode = response.errorURI;
-                    client.onstatechange(WsgState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                    onstatechange(WsgState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 });
         } else {
             onstatechange(state, msg);
@@ -140,20 +137,20 @@ WsgClient.prototype = {
   
   login: function(user, password, onstatechange) {
       var client = this;
-      this._connect(function(state, msg) {
+      client._connect(function(state, msg) {
         if(state == WsgState.WELCOMED) {
             var msg = Object();
             msg.user = user;
             msg.password = password;  // hash_sha1(password : this.sid)
-            this.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
-            this.call("wsg:login", msg).then(
+            client.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
+            client.call("wsg:login", msg).then(
                 function(response) {
-                    client.user = user;
-                    client.onstatechange(WsgState.AUTHENTICATED);
+                    client.user = response.user;
+                    onstatechange(WsgState.AUTHENTICATED, response);
                 }, 
                 function(response) {
                     var errorCode = response.errorURI;
-                    client.onstatechange(WsgState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                    onstatechange(WsgState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 });
         } else {
             onstatechange(state, msg);
@@ -164,21 +161,21 @@ WsgClient.prototype = {
   
   register: function(user, password, email, onstatechange) {
       var client = this;
-      this._connect(function(state, msg) {
+      client._connect(function(state, msg) {
         if(state == WsgState.WELCOMED) {
             var msg = Object();
             msg.user = user;
             msg.password = password;  // hash_sha1(password)
             msg.email = email;
-            this.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
-            this.call("wsg:register", msg).then(
+            client.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
+            client.call("wsg:register", msg).then(
                 function(response) {
-                    client.user = user;
-                    client.onstatechange(WsgState.AUTHENTICATED);
+                    client.user = response.user;
+                    onstatechange(WsgState.AUTHENTICATED, response);
                 }, 
                 function(response) {
                     var errorCode = response.errorURI;
-                    client.onstatechange(WsgState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                    onstatechange(WsgState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 });
         } else {
             onstatechange(state, msg);
@@ -191,7 +188,6 @@ WsgClient.prototype = {
       var client = this;
       var ws = null; 
       this.ws = null;
-      this.onstatechange = onstatechange;
       this.debug("Connecting to url: " + this.url);
 
       if ("WebSocket" in window) {
@@ -200,27 +196,27 @@ WsgClient.prototype = {
         ws = new MozWebSocket(this.url);
       } else {
         this.debug("This Browser does not support WebSockets");
-        client.onstatechange(WsgState.ERROR, "error:ws");
+        onstatechange(WsgState.ERROR, "error:ws");
         return;
       }
 
       ws.onopen = function(e) {
         client.debug("A connection to "+this.url+" has been opened.");
         client.ws = ws;
-        client.onstatechange(WsgState.CONNECTED);
+        onstatechange(WsgState.CONNECTED);
         //$("#server_url").attr("disabled",true);
         //$("#toggle_connect").html("Disconnect");
       };
    
       ws.onclose = function(e) {
         client.debug("The connection to "+this.url+" was closed.");
-        client.onstatechange(WsgState.DISCONNECTED);    
+        onstatechange(WsgState.DISCONNECTED);    
         client.close();
       };
 
       ws.onerror = function(e) {
         client.debug("WebSocket error: " + e);
-        client.onstatechange(WsgState.ERROR, "error:ws");
+        onstatechange(WsgState.ERROR, "error:ws");
         client.close();
       };
 
@@ -230,7 +226,7 @@ WsgClient.prototype = {
 
         if (arr[0] == 0) {  // WELCOME
             client.sid = arr[1];
-            client.onstatechange(WsgState.WELCOMED, arr);
+            onstatechange(WsgState.WELCOMED, arr);
         } else if (arr[0] == 3) {  // CALLRESULT
             var call = arr[1];
             if(client.calls[call]) {       
@@ -274,7 +270,6 @@ WsgClient.prototype = {
   },
   
   listApps: function(filterByDomain, callback) {
-      var client = this;
       var msg = Object();
       if(filterByDomain) msg.domain = document.domain.toString();
 
