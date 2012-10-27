@@ -499,6 +499,8 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
     $("#role" + memberId+ " option").remove();
     $("#role" + memberId).append(roles);
     
+    $("#team" + memberId).val(member.team);
+    
     $("#state" + memberId).attr("src", "images/" + memberState.toLowerCase() + ".png");
     $("#state" + memberId).attr("title", memberState);
 }
