@@ -747,19 +747,29 @@ public class Module extends WampModule
                 boolean autoMatchMode = node.get("automatch").asBoolean();
                 g.setAutoMatchEnabled(autoMatchMode);
                 g.getApplication().addAutoMatchGroup(g);
+                broadcastGroupInfo = true;
             } 
 
             if(node.has("dynamic")) {
                 boolean dynamic = node.get("dynamic").asBoolean();
                 g.setDynamicGroup(dynamic);
                 response.put("dynamic", g.isDynamicGroup());
+                broadcastGroupInfo = true;
             }
+            
+            if(node.has("alliances")) {
+                boolean alliances = node.get("alliances").asBoolean();
+                g.setAlliancesAllowed(alliances);
+                response.put("alliances", g.isAlliancesAllowed());
+                broadcastGroupInfo = true;
+            }            
 
             if(node.has("hidden")) {
                 boolean hidden = node.get("hidden").asBoolean();
                 g.setHidden(hidden);
                 response.put("hidden", g.isHidden());
                 broadcastAppInfo = true;
+                broadcastGroupInfo = true;
             }            
             
             if(node.has("observable")) {
@@ -767,6 +777,7 @@ public class Module extends WampModule
                 g.setObservableGroup(observable);
                 response.put("observable", g.isObservableGroup());
                 broadcastAppInfo = true;
+                broadcastGroupInfo = true;
             }                                 
             
             if(node.has("data")) {
