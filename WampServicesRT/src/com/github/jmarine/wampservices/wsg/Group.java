@@ -312,6 +312,7 @@ public class Group
         ObjectNode obj = mapper.createObjectNode();
         obj.put("gid", getGid());
         obj.put("admin", getAdminUser());
+        obj.put("automatch", isAutoMatchEnabled());
         obj.put("hidden", isHidden());
         obj.put("num", getNumMembers());
         obj.put("min", getMinMembers());

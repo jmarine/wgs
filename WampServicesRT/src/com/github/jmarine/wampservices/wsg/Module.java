@@ -531,6 +531,9 @@ public class Module extends WampModule
                     if(options.has("hidden")) {
                         g.setHidden(options.get("hidden").asBoolean(false));
                     }
+                    if(options.has("observable")) {
+                        g.setObservableGroup(options.get("observable").asBoolean(g.getApplication().isObservableGroup()));
+                    }                    
                     if(!autoMatchMode && options.has("password")) {
                         String password = options.get("password").asText();
                         g.setPassword( (password!=null && password.length()>0)? password : null);
@@ -639,11 +642,14 @@ public class Module extends WampModule
                     (index < Math.max(num_slots, g.getMinMembers())) || (requiredRoles.size() > 0);
                     index++) {
                 String usertype = "user";
-                int team = 1+index;
 
                 Member member = g.getMember(index);
-                if(member == null) member = new Member();
-                
+                if(member == null) {
+                    member = new Member();
+                    member.setTeam(1+index);
+                    g.setMember(index, member);
+                }
+                    
                 Role role = member.getRole();
                 if(role != null) {
                     requiredRoles.remove(role.toString());
@@ -658,8 +664,7 @@ public class Module extends WampModule
                     member.setState(MemberState.RESERVED);
                     member.setUser(client.getUser());
                     member.setUserType("user");
-                    member.setTeam(1+index);
-                    g.setMember(index, member);
+
                     client.setState(ClientState.JOINED);
                     joined = true;
                     connected = true;

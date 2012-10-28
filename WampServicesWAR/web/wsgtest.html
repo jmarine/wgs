@@ -309,6 +309,7 @@ function new_group() {
     var gid = $("#new_grp_automatch").is(":checked") ? "automatch" : "";
     var options = new Object();
     options.automatch = $("#new_grp_automatch").is(":checked");
+    options.observable = $("#new_grp_observable").is(":checked");
     options.hidden = $("#new_grp_hidden").is(":checked");
     options.password = $("#new_grp_password").val();
     
@@ -349,6 +350,17 @@ function show_group(group) {
     currentGroup = group;
     $("#group_gid").attr("value", group.gid);
     $("#group_admin").attr("value", group.admin);
+    if(group.observable) $("#grp_observable").attr('checked','yes');
+    else $("#grp_observable").removeAttr("checked");
+    if(group.hidden) $("#grp_hidden").attr('checked','yes');
+    else $("#grp_hidden").removeAttr("checked");
+    if(group.dynamic) $("#grp_dynamic").attr('checked','yes');
+    else $("#grp_dynamic").removeAttr("checked");
+    if(group.alliances) $("#grp_alliances").attr('checked','yes');
+    else $("#grp_alliances").removeAttr("checked");
+    if(group.automatch) $("#grp_automatch").attr('checked','yes');
+    else $("#grp_automatch").removeAttr("checked");
+    
     $("#group_params fieldset legend").html("Group members: " + group.app.name);
     
     if(group.members) {
@@ -865,6 +877,7 @@ function toggle_connect(create_user) {
     <fieldset>
       <legend>New group options</legend>
       <label for="new_grp_automatch">Auto-match:</label><input type="checkbox" name="new_grp_automatch" id="new_grp_automatch" /><br/>
+      <label for="new_grp_observable">Observable</label><input type="checkbox" name="new_grp_observable" id="new_grp_observable" /><br/>
       <label for="new_grp_hidden">Hidden:</label><input type="checkbox" name="new_grp_hidden" id="new_grp_hidden" /><br/>
       <label for="new_grp_password">Password:</label><input type="password" name="new_grp_password" id="new_grp_password" /><br/>
       <button id="new_group" onclick="new_group();">Create</button>
