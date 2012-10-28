@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <persistence version="2.0" xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
-  <persistence-unit name="WsgPU" transaction-type="JTA">
+  <persistence-unit name="WgsPU" transaction-type="JTA">
     <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
-    <jta-data-source>jdbc/WsgDS</jta-data-source>
-    <class>com.github.jmarine.wampservices.wsg.Role</class>
-    <class>com.github.jmarine.wampservices.wsg.Application</class>
-    <class>com.github.jmarine.wampservices.wsg.User</class>
+    <jta-data-source>jdbc/WgsDS</jta-data-source>
+    <class>com.github.jmarine.wampservices.wgs.Application</class>
+    <class>com.github.jmarine.wampservices.wgs.User</class>
+    <class>com.github.jmarine.wampservices.wgs.Role</class>
     <properties>
       <property name="eclipselink.ddl-generation" value="create-tables"/>
     </properties>

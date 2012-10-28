@@ -4,7 +4,7 @@
 		<title>WebSocket game services client</title>
 		<script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
 		<script type="text/javascript" src="js/jquery-ui-1.8.19.custom.min.js"></script>
-		<script type="text/javascript" src="js/wsgclient.js"></script>
+		<script type="text/javascript" src="js/wgsclient.js"></script>
 <style type="text/css">
 
 * {
@@ -60,7 +60,7 @@ label { display: block; float: left; width: 90px; clear: left; }
 </style>
 
 <script language="javascript">
-var wsgclient = null;
+var wgsclient = null;
 var currentAppAI = null;
 var currentGroup = null;
 
@@ -111,7 +111,7 @@ function enable_network() {
 }
 
 function authentication(state, msg) {
-      if(state == WsgState.AUTHENTICATED) {
+      if(state == WgsState.AUTHENTICATED) {
           $("#server_url").attr("disabled", "disabled");
           $("#user").attr("disabled", "disabled");
           $("#password").attr("disabled", "disabled");
@@ -123,7 +123,7 @@ function authentication(state, msg) {
           $("#password").hide();
                     
           list_apps();
-      } else if(state == WsgState.ERROR) {
+      } else if(state == WgsState.ERROR) {
           alert(msg);
       }
 }
@@ -166,9 +166,9 @@ function update_apps(response) {
 
 function list_apps() {
     $("#apps option").remove();
-    wsgclient.listApps(false, function(response) {
+    wgsclient.listApps(false, function(response) {
         if(response.valid) {
-            wsgclient.subscribe("https://github.com/jmarine/wampservices/wsgservice#apps_event", update_apps, true);
+            wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#apps_event", update_apps, true);
             update_apps(response);
             $("#app_params").hide();
             $("#app_list").slideDown(500);
@@ -232,15 +232,15 @@ function hide_group_list() {
     var appId = $("#apps option:selected").attr("value");
     $("#group_list").hide();
     $("#app_list").slideDown(500);
-    wsgclient.unsubscribe("https://github.com/jmarine/wampservices/wsgservice#app_event:" + appId, update_groups, false);
+    wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, false);
 }
 
 function list_groups() {
     var appId = $("#apps option:selected").attr("value");
     $("#groups option").remove();
-    wsgclient.listGroups(appId, function(response) {
+    wgsclient.listGroups(appId, function(response) {
         if(response.valid) {
-            wsgclient.subscribe("https://github.com/jmarine/wampservices/wsgservice#app_event:" + appId, update_groups, true);
+            wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, true);
             update_groups(response);
             $("#app_list").hide();
             $("#group_list").slideDown(500);
@@ -252,7 +252,7 @@ function list_groups() {
 function delete_app() {
     var appId = $("#apps option:selected").attr("value");
     if(confirm("Do you really want to delete the application?")) {
-        wsgclient.deleteApp(appId, function(response) {
+        wgsclient.deleteApp(appId, function(response) {
             if(!response.valid) {
                 alert("Error deleting application:"+response.errorDesc);
             } else {
@@ -279,7 +279,7 @@ function create_app() {
     var roles = [];
     $("#app_roles option").each(function() { roles[roles.length] = $(this).attr("value"); });
     
-    wsgclient.newApp(name, domain, version, min, max, delta, observable, dynamic, alliances, ai_available, roles, function(response) {
+    wgsclient.newApp(name, domain, version, min, max, delta, observable, dynamic, alliances, ai_available, roles, function(response) {
         if(!response.valid) {
             alert("Error creating application:"+response.errorDesc);
         } else {
@@ -327,12 +327,12 @@ function open_group(gid, options) {
     var appId = $("#apps option:selected").attr("value");
     if(gid == "automatch") $("#back_section").val("app_list");
     else $("#back_section").val("group_list");
-    wsgclient.openGroup(appId, gid, options, function(response) {
+    wgsclient.openGroup(appId, gid, options, function(response) {
        if(response.valid) {
             currentAppAI = response.app.ai;
-            if(response.gid != "") wsgclient.subscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + response.gid, update_group_callback, true);
+            if(response.gid != "") wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + response.gid, update_group_callback, true);
             show_group(response); 
-       } else if(response.errorURI == "https://github.com/jmarine/wampservices/wsgservice#incorrectpassword") {
+       } else if(response.errorURI == "https://github.com/jmarine/wampservices/wgs#incorrectpassword") {
             var password = prompt("Introduce the password to access the group:");
             if(password) {
                 if(!options) options = {};
@@ -364,7 +364,7 @@ function show_group(group) {
     $("#group_params fieldset legend").html("Group members: " + group.app.name);
     
     if(group.members) {
-        var currentUser = wsgclient.user;
+        var currentUser = wgsclient.user;
         var currentUserIsOnlineMember = false;
         var currentUserIsOfflineMember = false;
         group.members.forEach(function(member, index) {
@@ -379,7 +379,7 @@ function show_group(group) {
             var roleFixed = false;
             var currentUserSelected = false;
             
-            if(member.sid==wsgclient.sid) {
+            if(member.sid==wgsclient.sid) {
                 var selected = "";
                 if(currentUserIsOfflineMember && (!member.connected) && member.user==currentUser) {
                     currentUserSelected = true;;
@@ -406,7 +406,7 @@ function show_group(group) {
     $("#new_group_params").hide(); 
     $("#toggle_client_state").html("Ready");
     
-    if(wsgclient.user == $("#group_admin").val()) {
+    if(wgsclient.user == $("#group_admin").val()) {
         $("#start_group").show();
         $("#toggle_client_state").hide();
         $("#add_group_member").show();
@@ -441,11 +441,11 @@ function update_member(field, as_previous_client)
     }
     var user = option.text();
     if(sid == "") user = "";
-    else if(sid == wsgclient.sid) user = "";
+    else if(sid == wgsclient.sid) user = "";
     var slot = parseInt(field.substring(6));
     var role = $("#role" + slot + " option:selected").val();
     var team = parseInt($("#team" + slot).val());
-    wsgclient.updateMember(appId, gid, "RESERVED", slot, sid, usertype, user, role, team, update_group_callback);
+    wgsclient.updateMember(appId, gid, "RESERVED", slot, sid, usertype, user, role, team, update_group_callback);
     
 }
 
@@ -453,7 +453,7 @@ function update_client_state(state)
 {
     var appId = $("#apps option:selected").attr("value");
     var gid = $("#group_gid").val();
-    wsgclient.updateMember(appId, gid, state, NaN, false, false, false, false, false, update_group_callback);
+    wgsclient.updateMember(appId, gid, state, NaN, false, false, false, false, false, update_group_callback);
 }
 
 function toggle_client_state()
@@ -477,19 +477,19 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
     var memberRole = member.role;
     var members = "";
     var roles = "";
-    if(added || memberUser == "" || memberSid == wsgclient.sid || (wsgclient.user == $("#group_admin").val()) ) {
+    if(added || memberUser == "" || memberSid == wgsclient.sid || (wgsclient.user == $("#group_admin").val()) ) {
         members += '<option value="">Empty</option>';
-        members += '<option value="user:'+wsgclient.sid+'" ' + ((currentUserSelected && memberType=="user")? "selected" : "") + '>Me</option>';
-        if(ai) members += '<option value="computer:'+wsgclient.sid+'" ' + ((currentUserSelected && memberType=="computer")? "selected" : "") + '>MyComputer</option>';
-        var connections = wsgclient.getGroupConnections(currentGroup.gid);
+        members += '<option value="user:'+wgsclient.sid+'" ' + ((currentUserSelected && memberType=="user")? "selected" : "") + '>Me</option>';
+        if(ai) members += '<option value="computer:'+wgsclient.sid+'" ' + ((currentUserSelected && memberType=="computer")? "selected" : "") + '>MyComputer</option>';
+        var connections = wgsclient.getGroupConnections(currentGroup.gid);
         for(var sid in connections) {
-            if( (wsgclient.user == $("#group_admin").val()) && (sid != wsgclient.sid) && (memberSid != sid) ) {
+            if( (wgsclient.user == $("#group_admin").val()) && (sid != wgsclient.sid) && (memberSid != sid) ) {
                 members += '<option value="user:'+sid+'" ' + ((sid==memberSid && memberType=="user")? "selected" : "") + '>user:'+connections[sid].name+'</option>';
             }
         }
     } 
     
-    if(!added && memberUser != "" && memberSid != wsgclient.sid) {
+    if(!added && memberUser != "" && memberSid != wgsclient.sid) {
         var user = memberUser;
         var val = memberSid;
         if(memberType != "") {
@@ -500,7 +500,7 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
     }
     
     currentGroup.roles.forEach(function(role) {
-        if(!roleFixed || (memberRole==role.name) || memberSid == wsgclient.sid || (wsgclient.user == $("#group_admin").val()) ) {
+        if(!roleFixed || (memberRole==role.name) || memberSid == wgsclient.sid || (wgsclient.user == $("#group_admin").val()) ) {
             roles += '<option value="' + role.name + '" ' + ((memberRole==role.name)? "selected" : "") + '>' + role.name + '</option>';
         }
     });    
@@ -568,7 +568,7 @@ function update_group_callback(response) {
                 response.updates.forEach(function(member) {
                     var isMember = isFinite(member.slot);
 
-                    if(isMember && member.sid == wsgclient.sid && member.state == "RESERVED") {
+                    if(isMember && member.sid == wgsclient.sid && member.state == "RESERVED") {
                         $("#toggle_client_state").html("Ready");
                     }
                     
@@ -583,7 +583,7 @@ function update_group_callback(response) {
 
                     // append new joined user's user in selectboxes
                     for(var index = 0; index < num_members; index += 1) {
-                        if( (wsgclient.user == $("#group_admin").val()) ) {
+                        if( (wgsclient.user == $("#group_admin").val()) ) {
                             var val = "";
                             var text = "Empty";
                             if(member.sid && member.sid != "") {
@@ -603,7 +603,7 @@ function update_group_callback(response) {
                         var memberId = member.slot;                        
                         $("#team"+memberId).val(member.team);
 
-                        if(wsgclient.user == $("#group_admin").val()) {
+                        if(wgsclient.user == $("#group_admin").val()) {
 
                             var val = "";
                             if(member.sid != "") {
@@ -616,8 +616,8 @@ function update_group_callback(response) {
 
                         } else {
 
-                            var currentUserSelected = (wsgclient.sid == member.sid);
-                            var roleFixed = (member.role != "") && (member.sid != "") && (wsgclient.sid != member.sid);
+                            var currentUserSelected = (wgsclient.sid == member.sid);
+                            var roleFixed = (member.role != "") && (member.sid != "") && (wgsclient.sid != member.sid);
                             populate_group_member_fields(false, memberId, member, currentUserSelected, roleFixed, currentAppAI);
                         }
                     }
@@ -674,7 +674,7 @@ function update_group(state, data) {
     var dynamic = $("#grp_dynamic").is(':checked');
     var alliances = $("#grp_alliances").is(':checked');
 
-    wsgclient.updateGroup(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, function(response) {
+    wgsclient.updateGroup(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, function(response) {
         if(response.valid) update_group_callback(response);
     });
 }
@@ -692,8 +692,8 @@ function exit_group(toOfflineMode) {
     }
     
     var gid = $("#group_gid").val();
-    wsgclient.exitGroup(gid, function(response) {
-        wsgclient.unsubscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + gid, update_group_callback, true);
+    wgsclient.exitGroup(gid, function(response) {
+        wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + gid, update_group_callback, true);
     });
 }
 
@@ -736,8 +736,8 @@ function my_openid_connect(login) {
             var url = $("#server_url").val();
             var oicProvider = "defaultProvider";
             
-            wsgclient = new WsgClient(url);
-            wsgclient.openIdConnect(oicProvider, code, authentication);
+            wgsclient = new WgsClient(url);
+            wgsclient.openIdConnect(oicProvider, code, authentication);
         }
     }
 }
@@ -769,7 +769,7 @@ function clear_openid_connect_params() {
 
 function disconnect() {
     exit_group(true);
-    wsgclient.close();
+    wgsclient.close();
     $("#server_url").removeAttr("disabled");
     $("#user").removeAttr("disabled");
     $("#password").removeAttr("disabled");
@@ -800,12 +800,12 @@ function toggle_connect(create_user) {
         var user = $("#user").val();
         var pass = $("#password").val();
 
-        wsgclient = new WsgClient(url);
+        wgsclient = new WgsClient(url);
         if(create_user) {
             var email = prompt("Enter e-mail:");
-            if(email) wsgclient.register(user, pass, email, authentication);
+            if(email) wgsclient.register(user, pass, email, authentication);
         } else {
-            wsgclient.login(user, pass, authentication);
+            wgsclient.login(user, pass, authentication);
         }
     } else {
         disconnect();
@@ -821,7 +821,7 @@ function toggle_connect(create_user) {
   <div id="login" class="section hidden">
     <fieldset>
       <legend>Login</legend>
-    <label for="server_url">Server:</label><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wsgservice" /><br/>
+    <label for="server_url">Service:</label><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wgs" /><br/>
     <label for="user">Login:</label><input type="text" name="user" id="user" value="guest" /><br/>
     <label for="password" id="lbl_password">Password:</label><input type="password" name="password" id="password" value="guest" /><br/>
     <button id="oic_connect" onclick="my_openid_connect(true);">OpenId Connect</button>

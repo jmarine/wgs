@@ -4,7 +4,7 @@
  * @author Jordi Marine Fort 
  */
 
-package com.github.jmarine.wampservices.wsg;
+package com.github.jmarine.wampservices.wgs;
 
 
 import com.github.jmarine.wampservices.util.OpenIdConnect;
@@ -40,8 +40,8 @@ import org.codehaus.jackson.node.ObjectNode;
 public class Module extends WampModule 
 {
     private static final Logger logger = Logger.getLogger(Module.class.toString());
-    private static final String MODULE_URL = WampApplication.WAMP_BASE_URL + "/wsgservice#";
-    private static final String PU_NAME = "WsgPU";
+    private static final String MODULE_URL = WampApplication.WAMP_BASE_URL + "/wgs#";
+    private static final String PU_NAME = "WgsPU";
     private static final String LOCAL_USER_DOMAIN = "";
     
     private WampApplication wampApp = null;
@@ -58,13 +58,13 @@ public class Module extends WampModule
         wampApp.createTopic(getFQtopicURI("apps_event"), null);
 
         try {
-            List<Application> apps = findEntities(Application.class, "wsg.findAllApps");
+            List<Application> apps = findEntities(Application.class, "wgs.findAllApps");
             for(Application a : apps) {
                 System.out.println("Application found in DB: " + a.getName());
                 registerApplication(a);
             }
         } catch(Exception ex) {
-            System.out.println("Error loading WSG applications: " + ex.getMessage());
+            System.out.println("Error loading WGS applications: " + ex.getMessage());
             ex.printStackTrace();
         }
     }

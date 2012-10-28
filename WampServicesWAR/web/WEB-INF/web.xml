@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app version="3.0" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd">
     <servlet>
-        <servlet-name>WsgServlet</servlet-name>
+        <servlet-name>WgsServlet</servlet-name>
         <servlet-class>com.github.jmarine.wampservices.WampServlet</servlet-class>
         <init-param>
             <param-name>uri</param-name>
-            <param-value>/wsgservice</param-value>
+            <param-value>/wgs</param-value>
         </init-param>
         <init-param>
             <param-name>enableTopicWildcards</param-name>
@@ -17,7 +17,7 @@
         </init-param>        
         <init-param>
             <param-name>modules</param-name>
-            <param-value>com.github.jmarine.wampservices.wsg.Module</param-value>
+            <param-value>com.github.jmarine.wampservices.wgs.Module</param-value>
         </init-param>        
         
         <init-param>
@@ -38,14 +38,14 @@
         </init-param>                                 
         <init-param>
             <param-name>openIdConnect.defaultProvider.redirectUri</param-name>
-            <param-value>http://localhost:8080/wsgtest.html</param-value>
+            <param-value>http://localhost:8080/wgstest.html</param-value>
         </init-param>                                         
         
         <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>
-        <servlet-name>WsgServlet</servlet-name>
-        <url-pattern>/wsgservice</url-pattern>
+        <servlet-name>WgsServlet</servlet-name>
+        <url-pattern>/wgs</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>

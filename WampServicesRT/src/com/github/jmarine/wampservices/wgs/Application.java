@@ -1,5 +1,5 @@
 
-package com.github.jmarine.wampservices.wsg;
+package com.github.jmarine.wampservices.wgs;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -26,9 +26,9 @@ import org.codehaus.jackson.node.ObjectNode;
 
 @Entity
 @NamedQueries({
-    @NamedQuery(name="wsg.findAllApps",query="SELECT OBJECT(a) FROM Application a"),
-    @NamedQuery(name="wsg.findAppById",query="SELECT OBJECT(a) FROM Application a WHERE a.id = :id"),
-    @NamedQuery(name="wsg.findAppBySpec",query="SELECT OBJECT(a) FROM Application a WHERE a.name = :name AND a.domain = :domain AND a.version = :version")
+    @NamedQuery(name="wgs.findAllApps",query="SELECT OBJECT(a) FROM Application a"),
+    @NamedQuery(name="wgs.findAppById",query="SELECT OBJECT(a) FROM Application a WHERE a.id = :id"),
+    @NamedQuery(name="wgs.findAppBySpec",query="SELECT OBJECT(a) FROM Application a WHERE a.name = :name AND a.domain = :domain AND a.version = :version")
 })
 public class Application implements Serializable {
     

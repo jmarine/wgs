@@ -1,4 +1,4 @@
-package com.github.jmarine.wampservices.wsg;
+package com.github.jmarine.wampservices.wgs;
 
 import java.io.Serializable;
 import javax.persistence.Column;
@@ -17,7 +17,7 @@ import org.codehaus.jackson.node.ObjectNode;
 @Entity
 @Table(name="USR")
 @NamedQueries({
-    @NamedQuery(name="wsg.findUsersByEmail",query="SELECT OBJECT(u) FROM User u WHERE u.email = :email")
+    @NamedQuery(name="wgs.findUsersByEmail",query="SELECT OBJECT(u) FROM User u WHERE u.email = :email")
 })
 public class User implements Serializable 
 {
@@ -27,7 +27,7 @@ public class User implements Serializable
     @Column(name="name",nullable=false)
     private String name;   
     
-    @Column(name="password",nullable=false)
+    @Column(name="password")
     private String password;
     
     @Column(name="is_admin")

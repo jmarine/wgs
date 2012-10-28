@@ -1,4 +1,4 @@
-package com.github.jmarine.wampservices.wsg;
+package com.github.jmarine.wampservices.wgs;
 
 import java.util.ArrayList;
 import java.util.HashMap;

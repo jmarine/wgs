@@ -1,4 +1,4 @@
-package com.github.jmarine.wampservices.wsg;
+package com.github.jmarine.wampservices.wgs;
 
 public enum MemberState {
     EMPTY, RESERVED, READY

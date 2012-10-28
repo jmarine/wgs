@@ -1,4 +1,4 @@
-var WsgState = {
+var WgsState = {
   DISCONNECTED: 0,
   ERROR: 1,
   CONNECTED: 2,
@@ -6,12 +6,12 @@ var WsgState = {
   AUTHENTICATED: 4
 };
 
-function WsgClient(u) {
+function WgsClient(u) {
   this.url = u;
   return this;
 }
 
-WsgClient.prototype = {
+WgsClient.prototype = {
   ws: null,
   sid: null,
   groups: new Array(),
@@ -115,19 +115,19 @@ WsgClient.prototype = {
   openIdConnect: function(provider, code, onstatechange) {
       var client = this;
       client._connect(function(state, msg) {
-        if(state == WsgState.WELCOMED) {
+        if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.provider = provider;
             msg.code = code;
-            client.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
-            client.call("wsg:openid_connect", msg).then(
+            client.prefix("wgs", "https://github.com/jmarine/wampservices/wgs#");
+            client.call("wgs:openid_connect", msg).then(
                 function(response) {
                     client.user = response.user;
-                    onstatechange(WsgState.AUTHENTICATED, response);
+                    onstatechange(WgsState.AUTHENTICATED, response);
                 }, 
                 function(response) {
                     var errorCode = response.errorURI;
-                    onstatechange(WsgState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 });
         } else {
             onstatechange(state, msg);
@@ -138,19 +138,19 @@ WsgClient.prototype = {
   login: function(user, password, onstatechange) {
       var client = this;
       client._connect(function(state, msg) {
-        if(state == WsgState.WELCOMED) {
+        if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.user = user;
             msg.password = password;  // hash_sha1(password : this.sid)
-            client.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
-            client.call("wsg:login", msg).then(
+            client.prefix("wgs", "https://github.com/jmarine/wampservices/wgs#");
+            client.call("wgs:login", msg).then(
                 function(response) {
                     client.user = response.user;
-                    onstatechange(WsgState.AUTHENTICATED, response);
+                    onstatechange(WgsState.AUTHENTICATED, response);
                 }, 
                 function(response) {
                     var errorCode = response.errorURI;
-                    onstatechange(WsgState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 });
         } else {
             onstatechange(state, msg);
@@ -162,20 +162,20 @@ WsgClient.prototype = {
   register: function(user, password, email, onstatechange) {
       var client = this;
       client._connect(function(state, msg) {
-        if(state == WsgState.WELCOMED) {
+        if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.user = user;
             msg.password = password;  // hash_sha1(password)
             msg.email = email;
-            client.prefix("wsg", "https://github.com/jmarine/wampservices/wsgservice#");
-            client.call("wsg:register", msg).then(
+            client.prefix("wgs", "https://github.com/jmarine/wampservices/wgs#");
+            client.call("wgs:register", msg).then(
                 function(response) {
                     client.user = response.user;
-                    onstatechange(WsgState.AUTHENTICATED, response);
+                    onstatechange(WgsState.AUTHENTICATED, response);
                 }, 
                 function(response) {
                     var errorCode = response.errorURI;
-                    onstatechange(WsgState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 });
         } else {
             onstatechange(state, msg);
@@ -196,27 +196,27 @@ WsgClient.prototype = {
         ws = new MozWebSocket(this.url);
       } else {
         this.debug("This Browser does not support WebSockets");
-        onstatechange(WsgState.ERROR, "error:ws");
+        onstatechange(WgsState.ERROR, "error:ws");
         return;
       }
 
       ws.onopen = function(e) {
         client.debug("A connection to "+this.url+" has been opened.");
         client.ws = ws;
-        onstatechange(WsgState.CONNECTED);
+        onstatechange(WgsState.CONNECTED);
         //$("#server_url").attr("disabled",true);
         //$("#toggle_connect").html("Disconnect");
       };
    
       ws.onclose = function(e) {
         client.debug("The connection to "+this.url+" was closed.");
-        onstatechange(WsgState.DISCONNECTED);    
+        onstatechange(WgsState.DISCONNECTED);    
         client.close();
       };
 
       ws.onerror = function(e) {
         client.debug("WebSocket error: " + e);
-        onstatechange(WsgState.ERROR, "error:ws");
+        onstatechange(WgsState.ERROR, "error:ws");
         client.close();
       };
 
@@ -226,7 +226,7 @@ WsgClient.prototype = {
 
         if (arr[0] == 0) {  // WELCOME
             client.sid = arr[1];
-            onstatechange(WsgState.WELCOMED, arr);
+            onstatechange(WgsState.WELCOMED, arr);
         } else if (arr[0] == 3) {  // CALLRESULT
             var call = arr[1];
             if(client.calls[call]) {       
@@ -273,7 +273,7 @@ WsgClient.prototype = {
       var msg = Object();
       if(filterByDomain) msg.domain = document.domain.toString();
 
-      this.call("wsg:list_apps", msg).then(function(response) {
+      this.call("wgs:list_apps", msg).then(function(response) {
           callback(response);
         }, function(response) {
           callback(response);
@@ -281,7 +281,7 @@ WsgClient.prototype = {
   },
   
   listGroups: function(appId, callback) {
-      this.call("wsg:list_groups", appId).then(callback, callback);
+      this.call("wgs:list_groups", appId).then(callback, callback);
   },
 
   newApp: function(name, domain, version, min, max, delta, observable, dynamic, alliances, ai_available, roles, callback) {
@@ -298,14 +298,14 @@ WsgClient.prototype = {
       msg.ai_available = ai_available;
       msg.roles = roles;
       
-      this.call("wsg:new_app", msg).then(callback, callback);
+      this.call("wgs:new_app", msg).then(callback, callback);
   },
 
   deleteApp: function(appId, callback) {
       var msg = Object();
       msg.app = appId;
           
-      this.call("wsg:delete_app", msg).then(callback, callback);
+      this.call("wgs:delete_app", msg).then(callback, callback);
   },  
   
   openGroup: function(appId, gid, options, callback) {
@@ -315,7 +315,7 @@ WsgClient.prototype = {
       args[1] = gid? gid : null;
       args[2] = options;
 
-      this.call("wsg:open_group", args).then(function(response) {
+      this.call("wgs:open_group", args).then(function(response) {
           var _update_group_users = function(msg, topicURI) {
                 if(msg.connections) {
                     client.groups[msg.gid] = new Object();
@@ -340,15 +340,15 @@ WsgClient.prototype = {
                     }
                 }
             };
-          client.subscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + response.gid, _update_group_users, true);
+          client.subscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + response.gid, _update_group_users, true);
           _update_group_users(response);
           callback(response);
       }, callback);
   },
   
   exitGroup: function(gid, callback) {
-      this.call("wsg:exit_group", gid).then(callback, callback);
-      this.unsubscribe("https://github.com/jmarine/wampservices/wsgservice#group_event:" + gid, this._update_group_users, true);
+      this.call("wgs:exit_group", gid).then(callback, callback);
+      this.unsubscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + gid, this._update_group_users, true);
       delete this.groups[gid];
   },
 
@@ -369,7 +369,7 @@ WsgClient.prototype = {
       if(state) msg.state = state;
       if(data) msg.data  = data;
      
-      this.call("wsg:update_group", msg).then(callback, callback);
+      this.call("wgs:update_group", msg).then(callback, callback);
   },
 
   updateMember: function(appId, gid, state, slot, sid, usertype, user, role, team, callback) {
@@ -385,7 +385,7 @@ WsgClient.prototype = {
         msg.team = team;
         msg.type = usertype;
       }
-      this.call("wsg:update_member", msg).then(callback, callback);
+      this.call("wgs:update_member", msg).then(callback, callback);
   },
   
   sendGroupMessage: function(gid, data, callback) {
@@ -393,7 +393,7 @@ WsgClient.prototype = {
       args[0] = gid;
       args[1] = data;
       
-      this.call("wsg:send_group_message", args).then(callback, callback);
+      this.call("wgs:send_group_message", args).then(callback, callback);
   },
 
   sendTeamMessage: function(gid, data, callback) {
@@ -401,7 +401,7 @@ WsgClient.prototype = {
       args[0] = gid;
       args[1] = data;
       
-      this.call("wsg:send_team_message", args).then(callback, callback);
+      this.call("wgs:send_team_message", args).then(callback, callback);
   }
   
 }

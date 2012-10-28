@@ -24,7 +24,7 @@ public class WampServlet extends HttpServlet
 {
     private static final Logger logger = Logger.getLogger(WampServlet.class.toString());
     
-    private String contextPath = "/wsgservice";
+    private String contextPath = "/wgs";
     private WampApplication wampApplication = null;
 
     @Override
@@ -67,7 +67,7 @@ public class WampServlet extends HttpServlet
             }            
             
             WebSocketEngine.getEngine().register(wampApplication);
-            logger.log(Level.CONFIG, "WsgServlet: uri={0}", new Object[]{contextPath});
+            logger.log(Level.CONFIG, "WgsServlet: uri={0}", new Object[]{contextPath});
         } catch(Exception ex) {
             throw new ServletException("WampServlet error", ex);
         }
