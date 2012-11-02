@@ -429,15 +429,15 @@ public class Module extends WampModule
         return event;
     }
 
-    private ObjectNode updateGroupInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
+    private void updateGroupInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode event = g.toJSON();
-        event.put("cmd", cmd);
         if(!g.isHidden()) {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode event = g.toJSON();
+            event.put("cmd", cmd);
+            event.put("members", getMembers(g.getGid(),0));
             socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+g.getApplication().getAppId())), event, excludeMe);
         }
-        return event;
     }
     
     private ObjectNode listGroups(String appId) throws Exception
@@ -821,20 +821,22 @@ public class Module extends WampModule
     @WampRPC(name="list_members")
     public ArrayNode getMembers(String gid, int team) throws Exception 
     {
-        Group g = groups.get(gid);
         ObjectMapper mapper = new ObjectMapper();
         ArrayNode membersArray = mapper.createArrayNode();
-             
-        for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
-            Member member = g.getMember(slot);
-            if( (member != null) && (team==0 || team==member.getTeam()) ) {
-                boolean connected = (member.getClient() != null);
 
-                ObjectNode obj = member.toJSON();
-                obj.put("slot", slot);
-                obj.put("connected", connected);
-                
-                membersArray.add(obj);
+        Group g = groups.get(gid);
+        if(g != null) {
+            for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
+                Member member = g.getMember(slot);
+                if( (member != null) && (team==0 || team==member.getTeam()) ) {
+                    boolean connected = (member.getClient() != null);
+
+                    ObjectNode obj = member.toJSON();
+                    obj.put("slot", slot);
+                    obj.put("connected", connected);
+
+                    membersArray.add(obj);
+                }
             }
         }
         return membersArray;        
