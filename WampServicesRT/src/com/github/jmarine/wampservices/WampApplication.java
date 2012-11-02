@@ -145,7 +145,8 @@ public class WampApplication extends WebSocketApplication
                     processCallMessage(clientSocket, request);
                     break;
                 case 5:
-                    WampSubscriptionOptions options = new WampSubscriptionOptions();
+                    JsonNode jsonOptionsNode = (request.size() > 2) ? request.get(2) : null;
+                    WampSubscriptionOptions options = new WampSubscriptionOptions(jsonOptionsNode);
                     String subscriptionTopicName = request.get(1).asText();
 		    subscribeClientWithTopic(clientSocket, subscriptionTopicName, options);
                     break;

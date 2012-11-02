@@ -581,7 +581,7 @@ public class Module extends WampModule
                 topicOptions.setPublisherIdRevelationEnabled(true);
                 topic = wampApp.createTopic(topicName, topicOptions);
             }
-            WampSubscriptionOptions subscriptionOptions = new WampSubscriptionOptions();
+            WampSubscriptionOptions subscriptionOptions = new WampSubscriptionOptions(null);
             subscriptionOptions.setPublisherIdRequested(true);
             wampApp.subscribeClientWithTopic(client.getSocket(), topicName, subscriptionOptions);
             
