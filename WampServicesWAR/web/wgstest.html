@@ -423,7 +423,7 @@ function show_group(group) {
 
 function add_group_member(added) {
     var members = $("#group_params table[id='members'] tbody tr");
-    append_group_member(added, members.size(), {}, false, currentAppAI);
+    append_group_member(added, members.size(), {}, false, false, currentAppAI);
 }
 
 function update_member(field, as_previous_client) 
@@ -469,12 +469,12 @@ function toggle_client_state()
 
 
 function populate_group_member_fields(added, memberId, member, currentUserSelected, roleFixed, ai) {
-    var memberState = member.state;
-    var memberUser = member.user;
-    var memberName = member.name;
-    var memberSid = member.sid;
-    var memberType = member.type;
-    var memberRole = member.role;
+    var memberState = member.state ? member.state : "empty";
+    var memberUser  = member.user  ? member.user  : "";
+    var memberName  = member.name  ? member.name  : "";
+    var memberSid   = member.sid   ? member.sid   : "";
+    var memberType  = member.type  ? member.type  : "user";
+    var memberRole  = member.role  ? member.role  : "";
     var members = "";
     var roles = "";
     if(added || memberUser == "" || memberSid == wgsclient.sid || (wgsclient.user == $("#group_admin").val()) ) {
@@ -518,11 +518,6 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
 }
 
 function append_group_member(added, memberId, member, currentUserSelected, roleFixed, ai) {
-    var memberState = member.state ? member.state : "empty";
-    var memberUser  = member.user  ? member.user  : "";
-    var memberName  = member.name  ? member.name  : "";
-    var memberSid   = member.sid   ? member.sid   : "";
-    var memberType  = member.type  ? member.type  : "user";
     var memberRole  = member.role  ? member.role  : "";
     var tbody = $("#group_params table[id='members'] tbody");
     
