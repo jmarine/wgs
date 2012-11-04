@@ -6,11 +6,6 @@
 
 package com.github.jmarine.wampservices;
 
-import com.sun.grizzly.config.GrizzlyConfig;
-import com.sun.grizzly.tcp.Request;
-import com.sun.grizzly.tcp.Response;
-import com.sun.grizzly.tcp.StaticResourcesAdapter;
-import com.sun.grizzly.websockets.WebSocketEngine;
 import java.io.FileReader;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -18,6 +13,12 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import javax.naming.Context;
 import javax.naming.InitialContext;
+
+import org.glassfish.tyrus.server.DefaultServerConfiguration;
+import org.glassfish.tyrus.server.DefaultServerEndpointConfiguration;
+import org.glassfish.tyrus.server.TyrusServerContainer;
+import org.glassfish.tyrus.spi.TyrusContainer;
+import org.glassfish.tyrus.spi.TyrusServer;
 import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
 
 
@@ -35,7 +36,6 @@ public class WampServer {
         String configFileName = "wampservices.properties";
         if(args.length > 0) configFileName = args[0];
         
-        GrizzlyConfig grizzlyConfig = null;
 
         FileReader configReader = null;
         Properties wampConfig = new Properties();
@@ -49,10 +49,15 @@ public class WampServer {
             }            
         }
         
+        TyrusServerContainer server = null;        
         try {
-            DocRootAdapter.setDocRoot(wampConfig.getProperty("docroot"));
-            grizzlyConfig = new GrizzlyConfig("grizzly-config.xml");
-            grizzlyConfig.setupNetwork();            
+            String htdocs = wampConfig.getProperty("docroot");
+            
+            TyrusContainer tyrusContainer = new org.glassfish.tyrus.grizzly.GrizzlyEngine();
+            TyrusServer tyrusServer = tyrusContainer.createServer(htdocs, 8080);
+
+
+            DefaultServerConfiguration serverConfig = new DefaultServerConfiguration();
             
             
             String databases = wampConfig.getProperty("databases");
@@ -80,7 +85,9 @@ public class WampServer {
                     if((enableWildcards != null) && (enableWildcards.toUpperCase().equals("TRUE"))) topicWildcardsEnabled = true;
                     
                     System.out.println("Creating WAMP context URI: " + uri);
-                    WampApplication wampApplication = new WampApplication(wampConfig, uri, topicWildcardsEnabled);
+                    WampApplication wampApplication = new WampApplication();
+                    DefaultServerEndpointConfiguration endpointConfig = new DefaultServerEndpointConfiguration.Builder(uri).build();
+                    serverConfig = serverConfig.endpoint(wampApplication, endpointConfig);
 
                     String topics = wampConfig.getProperty("context." + context + ".topics");
                     if(topics != null) {
@@ -103,29 +110,27 @@ public class WampServer {
                     }
 
                     // register the application
-                    WebSocketEngine.getEngine().register(wampApplication);
                 }
             }
-        
-            //server.start();
+            
+            server = new TyrusServerContainer(tyrusServer, "", serverConfig);
+            server.start();
+            
             System.out.println("Press any key to stop the server...");
             //noinspection ResultOfMethodCallIgnored
             System.in.read();
             
         } finally {
-            // stop the grizzly service
-            if(grizzlyConfig != null) {
+
+            if(server != null) {
                 try { 
-                    grizzlyConfig.shutdownNetwork(); 
-                    System.out.println("Grizzly shut down normally");
-                }
-                catch(Exception ex) { 
-                    System.out.println("Grizzly shut down with errors: " + ex.getMessage());
+                    server.stop();
+                } catch (Exception ex) {
+                    System.err.println("WebSocket ServerContainer shutdown error: " + ex.getMessage());
                     ex.printStackTrace();
                 }
-                
             }
-
+            
             // stop embedded derby database
             if(ctx.list("jdbc").hasMore()) {
                 try { 
@@ -142,27 +147,5 @@ public class WampServer {
             
         }
     }
-    
-    
-    protected static class DocRootAdapter extends StaticResourcesAdapter 
-    {
-        private static String docRoot = ".";
-
-        protected static void setDocRoot(String docRoot) {
-            DocRootAdapter.docRoot = docRoot;
-        }
-
-        public DocRootAdapter()
-        {
-            super(docRoot);
-            
-            // SSL fix for Grizzly 1.9 (it is not required for Grizzly 2.x):
-            if(System.getProperty("os.name").equalsIgnoreCase("linux")) {
-                this.setUseSendFile(false);  
-            }
-        }
-
-    }
-    
     
 }

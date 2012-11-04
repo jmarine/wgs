@@ -6,8 +6,7 @@
 
 package com.github.jmarine.wampservices;
 
-import com.sun.grizzly.tcp.Request;
-import com.sun.grizzly.websockets.*;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -16,15 +15,19 @@ import java.util.NavigableMap;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.net.websocket.CloseReason;
+import javax.net.websocket.Endpoint;
+import javax.net.websocket.MessageHandler;
+import javax.net.websocket.Session;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 
 
-
-public class WampApplication extends WebSocketApplication 
+public class WampApplication extends Endpoint 
 {
     private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
 
@@ -35,18 +38,17 @@ public class WampApplication extends WebSocketApplication
     private TreeMap<String,WampTopic> topics;
     private TreeMap<String,WampTopicPattern> topicPatterns;
     private WampModule defaultModule;
-    private boolean topicWildcardsEnabled;
     private Properties wampConfig;
+    private ConcurrentHashMap<Session,WampSocket> sockets;
+    
 
     
-    public WampApplication(Properties wampConfig, String contextPath, boolean topicWildcardsEnabled) 
+    public WampApplication() 
     {
-        this.wampConfig = wampConfig;
-        this.contextPath = contextPath;
+        this.sockets = new ConcurrentHashMap<Session,WampSocket>();
         this.modules = new HashMap<String,WampModule>();
         this.topics = new TreeMap<String,WampTopic>();
         this.topicPatterns = new TreeMap<String,WampTopicPattern>();
-        this.topicWildcardsEnabled = topicWildcardsEnabled;
         
         this.defaultModule = new WampModule(this) {
             @Override
@@ -56,29 +58,11 @@ public class WampApplication extends WebSocketApplication
         };
     }
     
-    public Properties getWampConfig()
-    {
-        return this.wampConfig;
-    }
 
-    /**
-     * Creates a customized {@link WebSocket} implementation.
-     * 
-     * @return customized {@link WebSocket} implementation - {@link WampClient}
-     */
-    @Override
-    public WebSocket createWebSocket(ProtocolHandler handler,
-                                  //HttpRequestPacket request,
-                                  WebSocketListener... listeners) 
-    {
-        WampSocket socket = new WampSocket(this, handler, listeners);
-        return socket;
-    }
 
-    @Override
-    public boolean isApplicationRequest(Request request) 
+    private WampSocket getWampSocket(Session session)
     {
-        return contextPath.equals(request.requestURI().toString());
+        return sockets.get(session);
     }
 
     
@@ -94,17 +78,13 @@ public class WampApplication extends WebSocketApplication
     }
     
 
-    /**
-     * Invoked when the opening handshake has been completed for a specific
-     * {@link WebSocket} instance.
-     * 
-     * @param socket the newly connected {@link WebSocket}
-     */
     @Override
-    public void onConnect(WebSocket websocket)
-    {
-        super.onConnect(websocket);
-        WampSocket clientSocket = (WampSocket)websocket;
+    public void onOpen(final Session session) {
+        System.out.println("##################### Session opened");
+        
+        final WampSocket clientSocket = new WampSocket(this, session);
+        sockets.put(session, clientSocket);
+        
         for(WampModule module : modules.values()) {
             try { 
                 module.onConnect(clientSocket); 
@@ -112,78 +92,97 @@ public class WampApplication extends WebSocketApplication
                 logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
             }
         }        
-        clientSocket.sendSafe("[0,\"" + clientSocket.getSessionId() + "\", 1, \"" + getServerId() +"\" ]"); 
+
+
+        session.addMessageHandler(new MessageHandler.Text() {
+
+            @Override
+            public void onMessage(String message) {
+
+                try {
+                    logger.log(Level.FINE, "onMessage: {0}", new Object[]{message});
+                    ObjectMapper mapper = new ObjectMapper();
+                    ArrayNode request = (ArrayNode)mapper.readTree(message);                    
+                    WampApplication.this.onWampMessage(clientSocket, request);
+                } catch(Exception ex) { 
+                    System.out.println("Error processing message: " + ex);
+                }
+            }
+            
+            
+        });
+
+        
+        // Send WELCOME message to client:
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode response = mapper.createArrayNode();
+        response.add(0);  // WELCOME message code
+        response.add(clientSocket.getSessionId());
+        response.add(1);  // WAMP version
+        response.add(getServerId());
+        clientSocket.sendWampResponse(response);
+        
     }
 
 
-    /**
-     * Method is called, when {@link WampSocket} receives a {@link Frame}.
-     * @param websocket {@link WampSocket}
-     * @param data {@link Frame}
-     *
-     * @throws IOException
-     */
-    @Override
-    public void onMessage(WebSocket websocket, String data) 
+    public void onWampMessage(WampSocket clientSocket, ArrayNode request) throws Exception
     {
-        try {
-            logger.log(Level.FINE, "onMessage.data = {0}", new Object[]{data});
 
-	    WampSocket  clientSocket = (WampSocket)websocket;
-            ObjectMapper mapper = new ObjectMapper();
-            ArrayNode    request = (ArrayNode)mapper.readTree(data);
+        logger.log(Level.FINE, "onWampMessage.data = {0}", new Object[]{request});
 
-            int requestType = request.get(0).asInt();
-            logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
-
-	    try {
-              switch(requestType) {
-                case 1:
-                    processPrefixMessage(clientSocket, request);
-                    break;
-                case 2:
-                    processCallMessage(clientSocket, request);
-                    break;
-                case 5:
-                    JsonNode jsonOptionsNode = (request.size() > 2) ? request.get(2) : null;
-                    WampSubscriptionOptions options = new WampSubscriptionOptions(jsonOptionsNode);
-                    String subscriptionTopicName = request.get(1).asText();
-		    subscribeClientWithTopic(clientSocket, subscriptionTopicName, options);
-                    break;
-		case 6:
-                    String unsubscriptionTopicName = request.get(1).asText();
-		    unsubscribeClientFromTopic(clientSocket, unsubscriptionTopicName);
-                    break;
-                case 7:
-                    processPublishMessage(clientSocket, request);
-                    break;                
-                default:
-                    logger.log(Level.SEVERE, "Request type not implemented: {0}", new Object[]{requestType});
-              }
-
-            } catch(Exception ex) {
-                logger.log(Level.SEVERE, "Error processing request", ex);
-            }
+        int requestType = request.get(0).asInt();
+        logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
 
 
-
-        } catch(Exception ex) {
-           logger.log(Level.SEVERE, "Invalid WAMP request", ex);
+        switch(requestType) {
+            case 1:
+                processPrefixMessage(clientSocket, request);
+                break;
+            case 2:
+                processCallMessage(clientSocket, request);
+                break;
+            case 5:
+                JsonNode jsonOptionsNode = (request.size() > 2) ? request.get(2) : null;
+                WampSubscriptionOptions options = new WampSubscriptionOptions(jsonOptionsNode);
+                String subscriptionTopicName = request.get(1).asText();
+                subscribeClientWithTopic(clientSocket, subscriptionTopicName, options);
+                break;
+            case 6:
+                String unsubscriptionTopicName = request.get(1).asText();
+                unsubscribeClientFromTopic(clientSocket, unsubscriptionTopicName);
+                break;
+            case 7:
+                processPublishMessage(clientSocket, request);
+                break;                
+            default:
+                logger.log(Level.SEVERE, "Request type not implemented: {0}", new Object[]{requestType});
         }
-        
+
+
     }
     
 
-    /**
-     * {@inheritDoc}
-     */
+    
+
+    
     @Override
-    public void onClose(WebSocket websocket, DataFrame frame) 
+    public void onError(Throwable thr, Session session) 
     {
-        super.onClose(websocket, frame);        
-        websocket.setClosed();
+         super.onError(thr, session);        
+         System.out.println("##################### Session error");
+         onClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
+    }    
+
+
+    @Override
+    public void onClose(Session session, CloseReason reason) 
+    {
+        super.onClose(session, reason);
+    
+        try { session.close(reason); }
+        catch(Exception ex) { }
         
-        WampSocket clientSocket = (WampSocket)websocket;
+        WampSocket clientSocket = sockets.remove(session);
         for(WampModule module : modules.values()) {
             try { 
                 module.onDisconnect(clientSocket); 
@@ -342,7 +341,7 @@ public class WampApplication extends WebSocketApplication
     public boolean isTopicUriWithWildcards(String topicUrlPattern) 
     {
         int wildcardPos = topicUrlPattern.indexOf("*");
-        return (topicWildcardsEnabled) && (wildcardPos != -1);
+        return (wildcardPos != -1);
     }
 
     

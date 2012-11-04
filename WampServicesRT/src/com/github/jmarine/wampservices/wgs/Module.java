@@ -68,7 +68,7 @@ public class Module extends WampModule
             ex.printStackTrace();
         }
     }
-    
+
     
     public synchronized EntityManager getEntityManager()
     {
@@ -241,7 +241,8 @@ public class Module extends WampModule
             String code = data.get("code").asText();
             String provider = data.has("provider") ? data.get("provider").asText() : "defaultProvider";
             
-            OpenIdConnect oic = OpenIdConnect.getClient(wampApp.getWampConfig(), provider);
+            //OpenIdConnect oic = OpenIdConnect.getClient(wampApp.getWampConfig(), provider);
+            OpenIdConnect oic = OpenIdConnect.getClient(null, provider);  // FIXME
 
             String accessTokenResponse = oic.getAccessTokenResponse(code);
             logger.fine("AccessToken endpoint response: " + accessTokenResponse);

@@ -1,52 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app version="3.0" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd">
-    <servlet>
-        <servlet-name>WgsServlet</servlet-name>
-        <servlet-class>com.github.jmarine.wampservices.WampServlet</servlet-class>
-        <init-param>
-            <param-name>uri</param-name>
-            <param-value>/wgs</param-value>
-        </init-param>
-        <init-param>
-            <param-name>enableTopicWildcards</param-name>
-            <param-value>TRUE</param-value>
-        </init-param>        
-        <init-param>
-            <param-name>topics</param-name>
-            <param-value></param-value>
-        </init-param>        
-        <init-param>
-            <param-name>modules</param-name>
-            <param-value>com.github.jmarine.wampservices.wgs.Module</param-value>
-        </init-param>        
-        
-        <init-param>
-            <param-name>openIdConnect.defaultProvider.userInfoEndpointUrl</param-name>
-            <param-value>http://localhost:3000/user_info</param-value>
-        </init-param>         
-        <init-param>
-            <param-name>openIdConnect.defaultProvider.accessTokenEndpointUrl</param-name>
-            <param-value>http://localhost:3000/access_tokens</param-value>
-        </init-param>                 
-        <init-param>
-            <param-name>openIdConnect.defaultProvider.clientId</param-name>
-            <param-value>baa143594505f996a5467e4ae00af220</param-value>
-        </init-param>                         
-        <init-param>
-            <param-name>openIdConnect.defaultProvider.clientSecret</param-name>
-            <param-value>74d6ea4819831f5eaef5df4a215bc2a506cf8f53c48f810d1c709391b</param-value>
-        </init-param>                                 
-        <init-param>
-            <param-name>openIdConnect.defaultProvider.redirectUri</param-name>
-            <param-value>http://localhost:8080/wgstest.html</param-value>
-        </init-param>                                         
-        
-        <load-on-startup>1</load-on-startup>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>WgsServlet</servlet-name>
-        <url-pattern>/wgs</url-pattern>
-    </servlet-mapping>
     <session-config>
         <session-timeout>
             30

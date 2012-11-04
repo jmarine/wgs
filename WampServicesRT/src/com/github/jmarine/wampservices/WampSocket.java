@@ -1,44 +1,39 @@
 package com.github.jmarine.wampservices;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.sun.grizzly.websockets.DefaultWebSocket;
-import com.sun.grizzly.websockets.ProtocolHandler;
-import com.sun.grizzly.websockets.WebSocketException;
-import com.sun.grizzly.websockets.WebSocketListener;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import javax.net.websocket.CloseReason;
+import javax.net.websocket.Session;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.TextNode;
 
 
-public class WampSocket extends DefaultWebSocket
+public class WampSocket 
 {
-    // TODO: topic subscription management
-    
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
     
     private WampApplication app;
+    private Session session;
     private String sessionId;
     private Map    sessionData;
     private Map<String,String> prefixes;
     private Map<String,WampSubscription> subscriptions;
 
-    public WampSocket(WampApplication app,
-                        ProtocolHandler protocolHandler,
-                         //HttpRequestPacket request,
-                         WebSocketListener... listeners) 
+    public WampSocket(WampApplication app, Session session) 
     {
-        super(protocolHandler, listeners);
         this.app    = app;
+        this.session = session;
+        
         sessionId   = UUID.randomUUID().toString();
         sessionData = new ConcurrentHashMap();
         subscriptions = new ConcurrentHashMap<String,WampSubscription>();        
@@ -101,19 +96,25 @@ public class WampSocket extends DefaultWebSocket
         return curie;
     }    
 
-    /**
-     * Send the message in JSON encoding acceptable by browser's javascript.
-     *
-     * @param user the user name
-     * @param text the text message
-     */
-    protected void sendSafe(String msg) {
+
+    public void sendSafe(String msg) {
         try {
-            if(this.isConnected()) super.send(msg);
+            if(session.isActive()) session.getRemote().sendString(msg);
         } catch(Exception e) {
             logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
-            close(PROTOCOL_ERROR, e.getMessage());
+            app.onError(e, session);
         }
+    }
+
+    
+    public void sendWampResponse(ArrayNode response) {
+        String message = response.toString();
+        sendSafe(message);
+    }
+    
+    
+    protected boolean isActive() {
+        return session.isActive();
     }
     
     
