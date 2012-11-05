@@ -7,7 +7,7 @@
 package com.github.jmarine.wampservices.wgs;
 
 
-import com.github.jmarine.wampservices.util.OpenIdConnect;
+import com.github.jmarine.wampservices.util.OpenIdConnectProvider;
 import com.github.jmarine.wampservices.util.Base64;
 import com.github.jmarine.wampservices.WampApplication;
 import com.github.jmarine.wampservices.WampException;
@@ -235,14 +235,16 @@ public class Module extends WampModule
     public ObjectNode openIdConnect(WampSocket socket, ObjectNode data) throws Exception
     {
         User usr = null;
+        EntityManager manager = null;
         Client client = clients.get(socket.getSessionId());
 
         try {
             String code = data.get("code").asText();
-            String provider = data.has("provider") ? data.get("provider").asText() : "defaultProvider";
+            String providerDomain = data.has("provider") ? data.get("provider").asText() : "defaultProvider";
             
-            //OpenIdConnect oic = OpenIdConnect.getClient(wampApp.getWampConfig(), provider);
-            OpenIdConnect oic = OpenIdConnect.getClient(null, provider);  // FIXME
+            manager = getEntityManager();
+            OpenIdConnectProvider oic = manager.find(OpenIdConnectProvider.class, providerDomain);
+            if(oic == null) throw new WampException(MODULE_URL + "unknown_oic_provider", "Unknown OpenId Connect provider domain");
 
             String accessTokenResponse = oic.getAccessTokenResponse(code);
             logger.fine("AccessToken endpoint response: " + accessTokenResponse);
@@ -263,10 +265,10 @@ public class Module extends WampModule
 
                 ObjectNode   idTokenNode = (ObjectNode)mapper.readTree(idTokenData);          
 
-                EntityManager manager = getEntityManager();
-                UserId userId = new UserId(idTokenNode.get("iss").asText(), idTokenNode.get("user_id").asText());
+
+                String issuer = idTokenNode.get("iss").asText();
+                UserId userId = new UserId(providerDomain, idTokenNode.get("user_id").asText());
                 usr = manager.find(User.class, userId);
-                manager.close();
 
                 Calendar now = Calendar.getInstance();
                 if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
@@ -288,7 +290,6 @@ public class Module extends WampModule
                     usr = new User();
                     usr.setId(userId);
                     usr.setName(userInfoNode.get("name").asText());
-                    usr.setPassword("");
                     usr.setAdministrator(false);
 
                     if(userInfoNode.has("email")) usr.setEmail(userInfoNode.get("email").asText());
@@ -308,7 +309,14 @@ public class Module extends WampModule
             }
             
         } catch(Exception ex) {
+            
             logger.log(Level.SEVERE, "OpenID Connect error: " + ex.getClass().getName() + ":" + ex.getMessage(), ex);
+            
+        } finally {
+            if(manager != null) {
+                try { manager.close(); }
+                catch(Exception ex) { }
+            }
         }
 
         if(usr == null) throw new WampException(MODULE_URL + "oic_error", "OpenID Connect protocol error");

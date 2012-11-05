@@ -12,26 +12,26 @@ public class UserId implements java.io.Serializable
     private String uid;
     
     @Column(name="oic_provider", nullable = false)    
-    private String openIdConnectProviderUrl;    
+    private String openIdConnectProviderDomain;    
     
     public UserId() { }
     
     public UserId(String fqUser) 
     {
-        int pos = fqUser.indexOf("#");
+        int pos = fqUser.indexOf("@");
         if(pos == -1) {
-            this.openIdConnectProviderUrl = "";
             this.uid = fqUser;
+            this.openIdConnectProviderDomain = "";
         } else {
-            this.openIdConnectProviderUrl = fqUser.substring(0, pos);
-            this.uid = fqUser.substring(pos+1);
+            this.uid = fqUser.substring(0, pos);
+            this.openIdConnectProviderDomain = fqUser.substring(pos+1);
         }
     }
     
-    public UserId(String openIdConnectProviderUrl, String uid) 
+    public UserId(String openIdConnectProviderDomain, String uid) 
     {
-        if(openIdConnectProviderUrl == null) openIdConnectProviderUrl = "";
-        this.openIdConnectProviderUrl = openIdConnectProviderUrl;
+        if(openIdConnectProviderDomain == null) openIdConnectProviderDomain = "";
+        this.openIdConnectProviderDomain = openIdConnectProviderDomain;
         this.uid = uid;
     }
     
@@ -51,17 +51,17 @@ public class UserId implements java.io.Serializable
     
     
     /**
-     * @return the openIdConnectProviderUrl
+     * @return the openIdConnectProviderDomain
      */
-    public String getOpenIdConnectProviderUrl() {
-        return openIdConnectProviderUrl;
+    public String getOpenIdConnectProviderDomain() {
+        return openIdConnectProviderDomain;
     }
 
     /**
-     * @param openIdConnectProviderUrl the openIdConnectProviderUrl to set
+     * @param openIdConnectProviderDomain the openIdConnectProviderDomain to set
      */
-    public void setOpenIdConnectProviderUrl(String openIdConnectProviderUrl) {
-        this.openIdConnectProviderUrl = openIdConnectProviderUrl;
+    public void setOpenIdConnectProviderDomain(String openIdConnectProviderDomain) {
+        this.openIdConnectProviderDomain = openIdConnectProviderDomain;
     }
     
 
@@ -69,7 +69,7 @@ public class UserId implements java.io.Serializable
     public boolean equals(Object o) { 
         if( (o != null) && (o instanceof UserId) ) {
             UserId pk = (UserId)o;
-            return uid.equals(pk.getUid()) && openIdConnectProviderUrl.equals(pk.getOpenIdConnectProviderUrl());
+            return uid.equals(pk.getUid()) && openIdConnectProviderDomain.equals(pk.getOpenIdConnectProviderDomain());
         } else {
             return false;
         }
@@ -85,10 +85,10 @@ public class UserId implements java.io.Serializable
     @Override
     public String toString()
     {
-        if(openIdConnectProviderUrl == null || openIdConnectProviderUrl.length() == 0) {
+        if(openIdConnectProviderDomain == null || openIdConnectProviderDomain.length() == 0) {
             return uid;
         } else {
-            return openIdConnectProviderUrl + "#" + uid;
+            return uid + "@" + openIdConnectProviderDomain;
         }
     }
     

@@ -6,6 +6,7 @@
     <class>com.github.jmarine.wampservices.wgs.Application</class>
     <class>com.github.jmarine.wampservices.wgs.User</class>
     <class>com.github.jmarine.wampservices.wgs.Role</class>
+    <class>com.github.jmarine.wampservices.util.OpenIdConnectProvider</class>
     <properties>
       <property name="eclipselink.ddl-generation" value="create-tables"/>
     </properties>

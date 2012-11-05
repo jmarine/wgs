@@ -105,6 +105,7 @@ public class Role implements Serializable
         return obj;
     }
 
+    @Override
     public String toString()
     {
         StringBuilder sb = new StringBuilder();
@@ -115,6 +116,6 @@ public class Role implements Serializable
             else sb.append("?");
         }
         return sb.toString();
-        
     }
+    
 }

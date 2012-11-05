@@ -153,7 +153,7 @@ public class User implements Serializable
         this.picture = picture;
     }    
     
-    
+
     @Override
     public String toString()
     {   

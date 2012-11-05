@@ -3,40 +3,50 @@ package com.github.jmarine.wampservices.util;
 import java.io.*;
 import java.net.*;
 import java.util.Properties;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
 
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
 
-
-public class OpenIdConnect
+@Entity
+@Table(name="OIC_PROVIDER")
+public class OpenIdConnectProvider implements Serializable
 {
-    private String userInfoEndpointUrl = "http://localhost:3000/user_info";
-    private String accessTokenEndpointUrl = "http://localhost:3000/access_tokens";
-    private String clientId = "";
-    private String clientSecret = "";
+    @Id
+    @Column(name="provider_domain")
+    private String domain;
+
+    @Column(name="client_id")
+    private String clientId;
+    
+    @Column(name="client_secret")
+    private String clientSecret;
+
+    @Column(name="redirect_url")
     private String redirectUri = ""; 
     
-    private OpenIdConnect() { }
-            
-
-    public static OpenIdConnect getClient(Properties appConfig, String provider)
-    {
-        OpenIdConnect client = new OpenIdConnect();
-        client.setUserInfoEndpointUrl(getConfig(appConfig, provider, "userInfoEndpointUrl"));
-        client.setAccessTokenEndpointUrl(getConfig(appConfig, provider, "accessTokenEndpointUrl"));
-        client.setClientId(getConfig(appConfig, provider, "clientId"));
-        client.setClientSecret(getConfig(appConfig, provider, "clientSecret"));
-        client.setRedirectUri(getConfig(appConfig, provider, "redirectUri"));
-        return client;
-    }
+    @Column(name="access_token_url")
+    private String accessTokenEndpointUrl;
     
-    private static String getConfig(Properties appConfig, String provider, String key)
-    {
-        return appConfig.getProperty("openIdConnect." + provider + "." + key);
-    }
+    @Column(name="userinfo_url")
+    private String userInfoEndpointUrl;
     
 
+    /**
+     * @return the domain
+     */
+    public String getDomain() {
+        return domain;
+    }
+
+    /**
+     * @param domain the domain to set
+     */
+    public void setDomain(String domain) {
+        this.domain = domain;
+    }
+    
     /**
      * @return the userInfoEndpointUrl
      */
@@ -153,5 +163,6 @@ public class OpenIdConnect
         
         return retval.toString();
     }    
+
     
 }
