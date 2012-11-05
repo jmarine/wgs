@@ -719,10 +719,8 @@ function my_openid_connect(login) {
         var redirectUri = clear_openid_connect_params(true);
         var url = $("#server_url").val();
         var user = $("#user").val();
-        var provider = "defaultProvider";
-        if(user.indexOf("@")!=-1) provider = url.substring(user.indexOf("@")+1);
         wgsclient = new WgsClient(url);
-        wgsclient.openIdConnectLoginUrl(provider, redirectUri, authentication);
+        wgsclient.openIdConnectLoginUrl(user, redirectUri, authentication);
     } else {
         var redirectUri = clear_openid_connect_params(false);
         var code = get_url_param("code");

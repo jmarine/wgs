@@ -18,6 +18,7 @@ import com.github.jmarine.wampservices.WampSubscriptionOptions;
 import com.github.jmarine.wampservices.WampTopic;
 import com.github.jmarine.wampservices.WampTopicOptions;
 import com.github.jmarine.wampservices.util.OpenIdConnectProviderId;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -235,8 +236,24 @@ public class Module extends WampModule
     @WampRPC(name="openid_connect_login_url")
     public String openIdConnectLoginUrl(WampSocket socket, ObjectNode data) throws Exception
     {
-        String url = null;
-        String providerDomain = data.get("provider").asText();
+        String retval = null;
+        String providerDomain = null;
+        String principal = data.get("principal").asText();
+        
+        if(principal == null || principal.length() == 0) {
+            providerDomain = "defaultProvider";            
+        } else {
+            try { 
+                String normalizedIdentityURL = principal;
+                if(normalizedIdentityURL.indexOf("://") == -1) normalizedIdentityURL = "https://" + principal;
+                URL url = new URL(normalizedIdentityURL); 
+                providerDomain = url.getHost();
+            } finally {
+                if(providerDomain == null) throw new WampException(MODULE_URL + "oic_error", "Unsupported OpenID Connect principal format");
+            }
+        }
+        
+        
         String redirectUri = data.get("redirect_uri").asText();
         redirectUri = redirectUri + ((redirectUri.indexOf("?") == -1)?"?":"&") + "provider=" + URLEncoder.encode(providerDomain,"utf8");
         
@@ -246,14 +263,31 @@ public class Module extends WampModule
             manager = getEntityManager();
             OpenIdConnectProviderId oicId = new OpenIdConnectProviderId(providerDomain, redirectUri);
             OpenIdConnectProvider oic = manager.find(OpenIdConnectProvider.class, oicId);
-            if(oic == null) {
-                // TODO: dynamically register new OpenId Connect client in provider
+            if(oic == null && !providerDomain.equals("defaultProvider")) {
+                // TODO: update client_id & client_secret when oicClient expires
+                ObjectNode oicConfig = OpenIdConnectProvider.discover(principal);
+                String registrationEndpointUrl = oicConfig.get("registration_endpoint").asText();
+                
+                ObjectNode oicClient = OpenIdConnectProvider.registerClient(registrationEndpointUrl,redirectUri,"wsg");
+                Calendar clientExpiration = Calendar.getInstance();
+                clientExpiration.setTimeInMillis(oicClient.get("expires_at").asLong()*1000);
+            
+                oic = new OpenIdConnectProvider();
+                oic.setId(oicId);
+                oic.setAuthEndpointUrl(oicConfig.get("authorization_endpoint").asText());
+                oic.setAccessTokenEndpointUrl(oicConfig.get("token_endpoint").asText());
+                oic.setUserInfoEndpointUrl(oicConfig.get("userinfo_endpoint").asText());
+                oic.setClientId(oicClient.get("client_id").asText());
+                oic.setClientSecret(oicClient.get("client_secret").asText());
+                oic.setClientExpiration(clientExpiration);
+                
+                oic = saveEntity(oic);
             }
             
             if(oic != null) {
                 String oicAuthEndpointUrl = oic.getAuthEndpointUrl();
                 String clientId = oic.getClientId();
-                url = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + URLEncoder.encode(clientId,"utf8") + "&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8");
+                retval = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + URLEncoder.encode(clientId,"utf8") + "&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8");
             }
         
         } finally {
@@ -263,8 +297,8 @@ public class Module extends WampModule
             }            
         }
         
-        if(url == null) throw new WampException(MODULE_URL + "oic_error", "OpenID Connect provider error");        
-        return url;
+        if(retval == null) throw new WampException(MODULE_URL + "oic_error", "OpenID Connect provider error");        
+        return retval;
     }
     
     @WampRPC(name="openid_connect_auth")

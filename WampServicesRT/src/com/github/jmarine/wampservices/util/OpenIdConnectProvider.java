@@ -6,6 +6,10 @@ import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.Table;
+import javax.persistence.TemporalType;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.ObjectNode;
 
 
 @Entity
@@ -21,6 +25,10 @@ public class OpenIdConnectProvider implements Serializable
     @Column(name="client_secret")
     private String clientSecret;
     
+    @javax.persistence.Temporal(TemporalType.TIMESTAMP)
+    @Column(name="client_expiration")
+    private java.util.Calendar clientExpiration;
+    
     @Column(name="auth_endpoint_url")
     private String authEndpointUrl;
 
@@ -29,6 +37,8 @@ public class OpenIdConnectProvider implements Serializable
     
     @Column(name="userinfo_url")
     private String userInfoEndpointUrl;
+    
+    
     
 
     /**
@@ -116,11 +126,26 @@ public class OpenIdConnectProvider implements Serializable
         this.clientSecret = clientSecret;
     }
 
+    
+    /**
+     * @return the clientExpiration
+     */
+    public java.util.Calendar getClientExpiration() {
+        return clientExpiration;
+    }
+
+    /**
+     * @param clientExpiration the clientExpiration to set
+     */
+    public void setClientExpiration(java.util.Calendar clientExpiration) {
+        this.clientExpiration = clientExpiration;
+    }
+    
 
     public String getAccessTokenResponse(String authorization_code) throws Exception
     {
         URL url = new URL(getAccessTokenEndpointUrl());
-        URLConnection connection = url.openConnection();
+        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setDoOutput(true);
 
         OutputStreamWriter out = new OutputStreamWriter(
@@ -137,6 +162,7 @@ public class OpenIdConnectProvider implements Serializable
 	    data.append(decodedString);
         }
         in.close();
+        connection.disconnect();
 
         return data.toString();
     }
@@ -158,10 +184,104 @@ public class OpenIdConnectProvider implements Serializable
             retval.append(decodedString);
         }
         in.close();
+        connection.disconnect();
         
         return retval.toString();
     }    
 
+    public static ObjectNode discover(String principal) throws Exception
+    {
+        ObjectNode retval = null;
+        if(principal.indexOf("#") != -1) principal = principal.substring(0, principal.indexOf("#"));
+        if(principal.indexOf("?") != -1) principal = principal.substring(0, principal.indexOf("?"));
+        
+        String principalUrl = principal;
+        if(principalUrl.indexOf("://") == -1) principalUrl = "https://" + principal;
+        URL url = new URL(principalUrl);
+        
+        String swdRequestUrl = url.getProtocol() + "://" + url.getHost();
+        if(url.getPort() != -1) swdRequestUrl += ":" + url.getPort();
+        swdRequestUrl += "/.well-known/simple-web-discovery";
 
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode swd = null;
+        while(swdRequestUrl != null) {
+            StringBuffer swdResponse = new StringBuffer();
+            String paramSeparator = ((swdRequestUrl.indexOf("?") == -1)? "?":"&");
+            swdRequestUrl += paramSeparator + "principal=" + URLEncoder.encode(principal,"utf8");
+            swdRequestUrl += "&service=" + URLEncoder.encode("http://openid.net/specs/connect/1.0/issuer","utf8");
+            url = new URL(swdRequestUrl);
+        
+            HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+            connection.setDoOutput(false);
 
+            BufferedReader in = new BufferedReader(
+                                        new InputStreamReader(
+                                        connection.getInputStream()));
+            String decodedString;
+            while ((decodedString = in.readLine()) != null) {
+                swdResponse.append(decodedString);
+            }
+            in.close();
+            connection.disconnect();
+
+            swd = (ObjectNode) mapper.readTree(swdResponse.toString());
+            if(swd.has("SWD_service_redirect")) {
+                swdRequestUrl = swd.get("SWD_service_redirect").asText();
+            } else {
+                swdRequestUrl = null;
+            }
+        }
+        
+        if(swd.has("locations")) {
+            StringBuffer oicConfig = new StringBuffer();
+            ArrayNode locations = (ArrayNode)swd.get("locations");
+            url = new URL(locations.get(0).asText() + "/.well-known/openid-configuration");
+            HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+            connection.setDoOutput(false);
+
+            BufferedReader in = new BufferedReader(
+                                        new InputStreamReader(
+                                        connection.getInputStream()));
+            String decodedString;
+            while ((decodedString = in.readLine()) != null) {
+                oicConfig.append(decodedString);
+            }
+            in.close();
+            connection.disconnect();
+            
+            retval = (ObjectNode) mapper.readTree(oicConfig.toString());
+        }
+            
+        return retval;
+    }
+
+    public static ObjectNode registerClient(String registrationEndpointUrl, String redirectUri, String appName) throws Exception
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode retval = null;
+        URL url = new URL(registrationEndpointUrl);
+        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        connection.setDoOutput(true);
+
+        OutputStreamWriter out = new OutputStreamWriter(
+                                         connection.getOutputStream());
+        out.write("type=client_associate&token_endpoint_auth_type=client_secret_post&application_name=" + URLEncoder.encode(appName,"utf8") + "&redirect_uris=" + URLEncoder.encode(redirectUri,"utf8"));
+        out.close();
+
+        BufferedReader in = new BufferedReader(
+                                    new InputStreamReader(
+                                    connection.getInputStream()));
+        String decodedString;
+        StringBuffer data = new StringBuffer();
+        while ((decodedString = in.readLine()) != null) {
+	    data.append(decodedString);
+        }
+        in.close();
+        connection.disconnect();
+
+        retval = (ObjectNode) mapper.readTree(data.toString());
+        return retval;
+    }
+    
 }
