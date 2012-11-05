@@ -36,6 +36,5 @@ public class WgsEndpoint extends WampApplication
     public void wsError(Throwable thr, Session session) {
         super.onError(thr, session);
     }
-    
 
 }

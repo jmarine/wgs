@@ -1,6 +1,5 @@
 package com.github.jmarine.wampservices;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,7 +9,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-import javax.net.websocket.CloseReason;
 import javax.net.websocket.Session;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
