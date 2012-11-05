@@ -264,7 +264,6 @@ public class Module extends WampModule
             OpenIdConnectProviderId oicId = new OpenIdConnectProviderId(providerDomain, redirectUri);
             OpenIdConnectProvider oic = manager.find(OpenIdConnectProvider.class, oicId);
             if(oic == null && !providerDomain.equals("defaultProvider")) {
-                // TODO: update client_id & client_secret when oicClient expires
                 ObjectNode oicConfig = OpenIdConnectProvider.discover(principal);
                 String registrationEndpointUrl = oicConfig.get("registration_endpoint").asText();
                 
@@ -274,6 +273,7 @@ public class Module extends WampModule
             
                 oic = new OpenIdConnectProvider();
                 oic.setId(oicId);
+                oic.setRegistrationEndpointUrl(registrationEndpointUrl);
                 oic.setAuthEndpointUrl(oicConfig.get("authorization_endpoint").asText());
                 oic.setAccessTokenEndpointUrl(oicConfig.get("token_endpoint").asText());
                 oic.setUserInfoEndpointUrl(oicConfig.get("userinfo_endpoint").asText());
@@ -285,10 +285,24 @@ public class Module extends WampModule
             }
             
             if(oic != null) {
+                Calendar now = Calendar.getInstance();
+                if(oic.getClientExpiration() != null && now.after(oic.getClientExpiration())) {
+                    oic.rotateClientCredentials();
+                    oic = saveEntity(oic);
+                }
+                
                 String oicAuthEndpointUrl = oic.getAuthEndpointUrl();
                 String clientId = oic.getClientId();
                 retval = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + URLEncoder.encode(clientId,"utf8") + "&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8");
             }
+            
+            if(retval == null) {
+                throw new Exception("Unknown provider for domain " + providerDomain);
+            }
+            
+        } catch(Exception ex) {
+            
+            throw new WampException(MODULE_URL + "oic_error", "OpenID Connect provider error: " + ex.getMessage());
         
         } finally {
             if(manager != null) {
@@ -297,7 +311,6 @@ public class Module extends WampModule
             }            
         }
         
-        if(retval == null) throw new WampException(MODULE_URL + "oic_error", "OpenID Connect provider error");        
         return retval;
     }
     

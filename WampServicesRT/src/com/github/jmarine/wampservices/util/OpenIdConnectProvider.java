@@ -2,6 +2,7 @@ package com.github.jmarine.wampservices.util;
 
 import java.io.*;
 import java.net.*;
+import java.util.Calendar;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
@@ -38,7 +39,8 @@ public class OpenIdConnectProvider implements Serializable
     @Column(name="userinfo_url")
     private String userInfoEndpointUrl;
     
-    
+    @Column(name="registration_url")
+    private String registrationEndpointUrl;    
     
 
     /**
@@ -98,6 +100,20 @@ public class OpenIdConnectProvider implements Serializable
         this.authEndpointUrl = authEndpointUrl;
     }    
 
+    /**
+     * @return the registrationEndpointUrl
+     */
+    public String getRegistrationEndpointUrl() {
+        return registrationEndpointUrl;
+    }
+
+    /**
+     * @param registrationEndpointUrl the registrationEndpointUrl to set
+     */
+    public void setRegistrationEndpointUrl(String registrationEndpointUrl) {
+        this.registrationEndpointUrl = registrationEndpointUrl;
+    }
+    
     /**
      * @return the clientId
      */
@@ -283,5 +299,39 @@ public class OpenIdConnectProvider implements Serializable
         retval = (ObjectNode) mapper.readTree(data.toString());
         return retval;
     }
+
+    
+    public void rotateClientCredentials() throws Exception
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        URL url = new URL(registrationEndpointUrl);
+        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        connection.setDoOutput(true);
+
+        OutputStreamWriter out = new OutputStreamWriter(
+                                         connection.getOutputStream());
+        out.write("type=rotate_secret&client_id=" + URLEncoder.encode(this.getClientId(),"utf8")+ "&client_secret=" + URLEncoder.encode(this.getClientSecret(),"utf8"));
+        out.close();
+
+        BufferedReader in = new BufferedReader(
+                                    new InputStreamReader(
+                                    connection.getInputStream()));
+        String decodedString;
+        StringBuffer data = new StringBuffer();
+        while ((decodedString = in.readLine()) != null) {
+	    data.append(decodedString);
+        }
+        in.close();
+        connection.disconnect();
+
+        ObjectNode oicClient = (ObjectNode) mapper.readTree(data.toString());
+        Calendar clientExpiration = Calendar.getInstance();
+        clientExpiration.setTimeInMillis(oicClient.get("expires_at").asLong()*1000);
+        
+        setClientId(oicClient.get("client_id").asText());
+        setClientSecret(oicClient.get("client_secret").asText());
+        setClientExpiration(clientExpiration);
+    }
+    
     
 }
