@@ -112,12 +112,13 @@ WgsClient.prototype = {
   }, 
   
   
-  openIdConnect: function(provider, code, onstatechange) {
+  openIdConnect: function(provider, redirectUri, code, onstatechange) {
       var client = this;
       client._connect(function(state, msg) {
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.provider = provider;
+            msg.redirect_uri = redirectUri;
             msg.code = code;
             client.prefix("wgs", "https://github.com/jmarine/wampservices/wgs#");
             client.call("wgs:openid_connect", msg).then(

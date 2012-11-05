@@ -17,6 +17,7 @@ import com.github.jmarine.wampservices.WampSocket;
 import com.github.jmarine.wampservices.WampSubscriptionOptions;
 import com.github.jmarine.wampservices.WampTopic;
 import com.github.jmarine.wampservices.WampTopicOptions;
+import com.github.jmarine.wampservices.util.OpenIdConnectProviderId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
@@ -240,10 +241,12 @@ public class Module extends WampModule
 
         try {
             String code = data.get("code").asText();
-            String providerDomain = data.has("provider") ? data.get("provider").asText() : "defaultProvider";
+            String providerDomain = data.get("provider").asText();
+            String redirectUri = data.get("redirect_uri").asText();
             
             manager = getEntityManager();
-            OpenIdConnectProvider oic = manager.find(OpenIdConnectProvider.class, providerDomain);
+            OpenIdConnectProviderId oicId = new OpenIdConnectProviderId(providerDomain, redirectUri);
+            OpenIdConnectProvider oic = manager.find(OpenIdConnectProvider.class, oicId);
             if(oic == null) throw new WampException(MODULE_URL + "unknown_oic_provider", "Unknown OpenId Connect provider domain");
 
             String accessTokenResponse = oic.getAccessTokenResponse(code);

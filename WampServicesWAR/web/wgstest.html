@@ -714,12 +714,14 @@ function chat_message(message,sender) {
 }
 
 function my_openid_connect(login) {
+    var queryPos = document.location.href.indexOf("?");
+    if(queryPos == -1) queryPos = document.location.href.length;
+    var redirectUri = document.location.href.substring(0,queryPos);
+    
     if(login) {
         var oicAuthEndpointUrl = "http://localhost:3000/authorizations/new";
         var clientId = "baa143594505f996a5467e4ae00af220";
-        var queryPos = document.location.href.indexOf("?");
-        if(queryPos == -1) queryPos = document.location.href.length;
-        document.location.href = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + clientId + "&redirect_uri=" + document.location.href.substring(0,queryPos);
+        document.location.href = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + clientId + "&redirect_uri=" + escape(redirectUri);
     } else {
         var codePos = document.location.href.indexOf("&code=");
         if(codePos == -1) codePos = document.location.href.indexOf("?code=");
@@ -732,7 +734,7 @@ function my_openid_connect(login) {
             var oicProvider = "defaultProvider";
             
             wgsclient = new WgsClient(url);
-            wgsclient.openIdConnect(oicProvider, code, authentication);
+            wgsclient.openIdConnect(oicProvider, redirectUri, code, authentication);
         }
     }
 }

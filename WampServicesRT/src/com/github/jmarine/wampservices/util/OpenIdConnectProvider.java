@@ -2,10 +2,9 @@ package com.github.jmarine.wampservices.util;
 
 import java.io.*;
 import java.net.*;
-import java.util.Properties;
 import javax.persistence.Column;
+import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
-import javax.persistence.Id;
 import javax.persistence.Table;
 
 
@@ -13,9 +12,8 @@ import javax.persistence.Table;
 @Table(name="OIC_PROVIDER")
 public class OpenIdConnectProvider implements Serializable
 {
-    @Id
-    @Column(name="provider_domain")
-    private String domain;
+    @EmbeddedId
+    private OpenIdConnectProviderId id;
 
     @Column(name="client_id")
     private String clientId;
@@ -23,9 +21,6 @@ public class OpenIdConnectProvider implements Serializable
     @Column(name="client_secret")
     private String clientSecret;
 
-    @Column(name="redirect_url")
-    private String redirectUri = ""; 
-    
     @Column(name="access_token_url")
     private String accessTokenEndpointUrl;
     
@@ -34,18 +29,19 @@ public class OpenIdConnectProvider implements Serializable
     
 
     /**
-     * @return the domain
+     * @return the id
      */
-    public String getDomain() {
-        return domain;
+    public OpenIdConnectProviderId getId() {
+        return id;
     }
 
     /**
-     * @param domain the domain to set
+     * @param id the id to set
      */
-    public void setDomain(String domain) {
-        this.domain = domain;
+    public void setId(OpenIdConnectProviderId id) {
+        this.id = id;
     }
+
     
     /**
      * @return the userInfoEndpointUrl
@@ -57,7 +53,7 @@ public class OpenIdConnectProvider implements Serializable
     /**
      * @param userInfoEndpointUrl the userInfoEndpointUrl to set
      */
-    private void setUserInfoEndpointUrl(String userInfoEndpointUrl) {
+    public void setUserInfoEndpointUrl(String userInfoEndpointUrl) {
         this.userInfoEndpointUrl = userInfoEndpointUrl;
     }
 
@@ -71,7 +67,7 @@ public class OpenIdConnectProvider implements Serializable
     /**
      * @param accessTokenEndpointUrl the accessTokenEndpointUrl to set
      */
-    private void setAccessTokenEndpointUrl(String accessTokenEndpointUrl) {
+    public void setAccessTokenEndpointUrl(String accessTokenEndpointUrl) {
         this.accessTokenEndpointUrl = accessTokenEndpointUrl;
     }
 
@@ -85,7 +81,7 @@ public class OpenIdConnectProvider implements Serializable
     /**
      * @param clientId the clientId to set
      */
-    private void setClientId(String clientId) {
+    public void setClientId(String clientId) {
         this.clientId = clientId;
     }
 
@@ -99,23 +95,11 @@ public class OpenIdConnectProvider implements Serializable
     /**
      * @param clientSecret the clientSecret to set
      */
-    private void setClientSecret(String clientSecret) {
+    public void setClientSecret(String clientSecret) {
         this.clientSecret = clientSecret;
     }
 
-    /**
-     * @return the redirectUri
-     */
-    public String getRedirectUri() {
-        return redirectUri;
-    }
 
-    /**
-     * @param redirectUri the redirectUri to set
-     */
-    private void setRedirectUri(String redirectUri) {
-        this.redirectUri = redirectUri;
-    }
     
     
 
@@ -127,7 +111,7 @@ public class OpenIdConnectProvider implements Serializable
 
         OutputStreamWriter out = new OutputStreamWriter(
                                          connection.getOutputStream());
-        out.write("grant_type=authorization_code&code=" + URLEncoder.encode(authorization_code) + "&client_id=" + getClientId() + "&redirect_uri=" + URLEncoder.encode(getRedirectUri()) + "&client_id=" + URLEncoder.encode(getClientId()) + "&client_secret=" + URLEncoder.encode(getClientSecret()));
+        out.write("grant_type=authorization_code&code=" + URLEncoder.encode(authorization_code) + "&client_id=" + getClientId() + "&redirect_uri=" + URLEncoder.encode(getId().getRedirectUri()) + "&client_id=" + URLEncoder.encode(getClientId()) + "&client_secret=" + URLEncoder.encode(getClientSecret()));
         out.close();
 
         BufferedReader in = new BufferedReader(
@@ -164,5 +148,4 @@ public class OpenIdConnectProvider implements Serializable
         return retval.toString();
     }    
 
-    
 }
