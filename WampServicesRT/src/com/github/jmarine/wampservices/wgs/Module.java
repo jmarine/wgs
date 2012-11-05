@@ -18,6 +18,7 @@ import com.github.jmarine.wampservices.WampSubscriptionOptions;
 import com.github.jmarine.wampservices.WampTopic;
 import com.github.jmarine.wampservices.WampTopicOptions;
 import com.github.jmarine.wampservices.util.OpenIdConnectProviderId;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
@@ -230,10 +231,44 @@ public class Module extends WampModule
         
         return usr.toJSON();
     }
+
+    @WampRPC(name="openid_connect_login_url")
+    public String openIdConnectLoginUrl(WampSocket socket, ObjectNode data) throws Exception
+    {
+        String url = null;
+        String providerDomain = data.get("provider").asText();
+        String redirectUri = data.get("redirect_uri").asText();
+        redirectUri = redirectUri + ((redirectUri.indexOf("?") == -1)?"?":"&") + "provider=" + URLEncoder.encode(providerDomain,"utf8");
+        
+        
+        EntityManager manager = null;
+        try {
+            manager = getEntityManager();
+            OpenIdConnectProviderId oicId = new OpenIdConnectProviderId(providerDomain, redirectUri);
+            OpenIdConnectProvider oic = manager.find(OpenIdConnectProvider.class, oicId);
+            if(oic == null) {
+                // TODO: dynamically register new OpenId Connect client in provider
+            }
+            
+            if(oic != null) {
+                String oicAuthEndpointUrl = oic.getAuthEndpointUrl();
+                String clientId = oic.getClientId();
+                url = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + URLEncoder.encode(clientId,"utf8") + "&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8");
+            }
+        
+        } finally {
+            if(manager != null) {
+                try { manager.close(); }
+                catch(Exception ex) { }
+            }            
+        }
+        
+        if(url == null) throw new WampException(MODULE_URL + "oic_error", "OpenID Connect provider error");        
+        return url;
+    }
     
-    
-    @WampRPC(name="openid_connect")
-    public ObjectNode openIdConnect(WampSocket socket, ObjectNode data) throws Exception
+    @WampRPC(name="openid_connect_auth")
+    public ObjectNode openIdConnectAuth(WampSocket socket, ObjectNode data) throws Exception
     {
         User usr = null;
         EntityManager manager = null;

@@ -134,9 +134,7 @@ public class WampSocket
             try { 
                 JsonNode obj = args.get(i); 
                 if(obj instanceof TextNode) {
-                    response.append("\"");
                     response.append(app.encodeJSON(obj.asText()));
-                    response.append("\"");
                 } else {
                     response.append(obj); 
                 }

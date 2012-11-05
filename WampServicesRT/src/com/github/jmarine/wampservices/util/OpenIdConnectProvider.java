@@ -20,6 +20,9 @@ public class OpenIdConnectProvider implements Serializable
     
     @Column(name="client_secret")
     private String clientSecret;
+    
+    @Column(name="auth_endpoint_url")
+    private String authEndpointUrl;
 
     @Column(name="access_token_url")
     private String accessTokenEndpointUrl;
@@ -70,6 +73,20 @@ public class OpenIdConnectProvider implements Serializable
     public void setAccessTokenEndpointUrl(String accessTokenEndpointUrl) {
         this.accessTokenEndpointUrl = accessTokenEndpointUrl;
     }
+    
+    /**
+     * @return the authEndpointUrl
+     */
+    public String getAuthEndpointUrl() {
+        return authEndpointUrl;
+    }
+
+    /**
+     * @param authEndpointUrl the authEndpointUrl to set
+     */
+    public void setAuthEndpointUrl(String authEndpointUrl) {
+        this.authEndpointUrl = authEndpointUrl;
+    }    
 
     /**
      * @return the clientId
@@ -99,9 +116,6 @@ public class OpenIdConnectProvider implements Serializable
         this.clientSecret = clientSecret;
     }
 
-
-    
-    
 
     public String getAccessTokenResponse(String authorization_code) throws Exception
     {
@@ -147,5 +161,7 @@ public class OpenIdConnectProvider implements Serializable
         
         return retval.toString();
     }    
+
+
 
 }

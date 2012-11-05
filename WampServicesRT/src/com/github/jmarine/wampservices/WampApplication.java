@@ -497,15 +497,6 @@ public class WampApplication extends Endpoint
                 case '\\':
                     buffer.append("\\\\");
                     break;
-                case '<':
-                    buffer.append("&lt;");
-                    break;
-                case '>':
-                    buffer.append("&gt;");
-                    break;
-                case '&':
-                    buffer.append("&amp;");
-                    break;
                 default:
                     buffer.append(c);
             }

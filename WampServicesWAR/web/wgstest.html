@@ -714,54 +714,57 @@ function chat_message(message,sender) {
 }
 
 function my_openid_connect(login) {
-    var queryPos = document.location.href.indexOf("?");
-    if(queryPos == -1) queryPos = document.location.href.length;
-    var redirectUri = document.location.href.substring(0,queryPos);
     
     if(login) {
-        var oicAuthEndpointUrl = "http://localhost:3000/authorizations/new";
-        var clientId = "baa143594505f996a5467e4ae00af220";
-        document.location.href = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + clientId + "&redirect_uri=" + escape(redirectUri);
+        var redirectUri = clear_openid_connect_params(true);
+        var url = $("#server_url").val();
+        var user = $("#user").val();
+        var provider = "defaultProvider";
+        if(user.indexOf("@")!=-1) provider = url.substring(user.indexOf("@")+1);
+        wgsclient = new WgsClient(url);
+        wgsclient.openIdConnectLoginUrl(provider, redirectUri, authentication);
     } else {
-        var codePos = document.location.href.indexOf("&code=");
-        if(codePos == -1) codePos = document.location.href.indexOf("?code=");
-        if(codePos != -1) {
-            var code = document.location.href.substring(codePos+6);
-            codePos = code.indexOf("&");
-            if(codePos != -1) code = code.substring(0, codePos);
-            
+        var redirectUri = clear_openid_connect_params(false);
+        var code = get_url_param("code");
+        if(code != null) {
             var url = $("#server_url").val();
-            var oicProvider = "defaultProvider";
+            var provider = get_url_param("provider");
             
             wgsclient = new WgsClient(url);
-            wgsclient.openIdConnect(oicProvider, redirectUri, code, authentication);
+            wgsclient.openIdConnectAuthCode(provider, redirectUri, code, authentication);
         }
     }
 }
 
-function clear_openid_connect_params() {
-    // Clear OpenId Connect's authentication code 
-    var url = document.location.href;
-    var codePos = url.indexOf("&code=");
-    if(codePos == -1) codePos = url.indexOf("?code=");
-    if(codePos != -1) {
-        var codeEnd = url.indexOf("&", codePos+1);
-        var otherParams = (codeEnd != -1)? url.substring(codeEnd+1) : "";
-        var offset = (otherParams.length==0)? 0 : 1;
-        url = url.substring(0, codePos+offset) + otherParams;
-        
-        // Clear OpenId Connect's authentication state
-        var statePos = url.indexOf("&state=")
-        if(statePos == -1) statePos = url.indexOf("?state=");
-        if(statePos != -1) {
-            var stateEnd = url.indexOf("&", statePos+1);
-            otherParams = (stateEnd != -1)? url.substring(stateEnd+1) : "";
-            offset = (otherParams.length==0)? 0 : 1;
-            url = url.substring(0, statePos+offset) + otherParams;
-        }
-        
-        document.location.href = url;
+function get_url_param(param) {
+    var value = null;
+    var pos = document.location.href.indexOf("&"+param+"=");
+    if(pos == -1) pos = document.location.href.indexOf("?"+param+"=");
+    if(pos != -1) {
+        value = document.location.href.substring(pos+param.length+2);
+        pos = value.indexOf("&");
+        if(pos != -1) value = value.substring(0, pos);
     }
+    return value;
+}
+
+function clear_openid_connect_params(clearProvider) {
+    // Clear OpenId Connect's parameters
+    var url = document.location.href;
+    var oicParams = ["code","state","error","error_description"];
+    if(clearProvider) oicParams = ["provider", "code","state","error","error_description"];
+    oicParams.forEach(function(param) {
+        var paramPos = url.indexOf("&"+param+"=");
+        if(paramPos == -1) paramPos = url.indexOf("?"+param+"=");
+        if(paramPos != -1) {    
+            var paramEnd = url.indexOf("&", paramPos+1);
+            var otherParams = (paramEnd != -1)? url.substring(paramEnd+1) : "";
+            var offset = (otherParams.length==0)? 0 : 1;
+            url = url.substring(0, paramPos+offset) + otherParams;
+        }
+    });
+
+    return url;
 }
 
 function disconnect() {
@@ -786,7 +789,7 @@ function disconnect() {
     $("#group_params").slideDown(500);  
     
     enable_network();
-    clear_openid_connect_params();
+    document.location.href = clear_openid_connect_params(true);
     
 }
 

@@ -110,9 +110,33 @@ WgsClient.prototype = {
       arr[2] = event;
       this.send(JSON.stringify(arr));
   }, 
+
+
+  openIdConnectLoginUrl: function(provider, redirectUri, onstatechange) {
+      var client = this;
+      client._connect(function(state, msg) {
+        if(state == WgsState.WELCOMED) {
+            var msg = Object();
+            msg.provider = provider;
+            msg.redirect_uri = redirectUri;
+            client.prefix("wgs", "https://github.com/jmarine/wampservices/wgs#");
+            client.call("wgs:openid_connect_login_url", msg).then(
+                function(response) {
+                    client.close();
+                    document.location.href = response;
+                }, 
+                function(response) {
+                    var errorCode = response.errorURI;
+                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                });
+        } else {
+            onstatechange(state, msg);
+        }
+      });
+  },
+
   
-  
-  openIdConnect: function(provider, redirectUri, code, onstatechange) {
+  openIdConnectAuthCode: function(provider, redirectUri, code, onstatechange) {
       var client = this;
       client._connect(function(state, msg) {
         if(state == WgsState.WELCOMED) {
@@ -121,7 +145,7 @@ WgsClient.prototype = {
             msg.redirect_uri = redirectUri;
             msg.code = code;
             client.prefix("wgs", "https://github.com/jmarine/wampservices/wgs#");
-            client.call("wgs:openid_connect", msg).then(
+            client.call("wgs:openid_connect_auth", msg).then(
                 function(response) {
                     client.user = response.user;
                     onstatechange(WgsState.AUTHENTICATED, response);
