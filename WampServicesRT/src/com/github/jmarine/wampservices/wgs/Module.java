@@ -267,9 +267,7 @@ public class Module extends WampModule
                 ObjectNode oicConfig = OpenIdConnectProvider.discover(principal);
                 String registrationEndpointUrl = oicConfig.get("registration_endpoint").asText();
                 
-                ObjectNode oicClient = OpenIdConnectProvider.registerClient(registrationEndpointUrl,redirectUri,"wsg");
-                Calendar clientExpiration = Calendar.getInstance();
-                clientExpiration.setTimeInMillis(oicClient.get("expires_at").asLong()*1000);
+                ObjectNode oicClient = OpenIdConnectProvider.registerClient(registrationEndpointUrl,redirectUri,"wgs");
             
                 oic = new OpenIdConnectProvider();
                 oic.setId(oicId);
@@ -279,7 +277,14 @@ public class Module extends WampModule
                 oic.setUserInfoEndpointUrl(oicConfig.get("userinfo_endpoint").asText());
                 oic.setClientId(oicClient.get("client_id").asText());
                 oic.setClientSecret(oicClient.get("client_secret").asText());
-                oic.setClientExpiration(clientExpiration);
+                if(oicClient.has("expires_at")) {
+                    long expires_at = oicClient.get("expires_at").asLong();
+                    if(expires_at != 0l) {
+                        Calendar clientExpiration = Calendar.getInstance();
+                        clientExpiration.setTimeInMillis(expires_at*1000);
+                        oic.setClientExpiration(clientExpiration);
+                    }
+                }
                 
                 oic = saveEntity(oic);
             }
@@ -394,7 +399,7 @@ public class Module extends WampModule
             }
             
         } catch(Exception ex) {
-            
+            usr = null;
             logger.log(Level.SEVERE, "OpenID Connect error: " + ex.getClass().getName() + ":" + ex.getMessage(), ex);
             
         } finally {
