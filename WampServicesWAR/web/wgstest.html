@@ -821,7 +821,7 @@ function toggle_connect(create_user) {
       <legend>Login</legend>
     <label for="server_url">Service:</label><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wgs" /><br/>
     <label for="user">Login:</label><input type="text" name="user" id="user" value="guest" /><br/>
-    <label for="password" id="lbl_password">Password:</label><input type="password" name="password" id="password" value="guest" /><br/>
+    <label for="password" id="lbl_password">Password:</label><input type="password" name="password" id="password" value="" /><br/>
     <button id="oic_connect" onclick="my_openid_connect(true);">OpenId Connect</button>
     <button id="toggle_connect" onclick="toggle_connect(false);">Connect</button>
     <button id="register" onclick="toggle_connect(true);">Register</button>
