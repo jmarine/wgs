@@ -146,7 +146,7 @@ public class Module extends WampModule
         if(method.equals("list_groups")) {
             String appId = args.get(0).asText();
             WampSubscriptionOptions options = new WampSubscriptionOptions(null);
-            options.setPresenceEnabled(true);
+            options.setMetaEventsEnabled(true);
             wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId), options);
             retval = listGroups(appId);
         } else {

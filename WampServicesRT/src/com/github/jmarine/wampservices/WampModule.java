@@ -78,7 +78,7 @@ public abstract class WampModule
         topic.addSubscription(subscription);
         clientSocket.addSubscription(subscription);
         if(options != null) {
-            if(options.isPresenceEnabled()) {
+            if(options.isMetaEventsEnabled()) {
                 String metatopic = "http://wamp.ws/sub#joined";
                 if(options.isEventsEnabled()) onMetaEvent(topic, metatopic, subscription.toJSON(), null);
                 
@@ -95,7 +95,7 @@ public abstract class WampModule
     public void   onUnsubscribe(WampSocket clientSocket, WampTopic topic) throws Exception { 
         WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
         WampSubscriptionOptions options = subscription.getOptions();
-        if(options!=null && options.isPresenceEnabled() && options.isEventsEnabled()) {
+        if(options!=null && options.isMetaEventsEnabled() && options.isEventsEnabled()) {
             String metatopic = "http://wamp.ws/sub#left";
             ObjectNode metaevent = subscription.toJSON();
             onMetaEvent(topic, metatopic, metaevent, null);
@@ -150,7 +150,7 @@ public abstract class WampModule
         } else {
             for(String sid : topic.getSessionIds()) {
                 WampSubscription subscriber = topic.getSubscription(sid);
-                if(subscriber.getOptions() != null && subscriber.getOptions().isPresenceEnabled()) {
+                if(subscriber.getOptions() != null && subscriber.getOptions().isMetaEventsEnabled()) {
                     WampSocket remoteSocket = subscriber.getSocket();
                     remoteSocket.sendSafe(msg);
                 }
