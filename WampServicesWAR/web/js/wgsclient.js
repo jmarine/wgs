@@ -73,20 +73,19 @@ WgsClient.prototype = {
   },  
   
   subscribe: function(topic, event_cb, metaevent_cb, options) {
+        if(!options) options = {};
+        options.events = (event_cb != null);
+        options.metaevents = (metaevent_cb != null);
+
         if(!this.topics[topic]) this.topics[topic] = [];
         if(!this.metaeventHandlers[topic]) this.metaeventHandlers[topic] = [];
         
         var unsubscribed = ( (this.topics[topic].length + this.metaeventHandlers[topic].length) == 0);
         if(event_cb) this.topics[topic].push(event_cb);
         if(metaevent_cb) this.metaeventHandlers[topic].push(metaevent_cb);
-        if(options!=null && !options.clientSideOnly && unsubscribed 
+        if(unsubscribed && !options.clientSideOnly
             && (this.topics[topic].length==1 || this.metaeventHandlers[topic].length==1) ) {
             // sends subscription to server when 1st callback subscribed
-
-            if(metaevent_cb && !options.metaevents) {
-                options.metaevents = true;
-            }
-
             var arr = [];
             arr[0] = 5;  // SUBSCRIBE
             arr[1] = topic;
