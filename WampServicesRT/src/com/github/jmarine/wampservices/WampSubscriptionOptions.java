@@ -5,12 +5,14 @@ import org.codehaus.jackson.JsonNode;
 
 public class WampSubscriptionOptions 
 {
-    private boolean eventsEnabled;
-    private boolean metaEventsEnabled;
-    private boolean eventIdRequested;
-    private boolean publisherIdRequested;
-    private int     numberEventsToSendOnSubscription;
-    private long    sinceTimeEventsToSendOnSubscription;
+    private boolean  eventsEnabled;
+    private boolean  presenceEnabled;
+    private boolean  metaEventsEnabled;
+    private boolean  eventIdRequested;
+    private boolean  publisherIdRequested;
+    private int      numberEventsToSendOnSubscription;
+    private long     sinceTimeEventsToSendOnSubscription;
+    private JsonNode status;
 
     public WampSubscriptionOptions(JsonNode node) {
         this.eventsEnabled = true;
@@ -40,6 +42,14 @@ public class WampSubscriptionOptions
             if(node.has("sinceTime")) {
                 setSinceTimeEventsToSendOnSubscription(node.get("sinceTime").asLong(0));
             }            
+            
+            if(node.has("presence")) {
+                setPresenceEnabled(node.get("presence").asBoolean(false));
+            } 
+            
+            if(node.has("status")) {
+                setStatus(node.get("status"));
+            }
               
         }
     }
@@ -91,6 +101,22 @@ public class WampSubscriptionOptions
 
     public void setSinceTimeEventsToSendOnSubscription(long sinceTimeEventsToSendOnSubscription) {
         this.sinceTimeEventsToSendOnSubscription = sinceTimeEventsToSendOnSubscription;
+    }
+
+    public boolean isPresenceEnabled() {
+        return presenceEnabled;
+    }
+
+    public void setPresenceEnabled(boolean presenceEnabled) {
+        this.presenceEnabled = presenceEnabled;
+    }
+
+    public JsonNode getStatus() {
+        return status;
+    }
+
+    public void setStatus(JsonNode status) {
+        this.status = status;
     }
     
 }

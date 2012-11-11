@@ -2,6 +2,7 @@ package com.github.jmarine.wampservices;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -73,13 +74,33 @@ public abstract class WampModule
     }
     
     public void   onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
-        WampSubscription topicSubscription = new WampSubscription(clientSocket, topic.getURI(), options);
-        topic.addSubscription(topicSubscription);
-        clientSocket.addSubscription(topicSubscription);
+        WampSubscription subscription = new WampSubscription(clientSocket, topic.getURI(), options);
+        topic.addSubscription(subscription);
+        clientSocket.addSubscription(subscription);
+        if(options != null) {
+            if(options.isPresenceEnabled()) {
+                String metatopic = "http://wamp.ws/sub#joined";
+                if(options.isEventsEnabled()) onMetaEvent(topic, metatopic, subscription.toJSON(), null);
+                
+                for(String sid : topic.getSessionIds()) {
+                    if(!sid.equals(clientSocket.getSessionId())) {
+                        WampSubscription presence = topic.getSubscription(sid);
+                        onMetaEvent(topic, metatopic, presence.toJSON(), clientSocket);
+                    }
+                }
+            }
+        }         
     }
 
     public void   onUnsubscribe(WampSocket clientSocket, WampTopic topic) throws Exception { 
-        WampSubscription subscription = topic.removeSubscription(clientSocket.getSessionId());
+        WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
+        WampSubscriptionOptions options = subscription.getOptions();
+        if(options!=null && options.isPresenceEnabled() && options.isEventsEnabled()) {
+            String metatopic = "http://wamp.ws/sub#left";
+            ObjectNode metaevent = subscription.toJSON();
+            onMetaEvent(topic, metatopic, metaevent, null);
+        }
+        topic.removeSubscription(subscription.getSocket().getSessionId());
         clientSocket.removeSubscription(subscription.getTopicUriOrPattern());
     }
     
@@ -116,6 +137,26 @@ public abstract class WampModule
         }
         
     }
+
+    
+    public void   onMetaEvent(WampTopic topic, String metatopic, JsonNode metaevent, WampSocket toClient) throws Exception 
+    { 
+        String msg = "[9,\"" + topic.getURI() + "\", \"" + metatopic + "\"";
+        if(metaevent != null) msg += ", " + metaevent.toString();
+        msg += "]";
+        
+        if(toClient != null) {
+            toClient.sendSafe(msg);
+        } else {
+            for(String sid : topic.getSessionIds()) {
+                WampSubscription subscriber = topic.getSubscription(sid);
+                if(subscriber.getOptions() != null && subscriber.getOptions().isPresenceEnabled()) {
+                    WampSocket remoteSocket = subscriber.getSocket();
+                    remoteSocket.sendSafe(msg);
+                }
+            }
+        }
+    }   
     
     public void   onEvent(String publisherId, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
         String msgV1 = null;  // Cache EVENT message for WAMP v1
@@ -123,16 +164,19 @@ public abstract class WampModule
         for (String sid : eligible) {
             if((excluded==null) || (!excluded.contains(sid))) {
                 WampSubscription subscription = topic.getSubscription(sid);
-                WampSocket socket = subscription.getSocket();
-                synchronized(socket) {
-                    if(socket != null && socket.isActive() && !excluded.contains(sid)) {
-                        if( (topic.getOptions().isPublisherIdRevelationEnabled())
-                                && (subscription.getOptions().isPublisherIdRequested())) {
-                            if(msgV2 == null) msgV2 = "[8,\"" + topic.getURI() + "\", " + event.toString() + ",\"" + publisherId +"\"]";
-                            socket.sendSafe(msgV2);
-                        } else {
-                            if(msgV1 == null) msgV1 = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
-                            socket.sendSafe(msgV1);
+                WampSubscriptionOptions options = subscription.getOptions();
+                if(options != null && options.isEventsEnabled()) {
+                    WampSocket socket = subscription.getSocket();
+                    synchronized(socket) {
+                        if(socket != null && socket.isActive() && !excluded.contains(sid)) {
+                            if( (topic.getOptions().isPublisherIdRevelationEnabled())
+                                    && (subscription.getOptions().isPublisherIdRequested())) {
+                                if(msgV2 == null) msgV2 = "[8,\"" + topic.getURI() + "\", " + event.toString() + ",\"" + publisherId +"\"]";
+                                socket.sendSafe(msgV2);
+                            } else {
+                                if(msgV1 == null) msgV1 = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
+                                socket.sendSafe(msgV1);
+                            }
                         }
                     }
                 }

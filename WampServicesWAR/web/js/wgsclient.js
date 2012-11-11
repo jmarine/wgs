@@ -17,6 +17,7 @@ WgsClient.prototype = {
   groups: new Array(),
   calls: new Array(),
   topics: new Array(),
+  metaeventHandlers: new Array(),
   
   debug: function(str) {
     console.log(str);
@@ -71,36 +72,57 @@ WgsClient.prototype = {
       return dfd.promise();
   },  
   
-  subscribe: function(topic, callback, clientSideOnly) {
-        if(!this.topics[topic]) {
-            this.topics[topic] = [];
-        }
-        this.topics[topic].push(callback);
-        if(!clientSideOnly && this.topics[topic].length == 1) {
+  subscribe: function(topic, event_cb, metaevent_cb, options) {
+        if(!this.topics[topic]) this.topics[topic] = [];
+        if(!this.metaeventHandlers[topic]) this.metaeventHandlers[topic] = [];
+        
+        var unsubscribed = ( (this.topics[topic].length + this.metaeventHandlers[topic].length) == 0);
+        if(event_cb) this.topics[topic].push(event_cb);
+        if(metaevent_cb) this.metaeventHandlers[topic].push(metaevent_cb);
+        if(options!=null && !options.clientSideOnly && unsubscribed 
+            && (this.topics[topic].length==1 || this.metaeventHandlers[topic].length==1) ) {
             // sends subscription to server when 1st callback subscribed
+
+            if(metaevent_cb && !options.metaevents) {
+                options.metaevents = true;
+            }
+
             var arr = [];
             arr[0] = 5;  // SUBSCRIBE
             arr[1] = topic;
+            arr[2] = options;
             this.send(JSON.stringify(arr));
         }
   },
   
-  unsubscribe: function(topic, callback, clientSideOnly) {
+  unsubscribe: function(topic, event_cb, metaevent_cb, clientSideOnly) {
+        var subscribed = (this.topics[topic] && this.topics[topic].length > 0) 
+                         || (this.metaeventHandlers[topic] && this.metaeventHandlers[topic].length > 0);      
+        
         var callbacks = this.topics[topic];
-        if(callbacks) {
-            var index = callbacks.indexOf(callback);
+        if(event_cb && callbacks) {
+            var index = callbacks.indexOf(event_cb);
             if(index != -1) callbacks.splice(index,1);
-            if(callbacks.length == 0) {
-                delete this.topics[topic];
-                if(!clientSideOnly) {
-                    // send unsubscription to server (when no callbacks available)
-                    var arr = [];
-                    arr[0] = 6;  // UNSUBSCRIBE
-                    arr[1] = topic;    
-                    this.send(JSON.stringify(arr));
-                }
-            }
+            
         }
+        callbacks = this.metaeventHandlers[topic];
+        if(metaevent_cb && callbacks) {
+            var index = callbacks.indexOf(metaevent_cb);
+            if(index != -1) callbacks.splice(index,1);
+        }   
+        
+        if(subscribed && ((this.topics[topic].length+this.metaeventHandlers[topic].length) == 0)) {
+            delete this.topics[topic];
+            delete this.metaeventHandlers[topic];
+            if(!clientSideOnly) {
+                // send unsubscription to server (when no callbacks available)
+                var arr = [];
+                arr[0] = 6;  // UNSUBSCRIBE
+                arr[1] = topic;    
+                this.send(JSON.stringify(arr));
+            }
+        }        
+        
   },
   
   publish: function(topic, event) {
@@ -229,8 +251,6 @@ WgsClient.prototype = {
         client.debug("A connection to "+this.url+" has been opened.");
         client.ws = ws;
         onstatechange(WgsState.CONNECTED);
-        //$("#server_url").attr("disabled",true);
-        //$("#toggle_connect").html("Disconnect");
       };
    
       ws.onclose = function(e) {
@@ -286,6 +306,18 @@ WgsClient.prototype = {
                 // client.debug("topic not found: " + topic);
             }
             
+        } else if(arr[0] == 9) {  // META-EVENT  (not supported by WAMP v1)
+            var topicURI = arr[1];
+            if(client.metaeventHandlers[topicURI]) {
+                client.metaeventHandlers[topicURI].forEach(function(callback) {
+                    var metatopic = arr[2];
+                    var metaevent = (arr.length > 2) ? arr[3] : null;
+                    callback(topicURI, metatopic, metaevent);
+                });
+            } else {
+                // client.debug("topic not found: " + topic);
+            }            
+            
         } else {
             client.debug("Server message not recognized: " + message.type);
         }
@@ -333,6 +365,13 @@ WgsClient.prototype = {
       this.call("wgs:delete_app", msg).then(callback, callback);
   },  
   
+  setSubscriptionStatus: function(topicURI, newStatus, callback) {
+      var args = Array();
+      args[0] = topicURI;
+      args[1] = newStatus;
+      this.call("wgs:set_subscription_status", args).then(callback,callback);
+  },
+  
   openGroup: function(appId, gid, options, callback) {
       var client = this;
       var args = Array();
@@ -365,7 +404,7 @@ WgsClient.prototype = {
                     }
                 }
             };
-          client.subscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + response.gid, _update_group_users, true);
+          client.subscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + response.gid, _update_group_users, null, { "clientSideOnly":true} );
           _update_group_users(response);
           callback(response);
       }, callback);
@@ -373,7 +412,7 @@ WgsClient.prototype = {
   
   exitGroup: function(gid, callback) {
       this.call("wgs:exit_group", gid).then(callback, callback);
-      this.unsubscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + gid, this._update_group_users, true);
+      this.unsubscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + gid, this._update_group_users, null, true);
       delete this.groups[gid];
   },
 

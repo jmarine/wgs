@@ -14,10 +14,12 @@ import com.github.jmarine.wampservices.WampException;
 import com.github.jmarine.wampservices.WampModule;
 import com.github.jmarine.wampservices.WampRPC;
 import com.github.jmarine.wampservices.WampSocket;
+import com.github.jmarine.wampservices.WampSubscription;
 import com.github.jmarine.wampservices.WampSubscriptionOptions;
 import com.github.jmarine.wampservices.WampTopic;
 import com.github.jmarine.wampservices.WampTopicOptions;
 import com.github.jmarine.wampservices.util.OpenIdConnectProviderId;
+import java.math.BigDecimal;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -143,7 +145,9 @@ public class Module extends WampModule
         Object retval = null;
         if(method.equals("list_groups")) {
             String appId = args.get(0).asText();
-            wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId), null);
+            WampSubscriptionOptions options = new WampSubscriptionOptions(null);
+            options.setPresenceEnabled(true);
+            wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId), options);
             retval = listGroups(appId);
         } else {
             retval = super.onCall(socket, method, args);
@@ -173,6 +177,19 @@ public class Module extends WampModule
         super.onDisconnect(socket);
     }
     
+    @WampRPC(name="set_subscription_status")
+    public void setSubscriptionStatus(WampSocket socket, String topicName, JsonNode newStatus) throws Exception
+    {
+        WampTopic topic = wampApp.getTopic(socket.normalizeURI(topicName));
+        if(topic != null) {
+            WampSubscription subscription = topic.getSubscription(socket.getSessionId());
+            if(subscription != null) {
+                subscription.setStatus(newStatus);
+                String metatopic = MODULE_URL + "presence_updated";
+                onMetaEvent(topic, metatopic, subscription.toJSON(), null);
+            }
+        }
+    }
     
     @WampRPC(name="register")
     public ObjectNode registerUser(WampSocket socket, ObjectNode data) throws Exception

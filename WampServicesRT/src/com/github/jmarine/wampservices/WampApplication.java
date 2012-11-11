@@ -25,6 +25,7 @@ import javax.net.websocket.Session;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.ObjectNode;
 
 
 public class WampApplication extends Endpoint 
@@ -298,8 +299,7 @@ public class WampApplication extends Endpoint
                     topicPattern.getTopics().add(topic);
                     for(WampSubscription patternSubscription : topicPattern.getSubscriptions()) {
                         try { 
-                            WampModule module = getWampModule(topic.getBaseURI());
-                            module.onSubscribe(patternSubscription.getSocket(), topic, patternSubscription.getOptions());
+                            subscribeClientWithTopic(patternSubscription.getSocket(), topic.getURI(), patternSubscription.getOptions());
                         } catch(Exception ex) {
                             logger.log(Level.FINE, "Error in subscription to topic", ex);
                         }                      
@@ -318,10 +318,9 @@ public class WampApplication extends Endpoint
         if(topic != null) {
             topics.remove(topicFQname);
             
-            WampModule module = getWampModule(topic.getBaseURI());
             for(WampSubscription subscription : topic.getSubscriptions()) {
                 try { 
-                    module.onUnsubscribe(subscription.getSocket(), topic);
+                    unsubscribeClientFromTopic(subscription.getSocket(), topicFQname);
                 } catch(Exception ex) {
                     logger.log(Level.FINE, "Error in unsubscription to topic", ex);
                 }                      
@@ -394,12 +393,24 @@ public class WampApplication extends Endpoint
         } 
         
         for(WampTopic topic : topics) {
+            String metatopic = null;
+            ObjectNode metaevent = null;
+            WampModule module = getWampModule(topic.getBaseURI());
             try { 
-                WampModule module = getWampModule(topic.getBaseURI());
                 module.onSubscribe(clientSocket, topic, options);
+                metatopic = "http://wamp.ws/sub#ok";
             } catch(Exception ex) {
+                metatopic = "http://wamp.ws/sub#denied";
+                metaevent = (new ObjectMapper()).createObjectNode();
+                metaevent.put("error", ex.getMessage());
                 logger.log(Level.FINE, "Error in subscription to topic", ex);
             }          
+
+            if(options != null && options.isMetaEventsEnabled()) {
+                try { 
+                    module.onMetaEvent(topic, metatopic, metaevent, clientSocket);
+                } catch(Exception ex) { }
+            }
         }
     
         return topics;

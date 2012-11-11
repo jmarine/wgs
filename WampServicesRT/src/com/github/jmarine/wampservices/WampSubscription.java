@@ -4,6 +4,9 @@ package com.github.jmarine.wampservices;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ObjectNode;
 
 
 public class WampSubscription 
@@ -14,6 +17,8 @@ public class WampSubscription
 
     private WampSubscriptionOptions options;
     
+    private JsonNode   status;
+    
     
     public WampSubscription(WampSocket client, String topicUrlOrPattern, WampSubscriptionOptions options) 
     {
@@ -21,6 +26,7 @@ public class WampSubscription
         this.options = options;
         this.client = client;
         this.topicUrlOrPattern = topicUrlOrPattern;
+        this.status = options.getStatus();
     }
     
     public WampSubscriptionOptions getOptions()
@@ -36,6 +42,25 @@ public class WampSubscription
     public String getTopicUriOrPattern() 
     {
         return topicUrlOrPattern;
+    }
+
+
+    public JsonNode getStatus() {
+        return status;
+    }
+
+    public void setStatus(JsonNode status) {
+        this.status = status;
+    }
+    
+    
+    public ObjectNode toJSON() 
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode obj = mapper.createObjectNode();
+        obj.put("sessionId", client.getSessionId());
+        obj.put("status", getStatus());
+        return obj;
     }
     
 }

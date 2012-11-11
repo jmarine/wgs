@@ -168,7 +168,7 @@ function list_apps() {
     $("#apps option").remove();
     wgsclient.listApps(false, function(response) {
         if(response.valid) {
-            wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#apps_event", update_apps, true);
+            wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#apps_event", update_apps, null, { "clientSideOnly":true});
             update_apps(response);
             $("#app_params").hide();
             $("#app_list").slideDown(500);
@@ -228,23 +228,29 @@ function update_groups(response) {
     } 
 }
 
+function app_presence(topicURI, metatopic, metaevent) {
+    //alert(topicURI + "\n" + metatopic + "\n" + JSON.stringify(metaevent));
+}
+
 function hide_group_list() {
     var appId = $("#apps option:selected").attr("value");
     $("#group_list").hide();
     $("#app_list").slideDown(500);
-    wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, false);
+    wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, app_presence, false);
 }
 
 function list_groups() {
     var appId = $("#apps option:selected").attr("value");
     $("#groups option").remove();
+    wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, app_presence, { "clientSideOnly":true});
     wgsclient.listGroups(appId, function(response) {
         if(response.valid) {
-            wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, true);
             update_groups(response);
             $("#app_list").hide();
             $("#group_list").slideDown(500);
             $("#group_list fieldset legend").html("Groups: " + response.app.name);
+        } else {
+            wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, app_presence, false);
         }
     });
 }
@@ -329,8 +335,9 @@ function open_group(gid, options) {
     else $("#back_section").val("group_list");
     wgsclient.openGroup(appId, gid, options, function(response) {
        if(response.valid) {
+            wgsclient.setSubscriptionStatus("https://github.com/jmarine/wampservices/wgs#app_event:" + $("#apps option:selected").attr("value"), "busy", null );
             currentAppAI = response.app.ai;
-            if(response.gid != "") wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + response.gid, update_group_callback, true);
+            if(response.gid != "") wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + response.gid, update_group_callback, null, { "clientSideOnly":true} );
             show_group(response); 
        } else if(response.errorURI == "https://github.com/jmarine/wampservices/wgs#incorrectpassword") {
             var password = prompt("Introduce the password to access the group:");
@@ -688,7 +695,8 @@ function exit_group(toOfflineMode) {
     
     var gid = $("#group_gid").val();
     wgsclient.exitGroup(gid, function(response) {
-        wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + gid, update_group_callback, true);
+        wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + gid, update_group_callback, null, true);
+        wgsclient.setSubscriptionStatus("https://github.com/jmarine/wampservices/wgs#app_event:" + $("#apps option:selected").attr("value"), null, null );        
     });
 }
 
@@ -820,7 +828,7 @@ function toggle_connect(create_user) {
     <fieldset>
       <legend>Login</legend>
     <label for="server_url">Service:</label><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wgs" /><br/>
-    <label for="user">Login:</label><input type="text" name="user" id="user" value="guest" /><br/>
+    <label for="user">User:</label><input type="text" name="user" id="user" value="guest" /><br/>
     <label for="password" id="lbl_password">Password:</label><input type="password" name="password" id="password" value="" /><br/>
     <button id="oic_connect" onclick="my_openid_connect(true);">OpenId Connect</button>
     <button id="toggle_connect" onclick="toggle_connect(false);">Connect</button>

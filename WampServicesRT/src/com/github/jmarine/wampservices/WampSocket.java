@@ -72,9 +72,9 @@ public class WampSocket
         subscriptions.put(subscription.getTopicUriOrPattern(), subscription);
     }
     
-    public void removeSubscription(String topicUriOrPattern)
+    public WampSubscription removeSubscription(String topicUriOrPattern)
     {
-        subscriptions.remove(topicUriOrPattern);
+        return subscriptions.remove(topicUriOrPattern);
     }
     
     public Collection<WampSubscription> getSubscriptions()
