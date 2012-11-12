@@ -80,12 +80,12 @@ public abstract class WampModule
         if(options != null) {
             if(options.isMetaEventsEnabled()) {
                 String metatopic = "http://wamp.ws/sub#joined";
-                if(options.isEventsEnabled()) onMetaEvent(topic, metatopic, subscription.toJSON(), null);
+                if(options.isEventsEnabled()) app.publishMetaEvent(topic, metatopic, subscription.toJSON(), null);
                 
                 for(String sid : topic.getSessionIds()) {
                     if(!sid.equals(clientSocket.getSessionId())) {
                         WampSubscription presence = topic.getSubscription(sid);
-                        onMetaEvent(topic, metatopic, presence.toJSON(), clientSocket);
+                        app.publishMetaEvent(topic, metatopic, presence.toJSON(), clientSocket);
                     }
                 }
             }
@@ -98,7 +98,7 @@ public abstract class WampModule
         if(options!=null && options.isMetaEventsEnabled() && options.isEventsEnabled()) {
             String metatopic = "http://wamp.ws/sub#left";
             ObjectNode metaevent = subscription.toJSON();
-            onMetaEvent(topic, metatopic, metaevent, null);
+            app.publishMetaEvent(topic, metatopic, metaevent, null);
         }
         topic.removeSubscription(subscription.getSocket().getSessionId());
         clientSocket.removeSubscription(subscription.getTopicUriOrPattern());

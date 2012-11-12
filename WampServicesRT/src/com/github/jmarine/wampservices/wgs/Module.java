@@ -186,7 +186,7 @@ public class Module extends WampModule
             if(subscription != null) {
                 subscription.setStatus(newStatus);
                 String metatopic = MODULE_URL + "presence_updated";
-                onMetaEvent(topic, metatopic, subscription.toJSON(), null);
+                wampApp.publishMetaEvent(topic, metatopic, subscription.toJSON(), null);
             }
         }
     }

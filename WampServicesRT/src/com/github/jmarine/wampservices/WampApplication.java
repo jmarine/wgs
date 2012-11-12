@@ -410,7 +410,7 @@ public class WampApplication extends Endpoint
 
             if(options != null && options.isMetaEventsEnabled()) {
                 try { 
-                    module.onMetaEvent(topic, metatopic, metaevent, clientSocket);
+                    publishMetaEvent(topic, metatopic, metaevent, clientSocket);
                 } catch(Exception ex) { }
             }
         }
@@ -473,7 +473,18 @@ public class WampApplication extends Endpoint
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "Error in publishing event to topic", ex);
         }
-    }     
+    }   
+    
+    public void publishMetaEvent(WampTopic topic, String metatopic, JsonNode metaevent, WampSocket toClient) 
+    {
+        logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),metaevent});
+        try {
+            WampModule module = getWampModule(topic.getBaseURI());
+            module.onMetaEvent(topic, metatopic, metaevent, toClient);
+        } catch(Exception ex) {
+            logger.log(Level.SEVERE, "Error in publishing metaevent to topic", ex);
+        }        
+    }
     
     
     public String encodeJSON(String orig) 
