@@ -228,7 +228,7 @@ function update_groups(response) {
     } 
 }
 
-function app_presence(topicURI, metatopic, metaevent) {
+function app_metaevent(topicURI, metatopic, metaevent) {
     //alert(topicURI + "\n" + metatopic + "\n" + JSON.stringify(metaevent));
 }
 
@@ -236,13 +236,13 @@ function hide_group_list() {
     var appId = $("#apps option:selected").attr("value");
     $("#group_list").hide();
     $("#app_list").slideDown(500);
-    wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, app_presence, false);
+    wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, app_metaevent, false);
 }
 
 function list_groups() {
     var appId = $("#apps option:selected").attr("value");
     $("#groups option").remove();
-    wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, app_presence, { "clientSideOnly":true});
+    wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, app_metaevent, { "clientSideOnly":true});
     wgsclient.listGroups(appId, function(response) {
         if(response.valid) {
             update_groups(response);
@@ -250,7 +250,7 @@ function list_groups() {
             $("#group_list").slideDown(500);
             $("#group_list fieldset legend").html("Groups: " + response.app.name);
         } else {
-            wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, app_presence, false);
+            wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, app_metaevent, false);
         }
     });
 }
@@ -694,10 +694,12 @@ function exit_group(toOfflineMode) {
     }
     
     var gid = $("#group_gid").val();
-    wgsclient.exitGroup(gid, function(response) {
-        wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + gid, update_group_callback, null, true);
-        wgsclient.setSubscriptionStatus("https://github.com/jmarine/wampservices/wgs#app_event:" + $("#apps option:selected").attr("value"), null, null );        
-    });
+    if(gid.length > 0) {
+        wgsclient.exitGroup(gid, function(response) {
+            wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + gid, update_group_callback, null, true);
+            wgsclient.setSubscriptionStatus("https://github.com/jmarine/wampservices/wgs#app_event:" + $("#apps option:selected").attr("value"), null, null );        
+        });
+    }
 }
 
 function chat_message(message,sender) {

@@ -80,12 +80,9 @@ WgsClient.prototype = {
         if(!this.topics[topic]) this.topics[topic] = [];
         if(!this.metaeventHandlers[topic]) this.metaeventHandlers[topic] = [];
         
-        var unsubscribed = ( (this.topics[topic].length + this.metaeventHandlers[topic].length) == 0);
         if(event_cb) this.topics[topic].push(event_cb);
         if(metaevent_cb) this.metaeventHandlers[topic].push(metaevent_cb);
-        if(unsubscribed && !options.clientSideOnly
-            && (this.topics[topic].length==1 || this.metaeventHandlers[topic].length==1) ) {
-            // sends subscription to server when 1st callback subscribed
+        if(!options.clientSideOnly && ((event_cb && this.topics[topic].length==1) || (metaevent_cb && this.metaeventHandlers[topic].length==1)) ) {
             var arr = [];
             arr[0] = 5;  // SUBSCRIBE
             arr[1] = topic;
@@ -95,33 +92,59 @@ WgsClient.prototype = {
   },
   
   unsubscribe: function(topic, event_cb, metaevent_cb, clientSideOnly) {
-        var subscribed = (this.topics[topic] && this.topics[topic].length > 0) 
-                         || (this.metaeventHandlers[topic] && this.metaeventHandlers[topic].length > 0);      
+        var client = this;
+
+        var clearEventHandlers = false;
+        var clearMetaHandlers = false;
+        var indexOfEventHandlerToClear = -1;
+        var indexOfMetaHandlerToClear = -1;
         
         var callbacks = this.topics[topic];
         if(event_cb && callbacks) {
-            var index = callbacks.indexOf(event_cb);
-            if(index != -1) callbacks.splice(index,1);
-            
+            indexOfEventHandlerToClear = callbacks.indexOf(event_cb);
+            if(indexOfEventHandlerToClear != -1) {
+                clearEventHandlers = (event_cb && this.topics[topic] && this.topics[topic].length<=1);
+            }
         }
         callbacks = this.metaeventHandlers[topic];
         if(metaevent_cb && callbacks) {
-            var index = callbacks.indexOf(metaevent_cb);
-            if(index != -1) callbacks.splice(index,1);
+            indexOfMetaHandlerToClear = callbacks.indexOf(metaevent_cb);
+            if(indexOfMetaHandlerToClear != -1) {
+                clearMetaHandlers = (metaevent_cb && this.metaeventHandlers[topic] && this.metaeventHandlers[topic].length<=1);
+            }
         }   
         
-        if(subscribed && ((this.topics[topic].length+this.metaeventHandlers[topic].length) == 0)) {
-            delete this.topics[topic];
-            delete this.metaeventHandlers[topic];
-            if(!clientSideOnly) {
-                // send unsubscription to server (when no callbacks available)
-                var arr = [];
-                arr[0] = 6;  // UNSUBSCRIBE
-                arr[1] = topic;    
-                this.send(JSON.stringify(arr));
-            }
+        
+        var _clearHandlers = function() {
+            if(clearEventHandlers) delete client.topics[topic];
+            else if(indexOfEventHandlerToClear != -1) client.topics.splice(indexOfEventHandlerToClear,1);
+            
+            if(clearMetaHandlers) delete client.metaeventHandlers[topic];
+            else if(indexOfMetaHandlerToClear != -1) client.metaeventHandlers.splice(indexOfMetaHandlerToClear,1);
+        }
+            
+        var otherSubscribedEvents = (!clearEventHandlers && this.topics[topic] && this.topics[topic].length>0);
+        var otherSubscribedMetaEvents  = (!clearMetaHandlers && this.metaeventHandlers[topic] && this.metaeventHandlers[topic].length>0);
+        if(!this.metaeventHandlers[topic] || this.metaeventHandlers[topic].length == 0) {
+            _clearHandlers();
+        } else {
+            // defer metaevent callback deletion, until #left/#error metatopic is received for the subscribed sessionId
+            this.metaeventHandlers[topic].push(function(topic2, metatopic, metaevent) {
+               if(topic == topic2 && metaevent && metaevent.sessionId == client.sid) {
+                   _clearHandlers();
+               }
+            });
         }        
         
+        if(!clientSideOnly && (clearEventHandlers || clearMetaHandlers)) {
+            // send unsubscribe message to server (when all eventHandlers or metaeventHandlers are cleared)
+            var arr = [];
+            arr[0] = 6;  // Unsubscribe message type
+            arr[1] = topic;  
+            arr[2] = { "events": otherSubscribedEvents, "metaevents": otherSubscribedMetaEvents };
+            this.send(JSON.stringify(arr));
+        }   
+
   },
   
   publish: function(topic, event) {

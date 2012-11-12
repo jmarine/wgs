@@ -378,6 +378,8 @@ public class WampApplication extends Endpoint
 
     public Collection<WampTopic> subscribeClientWithTopic(WampSocket clientSocket, String topicUriOrPattern, WampSubscriptionOptions options)
     {
+        // FIXME: merge subscriptions options (events & metaevents),
+        // when the 1st eventhandler and 1st metahandler is subscribed
         topicUriOrPattern = clientSocket.normalizeURI(topicUriOrPattern);
         Collection<WampTopic> topics = getTopics(topicUriOrPattern);
         
