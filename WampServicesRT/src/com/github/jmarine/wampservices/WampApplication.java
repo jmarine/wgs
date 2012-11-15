@@ -18,23 +18,21 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.net.websocket.CloseReason;
-import javax.net.websocket.Endpoint;
-import javax.net.websocket.MessageHandler;
-import javax.net.websocket.Session;
+import javax.websocket.CloseReason;
+import javax.websocket.MessageHandler;
+import javax.websocket.Session;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
 
-public class WampApplication extends Endpoint 
+public class WampApplication
 {
     private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
 
     public  static final String WAMP_BASE_URL = "https://github.com/jmarine/wampservices";
     
-    private String contextPath;
     private Map<String,WampModule> modules;
     private TreeMap<String,WampTopic> topics;
     private TreeMap<String,WampTopicPattern> topicPatterns;
@@ -42,7 +40,6 @@ public class WampApplication extends Endpoint
     private Properties wampConfig;
     private ConcurrentHashMap<Session,WampSocket> sockets;
     
-
     
     public WampApplication() 
     {
@@ -59,8 +56,8 @@ public class WampApplication extends Endpoint
         };
     }
     
-
-
+ 
+    
     private WampSocket getWampSocket(Session session)
     {
         return sockets.get(session);
@@ -77,10 +74,9 @@ public class WampApplication extends Endpoint
     public String getServerId() {
         return "wsAppManager";
     }
-    
 
-    @Override
-    public void onOpen(final Session session) {
+    
+    public void onWampOpen(final Session session) {
         System.out.println("##################### Session opened");
         
         final WampSocket clientSocket = new WampSocket(this, session);
@@ -95,7 +91,7 @@ public class WampApplication extends Endpoint
         }        
 
 
-        session.addMessageHandler(new MessageHandler.Text() {
+        session.addMessageHandler(new MessageHandler.Basic<String>() {
 
             @Override
             public void onMessage(String message) {
@@ -123,8 +119,7 @@ public class WampApplication extends Endpoint
         response.add(getServerId());
         clientSocket.sendWampResponse(response);
         
-    }
-
+    }   
 
     public void onWampMessage(WampSocket clientSocket, ArrayNode request) throws Exception
     {
@@ -162,56 +157,49 @@ public class WampApplication extends Endpoint
 
     }
     
-
     
-
-    
-    @Override
-    public void onError(Throwable thr, Session session) 
+    public void onWampClose(Session session, CloseReason reason) 
     {
-         super.onError(thr, session);        
-         System.out.println("##################### Session error");
-         onClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
-    }    
-
-
-    @Override
-    public void onClose(Session session, CloseReason reason) 
-    {
-        super.onClose(session, reason);
-    
-        try { session.close(reason); }
-        catch(Exception ex) { }
-        
         WampSocket clientSocket = sockets.remove(session);
-        for(WampModule module : modules.values()) {
-            try { 
-                module.onDisconnect(clientSocket); 
-            } catch(Exception ex) {
-                logger.log(Level.SEVERE, "Error disconnecting client:", ex);
-            }
-        }
+        if(clientSocket != null) {
 
-        // First remove subscriptions to topic patterns:
-        for(WampSubscription subscription : clientSocket.getSubscriptions()) {
-            if(isTopicUriWithWildcards(subscription.getTopicUriOrPattern())) {
-                unsubscribeClientFromTopic(clientSocket, subscription.getTopicUriOrPattern());
+            try { clientSocket.close(reason); }
+            catch(Exception ex) { }            
+            
+            for(WampModule module : modules.values()) {
+                try { 
+                    module.onDisconnect(clientSocket); 
+                } catch(Exception ex) {
+                    logger.log(Level.SEVERE, "Error disconnecting client:", ex);
+                }
             }
+
+            // First remove subscriptions to topic patterns:
+            for(WampSubscription subscription : clientSocket.getSubscriptions()) {
+                if(isTopicUriWithWildcards(subscription.getTopicUriOrPattern())) {
+                    unsubscribeClientFromTopic(clientSocket, subscription.getTopicUriOrPattern());
+                }
+            }
+
+            // Then, remove remaining subscriptions to single topics:
+            for(WampSubscription subscription : clientSocket.getSubscriptions()) {
+                unsubscribeClientFromTopic(clientSocket, subscription.getTopicUriOrPattern());
+            }        
+            
+            logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
         }
         
-        // Then, remove remaining subscriptions to single topics:
-        for(WampSubscription subscription : clientSocket.getSubscriptions()) {
-            unsubscribeClientFromTopic(clientSocket, subscription.getTopicUriOrPattern());
-        }        
-
-        logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
     }
     
-    
-    public void registerWampModule(Class moduleClass) throws Exception
+    @SuppressWarnings("unchecked")
+    public void registerWampModule(Class moduleClass)
     {
-        WampModule module = (WampModule)moduleClass.getConstructor(WampApplication.class).newInstance(this);
-        modules.put(module.getBaseURL(), module);
+        try {
+            WampModule module = (WampModule)moduleClass.getConstructor(WampApplication.class).newInstance(this);
+            modules.put(module.getBaseURL(), module);
+        } catch(Exception ex) {
+            logger.log(Level.SEVERE, "WgsEndpoint: Error registering WGS module", ex);
+        }        
     }
 
     
@@ -528,6 +516,5 @@ public class WampApplication extends Endpoint
         buffer.append("\"");
         return buffer.toString();
     }
-
 
 }

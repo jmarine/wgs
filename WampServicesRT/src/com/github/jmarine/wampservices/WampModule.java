@@ -46,6 +46,7 @@ public abstract class WampModule
     
     public void   onDisconnect(WampSocket clientSocket) throws Exception { }
 
+    @SuppressWarnings("unchecked")
     public Object onCall(WampSocket clientSocket, String methodName, ArrayNode args) throws Exception 
     {
         ObjectMapper mapper = new ObjectMapper();

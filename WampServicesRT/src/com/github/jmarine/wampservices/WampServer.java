@@ -86,8 +86,9 @@ public class WampServer {
                     
                     System.out.println("Creating WAMP context URI: " + uri);
                     WampApplication wampApplication = new WampApplication();
+                    WampEndpoint wampEndpoint = new WampEndpoint(wampApplication);
                     DefaultServerEndpointConfiguration endpointConfig = new DefaultServerEndpointConfiguration.Builder(uri).build();
-                    serverConfig = serverConfig.endpoint(wampApplication, endpointConfig);
+                    serverConfig = serverConfig.endpoint(wampEndpoint, endpointConfig);
 
                     String topics = wampConfig.getProperty("context." + context + ".topics");
                     if(topics != null) {

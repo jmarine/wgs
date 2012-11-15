@@ -166,7 +166,7 @@ public class OpenIdConnectProvider implements Serializable
 
         OutputStreamWriter out = new OutputStreamWriter(
                                          connection.getOutputStream());
-        out.write("grant_type=authorization_code&code=" + URLEncoder.encode(authorization_code) + "&client_id=" + getClientId() + "&redirect_uri=" + URLEncoder.encode(getId().getRedirectUri()) + "&client_id=" + URLEncoder.encode(getClientId()) + "&client_secret=" + URLEncoder.encode(getClientSecret()));
+        out.write("grant_type=authorization_code&code=" + URLEncoder.encode(authorization_code,"utf8") + "&client_id=" + URLEncoder.encode(getClientId(),"utf8") + "&redirect_uri=" + URLEncoder.encode(getId().getRedirectUri(),"utf8") + "&client_id=" + URLEncoder.encode(getClientId(),"utf8") + "&client_secret=" + URLEncoder.encode(getClientSecret(),"utf8"));
         out.close();
 
         BufferedReader in = new BufferedReader(

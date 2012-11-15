@@ -9,7 +9,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-import javax.net.websocket.Session;
+import javax.websocket.CloseReason;
+import javax.websocket.Session;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -21,15 +22,17 @@ public class WampSocket
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
     
     private WampApplication app;
+    private boolean connected;
     private Session session;
-    private String sessionId;
-    private Map    sessionData;
+    private String  sessionId;
+    private Map     sessionData;
     private Map<String,String> prefixes;
     private Map<String,WampSubscription> subscriptions;
 
     public WampSocket(WampApplication app, Session session) 
     {
-        this.app    = app;
+        this.app = app;
+        this.connected = true;
         this.session = session;
         
         sessionId   = UUID.randomUUID().toString();
@@ -97,10 +100,10 @@ public class WampSocket
 
     public void sendSafe(String msg) {
         try {
-            if(session.isActive()) session.getRemote().sendString(msg);
+            if(isActive()) session.getRemote().sendString(msg);
         } catch(Exception e) {
             logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
-            app.onError(e, session);
+            app.onWampClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
         }
     }
 
@@ -111,8 +114,14 @@ public class WampSocket
     }
     
     
+    public void close(CloseReason reason)
+    {
+        this.connected = false;
+        app.onWampClose(session, reason);
+    }
+    
     protected boolean isActive() {
-        return session.isActive();
+        return connected && session.isActive();
     }
     
     

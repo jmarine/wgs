@@ -112,7 +112,7 @@ public class Module extends WampModule
     {
         EntityManager manager = getEntityManager();
 
-        javax.persistence.Query query = manager.createNamedQuery(namedQueryName, cls);
+        javax.persistence.TypedQuery<T> query = manager.createNamedQuery(namedQueryName, cls);
         if(params != null) {
             for(int index = 0; index < params.length; index++) {
                 query.setParameter(index, params[index]);
