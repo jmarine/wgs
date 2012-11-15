@@ -16,12 +16,11 @@ public class WgsEndpoint extends WampEndpoint
 {
     private static WampApplication wgsApplication = new WampApplication() {
             {   // annonymous class constructor:    
-                wgsApplication.registerWampModule(com.github.jmarine.wampservices.wgs.Module.class); 
+                registerWampModule(com.github.jmarine.wampservices.wgs.Module.class); 
             } 
         };
     
-    public WgsEndpoint()
-    {
+    public WgsEndpoint() {
         super(wgsApplication);
     }
     
