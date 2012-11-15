@@ -38,6 +38,11 @@ public class WampEndpoint extends Endpoint
         return application;
     }
     
+    public Session getSession()
+    {
+        return session;
+    }
+    
     
    
     @Override
