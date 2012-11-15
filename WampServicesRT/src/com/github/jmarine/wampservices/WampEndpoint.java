@@ -22,8 +22,6 @@ public class WampEndpoint extends Endpoint
     private WampApplication application;
    
     
-    public WampEndpoint() { }
-    
     public WampEndpoint(WampApplication application) 
     {
         setWampApplication(application);
