@@ -22,16 +22,11 @@ public class WampEndpoint extends Endpoint
     private WampApplication application;
    
     
-    public WampEndpoint(WampApplication application) 
-    {
-        setWampApplication(application);
-    }
-    
-    public void setWampApplication(WampApplication application) 
+    public WampEndpoint(WampApplication application)
     {
         this.application = application;
     }
-
+    
 
     public WampApplication getWampApplication() 
     {
