@@ -36,9 +36,8 @@ public class WampApplication
     private Map<String,WampModule> modules;
     private TreeMap<String,WampTopic> topics;
     private TreeMap<String,WampTopicPattern> topicPatterns;
-    private WampModule defaultModule;
-    private Properties wampConfig;
     private ConcurrentHashMap<Session,WampSocket> sockets;
+    private WampModule defaultModule;
     
     
     public WampApplication() 
