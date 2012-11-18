@@ -42,7 +42,7 @@ public class WampEndpoint extends Endpoint
     }
     
     
-    public WampApplication getWampContext() 
+    public WampApplication getWampApplication() 
     {
         return application;
     }
