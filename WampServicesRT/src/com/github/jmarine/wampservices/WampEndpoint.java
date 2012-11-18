@@ -26,12 +26,12 @@ public class WampEndpoint extends Endpoint
     
    
     public WampEndpoint() { 
-        logger.info("WAMP ENDPOINT CREATED");
+        logger.fine("##################### WAMP ENDPOINT CREATED");
     }
     
     public WampEndpoint(WampApplication application)
     {
-        logger.info("WAMP ENDPOINT CREATED");
+        logger.fine("##################### WAMP ENDPOINT CREATED");
         this.application = application;
     }
     
@@ -89,7 +89,7 @@ public class WampEndpoint extends Endpoint
 
     @Override
     public void onOpen(Session session) {
-        System.out.println("##################### Session opened");
+        logger.fine("##################### Session opened");
         
         this.session = session;
         if(application == null) {
@@ -105,6 +105,7 @@ public class WampEndpoint extends Endpoint
     {
         super.onClose(reason);
         application.onWampClose(session, reason);
+        logger.fine("##################### Session closed: " + session);
     }
     
     
@@ -112,7 +113,7 @@ public class WampEndpoint extends Endpoint
     public void onError(Throwable thr) 
     {
          super.onError(thr);        
-         System.out.println("##################### Session error");
+         logger.fine("##################### Session error");
          onClose(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
     }    
 
