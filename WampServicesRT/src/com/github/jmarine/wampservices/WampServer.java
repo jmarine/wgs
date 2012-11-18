@@ -13,11 +13,6 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import javax.naming.Context;
 import javax.naming.InitialContext;
-import javax.websocket.EndpointConfiguration;
-import javax.websocket.ContainerProvider;
-import javax.websocket.ServerContainer;
-
-import org.glassfish.tyrus.DefaultServerEndpointConfiguration;
 import org.glassfish.tyrus.server.DefaultServerConfiguration;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.TyrusContainer;
@@ -52,9 +47,10 @@ public class WampServer {
             }            
         }
         
-        //System.setProperty("websocket.servercontainer.classname", "org.glassfish.tyrus.TyrusServerContainer");
+        //System.setProperty("webocket.servercontainer.classname", "org.glassfish.tyrus.TyrusContainerProvider");
         //ServerContainer websocketServerContainer = ContainerProvider.getServerContainer();
-        //websocketServerContainer.publishServer(klass?);
+        //websocketServerContainer.publishServer(WampEndpoint.class);
+        
         TyrusServerContainer server = null;        
         try {
             String htdocs = wampConfig.getProperty("docroot");
@@ -62,9 +58,7 @@ public class WampServer {
             TyrusContainer tyrusContainer = new org.glassfish.tyrus.grizzly.GrizzlyEngine();
             TyrusServer tyrusServer = tyrusContainer.createServer(htdocs, 8080);
 
-
             DefaultServerConfiguration serverConfig = new DefaultServerConfiguration();
-            serverConfig = serverConfig.endpoint(WampEndpoint.class);
             
             String databases = wampConfig.getProperty("databases");
             if(databases != null) {
@@ -92,7 +86,9 @@ public class WampServer {
                     
                     System.out.println("Creating WAMP context URI: " + uri);
                     WampApplication wampApplication = WampApplication.getApplication(uri);
-
+                    //serverConfig = serverConfig.endpoint(WampEndpoint.class, uri);
+                    //server.publishServer(WampEndpoint.class  /* , uri */ );
+                    
                     String topics = wampConfig.getProperty("context." + context + ".topics");
                     if(topics != null) {
                         StringTokenizer tkTopics = new StringTokenizer(topics, ",");
@@ -118,6 +114,7 @@ public class WampServer {
             }
             
             server = new TyrusServerContainer(tyrusServer, "", serverConfig);
+            server.publishServer(WampEndpoint.class);
             server.start();
             
             System.out.println("Press any key to stop the server...");
