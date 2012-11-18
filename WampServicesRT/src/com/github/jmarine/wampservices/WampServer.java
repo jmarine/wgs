@@ -13,9 +13,12 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import javax.naming.Context;
 import javax.naming.InitialContext;
+import javax.websocket.EndpointConfiguration;
+import javax.websocket.ContainerProvider;
+import javax.websocket.ServerContainer;
 
+import org.glassfish.tyrus.DefaultServerEndpointConfiguration;
 import org.glassfish.tyrus.server.DefaultServerConfiguration;
-import org.glassfish.tyrus.server.DefaultServerEndpointConfiguration;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.TyrusContainer;
 import org.glassfish.tyrus.spi.TyrusServer;
@@ -49,6 +52,9 @@ public class WampServer {
             }            
         }
         
+        //System.setProperty("websocket.servercontainer.classname", "org.glassfish.tyrus.TyrusServerContainer");
+        //ServerContainer websocketServerContainer = ContainerProvider.getServerContainer();
+        //websocketServerContainer.publishServer(klass?);
         TyrusServerContainer server = null;        
         try {
             String htdocs = wampConfig.getProperty("docroot");
@@ -58,7 +64,7 @@ public class WampServer {
 
 
             DefaultServerConfiguration serverConfig = new DefaultServerConfiguration();
-            
+            serverConfig = serverConfig.endpoint(WampEndpoint.class);
             
             String databases = wampConfig.getProperty("databases");
             if(databases != null) {
@@ -85,10 +91,7 @@ public class WampServer {
                     if((enableWildcards != null) && (enableWildcards.toUpperCase().equals("TRUE"))) topicWildcardsEnabled = true;
                     
                     System.out.println("Creating WAMP context URI: " + uri);
-                    WampApplication wampApplication = new WampApplication();
-                    WampEndpoint wampEndpoint = new WampEndpoint(wampApplication);
-                    DefaultServerEndpointConfiguration endpointConfig = new DefaultServerEndpointConfiguration.Builder(uri).build();
-                    serverConfig = serverConfig.endpoint(wampEndpoint, endpointConfig);
+                    WampApplication wampApplication = WampApplication.getApplication(uri);
 
                     String topics = wampConfig.getProperty("context." + context + ".topics");
                     if(topics != null) {

@@ -12,7 +12,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +37,18 @@ public class WampApplication
     private TreeMap<String,WampTopicPattern> topicPatterns;
     private ConcurrentHashMap<Session,WampSocket> sockets;
     private WampModule defaultModule;
+    
+    
+    private static Map<String,WampApplication> contexts = new HashMap<String,WampApplication>();
+    
+    public static synchronized WampApplication getApplication(String context) {
+        WampApplication app = contexts.get(context);
+        if(app == null) {
+            app = new WampApplication();
+            contexts.put(context, app);
+        }
+        return app;
+    }
     
     
     public WampApplication() 
