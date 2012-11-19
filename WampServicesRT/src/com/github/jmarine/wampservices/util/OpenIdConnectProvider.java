@@ -282,7 +282,7 @@ public class OpenIdConnectProvider implements Serializable
 
         OutputStreamWriter out = new OutputStreamWriter(
                                          connection.getOutputStream());
-        out.write("type=client_associate&application_type=web&application_name=" + URLEncoder.encode(appName,"utf8") + "&redirect_uris=" + URLEncoder.encode(redirectUri,"utf8"));
+        out.write("type=client_associate&application_type=web&application_name=" + URLEncoder.encode(appName,"utf8") + "&redirect_uris=" + URLEncoder.encode(redirectUri,"utf8") + "&require_auth_time=false");
         out.close();
 
         BufferedReader in = new BufferedReader(
@@ -325,12 +325,18 @@ public class OpenIdConnectProvider implements Serializable
         connection.disconnect();
 
         ObjectNode oicClient = (ObjectNode) mapper.readTree(data.toString());
-        Calendar clientExpiration = Calendar.getInstance();
-        clientExpiration.setTimeInMillis(oicClient.get("expires_at").asLong()*1000);
+        Calendar expiration = null;
+        if(oicClient.has("expires_at")) {
+            long expires_at = oicClient.get("expires_at").asLong();
+            if(expires_at != 0l) {
+                expiration = Calendar.getInstance();
+                expiration.setTimeInMillis(oicClient.get("expires_at").asLong()*1000);
+            }
+        }
         
         setClientId(oicClient.get("client_id").asText());
         setClientSecret(oicClient.get("client_secret").asText());
-        setClientExpiration(clientExpiration);
+        setClientExpiration(expiration);
     }
     
     

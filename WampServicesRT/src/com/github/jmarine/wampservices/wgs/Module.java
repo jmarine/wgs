@@ -297,9 +297,9 @@ public class Module extends WampModule
                 if(oicClient.has("expires_at")) {
                     long expires_at = oicClient.get("expires_at").asLong();
                     if(expires_at != 0l) {
-                        Calendar clientExpiration = Calendar.getInstance();
-                        clientExpiration.setTimeInMillis(expires_at*1000);
-                        oic.setClientExpiration(clientExpiration);
+                        Calendar expiration = Calendar.getInstance();
+                        expiration.setTimeInMillis(expires_at*1000);
+                        oic.setClientExpiration(expiration);
                     }
                 }
                 
