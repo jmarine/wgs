@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.github.jmarine.wampservices;
 
 import java.util.ArrayList;
@@ -10,11 +6,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- *
- * @author jordi
- */
-public class WampTopic {
+
+public class WampTopic 
+{
     private String uri;
     private WampTopicOptions options;
     private Map<String,WampSubscription> subscriptions = new ConcurrentHashMap<String,WampSubscription>();

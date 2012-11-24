@@ -393,23 +393,18 @@ public class WampApplication
         } 
         
         for(WampTopic topic : topics) {
-            String metatopic = null;
-            ObjectNode metaevent = null;
             WampModule module = getWampModule(topic.getBaseURI());
             try { 
                 module.onSubscribe(clientSocket, topic, options);
-                metatopic = "http://wamp.ws/sub#ok";
             } catch(Exception ex) {
-                metatopic = "http://wamp.ws/sub#denied";
-                metaevent = (new ObjectMapper()).createObjectNode();
-                metaevent.put("error", ex.getMessage());
-                logger.log(Level.FINE, "Error in subscription to topic", ex);
-            }          
-
-            if(options != null && options.isMetaEventsEnabled()) {
-                try { 
-                    publishMetaEvent(topic, metatopic, metaevent, clientSocket);
-                } catch(Exception ex) { }
+                if(options != null && options.isMetaEventsEnabled()) {
+                    try { 
+                        ObjectNode metaevent = (new ObjectMapper()).createObjectNode();
+                        metaevent.put("error", ex.getMessage());
+                        publishMetaEvent(topic, WampMetaTopic.DENIED, metaevent, clientSocket);
+                        logger.log(Level.FINE, "Error in subscription to topic", ex);
+                    } catch(Exception ex2) { }
+                }
             }
         }
     

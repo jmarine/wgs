@@ -11,6 +11,7 @@ import com.github.jmarine.wampservices.util.OpenIdConnectProvider;
 import com.github.jmarine.wampservices.util.Base64;
 import com.github.jmarine.wampservices.WampApplication;
 import com.github.jmarine.wampservices.WampException;
+import com.github.jmarine.wampservices.WampMetaTopic;
 import com.github.jmarine.wampservices.WampModule;
 import com.github.jmarine.wampservices.WampRPC;
 import com.github.jmarine.wampservices.WampSocket;
@@ -155,6 +156,50 @@ public class Module extends WampModule
         return retval;
     }
 
+    
+    /*
+    @Override
+    public void   onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
+        super.onSubscribe(clientSocket, topic, options);
+        
+        if(options != null && options.isMetaEventsEnabled()) {
+            ObjectMapper mapper = new ObjectMapper();
+            ArrayNode arrayNode = mapper.createArrayNode();
+            String metatopic = MODULE_URL + "other_subscriptions";
+            
+            for(String sid : topic.getSessionIds()) {
+                if(!sid.equals(clientSocket.getSessionId())) {
+                    WampSubscription presence = topic.getSubscription(sid);
+                    ObjectNode obj = presence.toJSON();
+                    Client cli = clients.get(presence.getSocket().getSessionId());
+                    if(cli != null && cli.getState()!=ClientState.INVALID) {
+                        obj.putAll(cli.getUser().toJSON());
+                        arrayNode.add(obj);
+                    }                
+                }
+            }        
+            
+            if(arrayNode.size() > 0) {
+                wampApp.publishMetaEvent(topic, metatopic, arrayNode, clientSocket);
+            }
+        }
+        
+    }
+    
+    @Override
+    public void onMetaEvent(WampTopic topic, String metatopic, JsonNode metaevent, WampSocket toClient) throws Exception 
+    {
+        if(metatopic.equals(WampMetaTopic.JOINED)) {        
+            ObjectNode obj = (ObjectNode)metaevent;
+            Client cli = clients.get(obj.get("sessionId").asText());
+            if(cli != null && cli.getState()!=ClientState.INVALID) {
+                obj.putAll(cli.getUser().toJSON());
+            }
+        }
+        super.onMetaEvent(topic, metatopic, metaevent, toClient);
+    }
+    */
+
     @Override
     public void onConnect(WampSocket socket) throws Exception {
         super.onConnect(socket);
@@ -185,7 +230,7 @@ public class Module extends WampModule
             WampSubscription subscription = topic.getSubscription(socket.getSessionId());
             if(subscription != null) {
                 subscription.setStatus(newStatus);
-                String metatopic = MODULE_URL + "presence_updated";
+                String metatopic = MODULE_URL + "status_updated";
                 wampApp.publishMetaEvent(topic, metatopic, subscription.toJSON(), null);
             }
         }
@@ -1160,6 +1205,9 @@ public class Module extends WampModule
                 socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+gid)), response, true); // exclude Me
 
                 client.removeGroup(g);
+                if(client.getGroups().size() == 0) {
+                    client.setState(client.getUser() != null? ClientState.AUTHENTICATED : ClientState.INVALID);
+                }
                 
                 String topicName = getFQtopicURI("group_event:" + g.getGid());
                 for(WampTopic topic : wampApp.unsubscribeClientFromTopic(socket, topicName)) {
