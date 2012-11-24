@@ -11,6 +11,9 @@
   font-family: Verdana, sans-serif;
   font-size: 12px;
   color: #6c3000;
+}
+
+body {
   background: #f7e3a4; 
 }
 
@@ -43,14 +46,10 @@ option:active {
   background-color: #dac394;
 }
 
-
 fieldset { border: 1px #6c3000 solid; border-radius: 10px; }
-legend { border: 1px #6c3000 solid; margin-left: 0.5em; padding: 0.2em 0.8em; border-radius: 10px; font-weight: bold;
-          color: #6c3000;
-          background:#dac394
-}
+legend { border: 1px #6c3000 solid; margin-left: 0.5em; padding: 0.2em 0.8em; border-radius: 10px; font-weight: bold; color: #6c3000; background:#dac394 }
 
-label { display: block; float: left; width: 90px; clear: left; }
+label { /*display: block;*/ float: left; width: 90px; clear: left; }
 
 .section { clear: both; width: 100%; padding-bottom: 10px; padding-right: 20px; }
 .right { float: left; clear: right; }
@@ -188,6 +187,8 @@ function hide_app_params() {
 }
 
 function show_new_group_params() {
+    var app = $("#apps option:selected").text();
+    $("#new_group_params fieldset legend").html("New group: " + app);
     $("#group_list").hide();
     $("#new_group_params").slideDown(500);
 }
@@ -333,9 +334,11 @@ function open_group(gid, options) {
     var appId = $("#apps option:selected").attr("value");
     if(gid == "automatch") $("#back_section").val("app_list");
     else $("#back_section").val("group_list");
+    
+    wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, app_metaevent, false);
     wgsclient.openGroup(appId, gid, options, function(response) {
        if(response.valid) {
-            wgsclient.setSubscriptionStatus("https://github.com/jmarine/wampservices/wgs#app_event:" + $("#apps option:selected").attr("value"), "busy", null );
+            //wgsclient.setSubscriptionStatus("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, "busy", null );
             currentAppAI = response.app.ai;
             if(response.gid != "") wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + response.gid, update_group_callback, null, { "clientSideOnly":true} );
             show_group(response); 
@@ -687,17 +690,21 @@ function start_group() {
 
 
 function exit_group(toOfflineMode) {
-    if(!toOfflineMode) {
-        var back_section = $("#back_section").val();
-        $("#group_params").hide();
-        $("#" + back_section).slideDown(500);
-    }
-    
     var gid = $("#group_gid").val();
     if(gid.length > 0) {
         wgsclient.exitGroup(gid, function(response) {
             wgsclient.unsubscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + gid, update_group_callback, null, true);
-            wgsclient.setSubscriptionStatus("https://github.com/jmarine/wampservices/wgs#app_event:" + $("#apps option:selected").attr("value"), null, null );        
+            //wgsclient.setSubscriptionStatus("https://github.com/jmarine/wampservices/wgs#app_event:" + $("#apps option:selected").attr("value"), null, null );        
+            
+            if(!toOfflineMode) {
+                var back_section = $("#back_section").val();
+                $("#group_params").hide();
+
+                // $("#" + back_section).slideDown(500); 
+                if(back_section == "group_list") list_groups();
+                else list_apps();
+            }
+            
         });
     }
 }
@@ -832,7 +839,7 @@ function toggle_connect(create_user) {
     <label for="server_url">Service:</label><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wgs" /><br/>
     <label for="user">User:</label><input type="text" name="user" id="user" value="guest" /><br/>
     <label for="password" id="lbl_password">Password:</label><input type="password" name="password" id="password" value="" /><br/>
-    <button id="oic_connect" onclick="my_openid_connect(true);">OpenId Connect</button>
+    <button id="oic_connect" onclick="my_openid_connect(true);">OpenID Connect</button>
     <button id="toggle_connect" onclick="toggle_connect(false);">Connect</button>
     <button id="register" onclick="toggle_connect(true);">Register</button>
     </fieldset>
@@ -840,7 +847,7 @@ function toggle_connect(create_user) {
     
   <div id="app_list" class="section hidden">
     <fieldset>
-      <legend>Application</legend>
+      <legend>Applications</legend>
     <select id="apps" name="apps" size="8" style="width: 100%">
     </select><br>
     <button id="btn_automatch_group" onclick="open_group('automatch');" disabled >Auto-Match</button>
