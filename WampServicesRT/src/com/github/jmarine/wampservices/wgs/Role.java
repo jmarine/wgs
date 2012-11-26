@@ -10,6 +10,7 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -38,70 +39,100 @@ public class Role implements Serializable
     @Column(name="multiple")
     private boolean multiple;
     
+    @Lob()
+    @Column(name="icon")
+    private String iconDataURL;
+    
 
+    /**
+     * @return the application
+     */
+    public Application getApplication() 
+    {
+        return application;
+    }
+
+    /**
+     * @param application the application to set
+     */
+    public void setApplication(Application application) 
+    {
+        this.application = application;
+    }    
+    
     /**
      * @return the name
      */
-    public String getName() {
+    public String getName() 
+    {
         return name;
     }
 
     /**
      * @param name the name to set
      */
-    public void setName(String name) {
+    public void setName(String name) 
+    {
         this.name = name;
     }
 
     /**
      * @return the required
      */
-    public boolean isRequired() {
+    public boolean isRequired() 
+    {
         return required;
     }
 
     /**
      * @param required the required to set
      */
-    public void setRequired(boolean required) {
+    public void setRequired(boolean required) 
+    {
         this.required = required;
     }
 
     /**
      * @return the multiple
      */
-    public boolean isMultiple() {
+    public boolean isMultiple() 
+    {
         return multiple;
     }
 
     /**
      * @param multiple the multiple to set
      */
-    public void setMultiple(boolean multiple) {
+    public void setMultiple(boolean multiple) 
+    {
         this.multiple = multiple;
     }
-
-    /**
-     * @return the app
-     */
-    public Application getApplication() {
-        return application;
-    }
-
-    /**
-     * @param app the app to set
-     */
-    public void setApplication(Application app) {
-        this.application = app;
-    }
     
-    public ObjectNode toJSON() throws Exception
+    /**
+     * @return the iconDataURL
+     */
+    public String getIconDataURL() 
+    {
+        return iconDataURL;
+    }
+
+    /**
+     * @param iconDataURL the iconDataURL to set
+     */
+    public void setIconDataURL(String iconDataURL) 
+    {
+        this.iconDataURL = iconDataURL;
+    }    
+
+    
+    public ObjectNode toJSON() 
     {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode obj = mapper.createObjectNode();
         obj.put("name", name);
         obj.put("required", required);
         obj.put("multiple", multiple);
+        obj.put("iconDataURL", iconDataURL);
         return obj;
     }
 
@@ -117,5 +148,7 @@ public class Role implements Serializable
         }
         return sb.toString();
     }
+
+
     
 }

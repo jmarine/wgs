@@ -20,7 +20,6 @@ import com.github.jmarine.wampservices.WampSubscriptionOptions;
 import com.github.jmarine.wampservices.WampTopic;
 import com.github.jmarine.wampservices.WampTopicOptions;
 import com.github.jmarine.wampservices.util.OpenIdConnectProviderId;
-import java.math.BigDecimal;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -723,17 +722,12 @@ public class Module extends WampModule
         if(valid) {
             Application app = g.getApplication();
             ArrayList<String> requiredRoles = new ArrayList<String>();
+            for(Role r : app.getRoles()) {
+                if(r.isRequired()) requiredRoles.add(r.getName());
+            }
             
             response.put("created", created);
             response.put("app", app.toJSON());
-
-            ArrayNode rolesArray = mapper.createArrayNode();
-            for(Role r : app.getRoles()) {
-                rolesArray.add(r.toJSON());
-                if(r.isRequired()) requiredRoles.add(r.getName());
-            }
-            response.put("roles", rolesArray);
-
 
             String topicName = getFQtopicURI("group_event:" + g.getGid());
             WampTopic topic = wampApp.getTopic(topicName);
@@ -825,6 +819,16 @@ public class Module extends WampModule
                     member.setState(MemberState.RESERVED);
                     member.setUser(client.getUser());
                     member.setUserType("user");
+                    if(options != null && options.has("role")) {
+                        Role oldRole = member.getRole();
+                        String roleName = options.get("role").asText();
+                        role = g.getApplication().getRoleByName(roleName);
+                        if(role != null && (oldRole == null || !roleName.equals(oldRole.getName())) ) {
+                            requiredRoles.remove(roleName);
+                            if(oldRole != null && oldRole.isRequired()) requiredRoles.add(oldRole.getName());
+                            member.setRole(role);
+                        }
+                    }                    
 
                     client.setState(ClientState.JOINED);
                     joined = true;

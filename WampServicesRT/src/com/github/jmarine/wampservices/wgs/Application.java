@@ -20,6 +20,7 @@ import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
 
@@ -364,12 +365,22 @@ public class Application implements Serializable {
             obj.put("domain", getDomain());
             obj.put("ai", isAIavailable());
             obj.put("version", getVersion());
-            
-            // obj.put("open", getGroupsByState(GroupState.OPEN).size());
-            // obj.put("started", getGroupsByState(GroupState.STARTED).size());
+            obj.put("roles", getRolesNode());
             
         } catch(Exception ex) { }
         return obj;
+    }
+    
+    public ArrayNode getRolesNode() 
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode array = mapper.createArrayNode();
+        if(roles != null) {
+            for(Role role : roles) {
+                array.add(role.toJSON());
+            }
+        }
+        return array;
     }
     
     @Override

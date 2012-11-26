@@ -60,7 +60,7 @@ label { /*display: block;*/ float: left; width: 90px; clear: left; }
 
 <script language="javascript">
 var wgsclient = null;
-var currentAppAI = null;
+var currentApp = null;
 var currentGroup = null;
 
 $(document).ready(function(){
@@ -188,6 +188,15 @@ function hide_app_params() {
 
 function show_new_group_params() {
     var app = $("#apps option:selected").text();
+    
+    var roles = "";
+    currentApp.roles.forEach(function(role) {
+        roles += '<option value="' + role.name + '">' + role.name + '</option>';
+    });    
+
+    $("#new_grp_role option").remove();
+    $("#new_grp_role").append(roles);
+
     $("#new_group_params fieldset legend").html("New group: " + app);
     $("#group_list").hide();
     $("#new_group_params").slideDown(500);
@@ -246,6 +255,7 @@ function list_groups() {
     wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, update_groups, app_metaevent, { "clientSideOnly":true});
     wgsclient.listGroups(appId, function(response) {
         if(response.valid) {
+            currentApp = response.app;
             update_groups(response);
             $("#app_list").hide();
             $("#group_list").slideDown(500);
@@ -319,7 +329,7 @@ function new_group() {
     options.observable = $("#new_grp_observable").is(":checked");
     options.hidden = $("#new_grp_hidden").is(":checked");
     options.password = $("#new_grp_password").val();
-    
+    options.role = $("#new_grp_role option:selected").val();
     open_group(gid, options);
 }
 
@@ -339,7 +349,7 @@ function open_group(gid, options) {
     wgsclient.openGroup(appId, gid, options, function(response) {
        if(response.valid) {
             //wgsclient.setSubscriptionStatus("https://github.com/jmarine/wampservices/wgs#app_event:" + appId, "busy", null );
-            currentAppAI = response.app.ai;
+            currentApp = response.app;
             if(response.gid != "") wgsclient.subscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + response.gid, update_group_callback, null, { "clientSideOnly":true} );
             show_group(response); 
        } else if(response.errorURI == "https://github.com/jmarine/wampservices/wgs#incorrectpassword") {
@@ -406,7 +416,7 @@ function show_group(group) {
                 roleFixed = true;
             }
 
-            append_group_member(false, memberId, member, currentUserSelected, roleFixed, currentAppAI);
+            append_group_member(false, memberId, member, currentUserSelected, roleFixed, currentApp.ai);
 
         });
     }
@@ -433,7 +443,7 @@ function show_group(group) {
 
 function add_group_member(added) {
     var members = $("#group_params table[id='members'] tbody tr");
-    append_group_member(added, members.size(), {}, false, false, currentAppAI);
+    append_group_member(added, members.size(), {}, false, false, currentApp.ai);
 }
 
 function update_member(field, as_previous_client) 
@@ -509,7 +519,7 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
         members += '<option value="'+val+'" selected>' + user + '</option>';
     }
     
-    currentGroup.roles.forEach(function(role) {
+    currentGroup.app.roles.forEach(function(role) {
         if(!roleFixed || (memberRole==role.name) || memberSid == wgsclient.sid || (wgsclient.user == $("#group_admin").val()) ) {
             roles += '<option value="' + role.name + '" ' + ((memberRole==role.name)? "selected" : "") + '>' + role.name + '</option>';
         }
@@ -536,7 +546,7 @@ function append_group_member(added, memberId, member, currentUserSelected, roleF
     html += '<td><select id="member' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
 
     html += '</select></td><td><select id="role' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
-    currentGroup.roles.forEach(function(role) {
+    currentGroup.app.roles.forEach(function(role) {
         if(!roleFixed || added || (memberRole==role.name)) {
             html += '<option value="' + role.name + '" ' + ((memberRole==role.name)? "selected" : "") + '>' + role.name + '</option>';
         }
@@ -623,7 +633,7 @@ function update_group_callback(response) {
 
                             var currentUserSelected = (wgsclient.sid == member.sid);
                             var roleFixed = (member.role != "") && (member.sid != "") && (wgsclient.sid != member.sid);
-                            populate_group_member_fields(false, memberId, member, currentUserSelected, roleFixed, currentAppAI);
+                            populate_group_member_fields(false, memberId, member, currentUserSelected, roleFixed, currentApp.ai);
                         }
                     }
                 });
@@ -638,7 +648,7 @@ function update_group_callback(response) {
                 if(response.members) {
                     response.members.forEach(function(member) {
                         var memberId = member.slot;  
-                        populate_group_member_fields(false, memberId, member, false, false, currentAppAI);
+                        populate_group_member_fields(false, memberId, member, false, false, currentApp.ai);
                     });
                 }
                 
@@ -904,6 +914,7 @@ function toggle_connect(create_user) {
   <div id="new_group_params" class="section hidden">
     <fieldset>
       <legend>New group options</legend>
+      <label for="new_grp_role">Role:</label><select id="new_grp_role" name="new_grp_role"></select><br/>
       <label for="new_grp_automatch">Auto-match:</label><input type="checkbox" name="new_grp_automatch" id="new_grp_automatch" /><br/>
       <label for="new_grp_observable">Observable</label><input type="checkbox" name="new_grp_observable" id="new_grp_observable" /><br/>
       <label for="new_grp_hidden">Hidden:</label><input type="checkbox" name="new_grp_hidden" id="new_grp_hidden" /><br/>
