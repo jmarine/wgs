@@ -901,12 +901,7 @@ public class Module extends WampModule
         
         Group g = groups.get(gid);
         if(g != null) {
-            response = g.toJSON();
-            response.put("cmd", "group_updated");
-            
             logger.log(Level.FINE, "open_group: group found: " + gid);
-            
-            response.put("gid", g.getGid());
             
             if(node.has("automatch")) {
                 boolean autoMatchMode = node.get("automatch").asBoolean();
@@ -918,21 +913,18 @@ public class Module extends WampModule
             if(node.has("dynamic")) {
                 boolean dynamic = node.get("dynamic").asBoolean();
                 g.setDynamicGroup(dynamic);
-                response.put("dynamic", g.isDynamicGroup());
                 broadcastGroupInfo = true;
             }
             
             if(node.has("alliances")) {
                 boolean alliances = node.get("alliances").asBoolean();
                 g.setAlliancesAllowed(alliances);
-                response.put("alliances", g.isAlliancesAllowed());
                 broadcastGroupInfo = true;
             }            
 
             if(node.has("hidden")) {
                 boolean hidden = node.get("hidden").asBoolean();
                 g.setHidden(hidden);
-                response.put("hidden", g.isHidden());
                 broadcastAppInfo = true;
                 broadcastGroupInfo = true;
             }            
@@ -940,7 +932,6 @@ public class Module extends WampModule
             if(node.has("observable")) {
                 boolean observable = node.get("observable").asBoolean();
                 g.setObservableGroup(observable);
-                response.put("observable", g.isObservableGroup());
                 broadcastAppInfo = true;
                 broadcastGroupInfo = true;
             }                                 
@@ -948,15 +939,20 @@ public class Module extends WampModule
             if(node.has("data")) {
                 String data = node.get("data").asText();
                 g.setData(data);
-                response.put("data", data);
                 broadcastGroupInfo = true;
             }
             
             if(node.has("state")) {
                 String state = node.get("state").asText();
                 g.setState(GroupState.valueOf(state));
-                response.put("state", state);
-                
+                broadcastAppInfo = true;
+                broadcastGroupInfo = true;                
+            }
+
+            
+            response = g.toJSON();
+            response.put("cmd", "group_updated");
+            if(node.has("state")) {            
                 if(g.getState() == GroupState.STARTED) {
                     for(int slot = 0; slot < g.getNumSlots(); slot++) {
                         Member member = g.getMember(slot);
@@ -966,10 +962,6 @@ public class Module extends WampModule
                     }
                     response.put("updates", getMembers(gid,0));
                 }
-                
-                //updateAppInfo(socket, g.getApplication(), "app_updated", false);
-                broadcastAppInfo = true;
-                broadcastGroupInfo = true;
             }
             
             valid = true;
