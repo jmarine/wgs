@@ -495,16 +495,16 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
     var memberSid   = member.sid   ? member.sid   : "";
     var memberType  = member.type  ? member.type  : "user";
     var memberRole  = member.role  ? member.role  : "";
-    var members = "";
-    var roles = "";
+    
+    var userOptions = "";
     if(added || memberUser == "" || memberSid == wgsclient.sid || (wgsclient.user == $("#group_admin").val()) ) {
-        members += '<option value="">Empty</option>';
-        members += '<option value="user:'+wgsclient.sid+'" ' + ((currentUserSelected && memberType=="user")? "selected" : "") + '>Me</option>';
-        if(ai) members += '<option value="computer:'+wgsclient.sid+'" ' + ((currentUserSelected && memberType=="computer")? "selected" : "") + '>MyComputer</option>';
+        userOptions += '<option value="">Empty</option>';
+        userOptions += '<option value="user:'+wgsclient.sid+'" ' + ((currentUserSelected && memberType=="user")? "selected" : "") + '>Me</option>';
+        if(ai) userOptions += '<option value="computer:'+wgsclient.sid+'" ' + ((currentUserSelected && memberType=="computer")? "selected" : "") + '>MyComputer</option>';
         var connections = wgsclient.getGroupConnections(currentGroup.gid);
         for(var sid in connections) {
             if( (wgsclient.user == $("#group_admin").val()) && (sid != wgsclient.sid) && (memberSid != sid) ) {
-                members += '<option value="user:'+sid+'" ' + ((sid==memberSid && memberType=="user")? "selected" : "") + '>user:'+connections[sid].name+'</option>';
+                userOptions += '<option value="user:'+sid+'" ' + ((sid==memberSid && memberType=="user")? "selected" : "") + '>user:'+connections[sid].name+'</option>';
             }
         }
     } 
@@ -516,22 +516,34 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
             val = memberType + ":" + val;
             user = memberType + ":" + memberName;
         }
-        members += '<option value="'+val+'" selected>' + user + '</option>';
+        userOptions += '<option value="'+val+'" selected>' + user + '</option>';
     }
-    
+
+    var roleOptions = "";
     currentGroup.app.roles.forEach(function(role) {
         if(!roleFixed || (memberRole==role.name) || memberSid == wgsclient.sid || (wgsclient.user == $("#group_admin").val()) ) {
-            roles += '<option value="' + role.name + '" ' + ((memberRole==role.name)? "selected" : "") + '>' + role.name + '</option>';
+            roleOptions += '<option value="' + role.name + '" ' + ((memberRole==role.name)? "selected" : "") + '>' + role.name + '</option>';
         }
     });    
     
+    
+    var memberTeam  = 1;
+    if(isFinite(member.team)) {
+        memberTeam = member.team;
+    } else {
+        for(var index = 0; index < memberId; index++) {
+            memberTeam = Math.max(memberTeam, 1+parseInt($("#team" + index).val()));
+        }
+    }
+    
+    
     $("#member" + memberId+ " option").remove();
-    $("#member" + memberId).append(members);
+    $("#member" + memberId).append(userOptions);
     
     $("#role" + memberId+ " option").remove();
-    $("#role" + memberId).append(roles);
+    $("#role" + memberId).append(roleOptions);
     
-    $("#team" + memberId).val(member.team);
+    $("#team" + memberId).val(memberTeam);
     
     $("#state" + memberId).attr("src", "images/" + memberState.toLowerCase() + ".png");
     $("#state" + memberId).attr("title", memberState);
