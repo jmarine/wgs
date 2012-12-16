@@ -613,6 +613,7 @@ public class Module extends WampModule
             for(Group group : app.getGroupsByState(null)) {
                 if(group.isHidden()) continue;
                 ObjectNode obj = group.toJSON();
+                obj.put("members", getMembers(group.getGid(),0));                
                 groupsArray.add(obj);
             }   
 

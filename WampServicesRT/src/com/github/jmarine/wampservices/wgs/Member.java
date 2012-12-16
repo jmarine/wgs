@@ -105,7 +105,7 @@ public class Member
     }    
     
     
-    public ObjectNode toJSON() throws Exception
+    public ObjectNode toJSON() 
     {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode obj = mapper.createObjectNode();

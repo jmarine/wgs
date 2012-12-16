@@ -1,9 +1,6 @@
 package com.github.jmarine.wampservices.wgs;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
-import com.github.jmarine.wampservices.WampTopic;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
 
