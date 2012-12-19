@@ -321,6 +321,7 @@ public class Group
         obj.put("alliances", isAlliancesAllowed());
         obj.put("description", getDescription());        
         obj.put("state", String.valueOf(getState()));
+        obj.put("password", (password != null) && (password.length() > 0) );
         return obj;
     }
 

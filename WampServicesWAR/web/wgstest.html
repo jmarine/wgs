@@ -21,6 +21,20 @@ button, input, select, option {
   background: #fff0c0; 
 }
 
+.scrollTableData {
+  background: #fff0c0; 
+  border: 1px #6c3000 solid;
+}
+
+.scrollTableHeader {
+  background: #dac394;
+  border: 1px #6c3000 solid; border-top-left-radius: 6px; border-top-right-radius: 6px;
+}
+
+.scrollTableRow > td {
+  border-bottom: 1px #6c3000 solid; 
+}
+
 button, input, select {
   border: 1px #6c3000 solid;
   margin-bottom: 2px;
@@ -91,6 +105,71 @@ $(document).ready(function(){
     
 });
 
+function adjustScrollTable(tableName){
+ 
+  var colCount = $('#' + tableName + 'Header .columnHeader').length; //get total number of column
+ 
+  var m = 0;
+  var n = 0;
+  var brow = 'mozilla';
+ 
+  jQuery.each(jQuery.browser, function(i, val) {
+    if(val == true){
+      brow = i.toString();
+    }
+  });
+ 
+ 
+  if($('#' + tableName + 'Table tr').size() <= 0) {
+    $('#' + tableName + 'Header table').width("100%");
+  } else {
+    $('#' + tableName + 'Header table').width("0");
+    $('#' + tableName + 'Header .columnHeader').each(function(i){
+      if (m < colCount){
+
+        if (brow == 'mozilla'){
+          $('#firstTd').css("width",$('.tableFirstCol').innerWidth());//for adjusting first td
+          $(this).css('width',$('#' + tableName + 'Table td:eq('+m+')').innerWidth());//for assigning width to table Header div
+        }
+        else if (brow == 'msie'){
+          $('#firstTd').css("width",$('.tableFirstCol').width());
+          $(this).css('width',$('#' + tableName + 'Table td:eq('+m+')').width()-2);//In IE there is difference of 2 px
+        }
+        else if (brow == 'safari'){
+          $('#firstTd').css("width",$('.tableFirstCol').width());
+          $(this).css('width',$('#' + tableName + 'Table td:eq('+m+')').width());
+        }
+        else {
+          $('#firstTd').css("width",$('.tableFirstCol').width());
+          $(this).css('width',$('#' + tableName + 'Table td:eq('+m+')').innerWidth());
+        }
+      }
+      m++;
+    });
+  }
+   
+/*  
+  $('.tableFirstCol').each(function(i){
+    if(brow == 'mozilla'){
+      $(this).css('height',$('#table_div td:eq('+colCount*n+')').outerHeight());//for providing height using scrollable table column height
+    }
+    else if(brow == 'msie'){
+      $(this).css('height',$('#table_div td:eq('+colCount*n+')').innerHeight()-2);
+    }
+    else {
+      $(this).css('height',$('#table_div td:eq('+colCount*n+')').height());
+    }
+    n++;
+  });
+*/
+}
+
+
+function fnScroll(tableName){
+  $('#' + tableName + 'Header').scrollLeft($('#' + tableName + 'Table').scrollLeft());
+  //$('#' + tableName + 'FirstRow').scrollTop($('#' + tableName + 'Table').scrollTop());
+}
+
 function enable_network() {
     $("#group_params").hide();
     $("#login").slideDown(500);
@@ -132,10 +211,6 @@ function getAppDescription(app) {
     return app.name; // " (Open:" + app.open + ", Started:" + app.started + ")";
 }
 
-
-function getGroupDescription(group) {
-    return group.state + " (" + group.num + "/" + group.max + "): " + group.description;
-}
 
 function update_apps(response) {
     if(response.apps) { 
@@ -207,35 +282,95 @@ function hide_new_group_params() {
     $("#group_list").slideDown(500);
 }
 
+function getGroupDescription(group) {
+    return group.state + " (" + group.num + "/" + group.max + "): " + group.description;
+}
+
+function getGroupListItem(group) {
+   var opt = $('<tr>');
+   opt.attr("gid", group.gid);
+   opt.attr('observable', group.observable);   
+   opt.attr('class', "scrollTableRow");
+
+
+   var viewButton = "";
+   if(group.observable) viewButton = "<br><button onclick=\"javascript:view_group('" + group.gid + "')\">View</button>";
+   
+   opt.append('<td>Chess</td>');
+   opt.append('<td>' + group.state + (group.password? "<br>(password)" : "" ) + '</td>');
+   opt.append('<td>' + group.num + "/" + group.max + viewButton + "</td>");
+   
+   
+   var memberCol = $('<td>');
+   var members = $('<table>');
+
+   var count = 0;
+   var members = $('<table>');
+   group.members.forEach(function(member) {
+       count++;
+       var row = $("<tr>");
+       
+       var playerLabel = "Player " + count + (member.role? " ("+ member.role +")" : "");
+       row.append("<td>" + playerLabel + ":</td>");
+       if(member.name != null && member.name.length > 0) row.append("<td>" + member.name + "</td>");
+       else row.append("<td><button onclick=\"javascript:reserve_group_slot('" + group.gid + "'," + member.slot + ")\">Play</button></td>");
+        
+       members.append(row);
+   }); 
+
+   memberCol.append(members);
+   opt.append(memberCol);
+
+   return opt;
+}
+
 function update_groups(response) {
-    $("#groups option").remove();
     $('#btn_play_group').attr("disabled", "true");
     $('#btn_view_group').attr("disabled", "true");
         
     if(response.groups) {
+        //$("#groups option").remove();
+        $("#groupsTable>table>tbody>tr").remove();
+        
         response.groups.forEach(function(item) {
+            /*
             var opt = $('<option>')
             opt.attr('value',item.gid).text(getGroupDescription(item));
             opt.attr('observable', item.observable);
             $("#groups").append(opt);
+            */
+            var opt = getGroupListItem(item);
+            $("#groupsTable>table").append(opt);
         });
-        
-    } else if(response.cmd == "group_created" || response.cmd == "group_updated") {
-        
-        if(response.hidden) {
-            $("#groups option[value='"+response.gid+"']").remove();
-        } else {
-            if($("#groups option[value='"+response.gid+"']").size() <= 0) {  // insert group
-                $("#groups").append($("<option>").attr("value", response.gid));
-            }
-            $("#groups option[value='"+response.gid+"']").text(getGroupDescription(response));
-            $("#groups option[value='"+response.gid+"']").attr("observable", response.observable);
-        }
         
     } else if(response.cmd == "group_deleted") {
         
-        $("#groups option[value='"+response.gid+"']").remove();
+        //$("#groups option[value='"+response.gid+"']").remove();
+        $("#groupsTable>table>tbody>tr[gid='"+response.gid+"']").remove();
+        
+    } else {  // "group_created" || "group_updated" || user_joined || user_exit || user_updated
+        
+        if(response.hidden) {
+            //$("#groups option[value='"+response.gid+"']").remove();
+            $("#groupsTable>table>tbody>tr[gid='"+response.gid+"']").remove();
+        } else {
+            // if($("#groups option[value='"+response.gid+"']").size() <= 0) {  // insert group
+            //   $("#groups").append($("<option>").attr("value", response.gid));
+            // }
+            //$("#groups option[value='"+response.gid+"']").text(getGroupDescription(response));
+            //$("#groups option[value='"+response.gid+"']").attr("observable", response.observable);
+            
+            if($("#groupsTable>table>tbody>tr[gid='"+response.gid+"']").size() <= 0) {
+                $("#groupsTable>table").append(getGroupListItem(response));
+            } else {
+                $("#groupsTable>table>tbody>tr[gid='"+response.gid+"']").replaceWith(getGroupListItem(response));
+            }
+        }
+        
     } 
+    
+    $("#group_list").show();
+    adjustScrollTable("groups");
 }
 
 function app_metaevent(topicURI, metatopic, metaevent) {
@@ -333,10 +468,17 @@ function new_group() {
     open_group(gid, options);
 }
 
-function view_group() {
-    var gid = $('#groups option:selected').attr('value');
+function view_group(gid) {
+    //var gid = $('#groups option:selected').attr('value');
     var options = new Object();
     options.spectator = true;
+    open_group(gid, options);
+}
+
+function reserve_group_slot(gid,slot) {
+    //var gid = $('#groups option:selected').attr('value');
+    var options = new Object();
+    options.slot = slot;
     open_group(gid, options);
 }
 
@@ -914,10 +1056,40 @@ function toggle_connect(create_user) {
   <div id="group_list" class="section hidden">
     <fieldset id="group_list_fieldset">
       <legend>Groups</legend>
-    <select id="groups" name="groups" size="8" style="width: 100%">
-    </select><br>
-    <button id="btn_play_group" onclick="open_group($('#groups option:selected').attr('value'));" disabled>Play</button>
+    <!--<select id="groups" name="groups" size="8" style="width: 100%"></select>-->
+      <div id="groupsHeader" class="scrollTableHeader" style="overflow:hidden;width:100%">
+        <table cellspacing="0" cellpadding="0" border="0" >
+          <tr id='firstTr'>
+            <td>
+              <div class="columnHeader">Game</div>
+            </td>
+            <td>
+              <div class="columnHeader">Status</div>
+            </td>
+            <td>
+              <div class="columnHeader">N/T</div>
+            </td>
+            <td>
+              <div class="columnHeader">Members</div>
+            </td>
+          </tr>
+        </table>
+      </div>  
+      <div id="groupsTable" class="scrollTableData" style="overflow: scroll;width:100%;height:100px;position:relative" onscroll="fnScroll('groups')" >
+        <table width="100%" cellspacing="0" cellpadding="0" border="0" >
+          <!--<tr>
+            <td>Chess</td>
+            <td>Closed</td>
+            <td>1/2</td>
+            <td>Judith vs Irene</td>
+          </tr>-->
+        </table>
+      </div>
+    <br>
+    <!--<button id="btn_play_group" onclick="open_group($('#groups option:selected').attr('value'));" disabled>Play</button>
     <button id="btn_view_group" onclick="view_group();" disabled>View</button>
+    -->
+    <button id="btn_automatch_group_list" onclick="open_group('automatch');">Auto-Match</button>
     <button id="btn_new_group" onclick="show_new_group_params();">New</button>
     <button id="btn_hide_group" onclick="hide_group_list();">Exit</button>
     </fieldset>
