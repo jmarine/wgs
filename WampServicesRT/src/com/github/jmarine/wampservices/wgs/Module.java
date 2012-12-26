@@ -20,7 +20,6 @@ import com.github.jmarine.wampservices.WampSubscriptionOptions;
 import com.github.jmarine.wampservices.WampTopic;
 import com.github.jmarine.wampservices.WampTopicOptions;
 import com.github.jmarine.wampservices.util.OpenIdConnectProviderId;
-import java.math.BigDecimal;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -794,9 +793,10 @@ public class Module extends WampModule
                 }
             }
 
-            ArrayNode membersArray = mapper.createArrayNode();
-            for(int index = 0;
-                    (index < Math.max(num_slots, g.getMinMembers())) || (requiredRoles.size() > 0);
+            int requiredSlot = options.has("slot")? options.get("slot").asInt() : -1;
+            for(int index = (requiredSlot >= 0)? requiredSlot : 0;
+                    ((index < Math.max(num_slots, g.getMinMembers())) || (requiredRoles.size() > 0))
+                    && (requiredSlot < 0 || index==requiredSlot);
                     index++) {
                 String usertype = "user";
 
@@ -849,15 +849,9 @@ public class Module extends WampModule
                     socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), event, true);  // exclude Me
                 }
 
-
-                ObjectNode memberObj = member.toJSON();
-                memberObj.put("slot", index);
-                memberObj.put("connected", connected);
-                
-                membersArray.add(memberObj);
             }
 
-            response.put("members", membersArray);
+            response.put("members", getMembers(g.getGid(), 0));
             
             updateGroupInfo(socket, g, created? "group_created" : "group_updated", false);
         }
