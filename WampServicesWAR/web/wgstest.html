@@ -2,8 +2,9 @@
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 		<title>WebSocket game services client</title>
-		<script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
-		<script type="text/javascript" src="js/jquery-ui-1.8.19.custom.min.js"></script>
+                <link rel="stylesheet" href="css2/jquery-ui.css" />
+		<script type="text/javascript" src="js/jquery-1.8.3.js"></script>
+		<script type="text/javascript" src="js/jquery-ui-1.9.2.js"></script>
 		<script type="text/javascript" src="js/wgsclient.js"></script>
 <style type="text/css">
 
@@ -45,6 +46,42 @@ button, input, select {
 button {
   border-radius: 6px;
   margin-top: 5px;
+}
+
+.ui-buttonset { 
+  alignment-baseline: central;
+}
+
+.ui-menu { list-style:none; padding: 2px; margin: 0; display:block; outline: none;  }
+.ui-menu .ui-menu-item { margin: 0; padding: 0; zoom: 1; width: 100%; background-color: #fff0c0; }
+.ui-menu .ui-menu { margin-top: -3px; position: absolute; } 
+.ui-menu .ui-menu-divider { margin: 5px -2px 5px -2px; height: 0; font-size: 0; line-height: 0; border-width: 1px 0 0 0; }
+.ui-menu .ui-menu-item a { text-decoration: none; display: block; padding: 2px .4em; line-height: 1.5; zoom: 1; font-weight: normal; }
+.ui-menu .ui-menu-item a.ui-state-focus,
+.ui-menu .ui-menu-item a.ui-state-active { font-weight: normal; margin: -1px; background-color: blue }
+
+
+#openid_providers_menu {
+    border-radius: 6px; 
+    border-color: #6c3000;
+}
+
+#toggle_connect {
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+#oic_connect {
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    margin-left: -5px;
+    padding-left: 0px;
+    padding-right: 0px;
+    background-image: url(images/oic.png) ;
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: 14px,14px;
+    width: 20px;
 }
 
 button:active {
@@ -186,6 +223,28 @@ function enable_network() {
     $("#password").show();
     $("#lbl_password").show();
     
+        $( "#toggle_connect" )
+            .button()
+            .click(function() {
+                toggle_connect(false);
+            })
+            .next()
+                .button({
+                    text: false,
+                    icons: {
+                        primary: "ui-icon-triangle-1-s"
+                    }
+                })
+                .click(function() {
+                    openid_connect_menu(this);
+                    return false;
+                })
+                .parent()
+                    .buttonset()
+                    .next()
+                        .hide()
+                        .menu();
+    
 }
 
 function authentication(state, msg) {
@@ -193,8 +252,11 @@ function authentication(state, msg) {
           $("#server_url").attr("disabled", "disabled");
           $("#user").attr("disabled", "disabled");
           $("#password").attr("disabled", "disabled");
+
           $("#register").attr("disabled", "disabled");
-          $("#toggle_connect").html("Disconnect");          
+          $("#oic_connect").attr("disabled", "disabled");
+          
+          $("#toggle_connect").html("Disconnect");  
           
           $("#user").val(msg.name);
           $("#lbl_password").hide();
@@ -953,6 +1015,7 @@ function disconnect() {
     $("#user").removeAttr("disabled");
     $("#password").removeAttr("disabled");
     $("#register").removeAttr("disabled");
+    $("#oic_connect").removeAttr("disabled");
     $("#toggle_connect").html("Connect");
     $("#participants").html("");
     
@@ -991,6 +1054,39 @@ function toggle_connect(create_user) {
     }
 }
 
+function openid_connect_menu(self) {
+    var url = $("#server_url").val();
+    var redirectUri = clear_openid_connect_params(true);
+    
+    wgsclient = new WgsClient(url);
+    wgsclient.openIdConnectProviders(redirectUri, function(response) { 
+
+        var providers = $("#openid_providers_menu");
+        providers.find("li:gt(0)").each(function(){
+            $(this).remove();
+        });
+
+        if(response.valid) {
+            response.providers.forEach(function(provider) {
+                var item = $("<li>");
+                var link = $("<a>");
+                link.attr("href", provider.uri).text(provider.name);
+                item.attr("class", "ui-menu-item").append(link)
+                providers.append(item);
+            });
+        }
+        
+        var menu = $( self ).parent().next().show().position({
+                        my: "left top",
+                        at: "left bottom",
+                        of: "#toggle_connect"
+                    });
+        $( document ).one( "click", function() {
+            menu.hide();
+        });
+
+    });
+}
 
 </script>
 
@@ -1003,9 +1099,17 @@ function toggle_connect(create_user) {
     <label for="server_url">Service:</label><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wgs" /><br/>
     <label for="user">User:</label><input type="text" name="user" id="user" value="guest" /><br/>
     <label for="password" id="lbl_password">Password:</label><input type="password" name="password" id="password" value="" /><br/>
-    <button id="oic_connect" onclick="my_openid_connect(true);">OpenID Connect</button>
-    <button id="toggle_connect" onclick="toggle_connect(false);">Connect</button>
-    <button id="register" onclick="toggle_connect(true);">Register</button>
+
+    <div class="ui-buttonset">
+      <button id="toggle_connect">Connect</button>
+      <button id="oic_connect">&nbsp;</button>
+      <button id="register" onclick="toggle_connect(true);">Register</button>
+    </div>
+    
+    <ul id="openid_providers_menu" style="display: none">
+        <li><a href="javascript:my_openid_connect(true);">OpenID Connect</a></li>
+    </ul>    
+    
     </fieldset>
   </div>
     

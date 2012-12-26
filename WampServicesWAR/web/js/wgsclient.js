@@ -156,6 +156,26 @@ WgsClient.prototype = {
   }, 
 
 
+  openIdConnectProviders: function(redirectUri, callback) {
+      var client = this;
+      client._connect(function(state, msg) {
+        if(state == WgsState.WELCOMED) {
+            var msg = Object();
+            msg.redirect_uri = redirectUri;
+            client.prefix("wgs", "https://github.com/jmarine/wampservices/wgs#");
+            client.call("wgs:openid_connect_providers", msg).then(
+                function(response) {
+                    client.close();
+                    callback(response);
+                }, 
+                function(response) {
+                    client.close();
+                    callback(response);
+                });
+        } 
+      });
+  },
+
   openIdConnectLoginUrl: function(principal, redirectUri, onstatechange) {
       var client = this;
       client._connect(function(state, msg) {

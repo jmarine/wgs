@@ -6,6 +6,8 @@ import java.util.Calendar;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import javax.persistence.TemporalType;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -15,6 +17,9 @@ import org.codehaus.jackson.node.ObjectNode;
 
 @Entity
 @Table(name="OIC_PROVIDER")
+@NamedQueries({
+  @NamedQuery(name="oic_provider.findByRedirectUri", query="SELECT OBJECT(p) FROM OpenIdConnectProvider p WHERE p.id.redirectUri like :uri")
+})
 public class OpenIdConnectProvider implements Serializable
 {
     @EmbeddedId

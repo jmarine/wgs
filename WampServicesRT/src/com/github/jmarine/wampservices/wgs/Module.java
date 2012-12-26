@@ -36,6 +36,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
+import javax.persistence.TypedQuery;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -294,6 +295,52 @@ public class Module extends WampModule
         return usr.toJSON();
     }
 
+    
+    @WampRPC(name="openid_connect_providers")
+    public ObjectNode openIdConnectProviders(WampSocket socket, ObjectNode data) throws Exception
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode retval = mapper.createObjectNode();
+        ArrayNode providers = mapper.createArrayNode();
+        String redirectUri = data.get("redirect_uri").asText();
+        redirectUri = redirectUri + ((redirectUri.indexOf("?") == -1)?"?":"&") + "provider=%";
+        
+        EntityManager manager = null;
+        try {
+            manager = getEntityManager();
+            TypedQuery<OpenIdConnectProvider> query = manager.createNamedQuery("oic_provider.findByRedirectUri", OpenIdConnectProvider.class);
+            query.setParameter("uri", redirectUri);
+            
+            for(OpenIdConnectProvider oic : query.getResultList()) {
+                if(!"defaultProvider".equals(oic.getId().getDomain())) {
+                    String oicAuthEndpointUrl = oic.getAuthEndpointUrl();
+                    String clientId = oic.getClientId();
+                    String uri = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + URLEncoder.encode(clientId,"utf8") + "&redirect_uri=" + URLEncoder.encode(oic.getId().getRedirectUri(),"utf8");
+
+                    ObjectNode provider = mapper.createObjectNode();
+                    provider.put("name", oic.getId().getDomain());
+                    provider.put("uri", uri);
+                    providers.add(provider);
+                }
+            }
+            
+            retval.put("providers", providers);
+            
+        } catch(Exception ex) {
+            
+            throw new WampException(MODULE_URL + "oic_error", "OpenID Connect provider error: " + ex.getMessage());
+        
+        } finally {
+            if(manager != null) {
+                try { manager.close(); }
+                catch(Exception ex) { }
+            }            
+        }
+        
+        return retval;
+    }
+            
+    
     @WampRPC(name="openid_connect_login_url")
     public String openIdConnectLoginUrl(WampSocket socket, ObjectNode data) throws Exception
     {
