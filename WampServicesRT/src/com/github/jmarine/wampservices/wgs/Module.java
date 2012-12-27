@@ -7,7 +7,7 @@
 package com.github.jmarine.wampservices.wgs;
 
 
-import com.github.jmarine.wampservices.util.OpenIdConnectProvider;
+import com.github.jmarine.wampservices.util.OpenIdConnectClient;
 import com.github.jmarine.wampservices.util.Base64;
 import com.github.jmarine.wampservices.WampApplication;
 import com.github.jmarine.wampservices.WampException;
@@ -19,7 +19,8 @@ import com.github.jmarine.wampservices.WampSubscription;
 import com.github.jmarine.wampservices.WampSubscriptionOptions;
 import com.github.jmarine.wampservices.WampTopic;
 import com.github.jmarine.wampservices.WampTopicOptions;
-import com.github.jmarine.wampservices.util.OpenIdConnectProviderId;
+import com.github.jmarine.wampservices.util.OpenIdConnectClientPK;
+import com.github.jmarine.wampservices.util.OpenIdConnectProvider;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -306,23 +307,41 @@ public class Module extends WampModule
         redirectUri = redirectUri + ((redirectUri.indexOf("?") == -1)?"?":"&") + "provider=%";
         
         EntityManager manager = null;
+        ArrayList<String> domains = new ArrayList<String>();
+        
         try {
             manager = getEntityManager();
-            TypedQuery<OpenIdConnectProvider> query = manager.createNamedQuery("oic_provider.findByRedirectUri", OpenIdConnectProvider.class);
-            query.setParameter("uri", redirectUri);
-            
-            for(OpenIdConnectProvider oic : query.getResultList()) {
-                if(!"defaultProvider".equals(oic.getId().getDomain())) {
-                    String oicAuthEndpointUrl = oic.getAuthEndpointUrl();
-                    String clientId = oic.getClientId();
-                    String uri = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + URLEncoder.encode(clientId,"utf8") + "&redirect_uri=" + URLEncoder.encode(oic.getId().getRedirectUri(),"utf8");
 
-                    ObjectNode provider = mapper.createObjectNode();
-                    provider.put("name", oic.getId().getDomain());
-                    provider.put("uri", uri);
-                    providers.add(provider);
+            TypedQuery<OpenIdConnectClient> queryClients = manager.createNamedQuery("oic_client.findByRedirectUri", OpenIdConnectClient.class);
+            queryClients.setParameter("uri", redirectUri);
+            for(OpenIdConnectClient oic : queryClients.getResultList()) {
+                String domain = oic.getProvider().getDomain();
+                if(!domains.contains(domain) && !"defaultProvider".equals(domain)) {
+                    String clientId = oic.getClientId();
+                    String oicAuthEndpointUrl = oic.getProvider().getAuthEndpointUrl();
+                    String uri = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + URLEncoder.encode(clientId,"utf8") + "&redirect_uri=" + URLEncoder.encode(oic.getRedirectUri(),"utf8");
+
+                    ObjectNode node = mapper.createObjectNode();
+                    node.put("name", domain);
+                    node.put("authEndpoint", uri);
+                    providers.add(node);
+                    domains.add(domain);
                 }
             }
+            
+            TypedQuery<OpenIdConnectProvider> queryProviders = manager.createNamedQuery("oic_provider.findDynamic", OpenIdConnectProvider.class);
+            for(OpenIdConnectProvider provider : queryProviders.getResultList()) {
+                String domain = provider.getDomain();
+                if(!domains.contains(domain) && !"defaultProvider".equals(domain)) {
+                    ObjectNode node = mapper.createObjectNode();
+                    node.put("name", domain);
+                    node.put("registrationEndpoint", provider.getRegistrationEndpointUrl());
+                    providers.add(node);
+                    domains.add(domain);
+                }
+            }
+
+            
             
             retval.put("providers", providers);
             
@@ -369,20 +388,31 @@ public class Module extends WampModule
         EntityManager manager = null;
         try {
             manager = getEntityManager();
-            OpenIdConnectProviderId oicId = new OpenIdConnectProviderId(providerDomain, redirectUri);
-            OpenIdConnectProvider oic = manager.find(OpenIdConnectProvider.class, oicId);
+            OpenIdConnectClientPK oicId = new OpenIdConnectClientPK(providerDomain, redirectUri);
+            OpenIdConnectClient oic = manager.find(OpenIdConnectClient.class, oicId);
             if(oic == null && !providerDomain.equals("defaultProvider")) {
-                ObjectNode oicConfig = OpenIdConnectProvider.discover(principal);
-                String registrationEndpointUrl = oicConfig.get("registration_endpoint").asText();
                 
-                ObjectNode oicClient = OpenIdConnectProvider.registerClient(registrationEndpointUrl,redirectUri,"wgs");
-            
-                oic = new OpenIdConnectProvider();
-                oic.setId(oicId);
-                oic.setRegistrationEndpointUrl(registrationEndpointUrl);
-                oic.setAuthEndpointUrl(oicConfig.get("authorization_endpoint").asText());
-                oic.setAccessTokenEndpointUrl(oicConfig.get("token_endpoint").asText());
-                oic.setUserInfoEndpointUrl(oicConfig.get("userinfo_endpoint").asText());
+                OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
+                if(provider == null) {
+                    ObjectNode oicConfig = OpenIdConnectProvider.discover(principal);
+                    provider = new OpenIdConnectProvider();
+                    provider.setDomain(providerDomain);
+                    provider.setRegistrationEndpointUrl(oicConfig.get("registration_endpoint").asText());
+                    provider.setAuthEndpointUrl(oicConfig.get("authorization_endpoint").asText());
+                    provider.setAccessTokenEndpointUrl(oicConfig.get("token_endpoint").asText());
+                    provider.setUserInfoEndpointUrl(oicConfig.get("userinfo_endpoint").asText());
+                    provider = saveEntity(provider);
+                }
+
+                ObjectNode oicClient = provider.registerClient("wgs", redirectUri);
+                if(!provider.getDynamic()) {
+                    provider.setDynamic(true);
+                    provider = saveEntity(provider);
+                }
+                
+                oic = new OpenIdConnectClient();
+                oic.setProvider(provider);
+                oic.setRedirectUri(redirectUri);
                 oic.setClientId(oicClient.get("client_id").asText());
                 oic.setClientSecret(oicClient.get("client_secret").asText());
                 if(oicClient.has("expires_at")) {
@@ -404,7 +434,7 @@ public class Module extends WampModule
                     oic = saveEntity(oic);
                 }
                 
-                String oicAuthEndpointUrl = oic.getAuthEndpointUrl();
+                String oicAuthEndpointUrl = oic.getProvider().getAuthEndpointUrl();
                 String clientId = oic.getClientId();
                 retval = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + URLEncoder.encode(clientId,"utf8") + "&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8");
             }
@@ -440,8 +470,8 @@ public class Module extends WampModule
             String redirectUri = data.get("redirect_uri").asText();
             
             manager = getEntityManager();
-            OpenIdConnectProviderId oicId = new OpenIdConnectProviderId(providerDomain, redirectUri);
-            OpenIdConnectProvider oic = manager.find(OpenIdConnectProvider.class, oicId);
+            OpenIdConnectClientPK oicId = new OpenIdConnectClientPK(providerDomain, redirectUri);
+            OpenIdConnectClient oic = manager.find(OpenIdConnectClient.class, oicId);
             if(oic == null) throw new WampException(MODULE_URL + "unknown_oic_provider", "Unknown OpenId Connect provider domain");
 
             String accessTokenResponse = oic.getAccessTokenResponse(code);
@@ -480,7 +510,7 @@ public class Module extends WampModule
                     String accessToken = response.get("access_token").asText();
                     System.out.println("Access token: " + accessToken);
 
-                    String userInfo = oic.getUserInfo(accessToken);
+                    String userInfo = oic.getProvider().getUserInfo(accessToken);
                     logger.fine("OIC UserInfo: " + userInfo);
 
                     ObjectNode userInfoNode = (ObjectNode)mapper.readTree(userInfo);

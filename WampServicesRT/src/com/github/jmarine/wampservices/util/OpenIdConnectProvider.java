@@ -6,6 +6,7 @@ import java.util.Calendar;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
@@ -18,22 +19,16 @@ import org.codehaus.jackson.node.ObjectNode;
 @Entity
 @Table(name="OIC_PROVIDER")
 @NamedQueries({
-  @NamedQuery(name="oic_provider.findByRedirectUri", query="SELECT OBJECT(p) FROM OpenIdConnectProvider p WHERE p.id.redirectUri like :uri")
+  @NamedQuery(name="oic_provider.findDynamic", query="SELECT OBJECT(p) FROM OpenIdConnectProvider p WHERE p.dynamic = true")
 })
 public class OpenIdConnectProvider implements Serializable
 {
-    @EmbeddedId
-    private OpenIdConnectProviderId id;
-
-    @Column(name="client_id")
-    private String clientId;
+    @Id
+    @Column(name="provider_domain")
+    private String domain;
     
-    @Column(name="client_secret")
-    private String clientSecret;
-    
-    @javax.persistence.Temporal(TemporalType.TIMESTAMP)
-    @Column(name="client_expiration")
-    private java.util.Calendar clientExpiration;
+    @Column(name="dynamic", nullable=true)
+    private boolean dynamic;
     
     @Column(name="auth_endpoint_url")
     private String authEndpointUrl;
@@ -51,17 +46,27 @@ public class OpenIdConnectProvider implements Serializable
     /**
      * @return the id
      */
-    public OpenIdConnectProviderId getId() {
-        return id;
+    public String getDomain() {
+        return domain;
     }
 
     /**
      * @param id the id to set
      */
-    public void setId(OpenIdConnectProviderId id) {
-        this.id = id;
+    public void setDomain(String domain) {
+        this.domain = domain;
     }
 
+    public boolean getDynamic() 
+    {
+        return dynamic;
+    }
+
+    public void setDynamic(boolean dynamic) 
+    {
+        this.dynamic = dynamic;
+    }    
+    
     
     /**
      * @return the userInfoEndpointUrl
@@ -119,76 +124,7 @@ public class OpenIdConnectProvider implements Serializable
         this.registrationEndpointUrl = registrationEndpointUrl;
     }
     
-    /**
-     * @return the clientId
-     */
-    public String getClientId() {
-        return clientId;
-    }
 
-    /**
-     * @param clientId the clientId to set
-     */
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
-    }
-
-    /**
-     * @return the clientSecret
-     */
-    public String getClientSecret() {
-        return clientSecret;
-    }
-
-    /**
-     * @param clientSecret the clientSecret to set
-     */
-    public void setClientSecret(String clientSecret) {
-        this.clientSecret = clientSecret;
-    }
-
-    
-    /**
-     * @return the clientExpiration
-     */
-    public java.util.Calendar getClientExpiration() {
-        return clientExpiration;
-    }
-
-    /**
-     * @param clientExpiration the clientExpiration to set
-     */
-    public void setClientExpiration(java.util.Calendar clientExpiration) {
-        this.clientExpiration = clientExpiration;
-    }
-    
-
-    public String getAccessTokenResponse(String authorization_code) throws Exception
-    {
-        URL url = new URL(getAccessTokenEndpointUrl());
-        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-        connection.setDoOutput(true);
-
-        OutputStreamWriter out = new OutputStreamWriter(
-                                         connection.getOutputStream());
-        out.write("grant_type=authorization_code&code=" + URLEncoder.encode(authorization_code,"utf8") + "&client_id=" + URLEncoder.encode(getClientId(),"utf8") + "&redirect_uri=" + URLEncoder.encode(getId().getRedirectUri(),"utf8") + "&client_id=" + URLEncoder.encode(getClientId(),"utf8") + "&client_secret=" + URLEncoder.encode(getClientSecret(),"utf8"));
-        out.close();
-
-        BufferedReader in = new BufferedReader(
-                                    new InputStreamReader(
-                                    connection.getInputStream()));
-        String decodedString;
-        StringBuffer data = new StringBuffer();
-        while ((decodedString = in.readLine()) != null) {
-	    data.append(decodedString);
-        }
-        in.close();
-        connection.disconnect();
-
-        return data.toString();
-    }
-    
-    
     public String getUserInfo(String accessToken) throws Exception
     {
         StringBuffer retval = new StringBuffer();
@@ -277,11 +213,11 @@ public class OpenIdConnectProvider implements Serializable
         return retval;
     }
 
-    public static ObjectNode registerClient(String registrationEndpointUrl, String redirectUri, String appName) throws Exception
+    public ObjectNode registerClient(String appName, String redirectUri) throws Exception
     {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode retval = null;
-        URL url = new URL(registrationEndpointUrl);
+        URL url = new URL(getRegistrationEndpointUrl());
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setDoOutput(true);
 
@@ -304,45 +240,5 @@ public class OpenIdConnectProvider implements Serializable
         retval = (ObjectNode) mapper.readTree(data.toString());
         return retval;
     }
-
-    
-    public void rotateClientCredentials() throws Exception
-    {
-        ObjectMapper mapper = new ObjectMapper();
-        URL url = new URL(registrationEndpointUrl);
-        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-        connection.setDoOutput(true);
-
-        OutputStreamWriter out = new OutputStreamWriter(
-                                         connection.getOutputStream());
-        out.write("type=rotate_secret&client_id=" + URLEncoder.encode(this.getClientId(),"utf8")+ "&client_secret=" + URLEncoder.encode(this.getClientSecret(),"utf8"));
-        out.close();
-
-        BufferedReader in = new BufferedReader(
-                                    new InputStreamReader(
-                                    connection.getInputStream()));
-        String decodedString;
-        StringBuffer data = new StringBuffer();
-        while ((decodedString = in.readLine()) != null) {
-	    data.append(decodedString);
-        }
-        in.close();
-        connection.disconnect();
-
-        ObjectNode oicClient = (ObjectNode) mapper.readTree(data.toString());
-        Calendar expiration = null;
-        if(oicClient.has("expires_at")) {
-            long expires_at = oicClient.get("expires_at").asLong();
-            if(expires_at != 0l) {
-                expiration = Calendar.getInstance();
-                expiration.setTimeInMillis(oicClient.get("expires_at").asLong()*1000);
-            }
-        }
-        
-        setClientId(oicClient.get("client_id").asText());
-        setClientSecret(oicClient.get("client_secret").asText());
-        setClientExpiration(expiration);
-    }
-    
     
 }

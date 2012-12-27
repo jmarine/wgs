@@ -1068,9 +1068,12 @@ function openid_connect_menu(self) {
 
         if(response.valid) {
             response.providers.forEach(function(provider) {
-                var item = $("<li>");
                 var link = $("<a>");
-                link.attr("href", provider.uri).text(provider.name);
+                link.text(provider.name);
+                if(provider.authEndpoint) link.attr("href", provider.authEndpoint);
+                else link.attr("href", "javascript:wgsclient.openIdConnectLoginUrl('"+provider.registrationEndpoint+"', clear_openid_connect_params(true), authentication);");
+
+                var item = $("<li>");
                 item.attr("class", "ui-menu-item").append(link)
                 providers.append(item);
             });
@@ -1107,7 +1110,7 @@ function openid_connect_menu(self) {
     </div>
     
     <ul id="openid_providers_menu" style="display: none">
-        <li><a href="javascript:my_openid_connect(true);">OpenID Connect</a></li>
+        <li><a href="javascript:my_openid_connect(true);">Discover OpenID Connect principal</a></li>
     </ul>    
     
     </fieldset>
@@ -1183,8 +1186,8 @@ function openid_connect_menu(self) {
         <table width="100%" cellspacing="0" cellpadding="0" border="0" >
           <!--<tr>
             <td>Chess</td>
-            <td>Closed</td>
-            <td>1/2</td>
+            <td>Open</td>
+            <td>2/2</td>
             <td>Judith vs Irene</td>
           </tr>-->
         </table>

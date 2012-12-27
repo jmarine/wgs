@@ -165,7 +165,7 @@ WgsClient.prototype = {
             client.prefix("wgs", "https://github.com/jmarine/wampservices/wgs#");
             client.call("wgs:openid_connect_providers", msg).then(
                 function(response) {
-                    client.close();
+                    //client.close();
                     callback(response);
                 }, 
                 function(response) {
