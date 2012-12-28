@@ -52,18 +52,18 @@ button {
   alignment-baseline: central;
 }
 
-.ui-menu { list-style:none; padding: 2px; margin: 0; display:block; outline: none;  }
+.ui-corner-all { border-radius: 4px; }
+.ui-menu { list-style:none; padding: 2px; margin: 0; display:block; outline: none; }
 .ui-menu .ui-menu-item { margin: 0; padding: 0; zoom: 1; width: 100%; background-color: #fff0c0; }
-.ui-menu .ui-menu { margin-top: -3px; position: absolute; } 
-.ui-menu .ui-menu-divider { margin: 5px -2px 5px -2px; height: 0; font-size: 0; line-height: 0; border-width: 1px 0 0 0; }
-.ui-menu .ui-menu-item a { text-decoration: none; display: block; padding: 2px .4em; line-height: 1.5; zoom: 1; font-weight: normal; }
+.ui-menu .ui-menu-item a { text-decoration: none; display: block; padding: 2px 1px; line-height: 1.5; zoom: 1;  }
 .ui-menu .ui-menu-item a.ui-state-focus,
-.ui-menu .ui-menu-item a.ui-state-active { font-weight: normal; margin: -1px; background-color: blue }
+.ui-menu .ui-menu-item a.ui-state-active { background:#dac394; }
 
 
 #openid_providers_menu {
+    border: 1px #6c3000 solid;
     border-radius: 6px; 
-    border-color: #6c3000;
+    margin-top: 2px;
 }
 
 #toggle_connect {
@@ -956,14 +956,30 @@ function chat_message(message,sender) {
     $("#messages").prop({ scrollTop: $("#messages").prop("scrollHeight")  });
 }
 
-function my_openid_connect(login) {
+function getWebSocket() {
+    var url = $("#server_url").val();
+    if(!wgsclient || (url != wgsclient.url)) {
+        if(wgsclient) {
+            try { wgsclient.close(); } 
+            catch(e) { }
+        }
+        wgsclient = new WgsClient(url);
+    }
+    return wgsclient;
+}
+
+function openid_connect(login) {
     
     if(login) {
         var redirectUri = clear_openid_connect_params(true);
-        var url = $("#server_url").val();
         var user = $("#user").val();
-        wgsclient = new WgsClient(url);
-        wgsclient.openIdConnectLoginUrl(user, redirectUri, authentication);
+        if(user.length == 0) {
+            alert("User name is empty");
+        } else {
+            wgsclient = getWebSocket();
+            wgsclient.openIdConnectLoginUrl(user, redirectUri, authentication);
+        }
+        
     } else {
         var redirectUri = clear_openid_connect_params(false);
         var code = get_url_param("code");
@@ -1011,6 +1027,7 @@ function clear_openid_connect_params(clearProvider) {
 function disconnect() {
     exit_group(true);
     wgsclient.close();
+    wgsclient = null;
     $("#server_url").removeAttr("disabled");
     $("#user").removeAttr("disabled");
     $("#password").removeAttr("disabled");
@@ -1038,11 +1055,9 @@ function disconnect() {
 
 function toggle_connect(create_user) {
     if ($("#server_url").attr("disabled") != "disabled") {
-        var url = $("#server_url").val();
         var user = $("#user").val();
         var pass = $("#password").val();
-
-        wgsclient = new WgsClient(url);
+        wgsclient = getWebSocket();
         if(create_user) {
             var email = prompt("Enter e-mail:");
             if(email) wgsclient.register(user, pass, email, authentication);
@@ -1058,7 +1073,7 @@ function openid_connect_menu(self) {
     var url = $("#server_url").val();
     var redirectUri = clear_openid_connect_params(true);
     
-    wgsclient = new WgsClient(url);
+    wgsclient = getWebSocket();
     wgsclient.openIdConnectProviders(redirectUri, function(response) { 
 
         var providers = $("#openid_providers_menu");
@@ -1070,6 +1085,7 @@ function openid_connect_menu(self) {
             response.providers.forEach(function(provider) {
                 var link = $("<a>");
                 link.text(provider.name);
+                link.attr("class", "ui-corner-all")
                 if(provider.authEndpoint) link.attr("href", provider.authEndpoint);
                 else link.attr("href", "javascript:wgsclient.openIdConnectLoginUrl('"+provider.registrationEndpoint+"', clear_openid_connect_params(true), authentication);");
 
@@ -1082,10 +1098,13 @@ function openid_connect_menu(self) {
         var menu = $( self ).parent().next().show().position({
                         my: "left top",
                         at: "left bottom",
+                        offset: "0 2",
                         of: "#toggle_connect"
                     });
         $( document ).one( "click", function() {
             menu.hide();
+            //wgsclient.close();
+            //wgsclient = null;
         });
 
     });
@@ -1094,7 +1113,7 @@ function openid_connect_menu(self) {
 </script>
 
         </head>
-<body onload="javascript:enable_network();my_openid_connect(false)">
+<body onload="javascript:enable_network();openid_connect(false)">
 <div id="wrapper" style="width: 370px">
   <div id="login" class="section hidden">
     <fieldset>
@@ -1110,7 +1129,7 @@ function openid_connect_menu(self) {
     </div>
     
     <ul id="openid_providers_menu" style="display: none">
-        <li><a href="javascript:my_openid_connect(true);">Discover OpenID Connect principal</a></li>
+        <li><a href="javascript:openid_connect(true);">Discover OpenID Connect provider&amp;user authentication</a></li>
     </ul>    
     
     </fieldset>
