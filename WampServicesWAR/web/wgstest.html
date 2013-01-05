@@ -793,7 +793,8 @@ function update_group_callback(response) {
 
                 if(!response.updates) { 
                     // single user_joined
-                    response.updates = [ response ];
+                    if(response.members) response.updates = response.members;
+                    else response.updates = [ response ];
                 }
 
                 response.updates.forEach(function(member) {
