@@ -631,7 +631,7 @@ public class Module extends WampModule
         registerApplication(app);
         valid = true;
 
-        ObjectNode event = updateAppInfo(socket, app, "app_created", true);
+        ObjectNode event = broadcastAppInfo(socket, app, "app_created", true);
         return event;
     }
         
@@ -649,7 +649,7 @@ public class Module extends WampModule
         if(app != null) {
             removeEntity(app);
             unregisterApplication(app);
-            event = updateAppInfo(socket, app, "app_deleted", true);
+            event = broadcastAppInfo(socket, app, "app_deleted", true);
             return event;
         } else {
             throw new WampException(Module.MODULE_URL + "#appidnotfound", "AppId " + appId + " doesn't exist");
@@ -657,7 +657,7 @@ public class Module extends WampModule
     }
     
     
-    private ObjectNode updateAppInfo(WampSocket socket, Application app, String cmd, boolean excludeMe) throws Exception
+    private ObjectNode broadcastAppInfo(WampSocket socket, Application app, String cmd, boolean excludeMe) throws Exception
     {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode event = app.toJSON();
@@ -666,39 +666,6 @@ public class Module extends WampModule
         return event;
     }
 
-    private void updateGroupInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
-    {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode event = g.toJSON();
-        event.put("cmd", cmd);
-        event.put("members", getMembers(g.getGid(),0));
-        socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+g.getApplication().getAppId())), event, excludeMe);
-    }
-    
-    private ObjectNode listGroups(String appId) throws Exception
-    {
-        System.out.println("Listing groups for app: '" + appId + "'");
-
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode retval = mapper.createObjectNode();        
-        ArrayNode groupsArray = mapper.createArrayNode();
-        Application app = applications.get(appId);
-        if(app != null) {
-            retval.put("app", app.toJSON());
-            for(Group group : app.getGroupsByState(null)) {
-                if(group.isHidden()) continue;
-                ObjectNode obj = group.toJSON();
-                obj.put("members", getMembers(group.getGid(),0));                
-                groupsArray.add(obj);
-            }   
-
-            retval.put("groups", groupsArray);
-        }
-
-        return retval;
-        
-    }
-    
     
     @WampRPC(name="open_group")
     public synchronized ObjectNode openGroup(WampSocket socket, String appId, String gid, ObjectNode options) throws Exception
@@ -870,7 +837,7 @@ public class Module extends WampModule
                 }
             }
 
-            int requiredSlot = options.has("slot")? options.get("slot").asInt() : -1;
+            int requiredSlot = (options != null && options.has("slot"))? options.get("slot").asInt() : -1;
             for(int index = (requiredSlot >= 0)? requiredSlot : 0;
                     ((index < Math.max(num_slots, g.getMinMembers())) || (requiredRoles.size() > 0))
                     && (requiredSlot < 0 || index==requiredSlot);
@@ -930,7 +897,7 @@ public class Module extends WampModule
 
             response.put("members", getMembers(g.getGid(), 0));
             
-            updateGroupInfo(socket, g, created? "group_created" : "group_updated", false);
+            broadcastGroupInfo(socket, g, created? "group_created" : "group_updated", false);
         }
 
         
@@ -1043,7 +1010,7 @@ public class Module extends WampModule
 
         response.put("valid", valid);
 
-        if(broadcastAppInfo)    updateGroupInfo(socket, g, "group_updated", true);
+        if(broadcastAppInfo)    broadcastGroupInfo(socket, g, "group_updated", true);
         if(broadcastGroupInfo)  socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, true);  // exclude Me
         return response;
     }
@@ -1163,7 +1130,7 @@ public class Module extends WampModule
 
             if(valid) {
                 socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, true);
-                updateGroupInfo(socket, g, "group_updated", false);
+                broadcastGroupInfo(socket, g, "group_updated", false);
             }  // exclude Me
             return response;
     }
@@ -1296,12 +1263,45 @@ public class Module extends WampModule
                         wampApp.removeTopic(topicName);
                         deleted = true;
                     }
-                    updateGroupInfo(socket, g, deleted? "group_deleted" : "group_updated", false);
+                    broadcastGroupInfo(socket, g, deleted? "group_deleted" : "group_updated", false);
                 }
             }
 
             return response;
     }
 
+    
+    private void broadcastGroupInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode event = g.toJSON();
+        event.put("cmd", cmd);
+        event.put("members", getMembers(g.getGid(),0));
+        socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+g.getApplication().getAppId())), event, excludeMe);
+    }
+    
+    
+    private ObjectNode listGroups(String appId) throws Exception
+    {
+        System.out.println("Listing groups for app: '" + appId + "'");
+
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode retval = mapper.createObjectNode();        
+        ArrayNode groupsArray = mapper.createArrayNode();
+        Application app = applications.get(appId);
+        if(app != null) {
+            retval.put("app", app.toJSON());
+            for(Group group : app.getGroupsByState(null)) {
+                if(group.isHidden()) continue;
+                ObjectNode obj = group.toJSON();
+                obj.put("members", getMembers(group.getGid(),0));                
+                groupsArray.add(obj);
+            }   
+
+            retval.put("groups", groupsArray);
+        }
+
+        return retval;
+    }    
 
 }
