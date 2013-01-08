@@ -716,10 +716,6 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
     if(!added && memberUser != "" && memberSid != wgsclient.sid) {
         var user = memberUser;
         var val = memberSid;
-        if(memberType != "") {
-            val = memberType + ":" + val;
-            user = memberType + ":" + memberName;
-        }
         userOptions += '<option value="'+val+'" selected>' + user + '</option>';
     }
 
@@ -749,7 +745,9 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
     
     $("#team" + memberId).val(memberTeam);
     
-    $("#state" + memberId).attr("src", "images/" + memberState.toLowerCase() + ".png");
+    var status = memberState.toLowerCase();
+    if(status != 'empty') status = memberType.toLowerCase() + "_" + status;
+    $("#state" + memberId).attr("src", "images/" + status + ".png");
     $("#state" + memberId).attr("title", memberState);
 }
 
@@ -819,8 +817,8 @@ function update_group_callback(response) {
                             var val = "";
                             var text = "Empty";
                             if(member.sid && member.sid != "") {
-                                val = member.type + ":" + member.sid;
-                                text = member.type + ":" + member.name;
+                                val = member.sid;
+                                text = member.name;
 
                                 if($("#member"+index+" option[value='"+val+"']").size() <= 0) {  // insert user
                                     $("#member"+index).append($("<option>").attr("value", val).text(text));
@@ -837,14 +835,13 @@ function update_group_callback(response) {
 
                         if(wgsclient.user == $("#group_admin").val()) {
 
-                            var val = "";
-                            if(member.sid != "") {
-                                val = member.type + ":" + member.sid;
-                            }
+                            var val = member.sid;
                             $("#member"+memberId+" option[value='"+val+"']").attr("selected", "selected");
                             $("#role"+memberId+" option[value='"+member.role+"']").attr("selected", "selected");
-                            $("#state" + memberId).attr("src", "images/" + member.state.toLowerCase() + ".png");
-                            $("#state" + memberId).attr("title", member.state);
+                            var status = member.state.toLowerCase();
+                            if(status != 'empty') status = member.type.toLowerCase() + "_" + status;
+                            $("#state" + memberId).attr("src", "images/" + status + ".png");
+                            $("#state" + memberId).attr("title", ((status!='empty')? member.type:"") + " " + member.state);
 
                         } else {
 
