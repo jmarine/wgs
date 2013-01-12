@@ -1085,6 +1085,22 @@ public class Module extends WampModule
                     if(member == null) member = new Member();
                     if(c==null) member.setState(MemberState.EMPTY);
                     else if(c != member.getClient()) member.setState(MemberState.RESERVED);
+                    
+                    if(usertype.equalsIgnoreCase("remote")) {
+                        if(user.equals(member.getUser())) {
+                            usertype = member.getUserType();
+                        } else {
+                            usertype = "user";  // by default, but try to maintain remote's usertype selection
+                            for(int index = 0, numSlots = g.getNumSlots(); index < numSlots; index++) {
+                                Member m2 = g.getMember(index);
+                                if(user.equals(m2.getUser())) {
+                                    usertype = m2.getUserType();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
                     member.setClient(c);
                     member.setUser(user);
                     member.setUserType(usertype);

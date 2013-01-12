@@ -708,15 +708,13 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
         var connections = wgsclient.getGroupConnections(currentGroup.gid);
         for(var sid in connections) {
             if( (wgsclient.user == $("#group_admin").val()) && (sid != wgsclient.sid) && (memberSid != sid) ) {
-                userOptions += '<option value="user:'+sid+'" ' + ((sid==memberSid && memberType=="user")? "selected" : "") + '>user:'+connections[sid].name+'</option>';
+                userOptions += '<option value="remote:'+sid+'" ' + ((sid==memberSid)? "selected" : "") + '>'+connections[sid].name+'</option>';
             }
         }
     } 
     
     if(!added && memberUser != "" && memberSid != wgsclient.sid) {
-        var user = memberUser;
-        var val = memberSid;
-        userOptions += '<option value="'+val+'" selected>' + user + '</option>';
+        userOptions += '<option value="remote:'+memberSid+'" selected>' + memberName + '</option>';
     }
 
     var roleOptions = "";
@@ -748,7 +746,7 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
     var status = memberState.toLowerCase();
     if(status != 'empty') status = memberType.toLowerCase() + "_" + status;
     $("#state" + memberId).attr("src", "images/" + status + ".png");
-    $("#state" + memberId).attr("title", memberState);
+    $("#state" + memberId).attr("title", ((status!='empty')? memberType.toUpperCase():"") + " " + memberState);
 }
 
 function append_group_member(added, memberId, member, currentUserSelected, roleFixed, ai) {
@@ -814,17 +812,11 @@ function update_group_callback(response) {
                     // append new joined user's user in selectboxes
                     for(var index = 0; index < num_members; index += 1) {
                         if( (wgsclient.user == $("#group_admin").val()) ) {
-                            var val = "";
-                            var text = "Empty";
                             if(member.sid && member.sid != "") {
-                                val = member.sid;
-                                text = member.name;
-
-                                if($("#member"+index+" option[value='"+val+"']").size() <= 0) {  // insert user
-                                    $("#member"+index).append($("<option>").attr("value", val).text(text));
+                                if($("#member"+index+" option[value$=':"+member.sid+"']").size() <= 0) {  // insert user
+                                    $("#member"+index).append($("<option>").attr("value", "remote:"+member.sid).text(member.name));
                                 }
                             }
-
                         }
                     }
 
@@ -835,13 +827,13 @@ function update_group_callback(response) {
 
                         if(wgsclient.user == $("#group_admin").val()) {
 
-                            var val = member.sid;
+                            var val = ((member.sid == wgsclient.sid) ? member.usertype : "remote") + ":" + member.sid;
                             $("#member"+memberId+" option[value='"+val+"']").attr("selected", "selected");
                             $("#role"+memberId+" option[value='"+member.role+"']").attr("selected", "selected");
                             var status = member.state.toLowerCase();
                             if(status != 'empty') status = member.type.toLowerCase() + "_" + status;
                             $("#state" + memberId).attr("src", "images/" + status + ".png");
-                            $("#state" + memberId).attr("title", ((status!='empty')? member.type:"") + " " + member.state);
+                            $("#state" + memberId).attr("title", ((status!='empty')? member.type.toUpperCase():"") + " " + member.state);
 
                         } else {
 

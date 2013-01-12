@@ -153,6 +153,17 @@ public class User implements Serializable
         this.picture = picture;
     }    
     
+    
+    @Override
+    public boolean equals(Object o) 
+    { 
+        if( (o != null) && (o instanceof User) ) {
+            User u = (User)o;
+            return id.equals(u.getId());
+        } else {
+            return false;
+        }
+    }
 
     @Override
     public String toString()
