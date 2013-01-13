@@ -100,7 +100,7 @@ public class WampSocket
 
     public void sendSafe(String msg) {
         try {
-            if(isActive()) session.getRemote().sendString(msg);
+            if(isOpen()) session.getRemote().sendString(msg);
         } catch(Exception e) {
             logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
             app.onWampClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
@@ -120,8 +120,8 @@ public class WampSocket
         app.onWampClose(session, reason);
     }
     
-    protected boolean isActive() {
-        return connected && session.isActive();
+    protected boolean isOpen() {
+        return connected && session.isOpen();
     }
     
     

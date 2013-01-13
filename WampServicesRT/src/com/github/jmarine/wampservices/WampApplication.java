@@ -7,9 +7,11 @@
 package com.github.jmarine.wampservices;
 
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
@@ -18,20 +20,30 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.websocket.CloseReason;
+import javax.websocket.Decoder;
+import javax.websocket.Encoder;
+import javax.websocket.Endpoint;
+import javax.websocket.Extension;
+import javax.websocket.HandshakeResponse;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
+import javax.websocket.server.HandshakeRequest;
+import javax.websocket.server.DefaultServerConfiguration;
+import javax.websocket.server.ServerEndpointConfiguration;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
 
-public class WampApplication
+public class WampApplication extends DefaultServerConfiguration
 {
     private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
 
     public  static final String WAMP_BASE_URL = "https://github.com/jmarine/wampservices";
     
+    private String  path;
+    private boolean started;
     private Map<String,WampModule> modules;
     private TreeMap<String,WampTopic> topics;
     private TreeMap<String,WampTopicPattern> topicPatterns;
@@ -44,15 +56,16 @@ public class WampApplication
     public static synchronized WampApplication getApplication(String context) {
         WampApplication app = contexts.get(context);
         if(app == null) {
-            app = new WampApplication();
+            app = new WampApplication(WampEndpoint.class, context);
             contexts.put(context, app);
         }
         return app;
     }
     
     
-    public WampApplication() 
+    public WampApplication(Class<? extends Endpoint> endpointClass, String path) 
     {
+        super(endpointClass, path);
         this.sockets = new ConcurrentHashMap<Session,WampSocket>();
         this.modules = new HashMap<String,WampModule>();
         this.topics = new TreeMap<String,WampTopic>();
@@ -66,7 +79,11 @@ public class WampApplication
         };
     }
     
- 
+    public synchronized boolean start() {
+        boolean val = started;
+        started = true;
+        return !val;
+    }
     
     private WampSocket getWampSocket(Session session)
     {
@@ -522,4 +539,24 @@ public class WampApplication
         return buffer.toString();
     }
 
+
+    @Override
+    public String getNegotiatedSubprotocol(List<String> requestedSubprotocols) 
+    {
+        return (requestedSubprotocols != null && requestedSubprotocols.contains("wamp"))? "wamp" : null;
+    }
+    
+    @Override
+    public List<Extension> getNegotiatedExtensions(List<Extension> requestedExtensions) 
+    {
+        return requestedExtensions;
+    }
+    
+    @Override
+    public boolean checkOrigin(String originHeaderValue) 
+    {
+        return true;
+    }  
+
+    
 }

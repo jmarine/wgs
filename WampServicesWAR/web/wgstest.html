@@ -252,16 +252,22 @@ function authentication(state, msg) {
           $("#server_url").attr("disabled", "disabled");
           $("#user").attr("disabled", "disabled");
           $("#password").attr("disabled", "disabled");
-
+          
           $("#register").attr("disabled", "disabled");
           $("#oic_connect").attr("disabled", "disabled");
           
-          $("#toggle_connect").html("Disconnect");  
+          $("#toggle_connect").html("Log out");  
           
           $("#user").val(msg.name);
           $("#lbl_password").hide();
           $("#password").hide();
-                    
+
+          if(msg.picture) {
+            $("#user_picture").attr("src", msg.picture).width(45).height(45);
+          } else {
+            $("#user_picture").width(0).height(0);
+          }
+
           list_apps();
       } else if(state == WgsState.ERROR) {
           alert(msg);
@@ -1018,12 +1024,15 @@ function disconnect() {
     exit_group(true);
     wgsclient.close();
     wgsclient = null;
+    
     $("#server_url").removeAttr("disabled");
     $("#user").removeAttr("disabled");
     $("#password").removeAttr("disabled");
+    $("#user_picture").width(0).height(0);    
+
     $("#register").removeAttr("disabled");
     $("#oic_connect").removeAttr("disabled");
-    $("#toggle_connect").html("Connect");
+    $("#toggle_connect").html("Log in");
     $("#participants").html("");
     
     $("#enable_network").show();
@@ -1108,18 +1117,26 @@ function openid_connect_menu(self) {
   <div id="login" class="section hidden">
     <fieldset>
       <legend>Login</legend>
-    <label for="server_url">Service:</label><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wgs" /><br/>
-    <label for="user">User:</label><input type="text" name="user" id="user" value="guest" /><br/>
-    <label for="password" id="lbl_password">Password:</label><input type="password" name="password" id="password" value="" /><br/>
-
+      
+    <table>
+    <tr>
+        <td><label for="server_url">Service:</label></td><td><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wgs" /></td>
+        <td rowspan="3" valign="top">
+            <img id="user_picture" width="0" height="0">
+        </td>
+    </tr>
+    <tr><td><label for="user">User:</label></td><td><input type="text" name="user" id="user" value="guest" /></td></tr>
+    <tr><td><label for="password" id="lbl_password">Password:</label></td><td><input type="password" name="password" id="password" value="" /></td></tr>
+    </table>
+      
     <div class="ui-buttonset">
-      <button id="toggle_connect">Connect</button>
+      <button id="toggle_connect">Log in</button>
       <button id="oic_connect">&nbsp;</button>
       <button id="register" onclick="toggle_connect(true);">Register</button>
     </div>
     
     <ul id="openid_providers_menu" style="display: none">
-        <li><a href="javascript:openid_connect(true);">Discover OpenID Connect provider&amp;user authentication</a></li>
+        <li><a href="javascript:openid_connect(true);">OpenID Connect provider</a></li>
     </ul>    
     
     </fieldset>

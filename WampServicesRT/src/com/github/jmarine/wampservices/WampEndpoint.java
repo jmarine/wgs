@@ -11,10 +11,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.websocket.CloseReason;
-import javax.websocket.DefaultServerConfiguration;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfiguration;
 import javax.websocket.Session;
+import javax.websocket.server.ServerEndpointConfiguration;
 
 
 public class WampEndpoint extends Endpoint 
@@ -29,12 +29,7 @@ public class WampEndpoint extends Endpoint
         logger.fine("##################### WAMP ENDPOINT CREATED");
     }
     
-    public WampEndpoint(WampApplication application)
-    {
-        logger.fine("##################### WAMP ENDPOINT CREATED");
-        this.application = application;
-    }
-    
+
 
     public Session getSession()
     {
@@ -48,73 +43,37 @@ public class WampEndpoint extends Endpoint
     }
     
     
+    public void onApplicationStart(WampApplication app) { }
    
     @Override
-    public EndpointConfiguration getEndpointConfiguration() {
-        DefaultServerConfiguration config = null;
-        config = new DefaultServerConfiguration("") {
-            @Override
-            public boolean matchesURI(URI uri) {
-                return true;
-            }
-            
-            @Override
-            public String getNegotiatedSubprotocol(List<String> requestedSubprotocols) {
-                return "wamp";
-            }
-            
-            @Override
-            public List<String> getNegotiatedExtensions(List<String> requestedExtensions) {
-                String supportedExtensions[] = {};
-                List<String> result = new ArrayList<String>();
-                for (String requestedExtension : requestedExtensions) {
-                    for (String extension : supportedExtensions) {
-                        if(extension.equals(requestedExtension)){
-                            result.add(requestedExtension);
-                        }
-                    }
-                }                
-                return result;
-            }
-            
-            @Override
-            public boolean checkOrigin(String originHeaderValue) {
-                return true;
-            }
-            
-        };
-        return config;
-    }
-    
-
-    @Override
-    public void onOpen(Session session) {
+    public void onOpen(Session session, EndpointConfiguration endpointConfiguration) {
         logger.fine("##################### Session opened");
         
+        String path = ((ServerEndpointConfiguration)endpointConfiguration).getPath();
+        application = (WampApplication)endpointConfiguration;
+        if(application.start()) onApplicationStart(application);
+        
         this.session = session;
-        if(application == null) {
-            String path = session.getRequestURI().getPath();
-            application = WampApplication.getApplication(path);
-        }
+        
         application.onWampOpen(session);
     }
     
    
     @Override
-    public void onClose(CloseReason reason) 
+    public void onClose(Session session, CloseReason reason) 
     {
-        super.onClose(reason);
+        super.onClose(session, reason);
         application.onWampClose(session, reason);
         logger.fine("##################### Session closed: " + session);
     }
     
     
     @Override
-    public void onError(Throwable thr) 
+    public void onError(Session session, Throwable thr) 
     {
-         super.onError(thr);        
+         super.onError(session, thr);        
          logger.fine("##################### Session error");
-         onClose(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
+         onClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
     }    
 
 }

@@ -13,17 +13,18 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import javax.naming.Context;
 import javax.naming.InitialContext;
+
+import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
 import org.glassfish.tyrus.server.DefaultServerConfiguration;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.TyrusContainer;
 import org.glassfish.tyrus.spi.TyrusServer;
-import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
 
 
-public class WampServer {
-
-    
-    public static void main(String[] args) throws Exception {
+public class WampServer 
+{
+    public static void main(String[] args) throws Exception 
+    {
         // create a Grizzly HttpServer to server static resources from 'webapp', on PORT.
         System.setProperty(Context.INITIAL_CONTEXT_FACTORY, "org.apache.naming.java.javaURLContextFactory");
         System.setProperty(Context.URL_PKG_PREFIXES, "org.apache.naming");                    
@@ -53,10 +54,10 @@ public class WampServer {
         
         TyrusServerContainer server = null;        
         try {
-            String htdocs = wampConfig.getProperty("docroot");
+            String docroot = wampConfig.getProperty("docroot");
             
-            TyrusContainer tyrusContainer = new org.glassfish.tyrus.grizzly.GrizzlyEngine();
-            TyrusServer tyrusServer = tyrusContainer.createServer(htdocs, 8080);
+            TyrusContainer tyrusContainer = new org.glassfish.tyrus.container.grizzly.GrizzlyEngine();
+            TyrusServer tyrusServer = tyrusContainer.createServer(docroot, 8080);
 
             DefaultServerConfiguration serverConfig = new DefaultServerConfiguration();
             
@@ -73,6 +74,7 @@ public class WampServer {
                 } 
             }
 
+            server = new TyrusServerContainer(tyrusServer, "", serverConfig);
             String contexts = wampConfig.getProperty("contexts");
             if(contexts != null) {
                 StringTokenizer tkContexts = new StringTokenizer(contexts, ",");
@@ -108,13 +110,13 @@ public class WampServer {
                             wampApplication.registerWampModule(Class.forName(cls));
                         }
                     }
-
+                    
                     // register the application
+                    server.deploy(wampApplication.getEndpointClass().newInstance(), wampApplication);
                 }
             }
             
-            server = new TyrusServerContainer(tyrusServer, "", serverConfig);
-            server.publishServer(WampEndpoint.class);
+            //server.publishServer(WampApplication.class);
             server.start();
             
             System.out.println("Press any key to stop the server...");

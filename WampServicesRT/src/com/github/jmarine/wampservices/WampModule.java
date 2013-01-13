@@ -137,7 +137,7 @@ public abstract class WampModule
     
     public void   onEvent(String publisherId, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
         String msgV1 = null;  // Cache EVENT message for WAMP v1
-        String msgV2 = null;  // Cache EVENT message for WAMP v1
+        String msgV2 = null;  // Cache EVENT message for WAMP v2
         for (String sid : eligible) {
             if((excluded==null) || (!excluded.contains(sid))) {
                 WampSubscription subscription = topic.getSubscription(sid);
@@ -145,7 +145,7 @@ public abstract class WampModule
                 if(options != null && options.isEventsEnabled()) {
                     WampSocket socket = subscription.getSocket();
                     synchronized(socket) {
-                        if(socket != null && socket.isActive() && !excluded.contains(sid)) {
+                        if(socket != null && socket.isOpen() && !excluded.contains(sid)) {
                             if( (topic.getOptions().isPublisherIdRevelationEnabled())
                                     && (subscription.getOptions().isPublisherIdRequested())) {
                                 if(msgV2 == null) msgV2 = "[8,\"" + topic.getURI() + "\", " + event.toString() + ",\"" + publisherId +"\"]";
