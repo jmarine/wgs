@@ -722,7 +722,7 @@ public class Module extends WampModule
                 g.setMaxMembers(app.getMaxMembers());
                 g.setMinMembers(app.getMinMembers());
                 g.setDeltaMembers(app.getDeltaMembers());
-                g.setAdminUser(client.getUser().getFQid());
+                g.setAdminUser(client.getUser());
                 g.setAutoMatchEnabled(autoMatchMode);
                 g.setAutoMatchCompleted(false);
                 if(options != null) {

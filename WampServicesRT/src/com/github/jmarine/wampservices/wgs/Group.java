@@ -1,33 +1,88 @@
 package com.github.jmarine.wampservices.wgs;
 
 import java.util.ArrayList;
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinColumns;
+import javax.persistence.Lob;
+import javax.persistence.ManyToOne;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
+import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
+import javax.persistence.Table;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
 
-
-public class Group 
+@Entity(name="AppGroup")
+@Table(name="APP_GROUP")
+@NamedQueries({
+    @NamedQuery(name="wgs.findAllGroups",query="SELECT OBJECT(g) FROM AppGroup g")
+})
+public class Group implements java.io.Serializable
 {
+    @Id
+    private String gid;
+    
+    @Column(name="description")
+    private String description;
+    
+    @Lob()
+    @Column(name="data")
+    private String data;
+    
+    @Column(name="password")
+    private String password;
+    
+    @Enumerated(EnumType.ORDINAL)
     private GroupState state;
+    
+    @Column(name="minMembers")
     private int  minMembers;
+    
+    @Column(name="maxMembers")
     private int  maxMembers;
+    
+    @Column(name="deltaMembers")
     private int  deltaMembers;
-    private String adminUser;
+    
+    @ManyToOne(fetch= FetchType.EAGER)
+    @JoinColumns({
+        @JoinColumn(name="admin_uid", referencedColumnName = "uid"),
+        @JoinColumn(name="admin_oic_provider", referencedColumnName = "oic_provider")
+    })  
+    private User  adminUser;
 
+    @Column(name="automatchEnabled")
     private boolean autoMatchEnabled;
+    
+    @Column(name="automatchCompleted")
     private boolean autoMatchCompleted;
+    
+    @Column(name="dyn")
     private boolean dynamicGroup;
+    
+    @Column(name="alliances")
     private boolean alliancesAllowed;
+    
+    @Column(name="observable")
     private boolean observableGroup;
+    
+    @Column(name="hidden")
     private boolean hidden;
 
-    private String gid;
-    private String description;
-    private String data;
-    private String password;
-
+    @OneToMany(mappedBy = "applicationGroup", fetch=FetchType.EAGER, cascade = { CascadeType.ALL })
+    @OrderBy("slot")
     private ArrayList<Member> members = new ArrayList<Member>();
 
-    private Application app;
+    @ManyToOne(fetch=FetchType.LAZY)
+    private Application application;
 
     /**
      * @return the state
@@ -86,16 +141,16 @@ public class Group
     }    
     
     /**
-     * @return the adminUser
+     * @return the admin_user
      */
-    public String getAdminUser() {
+    public User getAdminUser() {
         return adminUser;
     }
 
     /**
-     * @param adminUser the adminUser to set
+     * @param admin_user the admin_user to set
      */
-    public void setAdminUser(String adminUser) {
+    public void setAdminUser(User adminUser) {
         this.adminUser = adminUser;
     }
     
@@ -217,14 +272,14 @@ public class Group
      * @return the app
      */
     public Application getApplication() {
-        return app;
+        return application;
     }
 
     /**
      * @param app the app to set
      */
     public void setApplication(Application app) {
-        this.app = app;
+        this.application = app;
     }
     
     
@@ -308,7 +363,7 @@ public class Group
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode obj = mapper.createObjectNode();
         obj.put("gid", getGid());
-        obj.put("admin", getAdminUser());
+        obj.put("admin", getAdminUser().getFQid());
         obj.put("automatch", isAutoMatchEnabled());
         obj.put("hidden", isHidden());
         obj.put("num", getNumMembers());

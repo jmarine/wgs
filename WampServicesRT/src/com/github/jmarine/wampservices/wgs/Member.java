@@ -1,24 +1,96 @@
 
 package com.github.jmarine.wampservices.wgs;
 
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinColumns;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
 
 
-public class Member
+@Entity(name="GroupMember")
+@Table(name="APP_GROUP_MEMBER")
+public class Member implements java.io.Serializable
 {
-    private Client client;
+    @Id
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="gid", referencedColumnName="gid")
+    private Group  applicationGroup;
+
+    @Id
+    @Column(name="slot")
+    private int    slot;
+
+    @Column(name="userType")
     private String userType;
+    
+    @ManyToOne(fetch= FetchType.EAGER)
+    @JoinColumns({
+        @JoinColumn(name="uid", referencedColumnName = "uid"),
+        @JoinColumn(name="oic_provider", referencedColumnName = "oic_provider")
+    })      
     private User   user;
+    
+    @ManyToOne(fetch=FetchType.EAGER, cascade = { CascadeType.ALL })
+    @JoinColumns({
+        @JoinColumn(name="role_app", referencedColumnName = "app"),
+        @JoinColumn(name="role_name", referencedColumnName = "name")
+    })      
     private Role   role;
+    
+    @Column(name="team")
     private int    team;
+    
+    @Column(name="state")
+    @Enumerated(EnumType.ORDINAL)
     private MemberState state;
 
+    @Transient
+    private Client client;
+    
     
     public Member()
     {
         state = MemberState.EMPTY;
     }
+    
+    /**
+     * @return the client
+     */
+    public Group getApplicationGroup() {
+        return applicationGroup;
+    }
+
+    /**
+     * @param applicationGroup the application Group to set
+     */
+    public void setApplicationGroup(Group applicationGroup) {
+        this.applicationGroup = applicationGroup;
+    }    
+    
+    /**
+     * @return the slot
+     */
+    public int getSlot() {
+        return slot;
+    }
+
+    /**
+     * @param slot the slot to set
+     */
+    public void setSlot(int slot) {
+        this.slot = slot;
+    }    
     
     /**
      * @return the client

@@ -6,6 +6,8 @@
     <class>com.github.jmarine.wampservices.wgs.Application</class>
     <class>com.github.jmarine.wampservices.wgs.User</class>
     <class>com.github.jmarine.wampservices.wgs.Role</class>
+    <class>com.github.jmarine.wampservices.wgs.Group</class>
+    <class>com.github.jmarine.wampservices.wgs.Member</class>    
     <class>com.github.jmarine.wampservices.util.OpenIdConnectProvider</class>
     <class>com.github.jmarine.wampservices.util.OpenIdConnectClient</class>
     <properties>
