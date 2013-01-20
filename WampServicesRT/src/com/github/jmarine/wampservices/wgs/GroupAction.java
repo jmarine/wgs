@@ -50,7 +50,7 @@ public class GroupAction implements java.io.Serializable
     
     @ManyToOne(fetch= FetchType.EAGER)
     @JoinColumns({
-        @JoinColumn(name="member_gid", referencedColumnName = "gid", insertable=false, updatable=false),
+        @JoinColumn(name="member_gid", referencedColumnName = "gid"),
         @JoinColumn(name="member_slot", referencedColumnName = "slot")
     })      
     private Member member;    
