@@ -1,7 +1,5 @@
-
 package com.github.jmarine.wampservices.wgs;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -11,7 +9,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinColumns;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
+import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -41,7 +39,7 @@ public class Member implements java.io.Serializable
     })      
     private User   user;
     
-    @ManyToOne(fetch=FetchType.EAGER, cascade = { CascadeType.ALL })
+    @ManyToOne(fetch=FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name="role_app", referencedColumnName = "app"),
         @JoinColumn(name="role_name", referencedColumnName = "name")

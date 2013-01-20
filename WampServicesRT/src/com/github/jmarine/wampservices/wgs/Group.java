@@ -1,6 +1,7 @@
 package com.github.jmarine.wampservices.wgs;
 
 import java.util.ArrayList;
+import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -23,8 +24,10 @@ import org.codehaus.jackson.node.ObjectNode;
 @Entity(name="AppGroup")
 @Table(name="APP_GROUP")
 @NamedQueries({
-    @NamedQuery(name="wgs.findAllGroups",query="SELECT OBJECT(g) FROM AppGroup g")
+    @NamedQuery(name="wgs.findAllGroups",query="SELECT OBJECT(g) FROM AppGroup g"),
+    @NamedQuery(name="wgs.findGroupsByUser",query="SELECT DISTINCT OBJECT(g) FROM AppGroup g JOIN g.members m WHERE m.user = :user")
 })
+// @org.eclipse.persistence.annotations.Index(name="APP_GROUP_STATE_IDX", columnNames={"STATE"})
 public class Group implements java.io.Serializable
 {
     @Id
@@ -312,8 +315,20 @@ public class Group implements java.io.Serializable
     }
 
     
+    public List<Member> getMembers() 
+    {
+        return this.members;
+    }
     
-    Member getMember(int index) 
+    public void setMembers(List<Member> members) 
+    {
+        this.members = new ArrayList<Member>();
+        for(Member member : members) {
+            setMember(member.getSlot(), member);
+        }
+    }    
+    
+    public Member getMember(int index) 
     {
         if(index < getNumSlots()) {
             return members.get(index);
@@ -322,7 +337,7 @@ public class Group implements java.io.Serializable
         }
     }
 
-    void setMember(int index, Member member) 
+    public void setMember(int index, Member member) 
     {
         while(index >= members.size()) {
             members.add(null);

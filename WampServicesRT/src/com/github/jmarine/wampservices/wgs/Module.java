@@ -847,6 +847,8 @@ public class Module extends WampModule
                 Member member = g.getMember(index);
                 if(member == null) {
                     member = new Member();
+                    member.setApplicationGroup(g);
+                    member.setSlot(index);
                     member.setTeam(1+index);
                     g.setMember(index, member);
                 }
@@ -898,6 +900,9 @@ public class Module extends WampModule
             response.put("members", getMembers(g.getGid(), 0));
             
             broadcastGroupInfo(socket, g, created? "group_created" : "group_updated", false);
+            
+            g = saveEntity(g);
+
         }
 
         
@@ -1005,6 +1010,8 @@ public class Module extends WampModule
             
             response.put("members", getMembers(gid,0));            
 
+            g = saveEntity(g);
+            
             valid = true;
         }
 
@@ -1082,7 +1089,11 @@ public class Module extends WampModule
                     manager.close();
                     
                     Member member = g.getMember(slot);
-                    if(member == null) member = new Member();
+                    if(member == null) {
+                        member = new Member();
+                        member.setApplicationGroup(g);
+                        member.setSlot(slot);
+                    }
                     if(c==null) member.setState(MemberState.EMPTY);
                     else if(c != member.getClient()) member.setState(MemberState.RESERVED);
                     
@@ -1146,8 +1157,9 @@ public class Module extends WampModule
 
             if(valid) {
                 socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, true);
-                broadcastGroupInfo(socket, g, "group_updated", false);
-            }  // exclude Me
+                broadcastGroupInfo(socket, g, "group_updated", false);  // exclude Me
+                g = saveEntity(g);
+            }  
             return response;
     }
     
@@ -1236,9 +1248,11 @@ public class Module extends WampModule
                             logger.log(Level.INFO, "clearing slot " + slot);
 
                             member.setClient(null);
-                            member.setState(MemberState.EMPTY);
-                            member.setUser(null);
-                            member.setUserType("user");
+                            if(g.getState() == GroupState.OPEN) {
+                                member.setState(MemberState.EMPTY);
+                                member.setUser(null);
+                                member.setUserType("user");
+                            }
                             g.setMember(slot, member);
                             
                             if(g.isAutoMatchEnabled() && g.isAutoMatchCompleted()) {
@@ -1249,6 +1263,8 @@ public class Module extends WampModule
                             ObjectNode obj = member.toJSON();
                             obj.put("slot", slot);
                             membersArray.add(obj);
+                            
+                            g = saveEntity(g);
 
                         } else {
                             num_members++;
@@ -1269,6 +1285,15 @@ public class Module extends WampModule
                 for(WampTopic topic : wampApp.unsubscribeClientFromTopic(socket, topicName)) {
                     boolean deleted = false;
                     if(topic.getSubscriptionCount() == 0) {
+                        
+                        switch(g.getState()) {
+                            case OPEN:
+                                removeEntity(g);
+                                break;
+                            case FINISHED:
+                                // move to historic table
+                        }
+                        
                         logger.log(Level.INFO, "closing group {0}: {1}", new Object[]{ g.getGid(), g.getDescription()});
 
                         groups.remove(g.getGid());
