@@ -380,8 +380,12 @@ function getGroupListItem(group) {
        
        var playerLabel = "Player " + count + (member.role? " ("+ member.role +")" : "");
        row.append("<td>" + playerLabel + ":</td>");
-       if(member.name != null && member.name.length > 0) row.append("<td>" + member.name + "</td>");
-       else row.append("<td><button onclick=\"javascript:reserve_group_slot('" + group.gid + "'," + member.slot + ")\">Play</button></td>");
+       
+       if(member.sid == "" && (member.user == "" || member.user == wgsclient.user) ) {
+           row.append("<td><button onclick=\"javascript:reserve_group_slot('" + group.gid + "'," + member.slot + ")\">Play</button></td>");
+       } else {
+           row.append("<td>" + member.name + "</td>");       
+       }
         
        members.append(row);
    }); 

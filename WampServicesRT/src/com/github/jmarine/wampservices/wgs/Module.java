@@ -842,7 +842,6 @@ public class Module extends WampModule
                     ((index < Math.max(num_slots, g.getMinMembers())) || (requiredRoles.size() > 0))
                     && (requiredSlot < 0 || index==requiredSlot);
                     index++) {
-                String usertype = "user";
 
                 Member member = g.getMember(index);
                 if(member == null) {
@@ -850,6 +849,7 @@ public class Module extends WampModule
                     member.setApplicationGroup(g);
                     member.setSlot(index);
                     member.setTeam(1+index);
+                    member.setUserType("user");
                     g.setMember(index, member);
                 }
                     
@@ -866,7 +866,6 @@ public class Module extends WampModule
                     member.setClient(client);
                     member.setState(MemberState.RESERVED);
                     member.setUser(client.getUser());
-                    member.setUserType("user");
                     if(options != null && options.has("role")) {
                         Role oldRole = member.getRole();
                         String roleName = options.get("role").asText();
@@ -1093,6 +1092,8 @@ public class Module extends WampModule
                         member = new Member();
                         member.setApplicationGroup(g);
                         member.setSlot(slot);
+                        member.setTeam(1+slot);
+                        member.setUserType("user");
                     }
                     if(c==null) member.setState(MemberState.EMPTY);
                     else if(c != member.getClient()) member.setState(MemberState.RESERVED);
@@ -1252,6 +1253,8 @@ public class Module extends WampModule
                                 member.setState(MemberState.EMPTY);
                                 member.setUser(null);
                                 member.setUserType("user");
+                            } else {
+                                member.setState(MemberState.RESERVED);
                             }
                             g.setMember(slot, member);
                             
