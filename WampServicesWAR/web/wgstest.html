@@ -679,7 +679,7 @@ function update_member(field, as_previous_client)
     var slot = parseInt(field.substring(6));
     var role = $("#role" + slot + " option:selected").val();
     var team = parseInt($("#team" + slot).val());
-    wgsclient.updateMember(appId, gid, "RESERVED", slot, sid, usertype, user, role, team, update_group_callback);
+    wgsclient.updateMember(appId, gid, "JOINED", slot, sid, usertype, user, role, team, update_group_callback);
     
 }
 
@@ -697,7 +697,7 @@ function toggle_client_state()
         update_client_state("READY")
     } else {
         $("#toggle_client_state").html("Ready");
-        update_client_state("RESERVED");
+        update_client_state("JOINED");
     }
 }
 
@@ -806,7 +806,7 @@ function update_group_callback(response) {
                 response.updates.forEach(function(member) {
                     var isMember = isFinite(member.slot);
 
-                    if(isMember && member.sid == wgsclient.sid && member.state == "RESERVED") {
+                    if(isMember && member.sid == wgsclient.sid && member.state == "JOINED") {
                         $("#toggle_client_state").html("Ready");
                     }
                     

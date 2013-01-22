@@ -173,7 +173,7 @@ public class Module extends WampModule
                     WampSubscription presence = topic.getSubscription(sid);
                     ObjectNode obj = presence.toJSON();
                     Client cli = clients.get(presence.getSocket().getSessionId());
-                    if(cli != null && cli.getState()!=ClientState.INVALID) {
+                    if(cli != null && cli.getState()==ClientState.AUTHENTICATED) {
                         obj.putAll(cli.getUser().toJSON());
                         arrayNode.add(obj);
                     }                
@@ -193,7 +193,7 @@ public class Module extends WampModule
         if(metatopic.equals(WampMetaTopic.JOINED)) {        
             ObjectNode obj = (ObjectNode)metaevent;
             Client cli = clients.get(obj.get("sessionId").asText());
-            if(cli != null && cli.getState()!=ClientState.INVALID) {
+            if(cli != null && cli.getState()==ClientState.AUTHENTICATED) {
                 obj.putAll(cli.getUser().toJSON());
             }
         }
@@ -204,10 +204,10 @@ public class Module extends WampModule
     @Override
     public void onConnect(WampSocket socket) throws Exception {
         super.onConnect(socket);
-        Client cli = new Client();
-        cli.setSocket(socket);
-        cli.setState(ClientState.INVALID);  // not authenticated
-        clients.put(socket.getSessionId(), cli);
+        Client client = new Client();
+        client.setSocket(socket);
+        client.setState(ClientState.UNAUTHENTICATED);  // not authenticated
+        clients.put(socket.getSessionId(), client);
         
         wampApp.subscribeClientWithTopic(socket, getFQtopicURI("apps_event"), null);
     }
@@ -216,6 +216,7 @@ public class Module extends WampModule
     public void onDisconnect(WampSocket socket) throws Exception {
         wampApp.unsubscribeClientFromTopic(socket, getFQtopicURI("apps_event"));
         Client client = clients.get(socket.getSessionId());
+        client.setState(ClientState.OFFLINE);
         for(String gid : client.getGroups().keySet()) {
             exitGroup(socket, gid);
         }
@@ -587,7 +588,7 @@ public class Module extends WampModule
 
         boolean valid = false;
         Client client = clients.get(socket.getSessionId());
-        if(client.getState() == ClientState.INVALID) throw new WampException(MODULE_URL + "unknownuser", "The user hasn't logged in");
+        if(client.getState() != ClientState.AUTHENTICATED) throw new WampException(MODULE_URL + "unknownuser", "The user hasn't logged in");
         
         // TODO: check user is administrator
         //if(!client.getUser().isAdministrator()) throw new WampException(MODULE_URL + "adminrequired", "The user is not and administrator");
@@ -864,7 +865,7 @@ public class Module extends WampModule
                 boolean connected = (member.getClient() != null);
                 if(!spectator && !connected && !joined && (!reserved || index == reservedSlot)) {
                     member.setClient(client);
-                    member.setState(MemberState.RESERVED);
+                    member.setState(MemberState.JOINED);
                     member.setUser(client.getUser());
                     if(options != null && options.has("role")) {
                         Role oldRole = member.getRole();
@@ -877,7 +878,6 @@ public class Module extends WampModule
                         }
                     }                    
 
-                    client.setState(ClientState.JOINED);
                     joined = true;
                     connected = true;
 
@@ -1095,8 +1095,9 @@ public class Module extends WampModule
                         member.setTeam(1+slot);
                         member.setUserType("user");
                     }
-                    if(c==null) member.setState(MemberState.EMPTY);
-                    else if(c != member.getClient()) member.setState(MemberState.RESERVED);
+                    
+                    if(c==null) member.setState((g.getState() == GroupState.OPEN)? MemberState.EMPTY : MemberState.DETACHED );
+                    else if(c != member.getClient()) member.setState(MemberState.JOINED);
                     
                     if(usertype.equalsIgnoreCase("remote")) {
                         if(user.equals(member.getUser())) {
@@ -1254,7 +1255,7 @@ public class Module extends WampModule
                                 member.setUser(null);
                                 member.setUserType("user");
                             } else {
-                                member.setState(MemberState.RESERVED);
+                                member.setState(MemberState.DETACHED);
                             }
                             g.setMember(slot, member);
                             
@@ -1280,9 +1281,6 @@ public class Module extends WampModule
                 socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+gid)), response, true); // exclude Me
 
                 client.removeGroup(g);
-                if(client.getGroups().size() == 0) {
-                    client.setState(client.getUser() != null? ClientState.AUTHENTICATED : ClientState.INVALID);
-                }
                 
                 String topicName = getFQtopicURI("group_event:" + g.getGid());
                 for(WampTopic topic : wampApp.unsubscribeClientFromTopic(socket, topicName)) {
