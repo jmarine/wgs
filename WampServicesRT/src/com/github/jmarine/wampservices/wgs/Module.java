@@ -898,7 +898,7 @@ public class Module extends WampModule
 
             response.put("members", getMembers(g.getGid(), 0));
             
-            broadcastGroupInfo(socket, g, created? "group_created" : "group_updated", false);
+            broadcastAppEventInfo(socket, g, created? "group_created" : "group_updated", false);
             
             g = saveEntity(g);
 
@@ -1016,7 +1016,7 @@ public class Module extends WampModule
 
         response.put("valid", valid);
 
-        if(broadcastAppInfo)    broadcastGroupInfo(socket, g, "group_updated", true);
+        if(broadcastAppInfo)    broadcastAppEventInfo(socket, g, "group_updated", true);
         if(broadcastGroupInfo)  socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, true);  // exclude Me
         return response;
     }
@@ -1055,7 +1055,7 @@ public class Module extends WampModule
 
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode response = mapper.createObjectNode();
-            response.put("cmd", "user_updated");
+            response.put("cmd", "group_updated");
 
             Group g = groups.get(gid);
             if(g != null) {
@@ -1100,7 +1100,7 @@ public class Module extends WampModule
                     else if(c != member.getClient()) member.setState(MemberState.JOINED);
                     
                     if(usertype.equalsIgnoreCase("remote")) {
-                        if(user.equals(member.getUser())) {
+                        if(user!=null && user.equals(member.getUser())) {
                             usertype = member.getUserType();
                         } else {
                             usertype = "user";  // by default, but try to maintain remote's usertype selection
@@ -1128,7 +1128,7 @@ public class Module extends WampModule
                     obj.put("slot", slot);
                     obj.put("connected", connected);
                     membersArray.add(obj);                    
-                    response.put("updates", membersArray);
+                    response.put("members", membersArray);
                     valid = true;
                     
                 } else {
@@ -1149,7 +1149,7 @@ public class Module extends WampModule
                                 membersArray.add(obj);
                             }
                         }
-                        response.put("updates", membersArray);
+                        response.put("members", membersArray);
                     }
                     valid = true;
                 }
@@ -1158,8 +1158,9 @@ public class Module extends WampModule
             response.put("valid", valid);
 
             if(valid) {
-                socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, true);
-                broadcastGroupInfo(socket, g, "group_updated", false);  // exclude Me
+                response.putAll(g.toJSON());
+                broadcastAppEventInfo(socket, g, "group_updated", false);  // exclude Me
+                socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, false);
                 g = saveEntity(g);
             }  
             return response;
@@ -1228,7 +1229,9 @@ public class Module extends WampModule
             
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode response = mapper.createObjectNode();
-            response.put("cmd", "user_unjoined");
+            response.put("cmd", "user_detached");
+            response.put("gid", gid);
+            response.put("valid", "false");
 
             Group g = groups.get(gid);
 
@@ -1236,7 +1239,7 @@ public class Module extends WampModule
                 String appId = g.getApplication().getAppId();
                 logger.log(Level.FINE, "open_group: group found: " + gid);
 
-                response.put("gid", g.getGid());
+                response.put("valid", true);
                 response.put("sid", socket.getSessionId());
 
                 int num_members = 0;
@@ -1277,7 +1280,6 @@ public class Module extends WampModule
                 }
                 response.put("members", membersArray);
 
-                response.put("valid", true);
                 socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+gid)), response, true); // exclude Me
 
                 client.removeGroup(g);
@@ -1305,7 +1307,7 @@ public class Module extends WampModule
                         wampApp.removeTopic(topicName);
                         deleted = true;
                     }
-                    broadcastGroupInfo(socket, g, deleted? "group_deleted" : "group_updated", false);
+                    broadcastAppEventInfo(socket, g, deleted? "group_deleted" : "group_updated", false);
                 }
             }
 
@@ -1313,7 +1315,7 @@ public class Module extends WampModule
     }
 
     
-    private void broadcastGroupInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
+    private void broadcastAppEventInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
     {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode event = g.toJSON();
@@ -1321,6 +1323,15 @@ public class Module extends WampModule
         event.put("members", getMembers(g.getGid(),0));
         socket.publishEvent(wampApp.getTopic(getFQtopicURI("app_event:"+g.getApplication().getAppId())), event, excludeMe);
     }
+    
+    private void broadcastGroupEventInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode event = g.toJSON();
+        event.put("cmd", cmd);
+        event.put("members", getMembers(g.getGid(),0));
+        socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), event, excludeMe);
+    }    
     
     
     private ObjectNode listGroups(String appId) throws Exception

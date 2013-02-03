@@ -342,7 +342,7 @@ WgsClient.prototype = {
             var topicURI = arr[1];
             if(client.topics[topicURI]) {
                 client.topics[topicURI].forEach(function(callback) {
-                    callback(arr[2], topicURI);                
+                    callback.call(client, arr[2], topicURI);                
                 });
             } else {
                 // client.debug("topic not found: " + topic);
@@ -354,7 +354,7 @@ WgsClient.prototype = {
                 client.metaeventHandlers[topicURI].forEach(function(callback) {
                     var metatopic = arr[2];
                     var metaevent = (arr.length > 2) ? arr[3] : null;
-                    callback(topicURI, metatopic, metaevent);
+                    callback.call(client, topicURI, metatopic, metaevent);
                 });
             } else {
                 // client.debug("topic not found: " + topic);
@@ -414,6 +414,34 @@ WgsClient.prototype = {
       this.call("wgs:set_subscription_status", args).then(callback,callback);
   },
   
+  _update_group_users: function(msg, topicURI) {
+      var client = this;
+      if(msg.connections) {
+          client.groups[msg.gid] = new Object();
+          client.groups[msg.gid].connections = new Array();
+          client.groups[msg.gid].members = msg.members;
+          msg.connections.forEach(function(con) { 
+              client.groups[msg.gid].connections[con.sid] = con;
+          });
+      } else if(msg.cmd == "user_joined" || msg.cmd == "group_updated") {
+          var gid = msg.gid;
+          if(!msg.members) msg.members = [ msg ];
+          if(msg.members) {
+              msg.members.forEach(function(item) {
+                  client.groups[gid].connections[item.sid] = item;
+                  if(isFinite(item.slot)) client.groups[gid].members[item.slot] = item;
+              });
+          }
+      } else if(msg.cmd == "user_detached") {
+          delete client.groups[msg.gid].connections[msg.sid];
+          if(msg.members) {
+              msg.members.forEach(function(item) {
+                  if(isFinite(item.slot)) client.groups[msg.gid].members[item.slot] = item;
+              });
+          }
+      }
+  },  
+  
   openGroup: function(appId, gid, options, callback) {
       var client = this;
       var args = Array();
@@ -422,39 +450,16 @@ WgsClient.prototype = {
       args[2] = options;
 
       this.call("wgs:open_group", args).then(function(response) {
-          var _update_group_users = function(msg, topicURI) {
-                if(msg.connections) {
-                    client.groups[msg.gid] = new Object();
-                    client.groups[msg.gid].connections = new Array();
-                    client.groups[msg.gid].members = msg.members;
-                    msg.connections.forEach(function(con) { 
-                        client.groups[msg.gid].connections[con.sid] = con;
-                    });
-                } else if(msg.cmd == "user_joined" || msg.cmd == "user_updated") {
-                    var gid = msg.gid;
-                    if(!msg.updates) msg.updates = [ msg ];
-                    msg.updates.forEach(function(item) {
-                        client.groups[gid].connections[item.sid] = item;
-                        if(item.slot) client.groups[gid].members[item.slot] = item;
-                    });
-                } else if(msg.cmd == "user_unjoined") {
-                    delete client.groups[msg.gid].connections[msg.sid];
-                    if(msg.members) {
-                        msg.members.forEach(function(member) {
-                            client.groups[msg.gid].members[member.slot] = null;
-                        });
-                    }
-                }
-            };
-          client.subscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + response.gid, _update_group_users, null, { "clientSideOnly":true} );
-          _update_group_users(response);
+          client.subscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + response.gid, client._update_group_users, null, { "clientSideOnly":true} );
+          client._update_group_users(response);
           callback(response);
       }, callback);
   },
   
   exitGroup: function(gid, callback) {
+      var client = this;
       this.call("wgs:exit_group", gid).then(callback, callback);
-      this.unsubscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + gid, this._update_group_users, null, true);
+      this.unsubscribe("https://github.com/jmarine/wampservices/wgs#group_event:" + gid, client._update_group_users, null, true);
       delete this.groups[gid];
   },
 
@@ -462,8 +467,12 @@ WgsClient.prototype = {
       return this.groups[gid].connections;
   },
   
+  getGroupMember: function(gid,slot) {
+      return this.groups[gid].members[slot];
+  },
 
   updateGroup: function(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, callback) {
+      var client = this;
       var msg = Object();
       msg.app = appId;
       msg.gid = gid;
@@ -475,10 +484,18 @@ WgsClient.prototype = {
       if(state) msg.state = state;
       if(data) msg.data  = data;
      
-      this.call("wgs:update_group", msg).then(callback, callback);
+      this.call("wgs:update_group", msg).then(function(response) { 
+          client._update_group_users(response);
+          callback(response);
+      }, 
+      function(response) { 
+          client._update_group_users(response);
+          callback(response) 
+      } );
   },
 
   updateMember: function(appId, gid, state, slot, sid, usertype, user, role, team, callback) {
+      var client = this;      
       var msg = Object();
       msg.app = appId;
       msg.gid = gid;
@@ -491,7 +508,14 @@ WgsClient.prototype = {
         msg.team = team;
         msg.type = usertype;
       }
-      this.call("wgs:update_member", msg).then(callback, callback);
+      this.call("wgs:update_member", msg).then(function(response) { 
+          client._update_group_users(response);
+          callback(response);
+      }, 
+      function(response) { 
+          client._update_group_users(response);
+          callback(response) 
+      } );
   },
   
   sendGroupMessage: function(gid, data, callback) {

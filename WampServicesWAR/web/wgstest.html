@@ -795,79 +795,12 @@ function update_group_callback(response) {
             var isMember = isFinite(response.slot);
             var num_members = $("#group_params table[id='members'] tbody tr").size();
 
-            if(response.cmd == "user_joined" || response.cmd == "user_updated" || response.cmd == "group_updated") {
-
-                if(!response.updates) { 
-                    // single user_joined
-                    if(response.members) response.updates = response.members;
-                    else response.updates = [ response ];
-                }
-
-                response.updates.forEach(function(member) {
-                    var isMember = isFinite(member.slot);
-
-                    if(isMember && member.sid == wgsclient.sid && member.state == "JOINED") {
-                        $("#toggle_client_state").html("Ready");
-                    }
-                    
-                    // create UI fields for new member slots:
-                    if(isMember) {
-                        var memberId = member.slot;
-                        while(num_members <= memberId) {
-                            add_group_member(false);
-                            num_members += 1;
-                        }                        
-                    }
-
-                    // append new joined user's user in selectboxes
-                    for(var index = 0; index < num_members; index += 1) {
-                        if( (wgsclient.user == $("#group_admin").val()) ) {
-                            if(member.sid && member.sid != "") {
-                                if($("#member"+index+" option[value$=':"+member.sid+"']").size() <= 0) {  // insert user
-                                    $("#member"+index).append($("<option>").attr("value", "remote:"+member.sid).text(member.name));
-                                }
-                            }
-                        }
-                    }
-
-                    // update UI fields with new member values:
-                    if(isMember) {                        
-                        var memberId = member.slot;                        
-                        $("#team"+memberId).val(member.team);
-
-                        if(wgsclient.user == $("#group_admin").val()) {
-
-                            var val = ((member.sid == wgsclient.sid) ? member.usertype : "remote") + ":" + member.sid;
-                            $("#member"+memberId+" option[value='"+val+"']").attr("selected", "selected");
-                            $("#role"+memberId+" option[value='"+member.role+"']").attr("selected", "selected");
-                            var status = member.state.toLowerCase();
-                            if(status != 'empty') status = member.type.toLowerCase() + "_" + status;
-                            $("#state" + memberId).attr("src", "images/" + status + ".png");
-                            $("#state" + memberId).attr("title", ((status!='empty')? member.type.toUpperCase():"") + " " + member.state);
-
-                        } else {
-
-                            var currentUserSelected = (wgsclient.sid == member.sid);
-                            var roleFixed = (member.role != "") && (member.sid != "") && (wgsclient.sid != member.sid);
-                            populate_group_member_fields(false, memberId, member, currentUserSelected, roleFixed, currentApp.ai);
-                        }
-                    }
-                });
-
-            } else if(response.cmd == "user_unjoined") {
-
-                // clear unjoined user's user from selectboxes
-                for(var index = 0; index < num_members; index += 1) {
-                    $("#member"+index+" option[value$=':"+response.sid+"']").remove();
-                }
-                
-                if(response.members) {
-                    response.members.forEach(function(member) {
-                        var memberId = member.slot;  
-                        populate_group_member_fields(false, memberId, member, false, false, currentApp.ai);
-                    });
-                }
-                
+            for(var index = 0; index < num_members; index += 1) {
+                var memberId = index;
+                var member = wgsclient.getGroupMember(response.gid, memberId);
+                var currentUserSelected = (wgsclient.sid == member.sid);
+                var roleFixed = (member.role != "") && (member.sid != "") && (wgsclient.sid != member.sid);
+                populate_group_member_fields(false, memberId, member, currentUserSelected, roleFixed, currentApp.ai);
             }
 
             if(response.cmd == "group_updated") {
