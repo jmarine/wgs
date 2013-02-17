@@ -1287,26 +1287,28 @@ public class Module extends WampModule
                 String topicName = getFQtopicURI("group_event:" + g.getGid());
                 for(WampTopic topic : wampApp.unsubscribeClientFromTopic(socket, topicName)) {
                     boolean deleted = false;
-                    if(topic.getSubscriptionCount() == 0) {
-                        
+                    if(topic.getSubscriptionCount() == 0 && g.getState() != GroupState.STARTED) {
+
                         switch(g.getState()) {
                             case OPEN:
                                 removeEntity(g);
                                 break;
                             case FINISHED:
-                                // move to historic table
+                                // move group to historic table?
+                                break;
                         }
                         
                         logger.log(Level.INFO, "closing group {0}: {1}", new Object[]{ g.getGid(), g.getDescription()});
 
                         groups.remove(g.getGid());
                         applications.get(appId).removeGroup(g);
-                        
+
                         //updateAppInfo(socket, applications.get(appId), "app_updated", false);
 
                         wampApp.removeTopic(topicName);
                         deleted = true;
                     }
+                    
                     broadcastAppEventInfo(socket, g, deleted? "group_deleted" : "group_updated", false);
                 }
             }
