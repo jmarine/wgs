@@ -206,7 +206,7 @@ public class Module extends WampModule
         super.onConnect(socket);
         Client client = new Client();
         client.setSocket(socket);
-        client.setState(ClientState.UNAUTHENTICATED);  // not authenticated
+        client.setState(ClientState.ANONYMOUS);  // not authenticated
         clients.put(socket.getSessionId(), client);
         
         wampApp.subscribeClientWithTopic(socket, getFQtopicURI("apps_event"), null);

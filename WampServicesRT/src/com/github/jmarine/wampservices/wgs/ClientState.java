@@ -9,5 +9,5 @@ package com.github.jmarine.wampservices.wgs;
  * @author jordi
  */
 public enum ClientState {
-    OFFLINE, UNAUTHENTICATED, AUTHENTICATED
+    OFFLINE, ANONYMOUS, AUTHENTICATED
 }
