@@ -11,7 +11,7 @@ import com.github.jmarine.wampservices.WampSocket;
 public class Client {
     
     private WampSocket  socket;
-    private ClientState state;
+    private ConnectionState state;
     
     private User user;
     private Map<String,Group> groups = new ConcurrentHashMap<String,Group>();
@@ -38,14 +38,14 @@ public class Client {
     /**
      * @return the state
      */
-    public ClientState getState() {
+    public ConnectionState getState() {
         return state;
     }
 
     /**
      * @param state the state to set
      */
-    public void setState(ClientState state) {
+    public void setState(ConnectionState state) {
         this.state = state;
     }
 

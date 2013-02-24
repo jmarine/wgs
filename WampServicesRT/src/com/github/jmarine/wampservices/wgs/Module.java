@@ -173,7 +173,7 @@ public class Module extends WampModule
                     WampSubscription presence = topic.getSubscription(sid);
                     ObjectNode obj = presence.toJSON();
                     Client cli = clients.get(presence.getSocket().getSessionId());
-                    if(cli != null && cli.getState()==ClientState.AUTHENTICATED) {
+                    if(cli != null && cli.getState()==ConnectionState.AUTHENTICATED) {
                         obj.putAll(cli.getUser().toJSON());
                         arrayNode.add(obj);
                     }                
@@ -193,7 +193,7 @@ public class Module extends WampModule
         if(metatopic.equals(WampMetaTopic.JOINED)) {        
             ObjectNode obj = (ObjectNode)metaevent;
             Client cli = clients.get(obj.get("sessionId").asText());
-            if(cli != null && cli.getState()==ClientState.AUTHENTICATED) {
+            if(cli != null && cli.getState()==ConnectionState.AUTHENTICATED) {
                 obj.putAll(cli.getUser().toJSON());
             }
         }
@@ -206,7 +206,7 @@ public class Module extends WampModule
         super.onConnect(socket);
         Client client = new Client();
         client.setSocket(socket);
-        client.setState(ClientState.ANONYMOUS);  // not authenticated
+        client.setState(ConnectionState.ANONYMOUS);  // not authenticated
         clients.put(socket.getSessionId(), client);
         
         wampApp.subscribeClientWithTopic(socket, getFQtopicURI("apps_event"), null);
@@ -216,7 +216,7 @@ public class Module extends WampModule
     public void onDisconnect(WampSocket socket) throws Exception {
         wampApp.unsubscribeClientFromTopic(socket, getFQtopicURI("apps_event"));
         Client client = clients.get(socket.getSessionId());
-        client.setState(ClientState.OFFLINE);
+        client.setState(ConnectionState.OFFLINE);
         for(String gid : client.getGroups().keySet()) {
             exitGroup(socket, gid);
         }
@@ -266,7 +266,7 @@ public class Module extends WampModule
         usr = saveEntity(usr);
 
         client.setUser(usr);
-        client.setState(ClientState.AUTHENTICATED);
+        client.setState(ConnectionState.AUTHENTICATED);
 
         return usr.toJSON();
     }
@@ -289,7 +289,7 @@ public class Module extends WampModule
         if( (usr != null) && (password.equals(usr.getPassword())) ) {
             user_valid = true;
             client.setUser(usr);
-            client.setState(ClientState.AUTHENTICATED);
+            client.setState(ConnectionState.AUTHENTICATED);
         }
 
         if(!user_valid) throw new WampException(MODULE_URL + "loginerror", "Login credentials are not valid");
@@ -504,7 +504,7 @@ public class Module extends WampModule
                     // Use cached UserInfo from local database
                     logger.fine("Cached OIC User: " + usr);
                     client.setUser(usr);
-                    client.setState(ClientState.AUTHENTICATED);
+                    client.setState(ConnectionState.AUTHENTICATED);
 
                 } else if(response.has("access_token")) {
                     // Get UserInfo from OpenId Connect Provider
@@ -532,7 +532,7 @@ public class Module extends WampModule
                     usr = saveEntity(usr);
 
                     client.setUser(usr);
-                    client.setState(ClientState.AUTHENTICATED);
+                    client.setState(ConnectionState.AUTHENTICATED);
                 } 
                 
             }
@@ -588,7 +588,7 @@ public class Module extends WampModule
 
         boolean valid = false;
         Client client = clients.get(socket.getSessionId());
-        if(client.getState() != ClientState.AUTHENTICATED) throw new WampException(MODULE_URL + "unknownuser", "The user hasn't logged in");
+        if(client.getState() != ConnectionState.AUTHENTICATED) throw new WampException(MODULE_URL + "unknownuser", "The user hasn't logged in");
         
         // TODO: check user is administrator
         //if(!client.getUser().isAdministrator()) throw new WampException(MODULE_URL + "adminrequired", "The user is not and administrator");
