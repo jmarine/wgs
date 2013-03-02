@@ -425,7 +425,8 @@ WgsClient.prototype = {
           });
       } else if(msg.cmd == "user_joined" || msg.cmd == "group_updated") {
           var gid = msg.gid;
-          if(!msg.members) msg.members = [ msg ];
+          if(isFinite(msg.slot)) msg.members = [ msg ];
+          else client.groups[gid].members = new Array();
           if(msg.members) {
               msg.members.forEach(function(item) {
                   client.groups[gid].connections[item.sid] = item;
@@ -465,6 +466,10 @@ WgsClient.prototype = {
 
   getGroupConnections: function(gid) {
       return this.groups[gid].connections;
+  },
+          
+  getGroupMembers: function(gid) {
+      return this.groups[gid].members;
   },
   
   getGroupMember: function(gid,slot) {

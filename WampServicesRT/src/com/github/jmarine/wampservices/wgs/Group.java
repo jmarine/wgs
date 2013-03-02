@@ -342,9 +342,20 @@ public class Group implements java.io.Serializable
         while(index >= members.size()) {
             members.add(null);
         }
+        member.setSlot(index);
         members.set(index, member);
     }
 
+    public Member removeMember(int index) {
+        Member removed = getMember(index);
+        int last = getNumSlots();
+        for(; index < last-1; index++) {
+            setMember(index, getMember(index+1));
+        }      
+        if(index < last) members.remove(index);
+        return removed;
+    }
+    
     /**
      * @return the hidden
      */

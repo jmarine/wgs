@@ -86,28 +86,33 @@ public class Module extends WampModule
     
     public <T> T saveEntity(T entity)
     {
-        EntityManager manager = getEntityManager();
-        EntityTransaction transaction = manager.getTransaction();
-        transaction.begin();
-        
-        entity = manager.merge(entity);
+        if(entity != null) {
+            EntityManager manager = getEntityManager();
+            EntityTransaction transaction = manager.getTransaction();
+            transaction.begin();
 
-        transaction.commit();
-        manager.close();        
+            entity = manager.merge(entity);
+
+            transaction.commit();
+            manager.close();        
+        }
         return entity;
     }
     
-    public void removeEntity(Object entity)
+    public <T> T removeEntity(T entity)
     {
-        EntityManager manager = getEntityManager();
-        EntityTransaction transaction = manager.getTransaction();
-        transaction.begin();
-        
-        entity = manager.merge(entity);
-        manager.remove(entity);
+        if(entity != null) {
+            EntityManager manager = getEntityManager();
+            EntityTransaction transaction = manager.getTransaction();
+            transaction.begin();
 
-        transaction.commit();
-        manager.close();        
+            entity = manager.merge(entity);
+            manager.remove(entity);
+
+            transaction.commit();
+            manager.close();        
+        }
+        return entity;
     }    
     
     public <T> List<T> findEntities(Class<T> cls, String namedQueryName, Object[] ... params)
@@ -883,12 +888,11 @@ public class Module extends WampModule
 
                     ObjectNode event = member.toJSON();
                     event.put("cmd", "user_joined");
-                    event.put("sid", client.getSessionId());
-                    event.put("user", member.getUser().getFQid());
-                    event.put("name", member.getUser().getName());
-                    event.put("picture", member.getUser().getPicture());
+                    //event.put("sid", client.getSessionId());
+                    //event.put("user", member.getUser().getFQid());
+                    //event.put("name", member.getUser().getName());
+                    //event.put("picture", member.getUser().getPicture());
                     event.put("gid", g.getGid());
-                    event.put("slot", index);
                     event.put("valid", true);
 
                     socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), event, true);  // exclude Me
@@ -900,7 +904,7 @@ public class Module extends WampModule
             
             broadcastAppEventInfo(socket, g, created? "group_created" : "group_updated", false);
             
-            g = saveEntity(g);
+            saveEntity(g);
 
         }
 
@@ -941,6 +945,7 @@ public class Module extends WampModule
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode response = mapper.createObjectNode();
         response.put("cmd", "group_updated");
+        response.put("sid", socket.getSessionId());
         
         
         Group g = groups.get(gid);
@@ -1009,7 +1014,7 @@ public class Module extends WampModule
             
             response.put("members", getMembers(gid,0));            
 
-            g = saveEntity(g);
+            saveEntity(g);
             
             valid = true;
         }
@@ -1033,12 +1038,7 @@ public class Module extends WampModule
             for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                 Member member = g.getMember(slot);
                 if( (member != null) && (team==0 || team==member.getTeam()) ) {
-                    boolean connected = (member.getClient() != null);
-
                     ObjectNode obj = member.toJSON();
-                    obj.put("slot", slot);
-                    obj.put("connected", connected);
-
                     membersArray.add(obj);
                 }
             }
@@ -1056,6 +1056,7 @@ public class Module extends WampModule
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode response = mapper.createObjectNode();
             response.put("cmd", "group_updated");
+            response.put("sid", socket.getSessionId());
 
             Group g = groups.get(gid);
             if(g != null) {
@@ -1068,68 +1069,81 @@ public class Module extends WampModule
                     String sid = data.get("sid").asText();
                     
                     int slot = data.get("slot").asInt();
-                    String userId = data.get("user").asText();
-                    String role = data.get("role").asText();
-                    String usertype = data.get("type").asText();
-                    int team = data.get("team").asInt();
-
-                    Client c = clients.get(sid);
-                    if(c!=null) {
-                        // when it's not a reservation of a member slot
-                        User u = c.getUser();
-                        if(u!=null) userId = u.getFQid();
+                    if(slot < 0) {
+                        // TODO: check client socket is allowed to remove slot when index < 0
+                        ArrayNode membersArray = mapper.createArrayNode(); 
+                        removeEntity(g.removeMember(-slot-1));
+                        
+                        slot = 0;
+                        for(int numSlots = g.getNumSlots(); slot < numSlots; slot++) {
+                            Member member = g.getMember(slot);
+                            if(member != null) {
+                                ObjectNode obj = member.toJSON();
+                                membersArray.add(member.toJSON());
+                            }
+                        }
+                        response.put("members", membersArray);
+                        
+                        valid = true;
                     }
+                    else {
+                        String userId = data.get("user").asText();
+                        String role = data.get("role").asText();
+                        String usertype = data.get("type").asText();
+                        int team = data.get("team").asInt();
 
-                    Role r = g.getApplication().getRoleByName(role);
+                        Client c = clients.get(sid);
+                        if(c!=null) {
+                            // when it's not a reservation of a member slot
+                            User u = c.getUser();
+                            if(u!=null) userId = u.getFQid();
+                        }
 
-                    // TODO: check "slot" is valid
-                    EntityManager manager = getEntityManager();
-                    User user = manager.find(User.class, new UserId(userId));
-                    manager.close();
-                    
-                    Member member = g.getMember(slot);
-                    if(member == null) {
-                        member = new Member();
-                        member.setApplicationGroup(g);
-                        member.setSlot(slot);
-                        member.setTeam(1+slot);
-                        member.setUserType("user");
-                    }
-                    
-                    if(c==null) member.setState((g.getState() == GroupState.OPEN)? MemberState.EMPTY : MemberState.DETACHED );
-                    else if(c != member.getClient()) member.setState(MemberState.JOINED);
-                    
-                    if(usertype.equalsIgnoreCase("remote")) {
-                        if(user!=null && user.equals(member.getUser())) {
-                            usertype = member.getUserType();
-                        } else {
-                            usertype = "user";  // by default, but try to maintain remote's usertype selection
-                            for(int index = 0, numSlots = g.getNumSlots(); index < numSlots; index++) {
-                                Member m2 = g.getMember(index);
-                                if(user.equals(m2.getUser())) {
-                                    usertype = m2.getUserType();
-                                    break;
+                        Role r = g.getApplication().getRoleByName(role);
+
+                        // TODO: check "slot" is valid
+                        EntityManager manager = getEntityManager();
+                        User user = manager.find(User.class, new UserId(userId));
+                        manager.close();
+
+                        Member member = g.getMember(slot);
+                        if(member == null) {
+                            member = new Member();
+                            member.setApplicationGroup(g);
+                            member.setSlot(slot);
+                            member.setTeam(1+slot);
+                            member.setUserType("user");
+                        }
+
+                        if(c==null) member.setState((g.getState() == GroupState.OPEN)? MemberState.EMPTY : MemberState.DETACHED );
+                        else if(c != member.getClient()) member.setState(MemberState.JOINED);
+
+                        if(usertype.equalsIgnoreCase("remote")) {
+                            if(user!=null && user.equals(member.getUser())) {
+                                usertype = member.getUserType();
+                            } else {
+                                usertype = "user";  // by default, but try to maintain remote's usertype selection
+                                for(int index = 0, numSlots = g.getNumSlots(); index < numSlots; index++) {
+                                    Member m2 = g.getMember(index);
+                                    if(user.equals(m2.getUser())) {
+                                        usertype = m2.getUserType();
+                                        break;
+                                    }
                                 }
                             }
                         }
-                    }
-                    
-                    member.setClient(c);
-                    member.setUser(user);
-                    member.setUserType(usertype);
-                    member.setRole(r);
-                    member.setTeam(team);
-                    g.setMember(slot, member);
 
+                        member.setClient(c);
+                        member.setUser(user);
+                        member.setUserType(usertype);
+                        member.setRole(r);
+                        member.setTeam(team);
+                        g.setMember(slot, member);
 
-                    boolean connected = (member.getClient() != null);
-                    ArrayNode membersArray = mapper.createArrayNode();                    
-                    ObjectNode obj = member.toJSON();
-                    obj.put("slot", slot);
-                    obj.put("connected", connected);
-                    membersArray.add(obj);                    
-                    response.put("members", membersArray);
-                    valid = true;
+                        response.putAll(member.toJSON());
+                        valid = true;
+                        
+                    } 
                     
                 } else {
                     // UPDATE CLIENT STATE ("reserved" <--> "ready")
@@ -1141,13 +1155,10 @@ public class Module extends WampModule
                         for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                             Member member = g.getMember(slot);
                             if( (member != null) && (member.getClient() != null) && (member.getClient().getSessionId().equals(sid)) ) {
-                                boolean connected = (member.getClient() != null);
                                 member.setState(MemberState.valueOf(state));
-                                ObjectNode obj = member.toJSON();
-                                obj.put("slot", slot);
-                                obj.put("connected", connected);
-                                membersArray.add(obj);
                             }
+                            ObjectNode obj = member.toJSON();
+                            membersArray.add(obj);
                         }
                         response.put("members", membersArray);
                     }
@@ -1158,10 +1169,10 @@ public class Module extends WampModule
             response.put("valid", valid);
 
             if(valid) {
-                response.putAll(g.toJSON());
+                //response.putAll(g.toJSON());
                 broadcastAppEventInfo(socket, g, "group_updated", false);  // exclude Me
                 socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, false);
-                g = saveEntity(g);
+                saveEntity(g);
             }  
             return response;
     }
@@ -1268,10 +1279,9 @@ public class Module extends WampModule
                             }                            
                             
                             ObjectNode obj = member.toJSON();
-                            obj.put("slot", slot);
                             membersArray.add(obj);
                             
-                            g = saveEntity(g);
+                            saveEntity(g);
 
                         } else {
                             num_members++;

@@ -786,14 +786,33 @@ function append_group_member(added, memberId, member, currentUserSelected, roleF
 }
 
 function remove_last_member(memberId) {
-    $("#group_params table[id='members'] tbody tr:last").remove();
-    $("button.remove_member:last").show();
+    var appId = $("#apps option:selected").attr("value");
+    var gid = $("#group_gid").val();
+    var slot = $("#group_params table[id='members'] tbody tr").size();
+    wgsclient.updateMember(appId, gid, "", -slot, false, false, false, false, false, function(response) {
+        if(!response.valid) {
+            alert("error while removing slot");
+        }
+    });
 }
 
 function update_group_callback(response) {
         if(response.valid) {  // TODO: check it is currentGroup gid
-            var isMember = isFinite(response.slot);
-            var num_members = $("#group_params table[id='members'] tbody tr").size();
+            
+            var num_members = wgsclient.getGroupMembers(response.gid).length;
+
+            var old_members = $("#group_params table[id='members'] tbody tr");
+            if(num_members < old_members.size()) {
+                $("#group_params table[id='members'] tbody tr").each(function(i) {
+                    if (i+1 > num_members) {
+                      $(this).remove();
+                    }
+                });
+            } else {
+                for(var index = num_members-old_members.size(); index > 0; index--) {
+                    add_group_member(true);
+                }
+            }
 
             for(var index = 0; index < num_members; index += 1) {
                 var memberId = index;
@@ -823,6 +842,7 @@ function update_group_callback(response) {
                     }
                 }
             }
+
 
         } else {
             alert("Error joining user:" + response.errorDesc);

@@ -177,6 +177,8 @@ public class Member implements java.io.Serializable
     
     public ObjectNode toJSON() 
     {
+        boolean connected = (getClient() != null);
+        
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode obj = mapper.createObjectNode();
         obj.put("sid", ((client!=null)? client.getSessionId():""));
@@ -187,6 +189,8 @@ public class Member implements java.io.Serializable
         obj.put("state",String.valueOf(state));
         obj.put("role",((role!=null)? role.getName():""));
         obj.put("team",team);
+        obj.put("slot", slot);
+        obj.put("connected", connected);
         return obj;
     }
     
