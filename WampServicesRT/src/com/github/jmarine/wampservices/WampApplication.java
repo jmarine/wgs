@@ -10,6 +10,7 @@ package com.github.jmarine.wampservices;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,20 +29,22 @@ import javax.websocket.HandshakeResponse;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 import javax.websocket.server.HandshakeRequest;
-import javax.websocket.server.DefaultServerConfiguration;
-import javax.websocket.server.ServerEndpointConfiguration;
+import javax.websocket.server.ServerEndpointConfig;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
 
-public class WampApplication extends DefaultServerConfiguration
+public class WampApplication 
+    extends javax.websocket.server.ServerEndpointConfig.Configurator
+    implements javax.websocket.server.ServerEndpointConfig
 {
     private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
 
     public  static final String WAMP_BASE_URL = "https://github.com/jmarine/wampservices";
     
+    private Class   endpointClass;
     private String  path;
     private boolean started;
     private Map<String,WampModule> modules;
@@ -63,9 +66,11 @@ public class WampApplication extends DefaultServerConfiguration
     }
     
     
-    public WampApplication(Class<? extends Endpoint> endpointClass, String path) 
+    public WampApplication(Class endpointClass, String path) 
     {
-        super(endpointClass, path);
+        this.endpointClass = endpointClass;
+        this.path = path;
+        
         this.sockets = new ConcurrentHashMap<Session,WampSocket>();
         this.modules = new HashMap<String,WampModule>();
         this.topics = new TreeMap<String,WampTopic>();
@@ -118,7 +123,7 @@ public class WampApplication extends DefaultServerConfiguration
         }        
 
 
-        session.addMessageHandler(new MessageHandler.Basic<String>() {
+        session.addMessageHandler(new MessageHandler.Whole<String>() {
 
             @Override
             public void onMessage(String message) {
@@ -539,24 +544,51 @@ public class WampApplication extends DefaultServerConfiguration
         return buffer.toString();
     }
 
+    
+    @Override
+    public Class<?> getEndpointClass() {
+        return endpointClass;
+    }
 
     @Override
-    public String getNegotiatedSubprotocol(List<String> requestedSubprotocols) 
-    {
-        return (requestedSubprotocols != null && requestedSubprotocols.contains("wamp"))? "wamp" : null;
+    public String getPath() {
+        return path;
     }
-    
-    @Override
-    public List<Extension> getNegotiatedExtensions(List<Extension> requestedExtensions) 
-    {
-        return requestedExtensions;
-    }
-    
-    @Override
-    public boolean checkOrigin(String originHeaderValue) 
-    {
-        return true;
-    }  
 
-    
+    @Override
+    public List<String> getSubprotocols() {
+        List<String> subprotocols = java.util.Arrays.asList("wamp");
+        return subprotocols;
+    }
+
+    @Override
+    public List<Extension> getExtensions() {
+        List<Extension> extensions = Collections.emptyList();
+        return extensions;
+    }
+
+    @Override
+    public Configurator getConfigurator() {
+        return this;
+    }
+
+    @Override
+    public List<Class<? extends Encoder>> getEncoders() {
+        List<Class<? extends Encoder>> encoders = Collections.emptyList();
+        return encoders;
+    }
+
+    @Override
+    public List<Class<? extends Decoder>> getDecoders() {
+        List<Class<? extends Decoder>> decoders = Collections.emptyList();
+        return decoders;
+    }
+
+    @Override
+    public Map<String, Object> getUserProperties() {
+        Map<String, Object> userProperties = new HashMap<String, Object>();
+        return userProperties;
+    }
+
+
 }

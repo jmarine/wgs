@@ -100,7 +100,7 @@ public class WampSocket
 
     public void sendSafe(String msg) {
         try {
-            if(isOpen()) session.getRemote().sendString(msg);
+            if(isOpen()) session.getBasicRemote().sendText(msg);
         } catch(Exception e) {
             logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
             app.onWampClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));

@@ -12,9 +12,9 @@ import java.util.List;
 import java.util.logging.Logger;
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfiguration;
+import javax.websocket.EndpointConfig;
 import javax.websocket.Session;
-import javax.websocket.server.ServerEndpointConfiguration;
+import javax.websocket.server.ServerEndpointConfig;
 
 
 public class WampEndpoint extends Endpoint 
@@ -46,10 +46,10 @@ public class WampEndpoint extends Endpoint
     public void onApplicationStart(WampApplication app) { }
    
     @Override
-    public void onOpen(Session session, EndpointConfiguration endpointConfiguration) {
+    public void onOpen(Session session, EndpointConfig endpointConfiguration) {
         logger.fine("##################### Session opened");
         
-        String path = ((ServerEndpointConfiguration)endpointConfiguration).getPath();
+        String path = ((ServerEndpointConfig)endpointConfiguration).getPath();
         application = (WampApplication)endpointConfiguration;
         if(application.start()) onApplicationStart(application);
         

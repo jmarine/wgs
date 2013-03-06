@@ -9,13 +9,18 @@ package com.github.jmarine.wampservices;
 import java.io.FileReader;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 import java.util.StringTokenizer;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 
+import javax.websocket.server.ServerEndpointConfig;
+
 import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
-import org.glassfish.tyrus.server.DefaultServerConfiguration;
+import org.glassfish.tyrus.server.TyrusServerConfiguration;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.TyrusContainer;
 import org.glassfish.tyrus.spi.TyrusServer;
@@ -59,7 +64,8 @@ public class WampServer
             TyrusContainer tyrusContainer = new org.glassfish.tyrus.container.grizzly.GrizzlyEngine();
             TyrusServer tyrusServer = tyrusContainer.createServer(docroot, 8080);
 
-            DefaultServerConfiguration serverConfig = new DefaultServerConfiguration();
+            //TyrusServerConfiguration serverConfig = new TyrusServerConfiguration();
+            Set<ServerEndpointConfig> dynamicallyAddedEndpointConfigs = new HashSet<ServerEndpointConfig>();
             
             String databases = wampConfig.getProperty("databases");
             if(databases != null) {
@@ -74,7 +80,6 @@ public class WampServer
                 } 
             }
 
-            server = new TyrusServerContainer(tyrusServer, "", serverConfig);
             String contexts = wampConfig.getProperty("contexts");
             if(contexts != null) {
                 StringTokenizer tkContexts = new StringTokenizer(contexts, ",");
@@ -112,10 +117,13 @@ public class WampServer
                     }
                     
                     // register the application
-                    server.deploy(wampApplication.getEndpointClass().newInstance(), wampApplication);
+                    // server.deploy(wampApplication.getEndpointClass().newInstance(), wampApplication);
+                    dynamicallyAddedEndpointConfigs.add(wampApplication);
                 }
             }
             
+            Set<Class<?>> emptyClassSet = new HashSet<Class<?>>();
+            server = new TyrusServerContainer(tyrusServer, "", emptyClassSet, emptyClassSet, dynamicallyAddedEndpointConfigs);
             //server.publishServer(WampApplication.class);
             server.start();
             

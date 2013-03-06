@@ -3,16 +3,15 @@ package com.github.jmarine.wampservices.samples;
 
 import com.github.jmarine.wampservices.WampApplication;
 import com.github.jmarine.wampservices.WampEndpoint;
-import javax.websocket.CloseReason;
-import javax.websocket.EndpointConfiguration;
+import javax.websocket.EndpointConfig;
 import javax.websocket.Session;
-import javax.websocket.WebSocketClose;
-import javax.websocket.WebSocketError;
-import javax.websocket.WebSocketOpen;
-import javax.websocket.server.WebSocketEndpoint;
+import javax.websocket.OnClose;
+import javax.websocket.OnError;
+import javax.websocket.OnOpen;
+import javax.websocket.server.ServerEndpoint;
 
 
-@WebSocketEndpoint(value="/wgs", configuration=WampApplication.class, subprotocols={"wamp"})
+@ServerEndpoint(value="/wgs", configurator=WampApplication.class, subprotocols={"wamp"})
 public class WgsEndpoint extends WampEndpoint
 {
     @Override
@@ -21,17 +20,17 @@ public class WgsEndpoint extends WampEndpoint
         app.registerWampModule(com.github.jmarine.wampservices.wgs.Module.class); 
     }
     
-    @WebSocketOpen
-    public void wsOpened(Session session, EndpointConfiguration endpointConfiguration) {
+    @OnOpen
+    public void wsOpened(Session session, EndpointConfig endpointConfiguration) {
         super.onOpen(session, endpointConfiguration);
     }
     
-    @WebSocketClose
+    @OnClose
     public void wsClosed(Session session) {
         super.onClose(session, null);
     }
 
-    @WebSocketError
+    @OnError
     public void wsError(Session session, Throwable thr) {
         super.onError(session, thr);
     }
