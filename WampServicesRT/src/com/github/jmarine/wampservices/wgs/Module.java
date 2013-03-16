@@ -999,8 +999,7 @@ public class Module extends WampModule
             }
 
             
-            response = g.toJSON();
-            response.put("cmd", "group_updated");
+            response.putAll(g.toJSON());
             if(node.has("state")) {            
                 if(g.getState() == GroupState.STARTED) {
                     for(int slot = 0; slot < g.getNumSlots(); slot++) {
@@ -1062,7 +1061,7 @@ public class Module extends WampModule
             if(g != null) {
                 logger.log(Level.FINE, "open_group: group found: " + gid);
                 
-                response.put("gid", g.getGid());
+                response.putAll(g.toJSON());
                 if(data.has("slot")) {
                     
                     // UPDATE MEMBER SLOT
@@ -1146,7 +1145,7 @@ public class Module extends WampModule
                     } 
                     
                 } else {
-                    // UPDATE CLIENT STATE ("reserved" <--> "ready")
+                    // UPDATE CLIENT STATE ("joined" <--> "ready")
                     String sid = socket.getSessionId();
                     ArrayNode membersArray = mapper.createArrayNode();
                     JsonNode stateNode = data.get("state");
