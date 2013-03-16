@@ -34,9 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -48,11 +45,9 @@ public class Module extends WampModule
 {
     private static final Logger logger = Logger.getLogger(Module.class.toString());
     private static final String MODULE_URL = WampApplication.WAMP_BASE_URL + "/wgs#";
-    private static final String PU_NAME = "WgsPU";
     private static final String LOCAL_USER_DOMAIN = "";
     
     private WampApplication wampApp = null;
-    private EntityManagerFactory emf = Persistence.createEntityManagerFactory(PU_NAME);        
     private Map<String,Client> clients = new ConcurrentHashMap<String,Client>();
     private Map<String, Application> applications = new ConcurrentHashMap<String,Application>();
     private Map<String, Group> groups = new ConcurrentHashMap<String,Group>();
@@ -65,7 +60,7 @@ public class Module extends WampModule
         wampApp.createTopic(getFQtopicURI("apps_event"), null);
 
         try {
-            List<Application> apps = findEntities(Application.class, "wgs.findAllApps");
+            List<Application> apps = Storage.findEntities(Application.class, "wgs.findAllApps");
             for(Application a : apps) {
                 System.out.println("Application found in DB: " + a.getName());
                 registerApplication(a);
@@ -75,65 +70,6 @@ public class Module extends WampModule
             ex.printStackTrace();
         }
     }
-
-    
-    public synchronized EntityManager getEntityManager()
-    {
-        EntityManager manager = emf.createEntityManager();
-        return manager;
-    }
-    
-    
-    public <T> T saveEntity(T entity)
-    {
-        if(entity != null) {
-            EntityManager manager = getEntityManager();
-            EntityTransaction transaction = manager.getTransaction();
-            transaction.begin();
-
-            entity = manager.merge(entity);
-
-            transaction.commit();
-            manager.close();        
-        }
-        return entity;
-    }
-    
-    public <T> T removeEntity(T entity)
-    {
-        if(entity != null) {
-            EntityManager manager = getEntityManager();
-            EntityTransaction transaction = manager.getTransaction();
-            transaction.begin();
-
-            entity = manager.merge(entity);
-            manager.remove(entity);
-
-            transaction.commit();
-            manager.close();        
-        }
-        return entity;
-    }    
-    
-    public <T> List<T> findEntities(Class<T> cls, String namedQueryName, Object[] ... params)
-    {
-        EntityManager manager = getEntityManager();
-
-        javax.persistence.TypedQuery<T> query = manager.createNamedQuery(namedQueryName, cls);
-        if(params != null) {
-            for(int index = 0; index < params.length; index++) {
-                query.setParameter(index, params[index]);
-            }
-        }
-
-        List<T> entities = query.getResultList();
-
-        manager.close();
-
-        return entities;
-    }
-    
-
 
     
     @Override
@@ -165,7 +101,7 @@ public class Module extends WampModule
     
     /*
     @Override
-    public void   onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
+    public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
         super.onSubscribe(clientSocket, topic, options);
         
         if(options != null && options.isMetaEventsEnabled()) {
@@ -254,7 +190,7 @@ public class Module extends WampModule
         String user = data.get("user").asText();
         UserId userId = new UserId(LOCAL_USER_DOMAIN, user);
         
-        EntityManager manager = getEntityManager();
+        EntityManager manager = Storage.getEntityManager();
         usr = manager.find(User.class, userId);
         manager.close();
         
@@ -268,7 +204,7 @@ public class Module extends WampModule
         usr.setPassword(data.get("password").asText());
         usr.setEmail(data.get("email").asText());
         usr.setAdministrator(false);
-        usr = saveEntity(usr);
+        usr = Storage.saveEntity(usr);
 
         client.setUser(usr);
         client.setState(ConnectionState.AUTHENTICATED);
@@ -286,7 +222,7 @@ public class Module extends WampModule
         String user = data.get("user").asText();
         String password  = data.get("password").asText();
 
-        EntityManager manager = getEntityManager();
+        EntityManager manager = Storage.getEntityManager();
         UserId userId = new UserId(LOCAL_USER_DOMAIN, user);
         User usr = manager.find(User.class, userId);
         manager.close();
@@ -316,7 +252,7 @@ public class Module extends WampModule
         ArrayList<String> domains = new ArrayList<String>();
         
         try {
-            manager = getEntityManager();
+            manager = Storage.getEntityManager();
 
             TypedQuery<OpenIdConnectClient> queryClients = manager.createNamedQuery("oic_client.findByRedirectUri", OpenIdConnectClient.class);
             queryClients.setParameter("uri", redirectUri);
@@ -393,7 +329,7 @@ public class Module extends WampModule
         
         EntityManager manager = null;
         try {
-            manager = getEntityManager();
+            manager = Storage.getEntityManager();
             OpenIdConnectClientPK oicId = new OpenIdConnectClientPK(providerDomain, redirectUri);
             OpenIdConnectClient oic = manager.find(OpenIdConnectClient.class, oicId);
             if(oic == null && !providerDomain.equals("defaultProvider")) {
@@ -407,13 +343,13 @@ public class Module extends WampModule
                     provider.setAuthEndpointUrl(oicConfig.get("authorization_endpoint").asText());
                     provider.setAccessTokenEndpointUrl(oicConfig.get("token_endpoint").asText());
                     provider.setUserInfoEndpointUrl(oicConfig.get("userinfo_endpoint").asText());
-                    provider = saveEntity(provider);
+                    provider = Storage.saveEntity(provider);
                 }
 
                 ObjectNode oicClient = provider.registerClient("wgs", redirectUri);
                 if(!provider.getDynamic()) {
                     provider.setDynamic(true);
-                    provider = saveEntity(provider);
+                    provider = Storage.saveEntity(provider);
                 }
                 
                 oic = new OpenIdConnectClient();
@@ -430,14 +366,14 @@ public class Module extends WampModule
                     }
                 }
                 
-                oic = saveEntity(oic);
+                oic = Storage.saveEntity(oic);
             }
             
             if(oic != null) {
                 Calendar now = Calendar.getInstance();
                 if(oic.getClientExpiration() != null && now.after(oic.getClientExpiration())) {
                     oic.rotateClientCredentials();
-                    oic = saveEntity(oic);
+                    oic = Storage.saveEntity(oic);
                 }
                 
                 String oicAuthEndpointUrl = oic.getProvider().getAuthEndpointUrl();
@@ -475,7 +411,7 @@ public class Module extends WampModule
             String providerDomain = data.get("provider").asText();
             String redirectUri = data.get("redirect_uri").asText();
             
-            manager = getEntityManager();
+            manager = Storage.getEntityManager();
             OpenIdConnectClientPK oicId = new OpenIdConnectClientPK(providerDomain, redirectUri);
             OpenIdConnectClient oic = manager.find(OpenIdConnectClient.class, oicId);
             if(oic == null) throw new WampException(MODULE_URL + "unknown_oic_provider", "Unknown OpenId Connect provider domain");
@@ -534,7 +470,7 @@ public class Module extends WampModule
                         usr.setProfileCaducity(caducity);
                     }
 
-                    usr = saveEntity(usr);
+                    usr = Storage.saveEntity(usr);
 
                     client.setUser(usr);
                     client.setState(ConnectionState.AUTHENTICATED);
@@ -633,7 +569,7 @@ public class Module extends WampModule
             app.addRole(role);
         }
 
-        app = saveEntity(app);
+        app = Storage.saveEntity(app);
         registerApplication(app);
         valid = true;
 
@@ -653,7 +589,7 @@ public class Module extends WampModule
 
         Application app = applications.get(appId);
         if(app != null) {
-            removeEntity(app);
+            Storage.removeEntity(app);
             unregisterApplication(app);
             event = broadcastAppInfo(socket, app, "app_deleted", true);
             return event;
@@ -904,7 +840,7 @@ public class Module extends WampModule
             
             broadcastAppEventInfo(socket, g, created? "group_created" : "group_updated", false);
             
-            saveEntity(g);
+            Storage.saveEntity(g);
 
         }
 
@@ -1013,7 +949,7 @@ public class Module extends WampModule
             
             response.put("members", getMembers(gid,0));            
 
-            saveEntity(g);
+            Storage.saveEntity(g);
             
             valid = true;
         }
@@ -1071,7 +1007,7 @@ public class Module extends WampModule
                     if(slot < 0) {
                         // TODO: check client socket is allowed to remove slot when index < 0
                         ArrayNode membersArray = mapper.createArrayNode(); 
-                        removeEntity(g.removeMember(-slot-1));
+                        Storage.removeEntity(g.removeMember(-slot-1));
                         
                         slot = 0;
                         for(int numSlots = g.getNumSlots(); slot < numSlots; slot++) {
@@ -1101,7 +1037,7 @@ public class Module extends WampModule
                         Role r = g.getApplication().getRoleByName(role);
 
                         // TODO: check "slot" is valid
-                        EntityManager manager = getEntityManager();
+                        EntityManager manager = Storage.getEntityManager();
                         User user = manager.find(User.class, new UserId(userId));
                         manager.close();
 
@@ -1171,7 +1107,7 @@ public class Module extends WampModule
                 //response.putAll(g.toJSON());
                 broadcastAppEventInfo(socket, g, "group_updated", false);  // exclude Me
                 socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, false);
-                saveEntity(g);
+                Storage.saveEntity(g);
             }  
             return response;
     }
@@ -1280,7 +1216,7 @@ public class Module extends WampModule
                             ObjectNode obj = member.toJSON();
                             membersArray.add(obj);
                             
-                            saveEntity(g);
+                            Storage.saveEntity(g);
 
                         } else {
                             num_members++;
@@ -1300,7 +1236,7 @@ public class Module extends WampModule
 
                         switch(g.getState()) {
                             case OPEN:
-                                removeEntity(g);
+                                Storage.removeEntity(g);
                                 break;
                             case FINISHED:
                                 // move group to historic table?
