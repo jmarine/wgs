@@ -32,6 +32,7 @@ public class WampTopicPattern
         return topics;
     }    
     
+    
     public void addSubscription(WampSubscription subscription)
     {
         subscriptions.put(subscription.getSocket().getSessionId(), subscription);
@@ -42,14 +43,14 @@ public class WampTopicPattern
         subscriptions.remove(subscription.getSocket().getSessionId());
     }
     
+    public WampSubscription getSubscription(String sessionId) 
+    {
+        return subscriptions.get(sessionId);
+    }
+    
     public Collection<WampSubscription> getSubscriptions()
     {
         return subscriptions.values();
-    }    
-    
-    public Collection<String> getSessionIds()
-    {
-        return subscriptions.keySet();
-    }        
+    } 
     
 }

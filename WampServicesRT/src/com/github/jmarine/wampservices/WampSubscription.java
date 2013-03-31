@@ -13,11 +13,13 @@ public class WampSubscription
 {
     private WampSocket client;
     
-    private String     topicUrlOrPattern;
+    private String topicUrlOrPattern;
 
     private WampSubscriptionOptions options;
     
-    private JsonNode   status;
+    private JsonNode status;
+    
+    private int refCount;
     
     
     public WampSubscription(WampSocket client, String topicUrlOrPattern, WampSubscriptionOptions options) 
@@ -27,6 +29,7 @@ public class WampSubscription
         this.client = client;
         this.topicUrlOrPattern = topicUrlOrPattern;
         this.status = options.getStatus();
+        this.refCount = 0;
     }
     
     public WampSubscriptionOptions getOptions()
@@ -44,6 +47,11 @@ public class WampSubscription
         return topicUrlOrPattern;
     }
 
+    public synchronized int refCount(int delta)
+    {
+        refCount += delta;
+        return refCount;
+    }
 
     public JsonNode getStatus() {
         return status;

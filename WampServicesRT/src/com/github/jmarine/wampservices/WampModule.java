@@ -40,11 +40,11 @@ public abstract class WampModule
         return app;
     }
     
-    public abstract String  getBaseURL();
+    public abstract String getBaseURL();
     
-    public void   onConnect(WampSocket clientSocket) throws Exception { }
+    public void onConnect(WampSocket clientSocket) throws Exception { }
     
-    public void   onDisconnect(WampSocket clientSocket) throws Exception { }
+    public void onDisconnect(WampSocket clientSocket) throws Exception { }
 
     @SuppressWarnings("unchecked")
     public Object onCall(WampSocket clientSocket, String methodName, ArrayNode args) throws Exception 
@@ -74,12 +74,13 @@ public abstract class WampModule
         throw new WampException(WampException.WAMP_GENERIC_ERROR_URI, "Method not implemented: " + methodName);
     }
     
-    public void   onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
-        WampSubscription subscription = new WampSubscription(clientSocket, topic.getURI(), options);
-        topic.addSubscription(subscription);
-        clientSocket.addSubscription(subscription);
-        if(options != null) {
-            if(options.isMetaEventsEnabled()) {
+    public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
+        WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
+        if(subscription == null) subscription = new WampSubscription(clientSocket, topic.getURI(), options);
+        if(subscription.refCount(+1) == 1) {
+            topic.addSubscription(subscription);
+            clientSocket.addSubscription(subscription);
+            if(options != null && options.isMetaEventsEnabled()) {
                 app.publishMetaEvent(topic, WampMetaTopic.OK, null, clientSocket);
                 
                 if(options.isEventsEnabled()) {
@@ -89,18 +90,20 @@ public abstract class WampModule
         }         
     }
 
-    public void   onUnsubscribe(WampSocket clientSocket, WampTopic topic) throws Exception { 
+    public void onUnsubscribe(WampSocket clientSocket, WampTopic topic) throws Exception { 
         WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
-        WampSubscriptionOptions options = subscription.getOptions();
-        if(options!=null && options.isMetaEventsEnabled() && options.isEventsEnabled()) {
-            ObjectNode metaevent = subscription.toJSON();
-            app.publishMetaEvent(topic, WampMetaTopic.LEFT, metaevent, null);
+        if(subscription.refCount(-1) <= 0) {
+            WampSubscriptionOptions options = subscription.getOptions();
+            if(options!=null && options.isMetaEventsEnabled() && options.isEventsEnabled()) {
+                ObjectNode metaevent = subscription.toJSON();
+                app.publishMetaEvent(topic, WampMetaTopic.LEFT, metaevent, null);
+            }
+            topic.removeSubscription(subscription.getSocket().getSessionId());
+            clientSocket.removeSubscription(subscription.getTopicUriOrPattern());
         }
-        topic.removeSubscription(subscription.getSocket().getSessionId());
-        clientSocket.removeSubscription(subscription.getTopicUriOrPattern());
     }
     
-    public void   onPublish(WampSocket clientSocket, WampTopic topic, ArrayNode request) throws Exception 
+    public void onPublish(WampSocket clientSocket, WampTopic topic, ArrayNode request) throws Exception 
     {
         JsonNode event = request.get(2);
         if(request.size() == 3) {
@@ -135,7 +138,7 @@ public abstract class WampModule
     }
 
     
-    public void   onEvent(String publisherId, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
+    public void onEvent(String publisherId, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
         String msgV1 = null;  // Cache EVENT message for WAMP v1
         String msgV2 = null;  // Cache EVENT message for WAMP v2
         for (String sid : eligible) {
@@ -162,7 +165,7 @@ public abstract class WampModule
     }
     
     
-    public void   onMetaEvent(WampTopic topic, String metatopic, JsonNode metaevent, WampSocket toClient) throws Exception 
+    public void onMetaEvent(WampTopic topic, String metatopic, JsonNode metaevent, WampSocket toClient) throws Exception 
     { 
         String msg = "[9,\"" + topic.getURI() + "\", \"" + metatopic + "\"";
         if(metaevent != null) msg += ", " + metaevent.toString();

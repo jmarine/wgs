@@ -302,8 +302,6 @@ public class WampApplication
         }
     }
     
-     
-
     
     public WampTopic createTopic(String topicFQname, WampTopicOptions options)
     {
@@ -314,8 +312,7 @@ public class WampApplication
             topics.put(topicFQname, topic);
             
             for(WampTopicPattern topicPattern : topicPatterns.values()) {
-                String regexp = topicPattern.getTopicUriPattern().replace("*", ".*");
-                if(topicFQname.matches(regexp)) {
+                if(isTopicUriMatchingWithWildcards(topicFQname, topicPattern.getTopicUriPattern())) {
                     topicPattern.getTopics().add(topic);
                     for(WampSubscription patternSubscription : topicPattern.getSubscriptions()) {
                         try { 
@@ -347,8 +344,7 @@ public class WampApplication
             }
             
             for(WampTopicPattern topicPattern : topicPatterns.values()) {
-                String regexp = topicPattern.getTopicUriPattern().replace("*", ".*");
-                if(topicFQname.matches(regexp)) {
+                if(isTopicUriMatchingWithWildcards(topicFQname, topicPattern.getTopicUriPattern())) {
                     topicPattern.getTopics().remove(topic);
                 }
             }            
@@ -361,6 +357,12 @@ public class WampApplication
     {
         int wildcardPos = topicUrlPattern.indexOf("*");
         return (wildcardPos != -1);
+    }
+    
+    public boolean isTopicUriMatchingWithWildcards(String topicFQname, String topicUrlPattern) 
+    {
+        String regexp = topicUrlPattern.replace("*", ".*");
+        return (topicFQname.matches(regexp));
     }
 
     
@@ -381,11 +383,17 @@ public class WampApplication
         } else {
         
             if(isTopicUriWithWildcards(topicUriOrPattern)) {
+                ArrayList<WampTopic> retval = new ArrayList<WampTopic>();
                 int wildcardPos = topicUriOrPattern.indexOf("*");
                 String topicUriBegin = topicUriOrPattern.substring(0, wildcardPos);
                 String topicUriEnd = topicUriBegin + "~";
                 NavigableMap<String,WampTopic> navMap = topics.subMap(topicUriBegin, true, topicUriEnd, false);
-                return navMap.values();
+                for(WampTopic topic : navMap.values()) {
+                    if(isTopicUriMatchingWithWildcards(topic.getURI(),topicUriOrPattern)) {
+                        retval.add(topic);
+                    }
+                }
+                return retval;
             } else {                
                 ArrayList<WampTopic> retval = new ArrayList<WampTopic>();
                 WampTopic topic = getTopic(topicUriOrPattern);
@@ -404,14 +412,16 @@ public class WampApplication
         Collection<WampTopic> topics = getTopics(topicUriOrPattern);
         
         if(isTopicUriWithWildcards(topicUriOrPattern)) {
-            WampSubscription subscription = new WampSubscription(clientSocket, topicUriOrPattern, options);
-            clientSocket.addSubscription(subscription);
-
             WampTopicPattern topicPattern = topicPatterns.get(topicUriOrPattern);
             if(topicPattern == null) {
                 topicPattern = new WampTopicPattern(topicUriOrPattern, topics);
                 topicPatterns.put(topicUriOrPattern, topicPattern);
             }
+            
+            WampSubscription subscription = topicPattern.getSubscription(clientSocket.getSessionId());
+            if(subscription == null) subscription = new WampSubscription(clientSocket, topicUriOrPattern, options);
+            if(subscription.refCount(+1) == 1) topicPattern.addSubscription(subscription);
+            //clientSocket.addSubscription(subscription);
         } 
         
         for(WampTopic topic : topics) {
@@ -439,12 +449,11 @@ public class WampApplication
         topicUriOrPattern = clientSocket.normalizeURI(topicUriOrPattern);
         Collection<WampTopic> topics = getTopics(topicUriOrPattern);
         if(isTopicUriWithWildcards(topicUriOrPattern)) {
-            clientSocket.removeSubscription(topicUriOrPattern);
-            /** Don't clear topicPatterns for future clients
             WampTopicPattern topicPattern = topicPatterns.get(topicUriOrPattern);
-            if(topicPattern.getSubscriptions().size() == 0) {
-                topicPatterns.remove(topicUriOrPattern);
-            }
+            WampSubscription subscription = topicPattern.getSubscription(clientSocket.getSessionId());
+            if(subscription.refCount(-1) <= 0) clientSocket.removeSubscription(topicUriOrPattern);
+            /** Don't clear topicPatterns for future clients
+            // topicPatterns.remove(topicUriOrPattern);
             */
         }
         
