@@ -188,6 +188,7 @@ WgsClient.prototype = {
                 function(response) {
                     client.close();
                     document.location.href = response;
+                    //window.open(response + "&nonce=" + escape(client.sid), "_blank");
                 }, 
                 function(response) {
                     var errorCode = response.errorURI;
