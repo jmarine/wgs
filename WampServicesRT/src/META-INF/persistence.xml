@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <persistence version="2.0" xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
-  <persistence-unit name="WgsPU" transaction-type="JTA">
+  <persistence-unit name="WampServicesPU" transaction-type="JTA">
     <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
-    <jta-data-source>jdbc/WgsDS</jta-data-source>
-    <class>com.github.jmarine.wampservices.wgs.Application</class>
-    <class>com.github.jmarine.wampservices.wgs.User</class>
-    <class>com.github.jmarine.wampservices.wgs.Role</class>
-    <class>com.github.jmarine.wampservices.wgs.Member</class>    
-    <class>com.github.jmarine.wampservices.wgs.Group</class>
-    <class>com.github.jmarine.wampservices.wgs.GroupAction</class>
-    <class>com.github.jmarine.wampservices.util.OpenIdConnectProvider</class>
-    <class>com.github.jmarine.wampservices.util.OpenIdConnectClient</class>
+    <jta-data-source>jdbc/WampServicesDS</jta-data-source>
+    <class>org.wampservices.entity.OpenIdConnectClient</class>
+    <class>org.wampservices.entity.OpenIdConnectProvider</class>
+    <class>org.wampservices.entity.User</class>
+    <class>org.wampservices.wgs.GroupAction</class>
+    <class>org.wampservices.wgs.Application</class>
+    <class>org.wampservices.wgs.Role</class>
+    <class>org.wampservices.wgs.Group</class>
+    <class>org.wampservices.wgs.Member</class>
     <properties>
       <property name="eclipselink.ddl-generation" value="create-tables"/>
     </properties>
