@@ -4,10 +4,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import javax.websocket.Endpoint;
-import org.wampservices.WampApplication;
-import org.wampservices.WampEndpoint;
 import javax.websocket.server.ServerApplicationConfig;
 import javax.websocket.server.ServerEndpointConfig;
+import org.wampservices.WampApplication;
+import org.wampservices.WampEndpoint;
 
 
 public class WgsApplicationConfig implements ServerApplicationConfig 
