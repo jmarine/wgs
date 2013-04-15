@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.Future;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
 import org.codehaus.jackson.JsonNode;
@@ -30,6 +31,8 @@ public class WampSocket
     private Map     sessionData;
     private Map<String,String> prefixes;
     private Map<String,WampSubscription> subscriptions;
+    private Map<String,Future<?>> rpcFutureResults;
+   
     
     private WampConnectionState state;
     
@@ -48,6 +51,7 @@ public class WampSocket
         sessionData = new ConcurrentHashMap();
         subscriptions = new ConcurrentHashMap<String,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
+        rpcFutureResults = new HashMap<String,Future<?>>();
     }
 
     /**
@@ -122,6 +126,30 @@ public class WampSocket
     }
 
     
+    public void addRpcFutureResult(String callID, Future<?> futureResult)
+    {
+        rpcFutureResults.put(callID, futureResult);
+    }
+    
+    public Future<?> getRpcFutureResult(String callID)
+    {
+        return rpcFutureResults.get(callID);
+    }    
+    
+    public Future<?> removeRpcFutureResult(String callID) {
+        return rpcFutureResults.remove(callID);
+    }
+    
+    public boolean cancelRpcFutureResult(String callID)
+    {
+        boolean success = false;
+        Future<?> future = rpcFutureResults.get(callID);
+        if (future != null) {
+            success = future.isDone() || future.cancel(true);
+            if(success) rpcFutureResults.remove(callID);
+        }
+        return success;
+    }    
     
     public String normalizeURI(String curie) {
         int curiePos = curie.indexOf(":");
@@ -134,7 +162,7 @@ public class WampSocket
     }    
 
 
-    public void sendSafe(String msg) {
+    public synchronized void sendSafe(String msg) {
         try {
             if(isOpen()) session.getBasicRemote().sendText(msg);
         } catch(Exception e) {

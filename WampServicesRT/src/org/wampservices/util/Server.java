@@ -14,6 +14,8 @@ import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 
@@ -36,8 +38,11 @@ public class Server
         System.setProperty(Context.URL_PKG_PREFIXES, "org.apache.naming");                    
         InitialContext ctx = new InitialContext();
         ctx.createSubcontext("jdbc");
-       
+        ctx.createSubcontext("concurrent");
         
+        ExecutorService execService = Executors.newCachedThreadPool();
+        ctx.bind("concurrent/WampRpcExecutorService", execService);
+       
         String configFileName = "wampservices.properties";
         if(args.length > 0) configFileName = args[0];
         

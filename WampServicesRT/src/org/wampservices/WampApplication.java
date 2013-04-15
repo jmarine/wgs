@@ -18,8 +18,11 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
 import javax.websocket.Decoder;
 import javax.websocket.Encoder;
@@ -52,11 +55,13 @@ public class WampApplication
     private TreeMap<String,WampTopicPattern> topicPatterns;
     private ConcurrentHashMap<Session,WampSocket> sockets;
     private WampModule defaultModule;
+    private ExecutorService executorService;
     
     
     private static Map<String,WampApplication> contexts = new HashMap<String,WampApplication>();
     
-    public static synchronized WampApplication getApplication(String context) {
+    public static synchronized WampApplication getApplication(String context) 
+    {
         WampApplication app = contexts.get(context);
         if(app == null) {
             app = new WampApplication(WampEndpoint.class, context);
@@ -66,8 +71,13 @@ public class WampApplication
     }
     
     
-    public WampApplication(Class endpointClass, String path) 
+    public WampApplication(Class endpointClass, String path)
     {
+        try {
+            InitialContext ctx = new InitialContext();
+            executorService = (ExecutorService)ctx.lookup("concurrent/WampRpcExecutorService");
+        } catch(Exception ex) { }
+        
         this.endpointClass = endpointClass;
         this.path = path;
         
@@ -243,63 +253,81 @@ public class WampApplication
     }
     
    
-    private void processCallMessage(WampSocket clientSocket, ArrayNode request) throws Exception
+    private void processCallMessage(final WampSocket clientSocket, final ArrayNode request) throws Exception
     {
-        String callID  = request.get(1).asText();
+        final String callID  = request.get(1).asText();
         if(callID == null || callID.equals("")) {
             clientSocket.sendCallError(callID, WampException.WAMP_GENERIC_ERROR_URI, "CallID not present", null);
             return;
-        }
+        }        
         
-        String procURI = clientSocket.normalizeURI(request.get(2).asText());
-        String baseURL = procURI;
-        String method  = "";
-        
-        WampModule module = modules.get(baseURL);
-        if(module == null) {
-            int methodPos = procURI.indexOf("#");
-            if(methodPos != -1) {
-                baseURL = procURI.substring(0, methodPos+1);
-                method = procURI.substring(methodPos+1);
-                module = getWampModule(baseURL);
+        Runnable task = new Runnable() {
+            
+            private boolean isCancelled(String callID) {
+                Future<?> future = clientSocket.getRpcFutureResult(callID);
+                return (future != null && future.isCancelled());
             }
-        }
-        
-        try {
-            if(module == null) throw new Exception("ProcURI not implemented");
             
-            ObjectMapper mapper = new ObjectMapper();
-            ArrayNode args = mapper.createArrayNode();
-            for(int i = 3; i < request.size(); i++) {
-                args.add(request.get(i));
-            }           
-            
-            synchronized(clientSocket) {
-                ArrayNode response = null;
-                Object result = module.onCall(clientSocket, method, args);
-                if(result == null || result instanceof ArrayNode) {
-                    response = (ArrayNode)result;
-                } else {
-                    response = mapper.createArrayNode();
-                    response.add(mapper.valueToTree(result));
+            @Override
+            public void run() {
+                    
+                String procURI = clientSocket.normalizeURI(request.get(2).asText());
+                String baseURL = procURI;
+                String method  = "";
+
+                WampModule module = modules.get(baseURL);
+                if(module == null) {
+                    int methodPos = procURI.indexOf("#");
+                    if(methodPos != -1) {
+                        baseURL = procURI.substring(0, methodPos+1);
+                        method = procURI.substring(methodPos+1);
+                        module = getWampModule(baseURL);
+                    }
                 }
-                clientSocket.sendCallResult(callID, response);
+                
+                try {
+                    if(module == null) throw new Exception("ProcURI not implemented");
+
+                    ObjectMapper mapper = new ObjectMapper();
+                    ArrayNode args = mapper.createArrayNode();
+                    for(int i = 3; i < request.size(); i++) {
+                        args.add(request.get(i));
+                    }           
+
+                    ArrayNode response = null;
+                    Object result = module.onCall(clientSocket, method, args);
+                    if(result == null || result instanceof ArrayNode) {
+                        response = (ArrayNode)result;
+                    } else {
+                        response = mapper.createArrayNode();
+                        response.add(mapper.valueToTree(result));
+                    }
+
+                    if(!isCancelled(callID)) clientSocket.sendCallResult(callID, response);
+
+                } catch(Throwable ex) {
+
+                    if(ex instanceof java.lang.reflect.InvocationTargetException) ex = ex.getCause();
+                    
+                    if(ex instanceof WampException) {
+                        WampException wex = (WampException)ex;
+                        if(!isCancelled(callID)) clientSocket.sendCallError(callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
+                        logger.log(Level.FINE, "Error calling method " + method + ": " + wex.getErrorDesc());
+                    } else {
+                        if(!isCancelled(callID)) clientSocket.sendCallError(callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + method, ex.getMessage());
+                        logger.log(Level.SEVERE, "Error calling method " + method, ex);
+                    }
+
+                } finally {
+                    clientSocket.removeRpcFutureResult(callID);
+                    if(isCancelled(callID)) clientSocket.sendCallError(callID, "http://wamp.ws/err#CanceledByCaller", "RPC cancelled by caller: " + callID, null);
+                }
             }
-            
-        } catch(Throwable ex) {
-            
-            if(ex instanceof java.lang.reflect.InvocationTargetException) ex = ex.getCause();
-            
-            if(ex instanceof WampException) {
-                WampException wex = (WampException)ex;
-                clientSocket.sendCallError(callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
-                logger.log(Level.FINE, "Error calling method " + method + ": " + wex.getErrorDesc());
-            } else {
-                clientSocket.sendCallError(callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + method, ex.getMessage());
-                logger.log(Level.SEVERE, "Error calling method " + method, ex);
-            }
-            
-        }
+        };
+        
+        if(executorService == null) task.run();
+        else clientSocket.addRpcFutureResult(callID, executorService.submit(task));
+        
     }
     
     
