@@ -152,6 +152,14 @@ public class Module extends WampModule
         Client client = new Client();
         client.setSocket(socket);
         socket.setState(WampConnectionState.ANONYMOUS);
+        if(socket.getUserPrincipal() != null) {
+            EntityManager manager = Storage.getEntityManager();
+            UserId userId = new UserId(LOCAL_USER_DOMAIN, socket.getUserPrincipal().getName());
+            User usr = manager.find(User.class, userId);
+            client.setUser(usr);
+            socket.setUserPrincipal(usr);
+            socket.setState(WampConnectionState.AUTHENTICATED);
+        }
         clients.put(socket.getSessionId(), client);
         
         wampApp.subscribeClientWithTopic(socket, getFQtopicURI("apps_event"), null);
@@ -211,7 +219,9 @@ public class Module extends WampModule
         usr = Storage.saveEntity(usr);
 
         client.setUser(usr);
-
+        socket.setUserPrincipal(usr);
+        socket.setState(WampConnectionState.AUTHENTICATED);
+        
         return usr.toJSON();
     }
     
@@ -233,6 +243,8 @@ public class Module extends WampModule
         if( (usr != null) && (password.equals(usr.getPassword())) ) {
             user_valid = true;
             client.setUser(usr);
+            socket.setUserPrincipal(usr);
+            socket.setState(WampConnectionState.AUTHENTICATED);
         }
 
         if(!user_valid) throw new WampException(MODULE_URL + "loginerror", "Login credentials are not valid");
@@ -447,7 +459,9 @@ public class Module extends WampModule
                     // Use cached UserInfo from local database
                     logger.fine("Cached OIC User: " + usr);
                     client.setUser(usr);
-
+                    socket.setUserPrincipal(usr);
+                    socket.setState(WampConnectionState.AUTHENTICATED);
+                    
                 } else if(response.has("access_token")) {
                     // Get UserInfo from OpenId Connect Provider
                     String accessToken = response.get("access_token").asText();
@@ -474,6 +488,9 @@ public class Module extends WampModule
                     usr = Storage.saveEntity(usr);
 
                     client.setUser(usr);
+                    socket.setUserPrincipal(usr);
+                    socket.setState(WampConnectionState.AUTHENTICATED);
+
                 } 
                 
             }

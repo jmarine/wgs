@@ -12,7 +12,8 @@ import org.wampservices.WampSocket;
  */
 public class Client {
     
-    private WampSocket  socket;
+    private User user;
+    private WampSocket socket;
     private Map<String,Group> groups = new ConcurrentHashMap<String,Group>();
 
 
@@ -37,12 +38,12 @@ public class Client {
 
     public User getUser()
     {
-        return (User)this.socket.getPrincipal();
+        return (User)this.user;
     }
     
     public void setUser(User user)
     {
-        this.socket.setPrincipal(user);
+        this.user = user;
         if(user != null) {
             socket.setState(WampConnectionState.AUTHENTICATED);
         }

@@ -32,10 +32,7 @@ public class WampSocket
     private Map<String,String> prefixes;
     private Map<String,WampSubscription> subscriptions;
     private Map<String,Future<?>> rpcFutureResults;
-   
-    
     private WampConnectionState state;
-    
     private Principal principal;
     
 
@@ -44,8 +41,8 @@ public class WampSocket
         this.app = app;
         this.connected = true;
         this.session = session;
-        this.principal = null;
-        this.state = WampConnectionState.ANONYMOUS;
+        this.principal = session.getUserPrincipal();
+        this.state = (principal != null) ? WampConnectionState.AUTHENTICATED : WampConnectionState.ANONYMOUS;
         
         sessionId   = UUID.randomUUID().toString();
         sessionData = new ConcurrentHashMap();
@@ -70,6 +67,23 @@ public class WampSocket
         return sessionData;
     }
 
+    /**
+     * Get the user principal
+     * @return the user principal
+     */
+    public Principal getUserPrincipal()
+    {
+        return this.session.getUserPrincipal();
+    }
+    
+    /**
+     * Set the user principal 
+     * @param principal the user principal
+     */
+    public void setUserPrincipal(Principal principal)
+    {
+        this.principal = principal;
+    }    
     
     /**
      * @return the state
@@ -87,17 +101,6 @@ public class WampSocket
     }    
     
     
-    public Principal getPrincipal()
-    {
-        return principal;
-    }
-    
-    public void setPrincipal(Principal principal)
-    {
-        this.principal = principal;
-    }
-    
-
     public void registerPrefixURL(String prefix, String url)
     {
         prefixes.put(prefix, url);	
