@@ -80,10 +80,10 @@ public abstract class WampModule
         if(subscription.refCount(+1) == 1) {
             topic.addSubscription(subscription);
             clientSocket.addSubscription(subscription);
-            if(options != null && options.isMetaEventsEnabled()) {
+            if(options != null && options.hasMetaEventsEnabled()) {
                 app.publishMetaEvent(topic, WampMetaTopic.OK, null, clientSocket);
                 
-                if(options.isEventsEnabled()) {
+                if(options.hasEventsEnabled()) {
                     app.publishMetaEvent(topic, WampMetaTopic.JOINED, subscription.toJSON(), null);
                 }
             }
@@ -94,7 +94,7 @@ public abstract class WampModule
         WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
         if(subscription.refCount(-1) <= 0) {
             WampSubscriptionOptions options = subscription.getOptions();
-            if(options!=null && options.isMetaEventsEnabled() && options.isEventsEnabled()) {
+            if(options!=null && options.hasMetaEventsEnabled() && options.hasEventsEnabled()) {
                 ObjectNode metaevent = subscription.toJSON();
                 app.publishMetaEvent(topic, WampMetaTopic.LEFT, metaevent, null);
             }
@@ -105,57 +105,78 @@ public abstract class WampModule
     
     public void onPublish(WampSocket clientSocket, WampTopic topic, ArrayNode request) throws Exception 
     {
+        WampPublishOptions options = new WampPublishOptions();
         JsonNode event = request.get(2);
-        if(request.size() == 3) {
-            clientSocket.publishEvent(topic, event, false);
-        } else if(request.size() == 4) {
-            // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
-            try {
-                boolean excludeMe = request.get(3).asBoolean();
-                clientSocket.publishEvent(topic, event, excludeMe);
-            } catch(Exception ex) {
+        
+        if(request.get(0).asInt() == 66) {
+            // WAMP v2
+            options.init(request.get(3));
+        } else {
+            // WAMP v1
+            if(request.size() == 4) {
+                // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
+                try {
+                    boolean excludeMe = request.get(3).asBoolean();
+                    options.setExcludeMe(excludeMe);
+                } catch(Exception ex) {
+                    HashSet<String> excludedSet = new HashSet<String>();
+                    ArrayNode excludedArray = (ArrayNode)request.get(3);
+                    for(int i = 0; i < excludedArray.size(); i++) {
+                        excludedSet.add(excludedArray.get(i).asText());
+                    }
+                    options.setExcluded(excludedSet);
+                }
+            } else if(request.size() == 5) {
                 HashSet<String> excludedSet = new HashSet<String>();
+                HashSet<String> eligibleSet = new HashSet<String>();
                 ArrayNode excludedArray = (ArrayNode)request.get(3);
                 for(int i = 0; i < excludedArray.size(); i++) {
                     excludedSet.add(excludedArray.get(i).asText());
                 }
-                app.publishEvent(clientSocket.getSessionId(), topic, event, excludedSet, null);
+                ArrayNode eligibleArray = (ArrayNode)request.get(4);
+                for(int i = 0; i < eligibleArray.size(); i++) {
+                    eligibleSet.add(eligibleArray.get(i).asText());
+                }
+                options.setExcluded(excludedSet);
+                options.setEligible(eligibleSet);
             }
-        } else if(request.size() == 5) {
-            HashSet<String> excludedSet = new HashSet<String>();
-            HashSet<String> eligibleSet = new HashSet<String>();
-            ArrayNode excludedArray = (ArrayNode)request.get(3);
-            for(int i = 0; i < excludedArray.size(); i++) {
-                excludedSet.add(excludedArray.get(i).asText());
-            }
-            ArrayNode eligibleArray = (ArrayNode)request.get(4);
-            for(int i = 0; i < eligibleArray.size(); i++) {
-                eligibleSet.add(eligibleArray.get(i).asText());
-            }
-            app.publishEvent(clientSocket.getSessionId(), topic, event, excludedSet, eligibleSet);
         }
+        
+        app.publishEvent(clientSocket.getSessionId(), topic, event, options);
         
     }
 
     
-    public void onEvent(String publisherId, WampTopic topic, JsonNode event, Set<String> excluded, Set<String> eligible) throws Exception { 
-        String msgV1 = null;  // Cache EVENT message for WAMP v1
-        String msgV2 = null;  // Cache EVENT message for WAMP v2
+    public void onEvent(String publisherId, WampTopic topic, JsonNode event, WampPublishOptions pubOptions) throws Exception { 
+        String msgByVersion[] = new String[WampSocket.WAMPv2+1];  // Cache EVENT message for each WAMP version
+
+        if(pubOptions == null) pubOptions = new WampPublishOptions(null);
+
+        Set<String> eligible = pubOptions.getEligible();
+        if(eligible == null) eligible = topic.getSessionIds();
+        else eligible.retainAll(topic.getSessionIds());
+        
+        Set<String> excluded = pubOptions.getExcluded();
+        if(excluded == null) excluded = new HashSet<String>();        
+        if(pubOptions.hasExcludeMe()) excluded.add(publisherId);
+        
         for (String sid : eligible) {
             if((excluded==null) || (!excluded.contains(sid))) {
                 WampSubscription subscription = topic.getSubscription(sid);
-                WampSubscriptionOptions options = subscription.getOptions();
-                if(options != null && options.isEventsEnabled()) {
+                WampSubscriptionOptions subOptions = subscription.getOptions();
+                if(subOptions != null && subOptions.hasEventsEnabled()) {
                     WampSocket socket = subscription.getSocket();
                     synchronized(socket) {
                         if(socket != null && socket.isOpen() && !excluded.contains(sid)) {
-                            if( (topic.getOptions().isPublisherIdRevelationEnabled())
-                                    && (subscription.getOptions().isPublisherIdRequested())) {
-                                if(msgV2 == null) msgV2 = "[8,\"" + topic.getURI() + "\", " + event.toString() + ",\"" + publisherId +"\"]";
-                                socket.sendSafe(msgV2);
+                            if(socket.supportVersion(WampSocket.WAMPv2)) {
+                                if(msgByVersion[WampSocket.WAMPv2] == null) {
+                                    String eventDetails = (!pubOptions.hasIdentifyMe())? "" : ", { \"PUBLISHER\": \"" + publisherId + "\" }";
+                                    msgByVersion[WampSocket.WAMPv2] = "[128,\"" + topic.getURI() + "\", " + event.toString() + eventDetails + "]";
+                                }
+                                socket.sendSafe(msgByVersion[WampSocket.WAMPv2]);
                             } else {
-                                if(msgV1 == null) msgV1 = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
-                                socket.sendSafe(msgV1);
+                                if(msgByVersion[WampSocket.WAMPv1] == null) msgByVersion[WampSocket.WAMPv1] = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
+                                socket.sendSafe(msgByVersion[WampSocket.WAMPv1]);
                             }
                         }
                     }
@@ -167,7 +188,7 @@ public abstract class WampModule
     
     public void onMetaEvent(WampTopic topic, String metatopic, JsonNode metaevent, WampSocket toClient) throws Exception 
     { 
-        String msg = "[9,\"" + topic.getURI() + "\", \"" + metatopic + "\"";
+        String msg = "[129,\"" + topic.getURI() + "\", \"" + metatopic + "\"";
         if(metaevent != null) msg += ", " + metaevent.toString();
         msg += "]";
         
@@ -176,7 +197,7 @@ public abstract class WampModule
         } else {
             for(String sid : topic.getSessionIds()) {
                 WampSubscription subscriber = topic.getSubscription(sid);
-                if(subscriber.getOptions() != null && subscriber.getOptions().isMetaEventsEnabled()) {
+                if(subscriber.getOptions() != null && subscriber.getOptions().hasMetaEventsEnabled()) {
                     WampSocket remoteSocket = subscriber.getSocket();
                     remoteSocket.sendSafe(msg);
                 }

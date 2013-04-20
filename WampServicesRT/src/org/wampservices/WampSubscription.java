@@ -28,7 +28,7 @@ public class WampSubscription
         this.options = options;
         this.client = client;
         this.topicUrlOrPattern = topicUrlOrPattern;
-        this.status = options.getStatus();
+        this.status = null;
         this.refCount = 0;
     }
     

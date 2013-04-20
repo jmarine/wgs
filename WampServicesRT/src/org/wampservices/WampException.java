@@ -3,7 +3,7 @@ package org.wampservices;
 
 public class WampException extends Exception
 {
-    public static final String WAMP_GENERIC_ERROR_URI = WampApplication.WAMP_BASE_URL + "#error";
+    public static final String WAMP_GENERIC_ERROR_URI = "http://wamp.ws/err";
     
     private String errorURI;
     private Object errorDetails;

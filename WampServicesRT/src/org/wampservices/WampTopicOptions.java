@@ -6,16 +6,6 @@ public class WampTopicOptions
     private boolean eventPersistence;
     private boolean deletionOfEventsOnTopicRemoval;
     private int     maxHistoricEvents;
-    private boolean publisherIdRevelationEnabled;
-
-
-    public boolean isPublisherIdRevelationEnabled() {
-        return publisherIdRevelationEnabled;
-    }
-
-    public void setPublisherIdRevelationEnabled(boolean enable) {
-        this.publisherIdRevelationEnabled = enable;
-    }
 
     
     public boolean hasEventPersistence() {

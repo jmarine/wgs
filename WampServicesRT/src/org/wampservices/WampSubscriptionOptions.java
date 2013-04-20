@@ -1,31 +1,46 @@
 package org.wampservices;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ObjectNode;
 
 
 public class WampSubscriptionOptions 
 {
-    private boolean  eventsEnabled;
-    private boolean  metaEventsEnabled;
+
+    public  enum MatchEnum { exact, prefix, wildcard };
+
+    private MatchEnum    matchType;
+    private List<String> metaEvents;
+    private boolean      eventsEnabled;
+    
+    /*
     private boolean  eventIdRequested;
     private boolean  publisherIdRequested;
     private int      numberEventsToSendOnSubscription;
     private long     sinceTimeEventsToSendOnSubscription;
-    private JsonNode status;
+    */
 
     public WampSubscriptionOptions(JsonNode node) {
+        this.matchType = MatchEnum.exact;
+        this.metaEvents = new ArrayList<String>();
         this.eventsEnabled = true;
-        // this.sinceTimeEventsToSendOnSubscription = System.currentTimeMillis();
         
         if(node != null) {
-            if(node.has("events")) {
-                setEventsEnabled(node.get("events").asBoolean(true));
+            if(node.has("MATCH")) {
+                setMatchType(MatchEnum.valueOf(node.get("MATCH").asText()));
             }     
             
-            if(node.has("metaevents")) {
-                setMetaEventsEnabled(node.get("metaevents").asBoolean(false));
-            }          
+            if(node.has("METAEVENTS")) {
+                setMetaEvents(node.get("METAEVENTS"));
+            }
+
+            if(node.has("EVENTS")) {
+                setEventsEnabled(node.get("EVENTS").asBoolean(true));
+            }     
             
+            /*
             if(node.has("eventId")) {
                 setEventIdRequested(node.get("eventId").asBoolean(false));
             }
@@ -42,13 +57,72 @@ public class WampSubscriptionOptions
                 setSinceTimeEventsToSendOnSubscription(node.get("sinceTime").asLong(0));
             }            
             
-            if(node.has("status")) {
-                setStatus(node.get("status"));
-            }
+            if(node.has("STATUS")) {
+                setStatus(node.get("STATUS"));
+            }            
+
+            */
               
         }
     }
+    
+    /**
+     * @return the matchType
+     */
+    public MatchEnum getMatchType() {
+        return matchType;
+    }
 
+    /**
+     * @param matchType the matchType to set
+     */
+    public void setMatchType(MatchEnum matchType) {
+        this.matchType = matchType;
+    }
+
+    /**
+     * @return the metaEvents
+     */
+    public List<String> getMetaEvents() {
+        return metaEvents;
+    }
+
+    /**
+     * @param metaEvents the metaEvents to set
+     */
+    public void setMetaEvents(List<String> metaEvents) {
+        this.metaEvents = metaEvents;
+    }
+
+    /**
+     * @param arrayNode the JSON array node with the text elements to set
+     */
+    public void setMetaEvents(JsonNode arrayNode) {
+        this.metaEvents = new ArrayList<String>();
+        if(arrayNode != null) {
+            for(int i = 0; i < arrayNode.size(); i++) {
+                this.metaEvents.add(arrayNode.get(i).asText());
+            }
+        }
+    }    
+    
+    public boolean hasMetaEventsEnabled()
+    {
+        return (this.metaEvents.size() > 0);
+    }
+    
+    
+    public void setEventsEnabled(boolean eventsEnabled) {
+        this.eventsEnabled = eventsEnabled;
+    }
+    
+    public boolean hasEventsEnabled()
+    {
+        return (this.eventsEnabled);
+    }    
+    
+    
+/*
     public boolean isPublisherIdRequested() {
         return publisherIdRequested;
     }
@@ -66,21 +140,6 @@ public class WampSubscriptionOptions
         this.numberEventsToSendOnSubscription = numberEventsToSendOnSubscription;
     }
 
-    public boolean isEventsEnabled() {
-        return eventsEnabled;
-    }
-
-    public void setEventsEnabled(boolean eventsEnabled) {
-        this.eventsEnabled = eventsEnabled;
-    }
-
-    public boolean isMetaEventsEnabled() {
-        return metaEventsEnabled;
-    }
-
-    public void setMetaEventsEnabled(boolean metaEventsEnabled) {
-        this.metaEventsEnabled = metaEventsEnabled;
-    }
 
     public boolean isEventIdRequested() {
         return eventIdRequested;
@@ -98,6 +157,7 @@ public class WampSubscriptionOptions
         this.sinceTimeEventsToSendOnSubscription = sinceTimeEventsToSendOnSubscription;
     }
 
+    
     public JsonNode getStatus() {
         return status;
     }
@@ -105,5 +165,8 @@ public class WampSubscriptionOptions
     public void setStatus(JsonNode status) {
         this.status = status;
     }
+
+    */
     
 }
+

@@ -22,6 +22,8 @@ import org.codehaus.jackson.node.TextNode;
 
 public class WampSocket 
 {
+    public static final  int WAMPv1 = 1;
+    public static final  int WAMPv2 = 2;    
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
     
     private WampApplication app;
@@ -34,10 +36,14 @@ public class WampSocket
     private Map<String,Future<?>> rpcFutureResults;
     private WampConnectionState state;
     private Principal principal;
+    private int versionSupport;
+    private int lastHeartBeat;
     
 
     public WampSocket(WampApplication app, Session session) 
     {
+        this.lastHeartBeat = 0;
+        this.versionSupport = 1;
         this.app = app;
         this.connected = true;
         this.session = session;
@@ -251,16 +257,39 @@ public class WampSocket
         sendSafe(response.toString());
     }    
     
+    public int getWampVersion() {
+        return versionSupport;
+    }
+    
+    public boolean supportVersion(int version) {
+        return versionSupport >= version;
+    }
+    
+    public void setVersionSupport(int version) {
+        this.versionSupport = version;
+    }
+    
+    public int getLastHeartBeat() {
+        return this.lastHeartBeat;
+    }
+
+    public void setLastHeartBeat(int heartbeatSequenceNo) {
+        this.lastHeartBeat = heartbeatSequenceNo;
+    }    
     
     /**
      * Broadcasts the event to subscribed sockets.
      */
-    public void publishEvent(WampTopic topic, JsonNode event, boolean excludeMe) {
+    public void publishEvent(WampTopic topic, JsonNode event, boolean excludeMe, boolean identifyMe) {
         logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         Set<String> excludedSet = new HashSet<String>();
         if(excludeMe) excludedSet.add(this.getSessionId());
-        app.publishEvent(this.getSessionId(), topic, event, excludedSet, null);
+        WampPublishOptions options = new WampPublishOptions();
+        options.setExcludeMe(excludeMe);
+        options.setIdentifyMe(identifyMe);
+        app.publishEvent(this.getSessionId(), topic, event, options);
     }
+
     
 
 }

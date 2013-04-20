@@ -22,6 +22,9 @@ import org.codehaus.jackson.node.ObjectNode;
 })
 public class User implements Serializable, Principal
 {
+    public static final String LOCAL_USER_DOMAIN = "";
+    
+    
     @EmbeddedId
     private UserId id;
     
