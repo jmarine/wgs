@@ -288,9 +288,13 @@ public class WampApplication
     
     private void processCallMessage(final WampSocket clientSocket, final ArrayNode request) throws Exception
     {
+        final int callMsgType = request.get(0).asInt();
+        final int callResponseMsgType = (callMsgType == 2) ? 3 : 32;
+        final int callErrorMsgType = (callMsgType == 2) ? 4 : 34;                    
+        
         final String callID  = request.get(1).asText();
         if(callID == null || callID.equals("")) {
-            clientSocket.sendCallError(callID, WampException.WAMP_GENERIC_ERROR_URI, "CallID not present", null);
+            clientSocket.sendCallError(callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "CallID not present", null);
             return;
         }        
         
@@ -321,11 +325,22 @@ public class WampApplication
                 try {
                     if(module == null) throw new Exception("ProcURI not implemented");
 
+                    ArrayNode args = null;
+                    WampCallOptions callOptions = null;
                     ObjectMapper mapper = new ObjectMapper();
                     
-                    ArrayNode args = null;
                     if(clientSocket.getWampVersion() > 1) {
-                        args = (ArrayNode)request.get(3);
+                        args = mapper.createArrayNode();                        
+                        if(request.size() > 2) {
+                            if(request.get(3) instanceof ArrayNode) {
+                                args = (ArrayNode)request.get(3);
+                            } else {
+                                args.add(request.get(3));
+                            }
+                        }
+                        if(request.size() > 3) {
+                            callOptions = new WampCallOptions((ObjectNode)request.get(4));
+                        }
                     } else {
                         args = mapper.createArrayNode();
                         for(int i = 3; i < request.size(); i++) {
@@ -334,7 +349,8 @@ public class WampApplication
                     }
 
                     ArrayNode response = null;
-                    Object result = module.onCall(clientSocket, method, args);
+                    if(callOptions == null) callOptions = new WampCallOptions(null);
+                    Object result = module.onCall(clientSocket, method, args, callOptions);
                     if(result == null || result instanceof ArrayNode) {
                         response = (ArrayNode)result;
                     } else {
@@ -342,7 +358,7 @@ public class WampApplication
                         response.add(mapper.valueToTree(result));
                     }
 
-                    if(!isCancelled(callID)) clientSocket.sendCallResult(callID, response);
+                    if(!isCancelled(callID)) clientSocket.sendCallResult(callResponseMsgType, callID, response);
 
                 } catch(Throwable ex) {
 
@@ -350,16 +366,16 @@ public class WampApplication
                     
                     if(ex instanceof WampException) {
                         WampException wex = (WampException)ex;
-                        if(!isCancelled(callID)) clientSocket.sendCallError(callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
+                        if(!isCancelled(callID)) clientSocket.sendCallError(callErrorMsgType, callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
                         logger.log(Level.FINE, "Error calling method " + method + ": " + wex.getErrorDesc());
                     } else {
-                        if(!isCancelled(callID)) clientSocket.sendCallError(callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + method, ex.getMessage());
+                        if(!isCancelled(callID)) clientSocket.sendCallError(callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + method, ex.getMessage());
                         logger.log(Level.SEVERE, "Error calling method " + method, ex);
                     }
 
                 } finally {
                     clientSocket.removeRpcFutureResult(callID);
-                    if(isCancelled(callID)) clientSocket.sendCallError(callID, "http://wamp.ws/err#CanceledByCaller", "RPC cancelled by caller: " + callID, null);
+                    if(isCancelled(callID)) clientSocket.sendCallError(callErrorMsgType, callID, "http://wamp.ws/err#CanceledByCaller", "RPC cancelled by caller: " + callID, null);
                 }
             }
         };

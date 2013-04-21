@@ -198,7 +198,7 @@ public class WampSocket
     }
     
     
-    protected void sendCallResult(String callID, ArrayNode args)
+    protected void sendCallResult(int callResponseMsgType, String callID, ArrayNode args)
     {
         StringBuilder response = new StringBuilder();
         if(args == null) {
@@ -208,7 +208,7 @@ public class WampSocket
         }
 
         response.append("[");
-        response.append("3");
+        response.append(callResponseMsgType);
         response.append(",");
         response.append(app.encodeJSON(callID));
         for(int i = 0; i < args.size(); i++) {
@@ -228,14 +228,14 @@ public class WampSocket
     }    
     
     
-    protected void sendCallError(String callID, String errorURI, String errorDesc, Object errorDetails)
+    protected void sendCallError(int callErrorMsgType, String callID, String errorURI, String errorDesc, Object errorDetails)
     {
         if(errorURI == null) errorURI = WampException.WAMP_GENERIC_ERROR_URI;
         if(errorDesc == null) errorDesc = "";
 
         StringBuilder response = new StringBuilder();
         response.append("[");
-        response.append("4");
+        response.append(callErrorMsgType);
         response.append(",");
         response.append(app.encodeJSON(callID));
 

@@ -7,7 +7,6 @@ import org.codehaus.jackson.node.ObjectNode;
 
 public class WampCallOptions 
 {
-
     public enum PartitionModeEnum { all, any }
     
     private int timeout;

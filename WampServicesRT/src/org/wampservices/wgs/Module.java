@@ -43,6 +43,7 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
+import org.wampservices.WampCallOptions;
 import org.wampservices.WampPublishOptions;
 
 
@@ -87,7 +88,7 @@ public class Module extends WampModule
     }
 
     @Override
-    public Object onCall(WampSocket socket, String method, ArrayNode args) throws Exception 
+    public Object onCall(WampSocket socket, String method, ArrayNode args, WampCallOptions callOptions) throws Exception 
     {
         Object retval = null;
         if(method.equals("list_groups")) {
@@ -98,7 +99,7 @@ public class Module extends WampModule
             wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId), options);
             retval = listGroups(appId);
         } else {
-            retval = super.onCall(socket, method, args);
+            retval = super.onCall(socket, method, args, callOptions);
         }
         return retval;
     }

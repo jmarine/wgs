@@ -47,7 +47,7 @@ public abstract class WampModule
     public void onDisconnect(WampSocket clientSocket) throws Exception { }
 
     @SuppressWarnings("unchecked")
-    public Object onCall(WampSocket clientSocket, String methodName, ArrayNode args) throws Exception 
+    public Object onCall(WampSocket clientSocket, String methodName, ArrayNode args, WampCallOptions options) throws Exception 
     {
         ObjectMapper mapper = new ObjectMapper();
         Method method = rpcs.get(methodName);
@@ -59,6 +59,8 @@ public abstract class WampModule
                     params.add(clientSocket);
                 } else if(paramType.isInstance(app)) {    // WampApplication parameter info
                     params.add(app);
+                } else if(WampCallOptions.class.isAssignableFrom(paramType)) {
+                    params.add(options);
                 } else if(ArrayNode.class.isAssignableFrom(paramType)) {
                     params.add(args);  // TODO: only from argCount to args.size()
                     argCount = args.size();
