@@ -457,15 +457,19 @@ WgsClient.prototype = {
       var client = this;
       if(msg.connections) {
           client.groups[msg.gid] = new Object();
-          client.groups[msg.gid].connections = new Array();
           client.groups[msg.gid].members = msg.members;
+          client.groups[msg.gid].connections = new Array();
           msg.connections.forEach(function(con) { 
               client.groups[msg.gid].connections[con.sid] = con;
           });
       } else if(msg.cmd == "user_joined" || msg.cmd == "group_updated") {
           var gid = msg.gid;
+          
           if(isFinite(msg.slot)) msg.members = [ msg ];
-          else client.groups[gid].members = new Array();
+          else if(msg.members) client.groups[gid].members = new Array();
+
+          if(msg.cmd == "user_joined") client.groups[gid].connections[msg.sid] = msg;
+          
           if(msg.members) {
               msg.members.forEach(function(item) {
                   client.groups[gid].connections[item.sid] = item;
