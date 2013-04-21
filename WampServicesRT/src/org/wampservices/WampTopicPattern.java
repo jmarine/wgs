@@ -8,19 +8,30 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class WampTopicPattern 
 {
-    private String     topicUriPattern;
+    private WampSubscriptionOptions.MatchEnum matchType;
+    
+    private String topicUriPattern;
     
     private Collection<WampTopic> topics;
     
     private Map<String,WampSubscription> subscriptions;
 
     
-    public WampTopicPattern(String topicUriPattern, Collection<WampTopic> topics) 
+    public WampTopicPattern(WampSubscriptionOptions.MatchEnum matchType, String topicUriPattern, Collection<WampTopic> topics) 
     {
+        this.matchType =  matchType;
         this.topicUriPattern = topicUriPattern;
         this.topics = topics;
         this.subscriptions = new ConcurrentHashMap<String,WampSubscription>();
     }
+    
+    /**
+     * @return the matchType
+     */
+    public WampSubscriptionOptions.MatchEnum getMatchType() {
+        return matchType;
+    }
+
     
     public String getTopicUriPattern()
     {
