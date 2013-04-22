@@ -16,7 +16,7 @@ public class WgsApplicationConfig implements ServerApplicationConfig
   public Set<ServerEndpointConfig> getEndpointConfigs(Set<Class<? extends Endpoint>> set) {
     return new HashSet<ServerEndpointConfig>() {
       {
-        add(new WampApplication(WgsEndpoint.class, "/wgs"));
+        add(new WampApplication(WampApplication.WAMPv2, WgsEndpoint.class, "/wgs"));
       }
     };
   }

@@ -150,7 +150,7 @@ public abstract class WampModule
 
     
     public void onEvent(String publisherId, WampTopic topic, JsonNode event, WampPublishOptions pubOptions) throws Exception { 
-        String msgByVersion[] = new String[WampSocket.WAMPv2+1];  // Cache EVENT message for each WAMP version
+        String msgByVersion[] = new String[WampApplication.WAMPv2+1];  // Cache EVENT message for each WAMP version
 
         if(pubOptions == null) pubOptions = new WampPublishOptions(null);
 
@@ -170,15 +170,15 @@ public abstract class WampModule
                     WampSocket socket = subscription.getSocket();
                     synchronized(socket) {
                         if(socket != null && socket.isOpen() && !excluded.contains(sid)) {
-                            if(socket.supportVersion(WampSocket.WAMPv2)) {
-                                if(msgByVersion[WampSocket.WAMPv2] == null) {
+                            if(socket.supportVersion(WampApplication.WAMPv2)) {
+                                if(msgByVersion[WampApplication.WAMPv2] == null) {
                                     String eventDetails = (!pubOptions.hasIdentifyMe())? "" : ", { \"PUBLISHER\": \"" + publisherId + "\" }";
-                                    msgByVersion[WampSocket.WAMPv2] = "[128,\"" + topic.getURI() + "\", " + event.toString() + eventDetails + "]";
+                                    msgByVersion[WampApplication.WAMPv2] = "[128,\"" + topic.getURI() + "\", " + event.toString() + eventDetails + "]";
                                 }
-                                socket.sendSafe(msgByVersion[WampSocket.WAMPv2]);
+                                socket.sendSafe(msgByVersion[WampApplication.WAMPv2]);
                             } else {
-                                if(msgByVersion[WampSocket.WAMPv1] == null) msgByVersion[WampSocket.WAMPv1] = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
-                                socket.sendSafe(msgByVersion[WampSocket.WAMPv1]);
+                                if(msgByVersion[WampApplication.WAMPv1] == null) msgByVersion[WampApplication.WAMPv1] = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
+                                socket.sendSafe(msgByVersion[WampApplication.WAMPv1]);
                             }
                         }
                     }

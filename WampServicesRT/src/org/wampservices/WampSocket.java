@@ -22,8 +22,6 @@ import org.codehaus.jackson.node.TextNode;
 
 public class WampSocket 
 {
-    public static final  int WAMPv1 = 1;
-    public static final  int WAMPv2 = 2;    
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
     
     private WampApplication app;

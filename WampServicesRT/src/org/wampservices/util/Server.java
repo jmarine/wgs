@@ -27,6 +27,7 @@ import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.TyrusContainer;
 import org.glassfish.tyrus.spi.TyrusServer;
 import org.wampservices.WampApplication;
+import org.wampservices.WampEndpoint;
 
 
 public class Server 
@@ -93,12 +94,10 @@ public class Server
                     String context = tkContexts.nextToken();
                     String uri = wampConfig.getProperty("context." + context + ".uri");
 
-                    boolean topicWildcardsEnabled = false;
-                    String enableWildcards = wampConfig.getProperty("context." + context + ".enableTopicWildcards");
-                    if((enableWildcards != null) && (enableWildcards.toUpperCase().equals("TRUE"))) topicWildcardsEnabled = true;
-                    
                     System.out.println("Creating WAMP context URI: " + uri);
-                    WampApplication wampApplication = WampApplication.getApplication(uri);
+                    
+                    int wampVersion = Integer.parseInt(wampConfig.getProperty("context." + context + ".wampVersion", "1"));
+                    WampApplication wampApplication = new WampApplication(wampVersion, WampEndpoint.class, uri);
                     //serverConfig = serverConfig.endpoint(WampEndpoint.class, uri);
                     //server.publishServer(WampEndpoint.class  /* , uri */ );
                     

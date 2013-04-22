@@ -44,10 +44,14 @@ public class WampApplication
     extends javax.websocket.server.ServerEndpointConfig.Configurator
     implements javax.websocket.server.ServerEndpointConfig
 {
-    private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
+    public  static final int WAMPv1 = 1;
+    public  static final int WAMPv2 = 2;    
 
     public  static final String WAMPSERVICES_BASE_URL = "https://wampservices.org";
     
+    private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
+
+    private int     wampVersion;
     private Class   endpointClass;
     private String  path;
     private boolean started;
@@ -59,26 +63,14 @@ public class WampApplication
     private ExecutorService executorService;
     
     
-    private static Map<String,WampApplication> contexts = new HashMap<String,WampApplication>();
-    
-    public static synchronized WampApplication getApplication(String context) 
-    {
-        WampApplication app = contexts.get(context);
-        if(app == null) {
-            app = new WampApplication(WampEndpoint.class, context);
-            contexts.put(context, app);
-        }
-        return app;
-    }
-    
-    
-    public WampApplication(Class endpointClass, String path)
+    public WampApplication(int version, Class endpointClass, String path)
     {
         try {
             InitialContext ctx = new InitialContext();
             executorService = (ExecutorService)ctx.lookup("concurrent/WampRpcExecutorService");
         } catch(Exception ex) { }
         
+        this.wampVersion = WAMPv1;
         this.endpointClass = endpointClass;
         this.path = path;
         
@@ -95,6 +87,14 @@ public class WampApplication
                 return WAMPSERVICES_BASE_URL;
             }
         };
+    }
+    
+    public int getWampVersion() {
+        return wampVersion;
+    }
+    
+    public void setWampVersion(int version) {
+        this.wampVersion = version;
     }
     
     public synchronized boolean start() {
@@ -161,9 +161,15 @@ public class WampApplication
         ObjectNode helloDetails = mapper.createObjectNode();
         response.add(0);  // WELCOME message code
         response.add(clientSocket.getSessionId());
-        response.add(helloDetails);  // WAMP v2
-        //response.add(1);  // WAMP v1
-        //response.add(getServerId());
+        switch(wampVersion) {
+            case WampApplication.WAMPv1:
+                response.add(1);  // WAMP v1
+                response.add(getServerId());
+                break;
+            default:
+                response.add(helloDetails);  // WAMP v2
+                break;
+        }
         clientSocket.sendWampResponse(response);
         
     }   
@@ -179,7 +185,7 @@ public class WampApplication
 
         switch(requestType) {
             case 0:
-                clientSocket.setVersionSupport(WampSocket.WAMPv2);
+                clientSocket.setVersionSupport(WampApplication.WAMPv2);
                 break;
             case 1:
                 if(clientSocket.supportVersion(2)) {
