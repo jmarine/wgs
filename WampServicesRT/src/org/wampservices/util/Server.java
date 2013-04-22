@@ -66,8 +66,8 @@ public class Server
         try {
             String docroot = wampConfig.getProperty("docroot");
             
-            TyrusContainer tyrusContainer = new org.glassfish.tyrus.container.grizzly.ExtendedGrizzlyEngine(true, wampConfig);
-            TyrusServer tyrusServer = tyrusContainer.createServer(docroot, 8080);
+            TyrusContainer tyrusContainer = new org.glassfish.tyrus.container.grizzly.WssGrizzlyEngine(wampConfig);
+            TyrusServer tyrusServer = tyrusContainer.createServer(docroot, Integer.parseInt(wampConfig.getProperty("ws-port")));
 
             //TyrusServerConfiguration serverConfig = new TyrusServerConfiguration();
             Set<ServerEndpointConfig> dynamicallyAddedEndpointConfigs = new HashSet<ServerEndpointConfig>();
