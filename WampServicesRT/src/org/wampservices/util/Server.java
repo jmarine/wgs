@@ -9,7 +9,6 @@ package org.wampservices.util;
 import java.io.FileReader;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
@@ -22,7 +21,6 @@ import javax.naming.InitialContext;
 import javax.websocket.server.ServerEndpointConfig;
 
 import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
-import org.glassfish.tyrus.server.TyrusServerConfiguration;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.TyrusContainer;
 import org.glassfish.tyrus.spi.TyrusServer;
@@ -68,7 +66,7 @@ public class Server
         try {
             String docroot = wampConfig.getProperty("docroot");
             
-            TyrusContainer tyrusContainer = new org.glassfish.tyrus.container.grizzly.GrizzlyEngine();
+            TyrusContainer tyrusContainer = new org.glassfish.tyrus.container.grizzly.ExtendedGrizzlyEngine(true, wampConfig);
             TyrusServer tyrusServer = tyrusContainer.createServer(docroot, 8080);
 
             //TyrusServerConfiguration serverConfig = new TyrusServerConfiguration();
@@ -163,5 +161,6 @@ public class Server
             
         }
     }
+    
     
 }
