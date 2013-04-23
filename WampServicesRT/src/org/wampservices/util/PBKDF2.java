@@ -10,12 +10,24 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class PBKDF2
 {
-    public static byte[] deriveKey( byte[] password, byte[] salt, int iterationCount, int dkLen )
+    private String prfAlgorithm;
+    
+    /**
+     * Constructs the PBKDF2 object
+     * 
+     * @param prfAlgorith set the pseudorandom function algorithm
+     *                    (i.e: "HmacSHA1", "HmacSHA256",...)
+     */
+    public PBKDF2(String prfAlgorithm) {
+        this.prfAlgorithm = prfAlgorithm;
+    }
+    
+    public byte[] deriveKey( byte[] password, byte[] salt, int iterationCount, int dkLen )
         throws java.security.NoSuchAlgorithmException, java.security.InvalidKeyException
     {
-        SecretKeySpec keyspec = new SecretKeySpec( password, "HmacSHA256" );
-        Mac prf = Mac.getInstance( "HmacSHA256" );
-        prf.init( keyspec );
+        SecretKeySpec keyspec = new SecretKeySpec(password, prfAlgorithm);
+        Mac prf = Mac.getInstance(prfAlgorithm);
+        prf.init(keyspec);
 
         // Note: hLen, dkLen, l, r, T, F, etc. are horrible names for
         //       variables and functions in this day and age, but they
@@ -45,7 +57,7 @@ public class PBKDF2
     } 
 
 
-    private static void F( byte[] dest, int offset, Mac prf, byte[] S, int c, int blockIndex ) {
+    private void F( byte[] dest, int offset, Mac prf, byte[] S, int c, int blockIndex ) {
         final int hLen = prf.getMacLength();
         byte U_r[] = new byte[ hLen ];
         // U0 = S || INT (i);
@@ -60,20 +72,17 @@ public class PBKDF2
         System.arraycopy( U_r, 0, dest, offset, hLen );
     }
 
-    private static void xor( byte[] dest, byte[] src ) {
+    private void xor( byte[] dest, byte[] src ) {
         for( int i = 0; i < dest.length; i++ ) {
             dest[i] ^= src[i];
         }
     }
 
-    private static void INT( byte[] dest, int offset, int i ) {
+    private void INT( byte[] dest, int offset, int i ) {
         dest[offset + 0] = (byte) (i / (256 * 256 * 256));
         dest[offset + 1] = (byte) (i / (256 * 256));
         dest[offset + 2] = (byte) (i / (256));
         dest[offset + 3] = (byte) (i);
     } 
-
-    // ctor
-    private PBKDF2 () {}
 
 }
