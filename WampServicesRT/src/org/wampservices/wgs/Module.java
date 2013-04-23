@@ -404,6 +404,15 @@ public class Module extends WampModule
                         oic.setClientSecret(oicClient.get("client_secret").asText());
                         oic.setRegistrationClientUri(oicClient.get("registration_client_uri").asText());
                         oic.setRegistrationAccessToken(oicClient.get("registration_access_token").asText());                        
+                        
+                        if(oicClient.has("expires_at")) {
+                            long expires_at = oicClient.get("expires_at").asLong();
+                            if(expires_at != 0l) {
+                                Calendar expiration = Calendar.getInstance();
+                                expiration.setTimeInMillis(expires_at*1000);
+                                oic.setClientExpiration(expiration);
+                            }
+                        }                        
                     }
                     oic = Storage.saveEntity(oic);
                 }
