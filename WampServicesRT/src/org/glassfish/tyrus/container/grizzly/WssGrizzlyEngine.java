@@ -1,9 +1,7 @@
 package org.glassfish.tyrus.container.grizzly;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Properties;
-import javax.websocket.ClientEndpointConfig;
 import javax.websocket.DeploymentException;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.http.server.NetworkListener;
@@ -11,10 +9,7 @@ import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
 import org.glassfish.tyrus.server.TyrusEndpoint;
 import org.glassfish.tyrus.spi.SPIEndpoint;
-import org.glassfish.tyrus.spi.SPIHandshakeListener;
 import org.glassfish.tyrus.spi.SPIRegisteredEndpoint;
-import org.glassfish.tyrus.spi.TyrusClientSocket;
-import org.glassfish.tyrus.spi.TyrusContainer;
 import org.glassfish.tyrus.spi.TyrusServer;
 import org.glassfish.tyrus.websockets.WebSocketEngine;
 
