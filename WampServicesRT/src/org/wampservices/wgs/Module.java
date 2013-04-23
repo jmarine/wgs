@@ -264,6 +264,7 @@ public class Module extends WampModule
         String redirectUri = data.get("redirect_uri").asText();
         redirectUri = redirectUri + ((redirectUri.indexOf("?") == -1)?"?":"&") + "provider=%";
         
+        Calendar now = Calendar.getInstance();        
         EntityManager manager = null;
         ArrayList<String> domains = new ArrayList<String>();
         
@@ -299,8 +300,6 @@ public class Module extends WampModule
                 }
             }
 
-            
-            
             retval.put("providers", providers);
             
         } catch(Exception ex) {
@@ -373,6 +372,9 @@ public class Module extends WampModule
                 oic.setRedirectUri(redirectUri);
                 oic.setClientId(oicClient.get("client_id").asText());
                 oic.setClientSecret(oicClient.get("client_secret").asText());
+                oic.setRegistrationClientUri(oicClient.get("registration_client_uri").asText());
+                oic.setRegistrationAccessToken(oicClient.get("registration_access_token").asText());
+                
                 if(oicClient.has("expires_at")) {
                     long expires_at = oicClient.get("expires_at").asLong();
                     if(expires_at != 0l) {
@@ -388,7 +390,21 @@ public class Module extends WampModule
             if(oic != null) {
                 Calendar now = Calendar.getInstance();
                 if(oic.getClientExpiration() != null && now.after(oic.getClientExpiration())) {
-                    oic.rotateClientCredentials();
+                    try {
+                        oic.rotateClientCredentials();
+                    } catch(Exception ex) {
+                        Storage.removeEntity(oic);
+                        
+                        OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
+                        ObjectNode oicClient = provider.registerClient("wgs", redirectUri);
+                        oic = new OpenIdConnectClient();
+                        oic.setProvider(provider);
+                        oic.setRedirectUri(redirectUri);
+                        oic.setClientId(oicClient.get("client_id").asText());
+                        oic.setClientSecret(oicClient.get("client_secret").asText());
+                        oic.setRegistrationClientUri(oicClient.get("registration_client_uri").asText());
+                        oic.setRegistrationAccessToken(oicClient.get("registration_access_token").asText());                        
+                    }
                     oic = Storage.saveEntity(oic);
                 }
                 
@@ -453,7 +469,7 @@ public class Module extends WampModule
 
 
                 String issuer = idTokenNode.get("iss").asText();
-                UserId userId = new UserId(providerDomain, idTokenNode.get("user_id").asText());
+                UserId userId = new UserId(providerDomain, idTokenNode.get("sub").asText());
                 usr = manager.find(User.class, userId);
 
                 Calendar now = Calendar.getInstance();

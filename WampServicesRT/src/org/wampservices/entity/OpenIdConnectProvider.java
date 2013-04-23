@@ -153,58 +153,58 @@ public class OpenIdConnectProvider implements Serializable
         if(principalUrl.indexOf("://") == -1) principalUrl = "https://" + principal;
         URL url = new URL(principalUrl);
         
-        String swdRequestUrl = url.getProtocol() + "://" + url.getHost();
-        if(url.getPort() != -1) swdRequestUrl += ":" + url.getPort();
-        swdRequestUrl += "/.well-known/simple-web-discovery";
+        String webfingerRequestUrl = url.getProtocol() + "://" + url.getHost();
+        if(url.getPort() != -1) webfingerRequestUrl += ":" + url.getPort();
+        webfingerRequestUrl += "/.well-known/webfinger";
 
         ObjectMapper mapper = new ObjectMapper();
-        ObjectNode swd = null;
-        while(swdRequestUrl != null) {
-            StringBuffer swdResponse = new StringBuffer();
-            String paramSeparator = ((swdRequestUrl.indexOf("?") == -1)? "?":"&");
-            swdRequestUrl += paramSeparator + "principal=" + URLEncoder.encode(principal,"utf8");
-            swdRequestUrl += "&service=" + URLEncoder.encode("http://openid.net/specs/connect/1.0/issuer","utf8");
-            url = new URL(swdRequestUrl);
-        
-            HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-            connection.setDoOutput(false);
+        ObjectNode webfingerResponse = null;
 
-            BufferedReader in = new BufferedReader(
-                                        new InputStreamReader(
-                                        connection.getInputStream()));
-            String decodedString;
-            while ((decodedString = in.readLine()) != null) {
-                swdResponse.append(decodedString);
-            }
-            in.close();
-            connection.disconnect();
+        StringBuffer response = new StringBuffer();
+        String paramSeparator = ((webfingerRequestUrl.indexOf("?") == -1)? "?":"&");
+        webfingerRequestUrl += paramSeparator + "resource=" + URLEncoder.encode(principal,"utf8");
+        webfingerRequestUrl += "&rel=" + URLEncoder.encode("http://openid.net/specs/connect/1.0/issuer","utf8");
+        url = new URL(webfingerRequestUrl);
 
-            swd = (ObjectNode) mapper.readTree(swdResponse.toString());
-            if(swd.has("SWD_service_redirect")) {
-                swdRequestUrl = swd.get("SWD_service_redirect").asText();
-            } else {
-                swdRequestUrl = null;
-            }
+        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        connection.setInstanceFollowRedirects(true);
+        connection.setDoOutput(false);
+
+        BufferedReader in = new BufferedReader(
+                                    new InputStreamReader(
+                                    connection.getInputStream()));
+        String decodedString;
+        while ((decodedString = in.readLine()) != null) {
+            response.append(decodedString);
         }
-        
-        if(swd.has("locations")) {
-            StringBuffer oicConfig = new StringBuffer();
-            ArrayNode locations = (ArrayNode)swd.get("locations");
-            url = new URL(locations.get(0).asText() + "/.well-known/openid-configuration");
-            HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-            connection.setDoOutput(false);
+        in.close();
+        connection.disconnect();
 
-            BufferedReader in = new BufferedReader(
-                                        new InputStreamReader(
-                                        connection.getInputStream()));
-            String decodedString;
-            while ((decodedString = in.readLine()) != null) {
-                oicConfig.append(decodedString);
+        webfingerResponse = (ObjectNode) mapper.readTree(response.toString());
+
+        
+        if(webfingerResponse.has("links")) {
+            StringBuffer oicConfig = new StringBuffer();
+            ArrayNode links = (ArrayNode)webfingerResponse.get("links");
+            for(int index = 0; index < links.size(); index++) {
+                ObjectNode link = (ObjectNode)links.get(index);
+                String rel = link.get("rel").asText();
+                if(rel.equals("http://openid.net/specs/connect/1.0/issuer")) {
+                    url = new URL(link.get("href").asText() + "/.well-known/openid-configuration");
+                    connection = (HttpURLConnection)url.openConnection();
+                    connection.setDoOutput(false);
+
+                    in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                    while ((decodedString = in.readLine()) != null) {
+                        oicConfig.append(decodedString);
+                    }
+                    in.close();
+                    connection.disconnect();
+
+                    retval = (ObjectNode) mapper.readTree(oicConfig.toString());
+                    break;
+                }
             }
-            in.close();
-            connection.disconnect();
-            
-            retval = (ObjectNode) mapper.readTree(oicConfig.toString());
         }
             
         return retval;
@@ -217,10 +217,20 @@ public class OpenIdConnectProvider implements Serializable
         URL url = new URL(getRegistrationEndpointUrl());
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setDoOutput(true);
+        connection.setRequestProperty("Content-Type", "application/json");
+        connection.setRequestProperty("Accept", "application/json");
 
+        ObjectNode req = mapper.createObjectNode();
+        ArrayNode redirect_uris = mapper.createArrayNode();
+        redirect_uris.add(redirectUri);
+        req.put("application_type", "web");
+        req.put("redirect_uris", redirect_uris);
+        req.put("client_name", appName);
+        System.out.println("RegisterClient:: " + req.toString());
+        
         OutputStreamWriter out = new OutputStreamWriter(
                                          connection.getOutputStream());
-        out.write("type=client_associate&application_type=web&application_name=" + URLEncoder.encode(appName,"utf8") + "&redirect_uris=" + URLEncoder.encode(redirectUri,"utf8"));
+        out.write(req.toString());
         out.close();
 
         BufferedReader in = new BufferedReader(

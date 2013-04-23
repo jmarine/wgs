@@ -1,5 +1,7 @@
 package org.wampservices.util;
 
+import sun.misc.BASE64Encoder;
+
 
 public class Base64 {
 
@@ -17,8 +19,8 @@ private static byte[]    map2 = new byte[128];
       for (int i=0; i<map2.length; i++) map2[i] = -1;
       for (int i=0; i<64; i++) map2[map1[i]] = (byte)i; 
   }
-
-  public static String decodeBase64ToString(String str) {
+   
+  public static byte[] decodeBase64ToByteArray(String str) {   
    char[] in = str.toCharArray();
    int iLen = in.length;
    if (iLen%4 != 0) throw new IllegalArgumentException ("Length of Base64 encoded input string is not a multiple of 4.");
@@ -45,7 +47,17 @@ private static byte[]    map2 = new byte[128];
       int o2 = ((b2 &   3)<<6) |  b3;
       out[op++] = (byte)o0;
       if (op<oLen) out[op++] = (byte)o1;
-      if (op<oLen) out[op++] = (byte)o2; }
-   return new String(out); 
+      if (op<oLen) out[op++] = (byte)o2; 
+   }
+   return out;
+  }
+
+  public static String decodeBase64ToString(String str) {
+   return new String(decodeBase64ToByteArray(str)); 
   }    
+  
+  public static String encodeByteArrayToBase64(byte[] data) {
+        BASE64Encoder bencoder = new BASE64Encoder();
+        return bencoder.encode(data);
+  }
 }

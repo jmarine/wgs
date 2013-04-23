@@ -9,6 +9,7 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
 import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
@@ -46,6 +47,12 @@ public class OpenIdConnectClient implements Serializable
     @Column(name="client_expiration")
     private java.util.Calendar clientExpiration;
     
+    @Column(name="registration_client_uri")
+    private String registrationClientUri;
+    
+    @Lob
+    @Column(name="registration_access_token")
+    private String registrationAccessToken;
 
     /**
      * @return the provider domain
@@ -110,6 +117,36 @@ public class OpenIdConnectClient implements Serializable
     public java.util.Calendar getClientExpiration() {
         return clientExpiration;
     }
+    
+    /**
+     * @return the registrationClientUri
+     */
+    public String getRegistrationClientUri() {
+        return registrationClientUri;
+    }
+
+    /**
+     * @param registrationClientUri the registrationClientUri to set
+     */
+    public void setRegistrationClientUri(String registrationClientUri) {
+        this.registrationClientUri = registrationClientUri;
+    }
+
+    /**
+     * @return the registrationAccessToken
+     */
+    public String getRegistrationAccessToken() {
+        return registrationAccessToken;
+    }
+
+    /**
+     * @param registrationAccessToken the registrationAccessToken to set
+     */
+    public void setRegistrationAccessToken(String registrationAccessToken) {
+        this.registrationAccessToken = registrationAccessToken;
+    }
+    
+    
 
     /**
      * @param clientExpiration the clientExpiration to set
@@ -147,14 +184,17 @@ public class OpenIdConnectClient implements Serializable
     public void rotateClientCredentials() throws Exception
     {
         ObjectMapper mapper = new ObjectMapper();
-        URL url = new URL(provider.getRegistrationEndpointUrl());
+        URL url = new URL(this.getRegistrationClientUri());
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        connection.setRequestProperty("Authorization", "Bearer " + this.getRegistrationAccessToken());
+        
+        /*
         connection.setDoOutput(true);
-
         OutputStreamWriter out = new OutputStreamWriter(
                                          connection.getOutputStream());
         out.write("type=rotate_secret&client_id=" + URLEncoder.encode(getClientId(),"utf8")+ "&client_secret=" + URLEncoder.encode(getClientSecret(),"utf8"));
         out.close();
+        */
 
         BufferedReader in = new BufferedReader(
                                     new InputStreamReader(
@@ -178,9 +218,10 @@ public class OpenIdConnectClient implements Serializable
         }
         
         setClientId(oicClient.get("client_id").asText());
-        setClientSecret(oicClient.get("client_secret").asText());
+        if(oicClient.has("client_secret")) setClientSecret(oicClient.get("client_secret").asText());
+        if(oicClient.has("registration_client_uri")) setRegistrationClientUri(oicClient.get("registration_client_uri").asText());
+        if(oicClient.has("registration_access_token")) setRegistrationAccessToken(oicClient.get("registration_access_token").asText());
         setClientExpiration(expiration);
     }
-    
     
 }
