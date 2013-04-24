@@ -226,7 +226,6 @@ public class OpenIdConnectProvider implements Serializable
         req.put("application_type", "web");
         req.put("redirect_uris", redirect_uris);
         req.put("client_name", appName);
-        System.out.println("RegisterClient:: " + req.toString());
         
         OutputStreamWriter out = new OutputStreamWriter(
                                          connection.getOutputStream());

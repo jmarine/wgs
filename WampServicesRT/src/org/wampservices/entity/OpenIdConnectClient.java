@@ -155,7 +155,26 @@ public class OpenIdConnectClient implements Serializable
         this.clientExpiration = clientExpiration;
     }
     
+    
+    public void load(ObjectNode oicClientRegistrationResponse) {
+        this.setRedirectUri(redirectUri);
+        this.setClientId(oicClientRegistrationResponse.get("client_id").asText());
+        this.setClientSecret(oicClientRegistrationResponse.get("client_secret").asText());
+        this.setRegistrationClientUri(oicClientRegistrationResponse.get("registration_client_uri").asText());
+        this.setRegistrationAccessToken(oicClientRegistrationResponse.get("registration_access_token").asText());                        
 
+        Calendar expiration = null;
+        if(oicClientRegistrationResponse.has("expires_at")) {
+            long expires_at = oicClientRegistrationResponse.get("expires_at").asLong();
+            if(expires_at != 0l) {
+                expiration = Calendar.getInstance();
+                expiration.setTimeInMillis(expires_at*1000);
+            }
+        }                        
+        this.setClientExpiration(expiration);
+    }
+
+    
     public String getAccessTokenResponse(String authorization_code) throws Exception
     {
         URL url = new URL(provider.getAccessTokenEndpointUrl());
@@ -181,21 +200,13 @@ public class OpenIdConnectClient implements Serializable
         return data.toString();
     }
 
-    public void rotateClientCredentials() throws Exception
+    public void updateClientCredentials() throws Exception
     {
         ObjectMapper mapper = new ObjectMapper();
         URL url = new URL(this.getRegistrationClientUri());
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setRequestProperty("Authorization", "Bearer " + this.getRegistrationAccessToken());
         
-        /*
-        connection.setDoOutput(true);
-        OutputStreamWriter out = new OutputStreamWriter(
-                                         connection.getOutputStream());
-        out.write("type=rotate_secret&client_id=" + URLEncoder.encode(getClientId(),"utf8")+ "&client_secret=" + URLEncoder.encode(getClientSecret(),"utf8"));
-        out.close();
-        */
-
         BufferedReader in = new BufferedReader(
                                     new InputStreamReader(
                                     connection.getInputStream()));

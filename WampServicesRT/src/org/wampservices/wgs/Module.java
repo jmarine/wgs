@@ -274,17 +274,33 @@ public class Module extends WampModule
             TypedQuery<OpenIdConnectClient> queryClients = manager.createNamedQuery("oic_client.findByRedirectUri", OpenIdConnectClient.class);
             queryClients.setParameter("uri", redirectUri);
             for(OpenIdConnectClient oic : queryClients.getResultList()) {
-                String domain = oic.getProvider().getDomain();
-                if(!domains.contains(domain) && !"defaultProvider".equals(domain)) {
+                String providerDomain = oic.getProvider().getDomain();
+                if(!domains.contains(providerDomain) && !"defaultProvider".equals(providerDomain)) {
+                    
+                    if(oic.getClientExpiration() != null && now.after(oic.getClientExpiration())) {
+                        try {
+                            oic.updateClientCredentials();
+                        } catch(Exception ex) {
+                            System.out.println("Error updating client credentials: " + ex.getMessage());
+                            
+                            Storage.removeEntity(oic);
+
+                            OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
+                            ObjectNode oicClientRegistrationResponse = provider.registerClient("wgs", oic.getRedirectUri());
+                            oic.load(oicClientRegistrationResponse);
+                        }
+                        oic = Storage.saveEntity(oic);
+                    }                    
+                    
                     String clientId = oic.getClientId();
                     String oicAuthEndpointUrl = oic.getProvider().getAuthEndpointUrl();
                     String uri = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + URLEncoder.encode(clientId,"utf8") + "&redirect_uri=" + URLEncoder.encode(oic.getRedirectUri(),"utf8");
 
                     ObjectNode node = mapper.createObjectNode();
-                    node.put("name", domain);
+                    node.put("name", providerDomain);
                     node.put("authEndpoint", uri);
                     providers.add(node);
-                    domains.add(domain);
+                    domains.add(providerDomain);
                 }
             }
             
@@ -361,7 +377,7 @@ public class Module extends WampModule
                     provider = Storage.saveEntity(provider);
                 }
 
-                ObjectNode oicClient = provider.registerClient("wgs", redirectUri);
+                ObjectNode oicClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
                 if(!provider.getDynamic()) {
                     provider.setDynamic(true);
                     provider = Storage.saveEntity(provider);
@@ -370,20 +386,7 @@ public class Module extends WampModule
                 oic = new OpenIdConnectClient();
                 oic.setProvider(provider);
                 oic.setRedirectUri(redirectUri);
-                oic.setClientId(oicClient.get("client_id").asText());
-                oic.setClientSecret(oicClient.get("client_secret").asText());
-                oic.setRegistrationClientUri(oicClient.get("registration_client_uri").asText());
-                oic.setRegistrationAccessToken(oicClient.get("registration_access_token").asText());
-                
-                if(oicClient.has("expires_at")) {
-                    long expires_at = oicClient.get("expires_at").asLong();
-                    if(expires_at != 0l) {
-                        Calendar expiration = Calendar.getInstance();
-                        expiration.setTimeInMillis(expires_at*1000);
-                        oic.setClientExpiration(expiration);
-                    }
-                }
-                
+                oic.load(oicClientRegistrationResponse);
                 oic = Storage.saveEntity(oic);
             }
             
@@ -391,28 +394,13 @@ public class Module extends WampModule
                 Calendar now = Calendar.getInstance();
                 if(oic.getClientExpiration() != null && now.after(oic.getClientExpiration())) {
                     try {
-                        oic.rotateClientCredentials();
+                        oic.updateClientCredentials();
                     } catch(Exception ex) {
                         Storage.removeEntity(oic);
                         
                         OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
-                        ObjectNode oicClient = provider.registerClient("wgs", redirectUri);
-                        oic = new OpenIdConnectClient();
-                        oic.setProvider(provider);
-                        oic.setRedirectUri(redirectUri);
-                        oic.setClientId(oicClient.get("client_id").asText());
-                        oic.setClientSecret(oicClient.get("client_secret").asText());
-                        oic.setRegistrationClientUri(oicClient.get("registration_client_uri").asText());
-                        oic.setRegistrationAccessToken(oicClient.get("registration_access_token").asText());                        
-                        
-                        if(oicClient.has("expires_at")) {
-                            long expires_at = oicClient.get("expires_at").asLong();
-                            if(expires_at != 0l) {
-                                Calendar expiration = Calendar.getInstance();
-                                expiration.setTimeInMillis(expires_at*1000);
-                                oic.setClientExpiration(expiration);
-                            }
-                        }                        
+                        ObjectNode oicClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
+                        oic.load(oicClientRegistrationResponse);
                     }
                     oic = Storage.saveEntity(oic);
                 }
