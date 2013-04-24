@@ -158,7 +158,7 @@ public class Module extends WampModule
             EntityManager manager = Storage.getEntityManager();
             UserId userId = new UserId(User.LOCAL_USER_DOMAIN, socket.getUserPrincipal().getName());
             User usr = manager.find(User.class, userId);
-            client.setUser(usr);
+            manager.close();
             socket.setUserPrincipal(usr);
             socket.setState(WampConnectionState.AUTHENTICATED);
         }
@@ -220,7 +220,6 @@ public class Module extends WampModule
         usr.setAdministrator(false);
         usr = Storage.saveEntity(usr);
 
-        client.setUser(usr);
         socket.setUserPrincipal(usr);
         socket.setState(WampConnectionState.AUTHENTICATED);
         
@@ -244,7 +243,6 @@ public class Module extends WampModule
         
         if( (usr != null) && (password.equals(usr.getPassword())) ) {
             user_valid = true;
-            client.setUser(usr);
             socket.setUserPrincipal(usr);
             socket.setState(WampConnectionState.AUTHENTICATED);
         }
@@ -473,7 +471,6 @@ public class Module extends WampModule
                 if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
                     // Use cached UserInfo from local database
                     logger.fine("Cached OIC User: " + usr);
-                    client.setUser(usr);
                     socket.setUserPrincipal(usr);
                     socket.setState(WampConnectionState.AUTHENTICATED);
                     
@@ -502,7 +499,6 @@ public class Module extends WampModule
 
                     usr = Storage.saveEntity(usr);
 
-                    client.setUser(usr);
                     socket.setUserPrincipal(usr);
                     socket.setState(WampConnectionState.AUTHENTICATED);
 

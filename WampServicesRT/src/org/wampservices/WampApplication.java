@@ -47,6 +47,7 @@ public class WampApplication
     public  static final int WAMPv1 = 1;
     public  static final int WAMPv2 = 2;    
 
+    public  static final String WAMP_ERROR_URI = "http://wamp.ws/err#";
     public  static final String WAMPSERVICES_BASE_URL = "https://wampservices.org";
     
     private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
@@ -381,7 +382,7 @@ public class WampApplication
 
                 } finally {
                     clientSocket.removeRpcFutureResult(callID);
-                    if(isCancelled(callID)) clientSocket.sendCallError(callErrorMsgType, callID, "http://wamp.ws/err#CanceledByCaller", "RPC cancelled by caller: " + callID, null);
+                    if(isCancelled(callID)) clientSocket.sendCallError(callErrorMsgType, callID, WAMP_ERROR_URI + "CanceledByCaller", "RPC cancelled by caller: " + callID, null);
                 }
             }
         };

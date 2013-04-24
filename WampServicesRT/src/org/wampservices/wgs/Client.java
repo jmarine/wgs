@@ -1,10 +1,14 @@
 package org.wampservices.wgs;
 
+import java.security.Principal;
 import org.wampservices.entity.User;
 import org.wampservices.WampConnectionState;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.persistence.EntityManager;
 import org.wampservices.WampSocket;
+import org.wampservices.entity.UserId;
+import org.wampservices.util.Storage;
 
 /**
  *
@@ -38,19 +42,25 @@ public class Client {
 
     public User getUser()
     {
-        return (User)this.user;
+        User user = null;
+        Principal principal = socket.getUserPrincipal();
+        if(principal != null) {
+            if(principal instanceof User) {
+                user = (User)principal;
+            } else {
+                String principalName = principal.getName();
+                if(this.user == null) {
+                    EntityManager manager = Storage.getEntityManager();
+                    UserId userId = new UserId(User.LOCAL_USER_DOMAIN, principalName);
+                    this.user = manager.find(User.class, userId);
+                    manager.close();                    
+                }
+                user = this.user;
+            }
+        }
+        return user;
     }
     
-    public void setUser(User user)
-    {
-        this.user = user;
-        if(user != null) {
-            socket.setState(WampConnectionState.AUTHENTICATED);
-        }
-        else if(socket.getState() != WampConnectionState.OFFLINE) {
-            socket.setState(WampConnectionState.ANONYMOUS);
-        }
-    }    
     
     /**
      * @return the groups

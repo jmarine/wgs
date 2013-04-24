@@ -9,6 +9,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityManager;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 import org.wampservices.entity.User;
 import org.wampservices.entity.UserId;
@@ -26,13 +27,21 @@ public class WampAPI extends WampModule
     
     @Override
     public String getBaseURL() {
-        return "https://api.wamp.ws/procedure#";
+        return "http://api.wamp.ws/procedure#";
     }
     
 
     @WampRPC(name="authreq")
-    public String authRequest(WampSocket socket, String authKey, ObjectNode extra)
+    public String authRequest(WampSocket socket, String authKey, ObjectNode extra) throws Exception
     {
+        if(socket.getState() == WampConnectionState.AUTHENTICATED) {
+            throw new WampException(WampApplication.WAMP_ERROR_URI + "already-authenticated", "already authenticated");
+        }
+        if(socket.getSessionData().containsKey("_clientPendingAuthInfo")) {
+            throw new WampException(WampApplication.WAMP_ERROR_URI +  "authentication-already-requested", "authentication request already issues - authentication pending");
+        }
+        
+        ObjectNode res = getAuthPermissions(authKey);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS");
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode info = mapper.createObjectNode();
@@ -40,81 +49,71 @@ public class WampAPI extends WampModule
         info.put("authkey", authKey);
         info.put("timestamp", sdf.format(new Date()));
         info.put("sessionid", socket.getSessionId());
+        info.put("permissions", (ObjectNode)res.get("permissions"));
         if(extra != null) info.put("extra", extra);
-
-/*
-            res = getAuthPermissions(authKey)
-            
-            if res is None:
-               res = {'permissions': {}}
-               res['permissions'] = {'pubsub': [], 'rpc': []}
-            info['permissions'] = res['permissions']
-            if 'authextra' in res:
-                info['authextra'] = res['authextra']
-
-            if authKey:
-               ## authenticated session
-               ##
-               infoser = self.factory._serialize(info)
-               sig = self.authSignature(infoser, authSecret)
-
-               self._clientPendingAuth = (info, sig, res)
-               return infoser
-            else:
-               ## anonymous session
-               ##
-               self._clientPendingAuth = (info, None, res)
-               return None
-*/                       
+        if(res.has("authextra")) info.put("authextra", res.get("authextra"));
         
-        String challenge = "";
-        return challenge;
+        String infoser = info.toString();
+        String authSecret = this.getAuthSecret(authKey);
+        String sig = "";
+        if(authKey != null && authKey.length() > 0) {
+            sig = this.authSignature(infoser, authSecret, extra);
+        } else {
+            infoser = "";
+        }
+        
+        socket.getSessionData().put("_clientPendingAuthInfo", info);
+        socket.getSessionData().put("_clientPendingAuthSig", sig);
+        socket.getSessionData().put("_clientPendingAuthPerms", res);
+        
+        return infoser;
     }
     
     
     @WampRPC(name="auth")
-    public ObjectNode auth(WampSocket socket, String signature)
+    public ObjectNode auth(WampSocket socket, String signature) throws Exception
     {
-        ObjectNode permissions = null;
-        return permissions;
-/*
-       if self._clientAuthenticated:
-         raise Exception(self.shrink(WampProtocol.URI_WAMP_ERROR + "already-authenticated"), "already authenticated")
-      if self._clientPendingAuth is None:
-         raise Exception(self.shrink(WampProtocol.URI_WAMP_ERROR + "no-authentication-requested"), "no authentication previously requested")
+        if(socket.getState() == WampConnectionState.AUTHENTICATED) {
+            throw new WampException(WampApplication.WAMP_ERROR_URI + "already-authenticated", "already authenticated");
+        }
+        if(!socket.getSessionData().containsKey("_clientPendingAuthInfo")) {
+            throw new WampException(WampApplication.WAMP_ERROR_URI + "no-authentication-requested", "no authentication previously requested");
+        }
 
-      ## check signature
-      ##
-      if type(signature) not in [str, unicode, types.NoneType]:
-         raise Exception(self.shrink(WampProtocol.URI_WAMP_ERROR + "invalid-argument"), "signature must be a string or None (was %s)" % str(type(signature)))
-      if self._clientPendingAuth[1] != signature:
-         ## delete pending authentication, so that no retries are possible. authid is only valid for 1 try!!
-         ## FIXME: drop the connection?
-         self._clientPendingAuth = None
-         raise Exception(self.shrink(WampProtocol.URI_WAMP_ERROR + "invalid-signature"), "signature for authentication request is invalid")
+        ObjectNode info = (ObjectNode)socket.getSessionData().remove("_clientPendingAuthInfo");;
+        ObjectNode perms = (ObjectNode)socket.getSessionData().remove("_clientPendingAuthPerms");            
+        String clientPendingAuthSig = (String)socket.getSessionData().remove("_clientPendingAuthSig");
+        if(clientPendingAuthSig == null) clientPendingAuthSig = "";
+        
+        if(!signature.equals(clientPendingAuthSig)) {
+            throw new WampException(WampApplication.WAMP_ERROR_URI + "invalid-signature", "signature for authentication request is invalid");
+        }
+        
+        String authKey = info.get("authkey").asText();
+        
+        EntityManager manager = Storage.getEntityManager();
+        UserId userId = new UserId(User.LOCAL_USER_DOMAIN, authKey);
+        User usr = manager.find(User.class, userId);
+        manager.close();
+        
+        socket.setUserPrincipal(usr);
+        socket.setState(WampConnectionState.AUTHENTICATED);
 
-      ## at this point, the client has successfully authenticated!
+        return perms;
+    }
+    
 
-      ## get the permissions we determined earlier
-      ##
-      perms = self._clientPendingAuth[2]
-      ## delete auth request and mark client as authenticated
-      ##
-      authKey = self._clientPendingAuth[0]['authkey']
-      self._clientAuthenticated = True
-      self._clientPendingAuth = None
-      if self._clientAuthTimeoutCall is not None:
-         self._clientAuthTimeoutCall.cancel()
-         self._clientAuthTimeoutCall = None
-
-      ## fire authentication callback
-      ##
-      self.onAuthenticated(authKey, perms)
-
-      ## return permissions to client
-      ##
-      return perms['permissions']
- */        
+    private ObjectNode getAuthPermissions(String authKey) 
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode res = mapper.createObjectNode();
+        ObjectNode perms = mapper.createObjectNode();
+        ArrayNode pubsub = mapper.createArrayNode();
+        ArrayNode rpcs = mapper.createArrayNode();
+        perms.put("pubsub", pubsub);
+        perms.put("rpcs", rpcs);
+        res.put("permissions", perms);
+        return res;
     }
     
     
@@ -123,26 +122,10 @@ public class WampAPI extends WampModule
         EntityManager manager = Storage.getEntityManager();
         UserId userId = new UserId(User.LOCAL_USER_DOMAIN, authKey);
         User usr = manager.find(User.class, userId);
+        manager.close();
         return usr.getPassword();
     }
     
-    private byte[] deriveKey(String secret, ObjectNode extra) throws Exception
-    {
-        MessageDigest md5 = MessageDigest.getInstance("MD5");
-        byte[] PWHash = md5.digest(secret.getBytes("UTF8"));            
-        
-        if(extra != null && extra.has("salt")) {
-            byte[] salt = Base64.decodeBase64ToByteArray(extra.get("salt").asText());
-            int iterations = extra.get("iterations").asInt(10000);
-            int keylen = extra.get("keylen").asInt(32);
-
-            PBKDF2 pbkdf2 = new PBKDF2("HmacSHA256");
-            byte[] result = pbkdf2.deriveKey(PWHash, salt, iterations, keylen);
-            return result;
-        } else {
-            return PWHash;
-        }
-    }
     
     private String authSignature(String authChallenge, String authSecret, ObjectNode authExtra) throws Exception
     {
@@ -156,5 +139,21 @@ public class WampAPI extends WampModule
         byte[] h = hmac.doFinal(authChallenge.getBytes("UTF8"));
         return Base64.encodeByteArrayToBase64(h);
     }
+    
+
+    private byte[] deriveKey(String secret, ObjectNode extra) throws Exception
+    {
+        if(extra != null && extra.has("salt")) {
+            byte[] salt = extra.get("salt").asText().getBytes("UTF8");
+            int iterations = extra.get("iterations").asInt(10000);
+            int keylen = extra.get("keylen").asInt(32);
+
+            PBKDF2 pbkdf2 = new PBKDF2("HmacSHA256");
+            //return pbkdf2.deriveKey(secret.getBytes("UTF8"), salt, iterations, keylen);
+            return Base64.encodeByteArrayToBase64(pbkdf2.deriveKey(secret.getBytes("UTF8"), salt, iterations, keylen)).getBytes("UTF8");
+        } else {
+            return secret.getBytes("UTF8");
+        }
+    }    
     
 }
