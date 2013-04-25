@@ -77,7 +77,8 @@ public class WampSocket
      */
     public Principal getUserPrincipal()
     {
-        return this.session.getUserPrincipal();
+        if(this.principal != null) return this.principal;
+        else return this.session.getUserPrincipal();
     }
     
     /**

@@ -86,7 +86,7 @@ WgsClient.prototype = {
       msg[1] = this._newid();
       msg[2] = cmd;
       if(this.isServerUsingWampVersion(2)) {
-          msg[3] = args;
+          msg[3] = (args && (args instanceof Array))? args : [ args ];
           if(wamp2OptionsOrWamp1ArgsAsArray) msg[4] = wamp2OptionsOrWamp1ArgsAsArray;
       } else {
           if(args && (args instanceof Array) && (!wamp2OptionsOrWamp1ArgsAsArray)) {
@@ -195,6 +195,88 @@ WgsClient.prototype = {
   }, 
 
 
+
+  
+  authreq: function(authKey, authExtra, callback) {
+      if(!authExtra) authExtra = {};
+      var args = []
+      args[0] = authKey;
+      args[1] = authExtra;
+      this.call("http://api.wamp.ws/procedure#authreq", args).then(callback,callback);      
+  },
+          
+  auth: function(signature, callback) {
+      this.call("http://api.wamp.ws/procedure#auth", signature).then(callback,callback);      
+  },          
+  
+  getUserInfo: function(callback) {
+      this.call("https://wampservices.org/wgs#get_user_info").then(callback,callback);
+  },
+  
+  login: function(user, password, onstatechange) {
+      var client = this;
+      client._connect(function(state, msg) {
+        if(state == WgsState.WELCOMED) {
+            var authExtra = null; // { salt: "RANDOMTEXT", keylen: 32, iterations: 4096 };
+            client.authreq(user, authExtra, function(response) {
+                if(typeof(response) == "string") {
+                    var challenge = JSON.parse(response);
+                    if(challenge.extra && challenge.extra.salt) {
+                        var key = CryptoJS.PBKDF2(password, challenge.extra.salt, { keySize: challenge.extra.keylen / 4, iterations: challenge.extra.iterations, hasher: CryptoJS.algo.SHA256 });
+                        password = key.toString(CryptoJS.enc.Base64);                        
+                    }
+                    var signature = CryptoJS.HmacSHA256(response, password).toString(CryptoJS.enc.Base64);
+                    client.auth(signature, function(response) {
+                        if(response.valid) {
+                            client.getUserInfo(function(response) {
+                                if(response.valid) {
+                                    onstatechange(WgsState.AUTHENTICATED, response);
+                                } else {
+                                    var errorCode = response.errorURI;
+                                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                                }
+                            });
+                        } else {
+                            var errorCode = response.errorURI;
+                            onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                        }
+                    });
+                } else {
+                    var errorCode = response.errorURI;
+                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                }
+            });
+        } else {
+            onstatechange(state, msg);
+        }
+      });
+  },
+  
+  
+  register: function(user, password, email, onstatechange) {
+      var client = this;
+      client._connect(function(state, msg) {
+        if(state == WgsState.WELCOMED) {
+            var msg = Object();
+            msg.user = user;
+            msg.password = password;  // hash_sha1(password)
+            msg.email = email;
+            client.call("https://wampservices.org/wgs#register", msg).then(
+                function(response) {
+                    client.user = response.user;
+                    onstatechange(WgsState.AUTHENTICATED, response);
+                }, 
+                function(response) {
+                    var errorCode = response.errorURI;
+                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                });
+        } else {
+            onstatechange(state, msg);
+        }
+      });
+  },  
+  
+  
   openIdConnectProviders: function(redirectUri, callback) {
       var client = this;
       client._connect(function(state, msg) {
@@ -260,52 +342,6 @@ WgsClient.prototype = {
         }
       });
   },
-  
-  login: function(user, password, onstatechange) {
-      var client = this;
-      client._connect(function(state, msg) {
-        if(state == WgsState.WELCOMED) {
-            var msg = Object();
-            msg.user = user;
-            msg.password = password;  // hash_sha1(password : this.sid)
-            client.call("https://wampservices.org/wgs#login", msg).then(
-                function(response) {
-                    client.user = response.user;
-                    onstatechange(WgsState.AUTHENTICATED, response);
-                }, 
-                function(response) {
-                    var errorCode = response.errorURI;
-                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
-                });
-        } else {
-            onstatechange(state, msg);
-        }
-      });
-  },
-  
-  
-  register: function(user, password, email, onstatechange) {
-      var client = this;
-      client._connect(function(state, msg) {
-        if(state == WgsState.WELCOMED) {
-            var msg = Object();
-            msg.user = user;
-            msg.password = password;  // hash_sha1(password)
-            msg.email = email;
-            client.call("https://wampservices.org/wgs#register", msg).then(
-                function(response) {
-                    client.user = response.user;
-                    onstatechange(WgsState.AUTHENTICATED, response);
-                }, 
-                function(response) {
-                    var errorCode = response.errorURI;
-                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
-                });
-        } else {
-            onstatechange(state, msg);
-        }
-      });
-  },  
   
   
   _connect: function(onstatechange) {

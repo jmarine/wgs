@@ -227,27 +227,20 @@ public class Module extends WampModule
     }
     
     
-    @WampRPC
-    public ObjectNode login(WampSocket socket, ObjectNode data) throws Exception
+    @WampRPC(name="get_user_info")
+    public ObjectNode getUserInfo(WampSocket socket, ObjectNode data) throws Exception
     {
         boolean user_valid = false;
         Client client = clients.get(socket.getSessionId());
 
-        String user = data.get("user").asText();
-        String password  = data.get("password").asText();
-
-        EntityManager manager = Storage.getEntityManager();
-        UserId userId = new UserId(User.LOCAL_USER_DOMAIN, user);
-        User usr = manager.find(User.class, userId);
-        manager.close();
-        
-        if( (usr != null) && (password.equals(usr.getPassword())) ) {
-            user_valid = true;
-            socket.setUserPrincipal(usr);
-            socket.setState(WampConnectionState.AUTHENTICATED);
+        if(client == null || client.getSocket().getState() != WampConnectionState.AUTHENTICATED) {
+            throw new WampException(MODULE_URL + "anonymous-user", "User not authenticated");
         }
-
-        if(!user_valid) throw new WampException(MODULE_URL + "loginerror", "Login credentials are not valid");
+        
+        User usr = client.getUser();
+        if(usr == null) {
+            throw new WampException(MODULE_URL + "unknown-user-info", "User info not registered");
+        }
         
         return usr.toJSON();
     }
