@@ -221,6 +221,7 @@ WgsClient.prototype = {
             client.authreq(user, authExtra, function(response) {
                 if(typeof(response) == "string") {
                     var challenge = JSON.parse(response);
+                    password = CryptoJS.MD5(password).toString();
                     if(challenge.extra && challenge.extra.salt) {
                         var key = CryptoJS.PBKDF2(password, challenge.extra.salt, { keySize: challenge.extra.keylen / 4, iterations: challenge.extra.iterations, hasher: CryptoJS.algo.SHA256 });
                         password = key.toString(CryptoJS.enc.Base64);                        
@@ -259,7 +260,7 @@ WgsClient.prototype = {
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.user = user;
-            msg.password = password;  // hash_sha1(password)
+            msg.password = CryptoJS.MD5(password).toString();
             msg.email = email;
             client.call("https://wampservices.org/wgs#register", msg).then(
                 function(response) {
