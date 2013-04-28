@@ -231,6 +231,7 @@ WgsClient.prototype = {
                         if(response.valid) {
                             client.getUserInfo(function(response) {
                                 if(response.valid) {
+                                    client.user = user;
                                     onstatechange(WgsState.AUTHENTICATED, response);
                                 } else {
                                     var errorCode = response.errorURI;
