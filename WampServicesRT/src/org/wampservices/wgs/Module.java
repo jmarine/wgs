@@ -779,7 +779,7 @@ public class Module extends WampModule
                     member = g.getMember(index);
                     boolean connected = (member != null) && (member.getClient() != null);
                     String user = ((member == null || member.getUser() == null) ? "" : member.getUser().getFQid() );
-                    if(!connected && user.equals(currentUser.getFQid())) {
+                    if(!connected && currentUser!=null && user.equals(currentUser.getFQid())) {
                         reserved = true;
                         reservedSlot = index;
                         break;
