@@ -224,6 +224,7 @@ function enable_network() {
     
     $("#user").val("");
     $("#password").val("");
+    $("#user_picture").width(0).height(0);    
     $("#password").show();
     $("#lbl_password").show();
     
@@ -251,31 +252,55 @@ function enable_network() {
     
 }
 
+function onUserChange(user) {
+    //var old = $("#toggle_connect").html();
+    if(user.length > 0) {
+        $("#toggle_connect").html("Log in");  
+    } else if(wgsclient.getState() == WgsState.ANONYMOUS) {
+        $("#toggle_connect").html("Disconnect");  
+    } else {
+        $("#toggle_connect").html("Connect");
+    }
+}
+
 function authentication(state, msg) {
-      if(state == WgsState.AUTHENTICATED) {
-          $("#server_url").attr("disabled", "disabled");
-          $("#user").attr("disabled", "disabled");
-          $("#password").attr("disabled", "disabled");
-          
-          $("#register").attr("disabled", "disabled");
-          $("#oic_connect").attr("disabled", "disabled");
-          
-          $("#toggle_connect").html("Log out");  
-          
-          $("#user").val(msg.name);
-          $("#lbl_password").hide();
-          $("#password").hide();
+    console.log("authentication state: " + state);
 
-          if(msg.picture) {
+    if(state == WgsState.ERROR) {
+        if(wgsclient.getState() == WgsState.ANONYMOUS) {
+            $("#toggle_connect").html("Disconnect");  
+        } else {
+            $("#toggle_connect").html("Connect");
+        }
+        alert(msg);
+        
+    } else if(state == WgsState.CONNECTED) {
+        $("#server_url").attr("disabled", "disabled");
+        $("#register").attr("disabled", "disabled");
+        $("#oic_connect").attr("disabled", "disabled");
+        
+    } else if(state == WgsState.ANONYMOUS || state == WgsState.AUTHENTICATED) {
+        $("#toggle_connect").html("Disconnect");
+        
+        list_apps();
+        
+        if(state == WgsState.AUTHENTICATED) {
+            $("#user").attr("disabled", "disabled");
+            $("#password").attr("disabled", "disabled");
+            
+            if(msg.name) $("#user").val(msg.name);
+            $("#lbl_password").hide();
+            $("#password").hide();            
+        }
+
+        if(msg && msg.picture) {
             $("#user_picture").attr("src", msg.picture).width(45).height(45);
-          } else {
+        } else {
             $("#user_picture").width(0).height(0);
-          }
+        }
 
-          list_apps();
-      } else if(state == WgsState.ERROR) {
-          alert(msg);
-      }
+    }
+        
 }
 
 
@@ -913,7 +938,7 @@ function chat_message(message,sender) {
     $("#messages").prop({ scrollTop: $("#messages").prop("scrollHeight")  });
 }
 
-function getWebSocket() {
+function getWgsClient() {
     var url = $("#server_url").val();
     if(!wgsclient || (url != wgsclient.url)) {
         if(wgsclient) {
@@ -933,7 +958,7 @@ function openid_connect(login) {
         if(user.length == 0) {
             alert("User name is empty");
         } else {
-            wgsclient = getWebSocket();
+            wgsclient = getWgsClient();
             wgsclient.openIdConnectLoginUrl(user, redirectUri, authentication);
         }
         
@@ -993,7 +1018,7 @@ function disconnect() {
 
     $("#register").removeAttr("disabled");
     $("#oic_connect").removeAttr("disabled");
-    $("#toggle_connect").html("Log in");
+    $("#toggle_connect").html("Connect");
     $("#participants").html("");
     
     $("#enable_network").show();
@@ -1014,15 +1039,27 @@ function disconnect() {
 
 
 function toggle_connect(create_user) {
-    if ($("#server_url").attr("disabled") != "disabled") {
+    if($("#toggle_connect").html() != "Disconnect") {
         var user = $("#user").val();
         var pass = $("#password").val();
-        wgsclient = getWebSocket();
+        $("#user").val("");
+        $("#password").val("");
+        $("#user_picture").width(0).height(0);
+        
+        wgsclient = getWgsClient();
         if(create_user) {
             var email = prompt("Enter e-mail:");
             if(email) wgsclient.register(user, pass, email, authentication);
-        } else {
+        } else if(user.length > 0) {
             wgsclient.login(user, pass, authentication);
+        } else {
+            wgsclient.connect(function(state,msg) {
+                authentication(state,msg);                
+                if(state == WgsState.WELCOMED) {
+                    wgsclient.setState(WgsState.ANONYMOUS);
+                    authentication(WgsState.ANONYMOUS);
+                }
+            });
         }
     } else {
         disconnect();
@@ -1033,7 +1070,7 @@ function openid_connect_menu(self) {
     var url = $("#server_url").val();
     var redirectUri = clear_openid_connect_params(true);
     
-    wgsclient = getWebSocket();
+    wgsclient = getWgsClient();
     wgsclient.openIdConnectProviders(redirectUri, function(response) { 
 
         var providers = $("#openid_providers_menu");
@@ -1086,12 +1123,12 @@ function openid_connect_menu(self) {
             <img id="user_picture" width="0" height="0">
         </td>
     </tr>
-    <tr><td><label for="user">User:</label></td><td><input type="text" name="user" id="user" value="guest" /></td></tr>
+    <tr><td><label for="user">User:</label></td><td><input type="text" name="user" id="user" value="guest" onkeyup="javascript:onUserChange(this.value)" /></td></tr>
     <tr><td><label for="password" id="lbl_password">Password:</label></td><td><input type="password" name="password" id="password" value="" /></td></tr>
     </table>
       
     <div class="ui-buttonset">
-      <button id="toggle_connect">Log in</button>
+      <button id="toggle_connect">Connect</button>
       <button id="oic_connect">&nbsp;</button>
       <button id="register" onclick="toggle_connect(true);">Register</button>
     </div>

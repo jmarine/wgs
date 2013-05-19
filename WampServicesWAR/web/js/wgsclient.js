@@ -3,7 +3,8 @@ var WgsState = {
   ERROR: 1,
   CONNECTED: 2,
   WELCOMED: 3,
-  AUTHENTICATED: 4
+  ANONYMOUS: 4,  
+  AUTHENTICATED: 5
 };
 
 function WgsClient(u) {
@@ -15,6 +16,7 @@ function WgsClient(u) {
 WgsClient.prototype = {
   ws: null,
   sid: null,
+  state: WgsClient.DISCONNECTED,
   groups: new Array(),
   calls: new Array(),
   topics: new Array(),
@@ -23,12 +25,21 @@ WgsClient.prototype = {
   debug: function(str) {
     console.log(str);
   },
+          
+  setState: function(state) {
+      this.state = state;
+  },
+          
+  getState: function() {
+    return this.state;  
+  },
 
   close: function() {
     if(this.ws /* && this.ws.state == this.ws.OPEN */) {
         this.ws.close();
         this.ws = null;
     }
+    this.state = WgsState.DISCONNECTED;
   },
 
   send: function(msg) {
@@ -215,7 +226,8 @@ WgsClient.prototype = {
   
   login: function(user, password, onstatechange) {
       var client = this;
-      client._connect(function(state, msg) {
+      client.connect(function(state, msg) {
+        onstatechange(state, msg);
         if(state == WgsState.WELCOMED) {
             var authExtra = null; // { salt: "RANDOMTEXT", keylen: 32, iterations: 4096 };
             client.authreq(user, authExtra, function(response) {
@@ -232,6 +244,7 @@ WgsClient.prototype = {
                             client.getUserInfo(function(response) {
                                 if(response.valid) {
                                     client.user = user;
+                                    client.state = WgsState.AUTHENTICATED;
                                     onstatechange(WgsState.AUTHENTICATED, response);
                                 } else {
                                     var errorCode = response.errorURI;
@@ -248,8 +261,6 @@ WgsClient.prototype = {
                     onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 }
             });
-        } else {
-            onstatechange(state, msg);
         }
       });
   },
@@ -257,7 +268,8 @@ WgsClient.prototype = {
   
   register: function(user, password, email, onstatechange) {
       var client = this;
-      client._connect(function(state, msg) {
+      client.connect(function(state, msg) {
+        onstatechange(state, msg);
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.user = user;
@@ -266,14 +278,13 @@ WgsClient.prototype = {
             client.call("https://wampservices.org/wgs#register", msg).then(
                 function(response) {
                     client.user = response.user;
+                    client.state = WgsState.AUTHENTICATED;
                     onstatechange(WgsState.AUTHENTICATED, response);
                 }, 
                 function(response) {
                     var errorCode = response.errorURI;
                     onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 });
-        } else {
-            onstatechange(state, msg);
         }
       });
   },  
@@ -281,7 +292,7 @@ WgsClient.prototype = {
   
   openIdConnectProviders: function(redirectUri, callback) {
       var client = this;
-      client._connect(function(state, msg) {
+      client.connect(function(state, msg) {
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.redirect_uri = redirectUri;
@@ -300,7 +311,7 @@ WgsClient.prototype = {
 
   openIdConnectLoginUrl: function(principal, redirectUri, onstatechange) {
       var client = this;
-      client._connect(function(state, msg) {
+      client.connect(function(state, msg) {
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.principal = principal;
@@ -315,8 +326,6 @@ WgsClient.prototype = {
                     var errorCode = response.errorURI;
                     onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 });
-        } else {
-            onstatechange(state, msg);
         }
       });
   },
@@ -324,7 +333,8 @@ WgsClient.prototype = {
   
   openIdConnectAuthCode: function(provider, redirectUri, code, onstatechange) {
       var client = this;
-      client._connect(function(state, msg) {
+      client.connect(function(state, msg) {
+        onstatechange(state, msg);          
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.provider = provider;
@@ -333,115 +343,125 @@ WgsClient.prototype = {
             client.call("https://wampservices.org/wgs#openid_connect_auth", msg).then(
                 function(response) {
                     client.user = response.user;
+                    client.state = WgsState.AUTHENTICATED;
                     onstatechange(WgsState.AUTHENTICATED, response);
                 }, 
                 function(response) {
                     var errorCode = response.errorURI;
                     onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 });
-        } else {
-            onstatechange(state, msg);
         }
       });
   },
   
   
-  _connect: function(onstatechange) {
+  connect: function(onstatechange) {
       var client = this;
-      var ws = null; 
-      this.ws = null;
+      this.user = null;
       this.debug("Connecting to url: " + this.url);
 
-      if ("WebSocket" in window) {
-        ws = new WebSocket(this.url);
-      } else if ("MozWebSocket" in window) {
-        ws = new MozWebSocket(this.url);
+      if(this.state >= WgsState.WELCOMED) {
+        // REAUTHENTICATION
+        onstatechange(WgsState.WELCOMED);
+        
       } else {
-        this.debug("This Browser does not support WebSockets");
-        onstatechange(WgsState.ERROR, "error:ws");
-        return;
-      }
-
-      ws.onopen = function(e) {
-        client.debug("A connection to "+this.url+" has been opened.");
-        client.ws = ws;
-        onstatechange(WgsState.CONNECTED);
-      };
-   
-      ws.onclose = function(e) {
-        client.debug("The connection to "+this.url+" was closed.");
-        onstatechange(WgsState.DISCONNECTED);    
-        client.close();
-      };
-
-      ws.onerror = function(e) {
-        client.debug("WebSocket error: " + e);
-        onstatechange(WgsState.ERROR, "error:ws");
-        client.close();
-      };
-
-      ws.onmessage = function(e) {
-        client.debug("ws.onmessage: " + e.data);
-        var arr = JSON.parse(e.data);
-
-        if (arr[0] == 0) {  // WELCOME (WAMPv1) / HELLO (WAMPv2)
-            client.sid = arr[1];
-            if(!isFinite(arr[2])) { // Version in WAMP v1
-                client.setServerWampVersion(2);
-                client.hello();  // WAMPv2
-            }
-            onstatechange(WgsState.WELCOMED, arr);
-        } else if (arr[0] == 3 || arr[0] == 32) {  // CALLRESULT
-            var call = arr[1];
-            if(client.calls[call]) {       
-                var args = arr[2];
-                if(!args) args = {};
-                args.valid = true;
-                client.calls[call].resolve(args);
-                delete client.calls[call];
-            } else {
-                client.debug("call not found: " + call);
-            }
-        } else if (arr[0] == 4 || arr[0] == 34) {  // CALLERROR
-            var call = arr[1];
-            if(client.calls[call]) {  
-                var args = {};
-                args.valid = false;
-                args.errorURI = arr[2];
-                if(arr.length >= 4) args.errorDesc = arr[3];
-                if(arr.length == 5) args.errorDetails = arr[4];
-                client.calls[call].reject(args);
-                delete client.calls[call];
-            } else {
-                client.debug("call not found: " + call);
-            }            
-        } else if(arr[0] == 8 || arr[0] == 128) {  // EVENT
-            var topicURI = arr[1];
-            if(client.topics[topicURI]) {
-                client.topics[topicURI].forEach(function(callback) {
-                    callback.call(client, arr[2], topicURI);                
-                });
-            } else {
-                // client.debug("topic not found: " + topic);
-            }
-            
-        } else if(arr[0] == 129) {  // META-EVENT  (not supported by WAMP v1)
-            var topicURI = arr[1];
-            if(client.metaeventHandlers[topicURI]) {
-                client.metaeventHandlers[topicURI].forEach(function(callback) {
-                    var metatopic = arr[2];
-                    var metaevent = (arr.length > 2) ? arr[3] : null;
-                    callback.call(client, topicURI, metatopic, metaevent);
-                });
-            } else {
-                // client.debug("topic not found: " + topic);
-            }            
-            
+        // RESET CONNECTION:
+        var ws = null; 
+        this.ws = null;
+        
+        if ("WebSocket" in window) {
+          ws = new WebSocket(this.url);
+        } else if ("MozWebSocket" in window) {
+          ws = new MozWebSocket(this.url);
         } else {
-            client.debug("Server message not recognized: " + message.type);
+          this.debug("This Browser does not support WebSockets");
+          onstatechange(WgsState.ERROR, "error:ws");
+          return;
         }
 
-      };
+        ws.onopen = function(e) {
+          client.debug("A connection to "+this.url+" has been opened.");
+          client.ws = ws;
+          this.state = WgsState.CONNECTED;
+          onstatechange(WgsState.CONNECTED);
+        };
+
+        ws.onclose = function(e) {
+          client.debug("The connection to "+this.url+" was closed.");
+          onstatechange(WgsState.DISCONNECTED);    
+          client.close();
+        };
+
+        ws.onerror = function(e) {
+          client.debug("WebSocket error: " + e);
+          onstatechange(WgsState.ERROR, "error:ws");
+          client.close();
+        };
+
+        ws.onmessage = function(e) {
+          client.debug("ws.onmessage: " + e.data);
+          var arr = JSON.parse(e.data);
+
+          if (arr[0] == 0) {  // WELCOME (WAMPv1) / HELLO (WAMPv2)
+              client.sid = arr[1];
+              if(!isFinite(arr[2])) { // Version in WAMP v1
+                  client.setServerWampVersion(2);
+                  client.hello();  // WAMPv2
+              }
+              client.state = WgsState.WELCOMED;
+              onstatechange(WgsState.WELCOMED);
+          } else if (arr[0] == 3 || arr[0] == 32) {  // CALLRESULT
+              var call = arr[1];
+              if(client.calls[call]) {       
+                  var args = arr[2];
+                  if(!args) args = {};
+                  args.valid = true;
+                  client.calls[call].resolve(args);
+                  delete client.calls[call];
+              } else {
+                  client.debug("call not found: " + call);
+              }
+          } else if (arr[0] == 4 || arr[0] == 34) {  // CALLERROR
+              var call = arr[1];
+              if(client.calls[call]) {  
+                  var args = {};
+                  args.valid = false;
+                  args.errorURI = arr[2];
+                  if(arr.length >= 4) args.errorDesc = arr[3];
+                  if(arr.length == 5) args.errorDetails = arr[4];
+                  client.calls[call].reject(args);
+                  delete client.calls[call];
+              } else {
+                  client.debug("call not found: " + call);
+              }            
+          } else if(arr[0] == 8 || arr[0] == 128) {  // EVENT
+              var topicURI = arr[1];
+              if(client.topics[topicURI]) {
+                  client.topics[topicURI].forEach(function(callback) {
+                      callback.call(client, arr[2], topicURI);                
+                  });
+              } else {
+                  // client.debug("topic not found: " + topic);
+              }
+
+          } else if(arr[0] == 129) {  // META-EVENT  (not supported by WAMP v1)
+              var topicURI = arr[1];
+              if(client.metaeventHandlers[topicURI]) {
+                  client.metaeventHandlers[topicURI].forEach(function(callback) {
+                      var metatopic = arr[2];
+                      var metaevent = (arr.length > 2) ? arr[3] : null;
+                      callback.call(client, topicURI, metatopic, metaevent);
+                  });
+              } else {
+                  // client.debug("topic not found: " + topic);
+              }            
+
+          } else {
+              client.debug("Server message not recognized: " + message.type);
+          }
+
+        };
+      }
 
   },
   
