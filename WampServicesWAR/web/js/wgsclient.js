@@ -229,7 +229,7 @@ WgsClient.prototype = {
       client._connect(function(state, msg) {
         onstatechange(state, msg);
         if(state == WgsState.WELCOMED) {
-          if(user == null) {
+          if(user == null || user.length == 0) {
             client.user = "anonymous-" + client.sid;
             client.state = WgsState.ANONYMOUS;
             onstatechange(WgsState.ANONYMOUS);              
