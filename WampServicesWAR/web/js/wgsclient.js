@@ -229,6 +229,11 @@ WgsClient.prototype = {
       client.connect(function(state, msg) {
         onstatechange(state, msg);
         if(state == WgsState.WELCOMED) {
+          if(user == null) {
+            client.user = "anonymous-" + client.sid;
+            client.setState(WgsState.ANONYMOUS);
+            onstatechange(WgsState.ANONYMOUS);              
+          } else {
             var authExtra = null; // { salt: "RANDOMTEXT", keylen: 32, iterations: 4096 };
             client.authreq(user, authExtra, function(response) {
                 if(typeof(response) == "string") {
@@ -261,6 +266,7 @@ WgsClient.prototype = {
                     onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 }
             });
+          }
         }
       });
   },

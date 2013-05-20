@@ -3,8 +3,11 @@ package org.wampservices.wgs;
 import org.wampservices.entity.User;
 import java.util.ArrayList;
 import java.util.List;
+import javax.persistence.AttributeOverride;
+import javax.persistence.AttributeOverrides;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -21,6 +24,7 @@ import javax.persistence.OrderBy;
 import javax.persistence.Table;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
+import org.wampservices.entity.UserId;
 
 @Entity(name="AppGroup")
 @Table(name="APP_GROUP")
@@ -56,12 +60,13 @@ public class Group implements java.io.Serializable
     @Column(name="deltaMembers")
     private int  deltaMembers;
     
-    @ManyToOne(fetch= FetchType.EAGER)
-    @JoinColumns({
-        @JoinColumn(name="admin_uid", referencedColumnName = "uid"),
-        @JoinColumn(name="admin_oic_provider", referencedColumnName = "oic_provider")
-    })  
-    private User  adminUser;
+    @AttributeOverrides({
+        @AttributeOverride(name="uid", column=@Column(name = "admin_uid")),
+        @AttributeOverride(name="openIdConnectProviderDomain", column=@Column(name = "admin_oic_provider"))}
+    )    
+    @Embedded
+    private UserId adminUserId;
+    
 
     @Column(name="automatchEnabled")
     private boolean autoMatchEnabled;
@@ -147,16 +152,17 @@ public class Group implements java.io.Serializable
     /**
      * @return the admin_user
      */
-    public User getAdminUser() {
-        return adminUser;
+    public UserId getAdminUserId() {
+        return adminUserId;
     }
 
     /**
      * @param admin_user the admin_user to set
      */
-    public void setAdminUser(User adminUser) {
-        this.adminUser = adminUser;
+    public void setAdminUserId(UserId adminUserId) {
+        this.adminUserId = adminUserId;
     }
+
     
     /**
      * @return the autoMatchEnabled property
@@ -390,7 +396,7 @@ public class Group implements java.io.Serializable
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode obj = mapper.createObjectNode();
         obj.put("gid", getGid());
-        obj.put("admin", ((adminUser!=null) ? adminUser.getFQid() : null));
+        obj.put("admin", (adminUserId != null) ? adminUserId.toString() : "" );
         obj.put("automatch", isAutoMatchEnabled());
         obj.put("hidden", isHidden());
         obj.put("num", getNumMembers());

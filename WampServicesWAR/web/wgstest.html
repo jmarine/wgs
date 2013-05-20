@@ -294,7 +294,9 @@ function authentication(state, msg) {
         }
 
         if(msg && msg.picture) {
-            $("#user_picture").attr("src", msg.picture).width(45).height(45);
+            $("#user_picture").attr("src", msg.picture).width(48).height(48);
+        } else if(state == WgsState.ANONYMOUS) {
+            $("#user_picture").attr("src", "images/anonymous.png").width(48).height(48);
         } else {
             $("#user_picture").width(0).height(0);
         }
@@ -1053,13 +1055,7 @@ function toggle_connect(create_user) {
         } else if(user.length > 0) {
             wgsclient.login(user, pass, authentication);
         } else {
-            wgsclient.connect(function(state,msg) {
-                authentication(state,msg);                
-                if(state == WgsState.WELCOMED) {
-                    wgsclient.setState(WgsState.ANONYMOUS);
-                    authentication(WgsState.ANONYMOUS);
-                }
-            });
+            wgsclient.login(null, null, authentication);
         }
     } else {
         disconnect();
