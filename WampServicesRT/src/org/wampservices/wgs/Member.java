@@ -183,7 +183,7 @@ public class Member implements java.io.Serializable
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode obj = mapper.createObjectNode();
         obj.put("sid", ((client!=null)? client.getSessionId():""));
-        obj.put("user", ((user!=null)? user.getFQid() : ((client != null) ? "anonymous-" + client.getSessionId() : "") ) );
+        obj.put("user", ((user!=null)? user.getFQid() : ((client != null) ? "#anonymous-" + client.getSessionId() : "") ) );
         obj.put("name", ((user!=null)? user.getName() : ((client != null) ? "Anonymous" : "") ) );
         obj.put("picture", ((user!=null)? user.getPicture() : ((client != null) ? "images/anonymous.png": "") ) );
         obj.put("type",userType);
