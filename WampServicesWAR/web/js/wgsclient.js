@@ -226,12 +226,12 @@ WgsClient.prototype = {
   
   login: function(user, password, onstatechange) {
       var client = this;
-      client.connect(function(state, msg) {
+      client._connect(function(state, msg) {
         onstatechange(state, msg);
         if(state == WgsState.WELCOMED) {
           if(user == null) {
             client.user = "anonymous-" + client.sid;
-            client.setState(WgsState.ANONYMOUS);
+            client.state = WgsState.ANONYMOUS;
             onstatechange(WgsState.ANONYMOUS);              
           } else {
             var authExtra = null; // { salt: "RANDOMTEXT", keylen: 32, iterations: 4096 };
@@ -274,7 +274,7 @@ WgsClient.prototype = {
   
   register: function(user, password, email, onstatechange) {
       var client = this;
-      client.connect(function(state, msg) {
+      client._connect(function(state, msg) {
         onstatechange(state, msg);
         if(state == WgsState.WELCOMED) {
             var msg = Object();
@@ -298,7 +298,7 @@ WgsClient.prototype = {
   
   openIdConnectProviders: function(redirectUri, callback) {
       var client = this;
-      client.connect(function(state, msg) {
+      client._connect(function(state, msg) {
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.redirect_uri = redirectUri;
@@ -317,7 +317,7 @@ WgsClient.prototype = {
 
   openIdConnectLoginUrl: function(principal, redirectUri, onstatechange) {
       var client = this;
-      client.connect(function(state, msg) {
+      client._connect(function(state, msg) {
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.principal = principal;
@@ -339,7 +339,7 @@ WgsClient.prototype = {
   
   openIdConnectAuthCode: function(provider, redirectUri, code, onstatechange) {
       var client = this;
-      client.connect(function(state, msg) {
+      client._connect(function(state, msg) {
         onstatechange(state, msg);          
         if(state == WgsState.WELCOMED) {
             var msg = Object();
@@ -361,7 +361,7 @@ WgsClient.prototype = {
   },
   
   
-  connect: function(onstatechange) {
+  _connect: function(onstatechange) {
       var client = this;
       this.user = null;
       this.debug("Connecting to url: " + this.url);
