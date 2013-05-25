@@ -486,11 +486,13 @@ WgsClient.prototype = {
       this.call("https://wampservices.org/wgs#list_groups", appId).then(callback, callback);
   },
 
-  newApp: function(name, domain, version, min, max, delta, observable, dynamic, alliances, ai_available, roles, callback) {
+  newApp: function(name, domain, version, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, callback) {
       var msg = Object();
       msg.name = name;
       msg.domain = domain;
       msg.version = version;
+      msg.max_scores = maxScores;
+      msg.desc_score_order = descScoreOrder;
       msg.min = min;
       msg.max = max;
       msg.delta = delta;

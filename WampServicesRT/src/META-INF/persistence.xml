@@ -11,6 +11,8 @@
     <class>org.wampservices.wgs.Role</class>
     <class>org.wampservices.wgs.Group</class>
     <class>org.wampservices.wgs.Member</class>
+    <class>org.wampservices.wgs.LeaderBoard</class>
+    <class>org.wampservices.wgs.Score</class>
     <properties>
       <property name="eclipselink.ddl-generation" value="create-tables"/>
     </properties>

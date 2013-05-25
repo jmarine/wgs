@@ -524,6 +524,8 @@ function create_app() {
     var name = $("#app_name").val();
     var domain = $("#app_domain").val();
     var version = $("#app_version").val();
+    var maxScores = $("#app_max_scores").val();
+    var descScoreOrder = $("#app_desc_score_order").is(':checked');
     var min = $("#app_min").val();
     var max = $("#app_max").val();
     var delta = $("#app_delta").val();
@@ -534,7 +536,7 @@ function create_app() {
     var roles = [];
     $("#app_roles option").each(function() { roles[roles.length] = $(this).attr("value"); });
     
-    wgsclient.newApp(name, domain, version, min, max, delta, observable, dynamic, alliances, ai_available, roles, function(response) {
+    wgsclient.newApp(name, domain, version, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, function(response) {
         if(!response.valid) {
             alert("Error creating application:"+response.errorDesc);
         } else {
@@ -1154,6 +1156,8 @@ function openid_connect_menu(self) {
     <label for="app_name">Name:</label><input type="text" name="app_name" id="app_name"/><br/>
     <label for="app_domain">Domain:</label><input type="text" name="app_domain" id="app_domain"/><br/>
     <label for="app_version">Version:</label><input type="number" size="5" name="app_version" id="app_version" min="1" max="99999" value="1"/><br/>
+    <label for="app_max_scores">Max.scores:</label><input type="number" size="5" name="app_max_scores" id="app_max_scores" min="1" max="99999" value="10"/><br/>
+    <label for="app_desc_score_order">Desc.scores:</label><input type="checkbox" name="app_desc_score_order" id="app_desc_score_order" /><br/>
     <label for="app_min">Min:</label><input type="number" size="5" name="app_min" id="app_min" min="1" max="99999" value="2"/><br/>
     <label for="app_max">Max:</label><input type="number" size="5" name="app_max" id="app_max" min="0" max="99999" value="2"/><br/>
     <label for="app_delta">Delta:</label><input type="number" size="5" name="app_delta" id="app_delta" min="0" max="99999" value="1"/><br/>

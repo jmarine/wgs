@@ -7,6 +7,7 @@
 package org.wampservices.wgs;
 
 
+import java.math.BigDecimal;
 import org.wampservices.util.Storage;
 import org.wampservices.entity.User;
 import org.wampservices.entity.UserId;
@@ -561,6 +562,8 @@ public class Module extends WampModule
         app.setName(data.get("name").asText());
         app.setDomain(data.get("domain").asText());
         app.setVersion(data.get("version").asInt());
+        app.setMaxScores(data.get("max_scores").asInt());
+        app.setDescendingScoreOrder(data.get("desc_score_order").asBoolean());
         app.setMaxMembers(data.get("max").asInt());
         app.setMinMembers(data.get("min").asInt());
         app.setDeltaMembers(data.get("delta").asInt());
@@ -1327,4 +1330,91 @@ public class Module extends WampModule
         return retval;
     }    
 
+    
+    @WampRPC(name = "get_leaderboard")
+    public ArrayNode getLeaderBoard(WampSocket socket, String appId, int leaderBoardId)
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode scoresNode = mapper.createArrayNode();
+        Application app = applications.get(appId);
+        
+        LeaderBoard leaderBoard = new LeaderBoard();
+        for(LeaderBoard ld : app.getLeaderBoards()) {
+            if(leaderBoardId == ld.getId()) {
+                leaderBoard = ld;
+                break;
+            }
+        }
+        
+        for(Score score : leaderBoard.getScores()) {
+            if(score != null) {
+                scoresNode.add(score.toJSON());
+            }
+        }
+
+        return scoresNode;
+    }
+    
+    
+    @WampRPC(name = "add_score")
+    public int addScore(WampSocket socket, String appId, int leaderBoardId, BigDecimal value)
+    {
+        Application app = applications.get(appId);
+        Calendar time = Calendar.getInstance();
+        Client client = clients.get(socket.getSessionId());
+        User usr = (client != null) ? client.getUser() : null;
+        
+        int position = -1;
+        if(app != null && value != null) {
+        
+            LeaderBoard leaderBoard = null;
+            for(LeaderBoard ld : app.getLeaderBoards()) {
+                if(leaderBoardId == ld.getId()) {
+                    leaderBoard = ld;
+                    break;
+                }
+            }
+            
+            if(leaderBoard == null) {
+                leaderBoard = new LeaderBoard();
+                leaderBoard.setApplication(app);
+                leaderBoard.setId(leaderBoardId);
+            }
+            
+            
+            BigDecimal factor = BigDecimal.ONE;
+            if(app.isDescendingScoreOrder()) factor = factor.negate();
+
+            Score score = null;
+            int index = app.getMaxScores();
+            while(index > 1) {
+                score = leaderBoard.getScore(index-1);
+                if(score == null || score.getValue().compareTo(value) < 0) {
+                    index--;
+                    leaderBoard.setScore(index, leaderBoard.getScore(index-1));
+                } else {
+                    break;
+                }
+            }      
+            
+            if( index < app.getMaxScores() 
+                    && (score == null || score.getValue().multiply(factor).compareTo(value) < 0) )  {
+                score = new Score();
+                score.setPosition(index);
+                score.setUser(usr);
+                score.setTime(time);
+                score.setLeaderBoard(leaderBoard);
+                score.setValue(value);
+                leaderBoard.setScore(index, score);
+
+                Storage.saveEntity(leaderBoard);
+                
+                position = index;
+            }
+        
+        }
+        
+        return position;
+    }    
+    
 }

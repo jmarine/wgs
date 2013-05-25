@@ -3,10 +3,13 @@ package org.wampservices.wgs;
 
 import org.wampservices.entity.User;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -19,6 +22,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.Transient;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -80,6 +84,16 @@ public class Application implements Serializable {
 
     @OneToMany(mappedBy = "application", fetch=FetchType.EAGER, cascade = { CascadeType.ALL })
     private Collection<Role> roles = new ArrayList<Role>();
+
+    @Column(name="max_scores")
+    private int maxScores;    
+
+    @Column(name="desc_scores")
+    private boolean descendingScoreOrder;
+    
+    @OneToMany(mappedBy = "application", fetch=FetchType.EAGER, cascade = { CascadeType.ALL })
+    private ArrayList<LeaderBoard> leaderBoards = new ArrayList<LeaderBoard>();    
+    
     
     @Transient
     private HashMap<String,Group> groupsByGid = new HashMap<String,Group>();
@@ -356,6 +370,53 @@ public class Application implements Serializable {
         return retval;
     }
     
+    
+    /**
+     * @return the maxScores
+     */
+    public int getMaxScores() {
+        return maxScores;
+    }
+
+    /**
+     * @param maxScores the maxScores to set
+     */
+    public void setMaxScores(int maxScores) {
+        this.maxScores = maxScores;
+    }
+
+    /**
+     * @return the descendingScoreValues
+     */
+    public boolean isDescendingScoreOrder() {
+        return descendingScoreOrder;
+    }
+
+    /**
+     * @param descendingScoreOrder the descendingScoreValues to set
+     */
+    public void setDescendingScoreOrder(boolean descendingScoreOrder) {
+        this.descendingScoreOrder = descendingScoreOrder;
+    }
+    
+    
+    /**
+     * @return the leaderBoards
+     */
+    public ArrayList<LeaderBoard> getLeaderBoards() {
+        return leaderBoards;
+    }
+
+    /**
+     * @param leaderBoards the leaderBoards to set
+     */
+    public void setLeaderBoards(ArrayList<LeaderBoard> leaderBoards) {
+        this.leaderBoards = leaderBoards;
+    }
+
+
+    
+    
     public ObjectNode toJSON()
     {
         ObjectMapper mapper = new ObjectMapper();
@@ -389,5 +450,7 @@ public class Application implements Serializable {
     {
         return toJSON().toString();        
     }
+
+
     
 }
