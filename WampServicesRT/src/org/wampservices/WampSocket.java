@@ -31,7 +31,7 @@ public class WampSocket
     private Map     sessionData;
     private Map<String,String> prefixes;
     private Map<String,WampSubscription> subscriptions;
-    private Map<String,Future<?>> rpcFutureResults;
+    private Map<String,WampCallController> rpcControllers;
     private WampConnectionState state;
     private Principal principal;
     private int versionSupport;
@@ -52,7 +52,7 @@ public class WampSocket
         sessionData = new ConcurrentHashMap();
         subscriptions = new ConcurrentHashMap<String,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
-        rpcFutureResults = new HashMap<String,Future<?>>();
+        rpcControllers = new HashMap<String,WampCallController>();
     }
 
     /**
@@ -134,30 +134,20 @@ public class WampSocket
     }
 
     
-    public void addRpcFutureResult(String callID, Future<?> futureResult)
+    public void addRpcController(String callID, WampCallController rpcController)
     {
-        rpcFutureResults.put(callID, futureResult);
+        rpcControllers.put(callID, rpcController);
     }
     
-    public Future<?> getRpcFutureResult(String callID)
+    public WampCallController getRpcController(String callID)
     {
-        return rpcFutureResults.get(callID);
+        return rpcControllers.get(callID);
     }    
     
-    public Future<?> removeRpcFutureResult(String callID) {
-        return rpcFutureResults.remove(callID);
+    public WampCallController removeRpcController(String callID) {
+        return rpcControllers.remove(callID);
     }
     
-    public boolean cancelRpcFutureResult(String callID)
-    {
-        boolean success = false;
-        Future<?> future = rpcFutureResults.get(callID);
-        if (future != null) {
-            success = future.isDone() || future.cancel(true);
-            if(success) rpcFutureResults.remove(callID);
-        }
-        return success;
-    }    
     
     public String normalizeURI(String curie) {
         int curiePos = curie.indexOf(":");
