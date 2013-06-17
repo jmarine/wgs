@@ -285,10 +285,10 @@ public class WampApplication
 
     private void processCallCancelMessage(WampSocket clientSocket, ArrayNode request) throws Exception
     {
-        // TODO: CancelOptions
         String callID  = request.get(1).asText();
+        String cancelMode = (request.size() >= 3 && request.get(2).has("cancelmode")) ? request.get(2).get("cancelmode").asText() : "killnowait";
         WampCallController call = clientSocket.getRpcController(callID);
-        call.cancel();
+        call.cancel(cancelMode);
     }
     
     private void processCallMessage(final WampSocket clientSocket, final ArrayNode request) throws Exception

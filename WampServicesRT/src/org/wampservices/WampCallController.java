@@ -131,16 +131,17 @@ public class WampCallController implements Runnable
         }
     }
     
-    public void cancel() {
+    public void cancel(String cancelMode) {
         if(!done) {
             cancelled = true;
 
             if (future != null) {
-                future.cancel(true);
+                boolean mayInterruptIfRunning = (cancelMode != null) && !cancelMode.equalsIgnoreCase("skip");
+                future.cancel(mayInterruptIfRunning);
             }
 
             if(cancellableCall != null) {
-                cancellableCall.cancel();
+                cancellableCall.cancel(cancelMode);
             }
         }
     }
