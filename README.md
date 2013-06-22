@@ -12,7 +12,8 @@ This repository implements the following game services in Java:
 * user registration/authentication.
 * group joining/communications for multi-player online games.
 
-This services are provided via WebSockets with the [WebSocket Application Messaging Protocol (WAMP)](http://wamp.ws/spec) specification:
+
+This services are provided via WebSockets with the [WebSocket Application Messaging Protocol (WAMP)](http://wamp.ws/spec) specification.
 
 
 
