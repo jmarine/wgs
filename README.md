@@ -1,5 +1,5 @@
-WAMP services provider for Java
-===============================
+Websocket Game Services for Java
+================================
 
 Version: 1.0-alpha
 
@@ -7,13 +7,16 @@ Version: 1.0-alpha
 About
 -----
 
-This repository implements the [WebSocket Application Messaging Protocol (WAMP)](http://wamp.ws/spec) specification, and enables the development of new server-side services in Java language.
+This repository implements the following game services in Java:
 
-It also provides the following modules:
-* WebSocket game service (WGS): with user registration/authentication and group joining/communications for multi-player online games.
+* user registration/authentication.
+* group joining/communications for multi-player online games.
+
+This services are provided via WebSockets with the [WebSocket Application Messaging Protocol (WAMP)](http://wamp.ws/spec) specification:
+
 
 
 Documentation
 -------------
-Visit the project's [wiki](https://github.com/jmarine/wampservices/wiki) at https://github.com/jmarine/wampservices/wiki
+Visit the project's [wiki](https://github.com/jmarine/wgs/wiki) at https://github.com/jmarine/wgs/wiki
 
