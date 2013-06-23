@@ -1,4 +1,4 @@
-Websocket Game Services for Java
+WebSocket Game Services for Java
 ================================
 
 Version: 1.0-alpha
