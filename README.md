@@ -1,5 +1,5 @@
-WebSocket Game Services for Java
-================================
+WebSockets Game Services for Java
+=================================
 
 Version: 1.0-alpha
 
