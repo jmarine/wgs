@@ -49,7 +49,7 @@ import org.wgs.wamp.WampTopic;
 import org.wgs.wamp.WampTopicOptions;
 
 
-@WampNamespace(url=Module.WGS_URL)
+@WampNamespace(Module.WGS_URL)
 public class Module extends WampModule 
 {
     private static final Logger logger = Logger.getLogger(Module.class.toString());
