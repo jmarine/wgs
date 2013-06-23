@@ -15,7 +15,7 @@ import org.codehaus.jackson.node.ObjectNode;
 
 
 
-public abstract class WampModule 
+public class WampModule 
 {
     private WampApplication app;
     private HashMap<String,Method> rpcs;
@@ -40,7 +40,14 @@ public abstract class WampModule
         return app;
     }
     
-    public abstract String getBaseURL();
+    public String getBaseURL() 
+    {
+        String retval = "";
+        WampNamespace ns = this.getClass().getAnnotation(WampNamespace.class);
+        if(ns != null) retval = ns.url();
+        if(!retval.endsWith("#")) retval = retval + "#";
+        return retval;
+    }
     
     public void onConnect(WampSocket clientSocket) throws Exception { }
     

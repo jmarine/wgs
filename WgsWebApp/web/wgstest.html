@@ -341,7 +341,7 @@ function list_apps() {
     $("#apps option").remove();
     wgsclient.listApps(false, function(response) {
         if(response.valid) {
-            wgsclient.subscribe("https://wampservices.org/wgs#apps_event", update_apps, null, { "clientSideOnly":true});
+            wgsclient.subscribe("https://wgs.org#apps_event", update_apps, null, { "clientSideOnly":true});
             update_apps(response);
             $("#app_params").hide();
             $("#app_list").slideDown(500);
@@ -484,13 +484,13 @@ function hide_group_list() {
     var appId = $("#apps option:selected").attr("value");
     $("#group_list").hide();
     $("#app_list").slideDown(500);
-    wgsclient.unsubscribe("https://wampservices.org/wgs#app_event:" + appId, update_groups, app_metaevent, false);
+    wgsclient.unsubscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, false);
 }
 
 function list_groups() {
     var appId = $("#apps option:selected").attr("value");
     $("#groups option").remove();
-    wgsclient.subscribe("https://wampservices.org/wgs#app_event:" + appId, update_groups, app_metaevent, { "clientSideOnly":true});
+    wgsclient.subscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, { "clientSideOnly":true});
     wgsclient.listGroups(appId, function(response) {
         if(response.valid) {
             currentApp = response.app;
@@ -499,7 +499,7 @@ function list_groups() {
             $("#group_list").slideDown(500);
             $("#group_list fieldset legend").html("Groups: " + response.app.name);
         } else {
-            wgsclient.unsubscribe("https://wampservices.org/wgs#app_event:" + appId, update_groups, app_metaevent, false);
+            wgsclient.unsubscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, false);
         }
     });
 }
@@ -592,14 +592,14 @@ function open_group(gid, options) {
     if(gid == "automatch") $("#back_section").val("app_list");
     else $("#back_section").val("group_list");
     
-    wgsclient.unsubscribe("https://wampservices.org/wgs#app_event:" + appId, update_groups, app_metaevent, false);
+    wgsclient.unsubscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, false);
     wgsclient.openGroup(appId, gid, options, function(response) {
        if(response.valid) {
-            //wgsclient.setSubscriptionStatus("https://wampservices.org/wgs#app_event:" + appId, "busy", null );
+            //wgsclient.setSubscriptionStatus("https://wgs.org#app_event:" + appId, "busy", null );
             currentApp = response.app;
-            if(response.gid != "") wgsclient.subscribe("https://wampservices.org/wgs#group_event:" + response.gid, update_group_callback, null, { "clientSideOnly":true} );
+            if(response.gid != "") wgsclient.subscribe("https://wgs.org#group_event:" + response.gid, update_group_callback, null, { "clientSideOnly":true} );
             show_group(response); 
-       } else if(response.errorURI == "https://wampservices.org/wgs#incorrectpassword") {
+       } else if(response.errorURI == "https://wgs.org#incorrectpassword") {
             var password = prompt("Introduce the password to access the group:");
             if(password) {
                 if(!options) options = {};
@@ -905,8 +905,8 @@ function exit_group(toOfflineMode) {
     var gid = $("#group_gid").val();
     if(gid.length > 0) {
         wgsclient.exitGroup(gid, function(response) {
-            wgsclient.unsubscribe("https://wampservices.org/wgs#group_event:" + gid, update_group_callback, null, true);
-            //wgsclient.setSubscriptionStatus("https://wampservices.org/wgs#app_event:" + $("#apps option:selected").attr("value"), null, null );        
+            wgsclient.unsubscribe("https://wgs.org#group_event:" + gid, update_group_callback, null, true);
+            //wgsclient.setSubscriptionStatus("https://wgs.org#app_event:" + $("#apps option:selected").attr("value"), null, null );        
             
             if(!toOfflineMode) {
                 var back_section = $("#back_section").val();

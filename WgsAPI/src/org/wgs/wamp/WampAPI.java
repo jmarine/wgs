@@ -18,16 +18,12 @@ import org.wgs.util.PBKDF2;
 import org.wgs.util.Storage;
 
 
+@WampNamespace(url="http://api.wamp.ws/procedure#")
 public class WampAPI extends WampModule 
 {
     public WampAPI(WampApplication app)
     {
         super(app);
-    }
-    
-    @Override
-    public String getBaseURL() {
-        return "http://api.wamp.ws/procedure#";
     }
     
 

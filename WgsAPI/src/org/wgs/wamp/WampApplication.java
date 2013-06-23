@@ -41,7 +41,6 @@ public class WampApplication
     public  static final int WAMPv2 = 2;    
 
     public  static final String WAMP_ERROR_URI = "http://wamp.ws/err#";
-    public  static final String WAMPSERVICES_BASE_URL = "https://wampservices.org";
     
     private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
 
@@ -75,12 +74,7 @@ public class WampApplication
         
         this.registerWampModule(WampAPI.class);
         
-        this.defaultModule = new WampModule(this) {
-            @Override
-            public String getBaseURL() {
-                return WAMPSERVICES_BASE_URL;
-            }
-        };
+        this.defaultModule = new WampModule(this);
     }
     
     public int getWampVersion() {
