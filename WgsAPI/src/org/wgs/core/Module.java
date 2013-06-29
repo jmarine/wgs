@@ -283,7 +283,7 @@ public class Module extends WampModule
                     
                     String clientId = oic.getClientId();
                     String oicAuthEndpointUrl = oic.getProvider().getAuthEndpointUrl();
-                    String uri = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + URLEncoder.encode(clientId,"utf8") + "&redirect_uri=" + URLEncoder.encode(oic.getRedirectUri(),"utf8");
+                    String uri = oicAuthEndpointUrl + "?response_type=code&access_type=offline&scope=" + URLEncoder.encode(oic.getProvider().getScopes(),"utf8") + "&client_id=" + URLEncoder.encode(clientId,"utf8") + "&approval_prompt=force&redirect_uri=" + URLEncoder.encode(oic.getRedirectUri(),"utf8");
 
                     ObjectNode node = mapper.createObjectNode();
                     node.put("name", providerDomain);
@@ -396,7 +396,7 @@ public class Module extends WampModule
                 
                 String oicAuthEndpointUrl = oic.getProvider().getAuthEndpointUrl();
                 String clientId = oic.getClientId();
-                retval = oicAuthEndpointUrl + "?response_type=code&scope=openid%20profile%20email&client_id=" + URLEncoder.encode(clientId,"utf8") + "&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8");
+                retval = oicAuthEndpointUrl + "?response_type=code&access_type=offline&scope=" + URLEncoder.encode(oic.getProvider().getScopes(),"utf8") + "&client_id=" + URLEncoder.encode(clientId,"utf8") + "&approval_prompt=force&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8");
             }
             
             if(retval == null) {
@@ -458,6 +458,9 @@ public class Module extends WampModule
                 UserId userId = new UserId(providerDomain, idTokenNode.get("sub").asText());
                 usr = manager.find(User.class, userId);
 
+                if(response.has("access_token")) client.setAccessToken(response.get("access_token").asText());
+                if(response.has("refresh_token")) client.setRefreshToken(response.get("refresh_token").asText());
+                
                 Calendar now = Calendar.getInstance();
                 if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
                     // Use cached UserInfo from local database
@@ -492,10 +495,11 @@ public class Module extends WampModule
 
                     socket.setUserPrincipal(usr);
                     socket.setState(WampConnectionState.AUTHENTICATED);
-
                 } 
                 
             }
+            
+            
             
         } catch(Exception ex) {
             usr = null;

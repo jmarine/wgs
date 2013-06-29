@@ -2,7 +2,9 @@ package org.wgs.entity;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
@@ -233,6 +235,32 @@ public class OpenIdConnectClient implements Serializable
         if(oicClient.has("registration_client_uri")) setRegistrationClientUri(oicClient.get("registration_client_uri").asText());
         if(oicClient.has("registration_access_token")) setRegistrationAccessToken(oicClient.get("registration_access_token").asText());
         setClientExpiration(expiration);
+    }
+    
+    public List<User> getFriends(String uid,String accessToken) throws Exception
+    {
+        ArrayList<User> friends = new ArrayList<User>();
+        if(provider.getDomain().equalsIgnoreCase("accounts.google.com")) {
+            StringBuffer retval = new StringBuffer();
+            URL url = new URL("https://www.googleapis.com/plus/v1/people/"+URLEncoder.encode(uid,"utf8")+"/people/visible");
+            HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+            connection.setDoOutput(false);
+
+            BufferedReader in = new BufferedReader(
+                                        new InputStreamReader(
+                                        connection.getInputStream()));
+            String decodedString;
+            while ((decodedString = in.readLine()) != null) {
+                retval.append(decodedString);
+            }
+            in.close();
+            connection.disconnect();
+
+            System.out.println(retval.toString());
+            
+        }
+        return friends;
     }
     
 }

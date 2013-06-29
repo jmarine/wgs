@@ -121,6 +121,14 @@ public class OpenIdConnectProvider implements Serializable
         this.registrationEndpointUrl = registrationEndpointUrl;
     }
     
+    
+    public String getScopes() 
+    {
+        String scopes = "openid profile email";
+        if(domain.equalsIgnoreCase("accounts.google.com")) scopes = "https://www.googleapis.com/auth/plus.login https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gcm_for_chrome";
+        return scopes;
+    }
+    
 
     public String getUserInfo(String accessToken) throws Exception
     {

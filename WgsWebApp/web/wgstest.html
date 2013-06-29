@@ -994,8 +994,8 @@ function get_url_param(param) {
 function clear_openid_connect_params(clearProvider) {
     // Clear OpenId Connect's parameters
     var url = document.location.href;
-    var oicParams = ["code","state","error","error_description"];
-    if(clearProvider) oicParams = ["provider", "code","state","error","error_description"];
+    var oicParams = ["code","state","error","error_description","authuser","prompt","session_state"];
+    if(clearProvider) oicParams = ["provider", "code","state","error","error_description","authuser","prompt","session_state"];
     oicParams.forEach(function(param) {
         var paramPos = url.indexOf("&"+param+"=");
         if(paramPos == -1) paramPos = url.indexOf("?"+param+"=");

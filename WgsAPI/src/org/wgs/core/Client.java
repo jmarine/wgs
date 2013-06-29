@@ -10,13 +10,12 @@ import org.wgs.wamp.WampSocket;
 import org.wgs.entity.UserId;
 import org.wgs.util.Storage;
 
-/**
- *
- * @author jordi
- */
-public class Client {
-    
+
+public class Client 
+{
     private User user;
+    private String accessToken;
+    private String refreshToken;
     private WampSocket socket;
     private Map<String,Group> groups = new ConcurrentHashMap<String,Group>();
 
@@ -80,7 +79,34 @@ public class Client {
     {
         groups.remove(group.getGid());
     }
-    
+
+    /**
+     * @return the accessToken
+     */
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    /**
+     * @param accessToken the accessToken to set
+     */
+    public void setAccessToken(String accessToken) {
+        this.accessToken = accessToken;
+    }
+
+    /**
+     * @return the refreshToken
+     */
+    public String getRefreshToken() {
+        return refreshToken;
+    }
+
+    /**
+     * @param refreshToken the refreshToken to set
+     */
+    public void setRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
+    }
     
 
 }
