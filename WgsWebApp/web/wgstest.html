@@ -250,28 +250,8 @@ function enable_network() {
                         .hide()
                         .menu();
    
-  if(chrome) fetchChannelId(); 
 }
 
-
-// Get the channel ID for display to the user.
-function fetchChannelId() {
-  chrome.pushMessaging.getChannelId(true, channelIdCallback);
-  console.log("fetchChannelId returned. Awaiting callback...");
-}
-
-// When the channel ID is available, this callback recieves it.
-function channelIdCallback(message) {
-  console.log("Push Sample Channel ID callback seen, channel Id is " + message.channelId);
-  channel_id = message.channelId;
-
-  showChannelId(channel_id);
-}
-
-// Pop up when the icon is clicked to show the channel ID that is registered.
-function showChannelId(channelId) {
-  alert("showChannelId: " + channelId);
-}
 
 function onUserChange(user) {
     //var old = $("#toggle_connect").html();
