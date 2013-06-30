@@ -1,0 +1,23 @@
+{
+   "app": {
+      "background": {
+         "scripts": [ "background.js" ]
+      }
+   },
+   "description": "WGS demo with Chrome Push Messaging.",
+   "icons": {
+      "128": "images/logo128.png",
+      "16": "images/logo.png",
+      "24": "images/logo24.png"
+   },
+   "manifest_version": 2,
+   "name": "WGS demo",
+   "permissions": [ "background", "notifications", "pushMessaging" ],
+   "version": "1.3.9",
+   "web_accessible_resources": [
+    "images/logo24.png"
+  ],
+  "sandbox": {
+    "pages": ["wgs_gcm.html"]
+  }
+}

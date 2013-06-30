@@ -1,0 +1,18 @@
+<html>
+  <head>
+    <title>Push Messaging Sample App Popup</title>
+    <!-- JavaScript and HTML must be in separate files for security. -->
+<script language="javascript">
+window.onload = redirectApp();
+
+// Get the channel ID for display to the user.
+function redirectApp() {
+  window.open("http://localhost:8080/wgstest.html?" + document.location.href.substring(document.location.href.indexOf("gcmChannelId=")), "_blank");
+  window.close();
+}
+</script>
+  </head>
+  <body>
+    <div>Loading ...</div>
+  </body>
+</html>
