@@ -315,14 +315,14 @@ WgsClient.prototype = {
       });
   },
 
-  openIdConnectLoginUrl: function(principal, redirectUri, state, onstatechange) {
+  openIdConnectLoginUrl: function(principal, redirectUri, notificationChannel, onstatechange) {
       var client = this;
       client._connect(function(state, msg) {
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.principal = principal;
             msg.redirect_uri = redirectUri;
-            msg.state = state;
+            msg.state = notificationChannel;
             client.call("https://wgs.org#openid_connect_login_url", msg).then(
                 function(response) {
                     client.close();
