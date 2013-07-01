@@ -315,13 +315,14 @@ WgsClient.prototype = {
       });
   },
 
-  openIdConnectLoginUrl: function(principal, redirectUri, onstatechange) {
+  openIdConnectLoginUrl: function(principal, redirectUri, state, onstatechange) {
       var client = this;
       client._connect(function(state, msg) {
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.principal = principal;
             msg.redirect_uri = redirectUri;
+            msg.state = state;
             client.call("https://wgs.org#openid_connect_login_url", msg).then(
                 function(response) {
                     client.close();
@@ -337,15 +338,17 @@ WgsClient.prototype = {
   },
 
   
-  openIdConnectAuthCode: function(provider, redirectUri, code, onstatechange) {
+  openIdConnectAuthCode: function(provider, redirectUri, code, notificationChannel, onstatechange) {
       var client = this;
       client._connect(function(state, msg) {
         onstatechange(state, msg);          
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.provider = provider;
-            msg.redirect_uri = redirectUri;
             msg.code = code;
+            msg.redirect_uri = redirectUri;
+            if(notificationChannel) msg.notification_channel = notificationChannel;
+            
             client.call("https://wgs.org#openid_connect_auth", msg).then(
                 function(response) {
                     client.user = response.user;

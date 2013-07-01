@@ -47,6 +47,8 @@ public class User implements Serializable, Principal
     @Column(name="picture")
     private String picture;    
 
+    @Column(name="notification_channel")
+    private String notificationChannel;    
     
     /**
      * @return the UserPK
@@ -156,6 +158,21 @@ public class User implements Serializable, Principal
     public void setPicture(String picture) {
         this.picture = picture;
     }    
+
+
+    /**
+     * @return the notificationChannel
+     */
+    public String getNotificationChannel() {
+        return notificationChannel;
+    }
+
+    /**
+     * @param notificationChannel the notificationChannel to set
+     */
+    public void setNotificationChannel(String notificationChannel) {
+        this.notificationChannel = notificationChannel;
+    }
     
     
     @Override
@@ -190,4 +207,5 @@ public class User implements Serializable, Principal
         retval.put("picture", getPicture());    
         return retval;
     }
+
 }

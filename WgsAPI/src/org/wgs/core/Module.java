@@ -328,6 +328,7 @@ public class Module extends WampModule
         String retval = null;
         String providerDomain = null;
         String principal = data.get("principal").asText();
+        String state = data.has("state")? data.get("state").asText() : null;
         
         if(principal == null || principal.length() == 0) {
             providerDomain = "defaultProvider";            
@@ -414,6 +415,7 @@ public class Module extends WampModule
             }            
         }
         
+        if(state != null) retval = retval + "&state=" + URLEncoder.encode(state, "utf8");
         return retval;
     }
     
@@ -496,6 +498,14 @@ public class Module extends WampModule
                     socket.setUserPrincipal(usr);
                     socket.setState(WampConnectionState.AUTHENTICATED);
                 } 
+                
+                if(usr!= null && data.has("notification_channel")) {
+                    String notificationChannel = data.get("notification_channel").asText();
+                    if(!notificationChannel.equals(usr.getNotificationChannel())) {
+                        usr.setNotificationChannel(notificationChannel);
+                        usr = Storage.saveEntity(usr);
+                    }
+                }
                 
             }
             

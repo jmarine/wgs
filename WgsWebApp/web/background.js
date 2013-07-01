@@ -4,45 +4,56 @@
 
 // This is a sample app to show how to use our push messaging service.
 var channel = null;
+var showSite = false;
+
+function openWgsSite() {
+  chrome.app.window.create('wgs_gcm.html?gcmChannelId='+channel, {"hidden":true});
+}
 
 // This function gets called in the packaged app model on launch.
 chrome.app.runtime.onLaunched.addListener(function() {
-  // stuff to do when the app is launched
   console.log("Push Messaging Sample Client Launched!");
 
-  // You likely wouldn't do this every time your app launches,
-  // but we do it here so we can help debugging by showing the channelId
-  // every time.
-  firstTimePushSetup();
-
-  // Do the normal setup steps every time the app starts, listen for events.
-  setupPush();
-
-  // Pretend we just got a message so you can see what a notification will
-  // look like when it arrives.
-  // showPushMessage("no payload yet", 8);
+  if(channel != null) {
+    openWgsSite();
+  } else {
+    showSite = true;
+    startTimePushSetup();
+    setupPush();
+  }
 });
+
+/*
+chrome.app.runtime.onRestarted.addListener(function() {
+  console.log("Push Messaging Sample Client Restart!");
+
+  showSite = false;
+  startTimePushSetup();
+  setupPush();
+});
+*/
 
 // This function gets called in the packaged app model on install.
 // Typically on install you will get the channelId, and send it to your
 // server which will send Push Messages.
 chrome.runtime.onInstalled.addListener(function() {
-  //firstTimePushSetup();
+  startTimePushSetup();
   console.log("Push Messaging Sample Client installed!");
 });
 
 // This function gets called in the packaged app model on shutdown.
 // You can override it if you wish to do clean up at shutdown time.
 chrome.runtime.onSuspend.addListener(function() {
+  //takedownPush();
   console.log("Push Messaging Sample Client shutting down");
 });
 
 // This should only be called once on the instance of chrome where the app
 // is first installed for this user. It need not be called every time the
 // Push Messaging Client App starts.
-function firstTimePushSetup() {
+function startTimePushSetup() {
   // Start fetching the channel ID (it will arrive in the callback).
-  chrome.pushMessaging.getChannelId(true, channelIdCallback);
+  if(channel == null) chrome.pushMessaging.getChannelId(true, channelIdCallback);
   console.log("getChannelId returned. Awaiting callback...");
 }
 
@@ -63,7 +74,7 @@ function setupPush() {
 // Unregister for Push Messages (only call if you have previously
 // called setupPush).
 function takedownPush() {
-  chrome.pushMessaging.onMessage.removeListener(messageCallback);
+  //chrome.pushMessaging.onMessage.removeListener(messageCallback);
   console.log('called removeListener');
 }
 
@@ -79,9 +90,6 @@ function messageCallback(message) {
   showPushMessage(message.payload, message.subchannelId.toString());
 }
 
-function openWgsSite() {
-  chrome.app.window.create('wgs_gcm.html?gcmChannelId='+channel, {"hidden":true});
-}
 
 // When the channel ID callback is available, this callback recieves it.
 // The push client app should communicate this to the push server app as
@@ -89,9 +97,8 @@ function openWgsSite() {
 function channelIdCallback(message) {
   console.log("Background Channel ID callback seen, channel Id is " + message.channelId);
   channel = message.channelId;
-  openWgsSite();
+  if(showSite) openWgsSite();
 }
-
 
 
 // When a Push Message arrives, show it as a text notification (toast)

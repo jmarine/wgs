@@ -117,6 +117,7 @@ label { /*display: block;*/ float: left; width: 90px; clear: left; }
 var wgsclient = null;
 var currentApp = null;
 var currentGroup = null;
+var notificationChannel = null;
 
 $(document).ready(function(){
     $('#apps').click(function() {
@@ -212,6 +213,9 @@ function fnScroll(tableName){
 }
 
 function enable_network() {
+    notificationChannel = get_url_param("gcmChannelId");
+    if(notificationChannel == null) notificationChannel = get_url_param("state");
+    
     $("#group_params").hide();
     $("#login").slideDown(500);
     $("#enable_network").hide();
@@ -249,7 +253,7 @@ function enable_network() {
                     .next()
                         .hide()
                         .menu();
-   
+ 
 }
 
 
@@ -964,7 +968,7 @@ function openid_connect(login) {
             alert("User name is empty");
         } else {
             wgsclient = getWgsClient();
-            wgsclient.openIdConnectLoginUrl(user, redirectUri, authentication);
+            wgsclient.openIdConnectLoginUrl(user, redirectUri, notificationChannel, authentication);
         }
         
     } else {
@@ -975,7 +979,7 @@ function openid_connect(login) {
             var provider = get_url_param("provider");
             
             wgsclient = new WgsClient(url);
-            wgsclient.openIdConnectAuthCode(provider, redirectUri, code, authentication);
+            wgsclient.openIdConnectAuthCode(provider, redirectUri, code, notificationChannel, authentication);
         }
     }
 }
@@ -996,7 +1000,7 @@ function clear_openid_connect_params(clearProvider) {
     // Clear OpenId Connect's parameters
     var url = document.location.href;
     var oicParams = ["code","state","error","error_description","authuser","prompt","session_state"];
-    if(clearProvider) oicParams = ["provider", "code","state","error","error_description","authuser","prompt","session_state"];
+    if(clearProvider) oicParams = ["provider", "code","state","error","error_description","authuser","prompt","session_state","gcmChannelId"];
     oicParams.forEach(function(param) {
         var paramPos = url.indexOf("&"+param+"=");
         if(paramPos == -1) paramPos = url.indexOf("?"+param+"=");
@@ -1082,8 +1086,8 @@ function openid_connect_menu(self) {
                 var link = $("<a>");
                 link.text(provider.name);
                 link.attr("class", "ui-corner-all")
-                if(provider.authEndpoint) link.attr("href", provider.authEndpoint);
-                else link.attr("href", "javascript:wgsclient.openIdConnectLoginUrl('"+provider.registrationEndpoint+"', clear_openid_connect_params(true), authentication);");
+                if(provider.authEndpoint) link.attr("href", provider.authEndpoint + "&state=" + escape(notificationChannel));
+                else link.attr("href", "javascript:wgsclient.openIdConnectLoginUrl('"+provider.registrationEndpoint+"', clear_openid_connect_params(true), notificationChannel, authentication);");
 
                 var item = $("<li>");
                 item.attr("class", "ui-menu-item").append(link)
