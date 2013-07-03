@@ -38,6 +38,10 @@ public class User implements Serializable, Principal
     
     @Column(name="name",nullable=false)
     private String name;   
+
+    @javax.persistence.Temporal(TemporalType.TIMESTAMP)
+    @Column(name="last_login")
+    private java.util.Calendar lastLoginTime;
     
     @Column(name="password")
     private String password;
@@ -113,7 +117,20 @@ public class User implements Serializable, Principal
         this.name = name;
     }
     
+    /**
+     * @return the lastLoginTime
+     */
+    public java.util.Calendar getLastLoginTime() {
+        return lastLoginTime;
+    }
 
+    /**
+     * @param lastLoginTime the lastLoginTime to set
+     */
+    public void setLastLoginTime(java.util.Calendar lastLoginTime) {
+        this.lastLoginTime = lastLoginTime;
+    }
+    
     /**
      * @return the password
      */

@@ -216,6 +216,7 @@ public class Module extends WampModule
         usr.setPassword(data.get("password").asText());
         usr.setEmail(data.get("email").asText());
         usr.setAdministrator(false);
+        usr.setLastLoginTime(Calendar.getInstance());
         usr = Storage.saveEntity(usr);
 
         socket.setUserPrincipal(usr);
@@ -423,7 +424,6 @@ public class Module extends WampModule
     public ObjectNode openIdConnectAuth(WampSocket socket, ObjectNode data) throws Exception
     {
         User usr = null;
-        boolean updateUser = false;        
         EntityManager manager = null;
         Client client = clients.get(socket.getSessionId());
 
@@ -500,7 +500,6 @@ public class Module extends WampModule
 
                 if(response.has("refresh_token")) {
                     usr.setRefreshToken(response.get("refresh_token").asText());
-                    updateUser = true;
                 }
                 
                 if(response.has("access_token")) {
@@ -511,18 +510,17 @@ public class Module extends WampModule
                         expiration.add(Calendar.SECOND, expires_in);
                         usr.setTokenCaducity(expiration);
                     }
-                    updateUser = true;
                 }
                 
                 if(usr!= null && data.has("notification_channel")) {
                     String notificationChannel = data.get("notification_channel").asText();
                     if(!notificationChannel.equals(usr.getNotificationChannel())) {
                         usr.setNotificationChannel(notificationChannel);
-                        updateUser = true;
                     }
                 }
                 
-                if(updateUser) usr = Storage.saveEntity(usr);
+                usr.setLastLoginTime(now);
+                usr = Storage.saveEntity(usr);
                 
                 oic.getFriends(usr);
                 

@@ -52,6 +52,15 @@ public class Storage
         return entity;
     }    
     
+    public static <T> T findEntity(Class<T> cls, Object key) 
+    {
+        EntityManager manager = getEntityManager();
+        T entity = manager.find(cls, key);
+        manager.close();
+
+        return entity;
+    }
+    
     public static <T> List<T> findEntities(Class<T> cls, String namedQueryName, Object[] ... params)
     {
         EntityManager manager = getEntityManager();

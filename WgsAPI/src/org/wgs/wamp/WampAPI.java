@@ -3,6 +3,7 @@ package org.wgs.wamp;
 import java.math.BigDecimal;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.UUID;
 import javax.crypto.Mac;
@@ -87,10 +88,10 @@ public class WampAPI extends WampModule
         
         String authKey = info.get("authkey").asText();
         
-        EntityManager manager = Storage.getEntityManager();
         UserId userId = new UserId(User.LOCAL_USER_DOMAIN, authKey);
-        User usr = manager.find(User.class, userId);
-        manager.close();
+        User usr = Storage.findEntity(User.class, userId);
+        usr.setLastLoginTime(Calendar.getInstance());
+        usr = Storage.saveEntity(usr);
         
         socket.setUserPrincipal(usr);
         socket.setState(WampConnectionState.AUTHENTICATED);
