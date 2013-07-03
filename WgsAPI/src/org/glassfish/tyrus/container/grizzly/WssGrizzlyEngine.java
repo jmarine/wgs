@@ -7,7 +7,7 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.http.server.NetworkListener;
 import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
-import org.glassfish.tyrus.server.TyrusEndpoint;
+import org.glassfish.tyrus.core.TyrusEndpoint;
 import org.glassfish.tyrus.spi.SPIEndpoint;
 import org.glassfish.tyrus.spi.SPIRegisteredEndpoint;
 import org.glassfish.tyrus.spi.TyrusServer;
