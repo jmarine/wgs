@@ -2,13 +2,21 @@ package org.wgs.entity;
 
 import java.io.Serializable;
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.Lob;
+import javax.persistence.ManyToMany;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.OrderBy;
 import javax.persistence.Table;
 import javax.persistence.TemporalType;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -48,7 +56,27 @@ public class User implements Serializable, Principal
     private String picture;    
 
     @Column(name="notification_channel")
-    private String notificationChannel;    
+    private String notificationChannel;  
+    
+    @javax.persistence.Temporal(TemporalType.TIMESTAMP)
+    @Column(name="token_caducity")
+    private java.util.Calendar tokenCaducity;
+    
+    @Lob
+    @Column(name="access_token")
+    private String accessToken;
+    
+    @Lob
+    @Column(name="refresh_token")
+    private String refreshToken;    
+    
+    
+    @ManyToMany(fetch = FetchType.LAZY)
+    @OrderBy(value = "name")
+    @JoinTable(name="USR_FRIEND", 
+            joinColumns={@JoinColumn(name="user_id", referencedColumnName = "uid"), @JoinColumn(name="user_provider", referencedColumnName="oic_provider")}, 
+            inverseJoinColumns={@JoinColumn(name="friend_id", referencedColumnName = "uid"), @JoinColumn(name="friend_provider", referencedColumnName="oic_provider")})
+    private List<User> friends;
     
     /**
      * @return the UserPK
@@ -173,6 +201,62 @@ public class User implements Serializable, Principal
     public void setNotificationChannel(String notificationChannel) {
         this.notificationChannel = notificationChannel;
     }
+
+    
+    /**
+     * @return the tokenCaducity
+     */
+    public java.util.Calendar getTokenCaducity() {
+        return tokenCaducity;
+    }
+
+    /**
+     * @param tokenCaducity the tokenCaducity to set
+     */
+    public void setTokenCaducity(java.util.Calendar tokenCaducity) {
+        this.tokenCaducity = tokenCaducity;
+    }
+
+    
+    /**
+     * @return the accessToken
+     */
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    /**
+     * @param accessToken the accessToken to set
+     */
+    public void setAccessToken(String accessToken) {
+        this.accessToken = accessToken;
+    }
+
+    
+    /**
+     * @return the refreshToken
+     */
+    public String getRefreshToken() {
+        return refreshToken;
+    }
+
+    /**
+     * @param refreshToken the refreshToken to set
+     */
+    public void setRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
+    }
+    
+    
+    public List<User> getFriends() 
+    {
+        return this.friends;
+    }
+    
+    public void setFriends(List<User> friends) 
+    {
+        this.friends = friends;
+    }  
     
     
     @Override

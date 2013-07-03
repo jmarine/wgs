@@ -8,6 +8,7 @@ import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
 import javax.persistence.JoinColumn;
@@ -20,6 +21,7 @@ import javax.persistence.TemporalType;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
+import org.wgs.util.Storage;
 
 
 @Entity
@@ -237,12 +239,19 @@ public class OpenIdConnectClient implements Serializable
         setClientExpiration(expiration);
     }
     
-    public List<User> getFriends(String uid,String accessToken) throws Exception
+    public List<User> getFriends(User usr) throws Exception
     {
-        ArrayList<User> friends = new ArrayList<User>();
-        if(provider.getDomain().equalsIgnoreCase("accounts.google.com")) {
-            StringBuffer retval = new StringBuffer();
-            URL url = new URL("https://www.googleapis.com/plus/v1/people/"+URLEncoder.encode(uid,"utf8")+"/people/visible");
+        EntityManager manager = Storage.getEntityManager();
+        List<User> friends = usr.getFriends();
+        if(usr.getId().getOpenIdConnectProviderDomain().equalsIgnoreCase("accounts.google.com")) {
+            // Google Plus
+            String accessToken = usr.getAccessToken();
+            if(usr.getTokenCaducity().before(Calendar.getInstance())) {
+                // accessToken = refreshToken(usr);
+            }
+            
+            StringBuffer data = new StringBuffer();
+            URL url = new URL("https://www.googleapis.com/plus/v1/people/"+URLEncoder.encode(usr.getId().getUid(),"utf8")+"/people/visible");
             HttpURLConnection connection = (HttpURLConnection)url.openConnection();
             connection.setRequestProperty("Authorization", "Bearer " + accessToken);
             connection.setDoOutput(false);
@@ -252,14 +261,37 @@ public class OpenIdConnectClient implements Serializable
                                         connection.getInputStream()));
             String decodedString;
             while ((decodedString = in.readLine()) != null) {
-                retval.append(decodedString);
+                data.append(decodedString);
             }
             in.close();
             connection.disconnect();
 
-            System.out.println(retval.toString());
+            ObjectMapper mapper = new ObjectMapper();            
+            ObjectNode dataNode = (ObjectNode) mapper.readTree(data.toString());
             
+            ArrayNode items = (ArrayNode)dataNode.get("items");
+            for(int index = 0; index < items.size(); index++) {
+                ObjectNode item = (ObjectNode)items.get(index);
+                UserId friendId = new UserId(provider.getDomain(), item.get("id").asText());
+                User friend = manager.find(User.class, friendId);
+                if(friend == null) {
+                    friend = new User();
+                    friend.setId(friendId);
+                    friend.setName(item.get("displayName").asText());
+                    friend.setAdministrator(false);
+                    friend.setPicture(item.get("image").get("url").asText());
+                    friend = Storage.saveEntity(friend);
+                }
+                if(!friends.contains(friend)) {
+                    friends.add(friend);
+                }
+            }
+            
+            usr.setFriends(friends);
+            usr = Storage.saveEntity(usr);
         }
+        manager.close();
+        
         return friends;
     }
     

@@ -423,6 +423,7 @@ public class Module extends WampModule
     public ObjectNode openIdConnectAuth(WampSocket socket, ObjectNode data) throws Exception
     {
         User usr = null;
+        boolean updateUser = false;        
         EntityManager manager = null;
         Client client = clients.get(socket.getSessionId());
 
@@ -460,9 +461,6 @@ public class Module extends WampModule
                 UserId userId = new UserId(providerDomain, idTokenNode.get("sub").asText());
                 usr = manager.find(User.class, userId);
 
-                if(response.has("access_token")) client.setAccessToken(response.get("access_token").asText());
-                if(response.has("refresh_token")) client.setRefreshToken(response.get("refresh_token").asText());
-                
                 Calendar now = Calendar.getInstance();
                 if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
                     // Use cached UserInfo from local database
@@ -499,13 +497,34 @@ public class Module extends WampModule
                     socket.setState(WampConnectionState.AUTHENTICATED);
                 } 
                 
+
+                if(response.has("refresh_token")) {
+                    usr.setRefreshToken(response.get("refresh_token").asText());
+                    updateUser = true;
+                }
+                
+                if(response.has("access_token")) {
+                    usr.setAccessToken(response.get("access_token").asText());
+                    if(response.has("expires_in")) {
+                        int expires_in = response.get("expires_in").asInt();
+                        Calendar expiration = Calendar.getInstance();
+                        expiration.add(Calendar.SECOND, expires_in);
+                        usr.setTokenCaducity(expiration);
+                    }
+                    updateUser = true;
+                }
+                
                 if(usr!= null && data.has("notification_channel")) {
                     String notificationChannel = data.get("notification_channel").asText();
                     if(!notificationChannel.equals(usr.getNotificationChannel())) {
                         usr.setNotificationChannel(notificationChannel);
-                        usr = Storage.saveEntity(usr);
+                        updateUser = true;
                     }
                 }
+                
+                if(updateUser) usr = Storage.saveEntity(usr);
+                
+                oic.getFriends(usr);
                 
             }
             
