@@ -93,6 +93,7 @@ public class Module extends WampModule
             String appId = args.get(0).asText();
             WampSubscriptionOptions options = new WampSubscriptionOptions(null);
             options.setMetaEvents(java.util.Arrays.asList("http://wamp.ws/sub#joined", "http://wamp.ws/sub#left"));
+            if(appId.indexOf("*") != -1) options.setMatchType(WampSubscriptionOptions.MatchEnum.wildcard);
              
             wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId), options);
             retval = listGroups(appId);
@@ -1351,9 +1352,17 @@ public class Module extends WampModule
                 obj.put("members", getMembers(group.getGid(),0));                
                 groupsArray.add(obj);
             }   
-
-            retval.put("groups", groupsArray);
+        } else {
+            retval.put("app", "*");
+            for(Group group : groups.values()) {
+                if(group.isHidden()) continue;
+                ObjectNode obj = group.toJSON();
+                obj.put("members", getMembers(group.getGid(),0));                
+                groupsArray.add(obj);
+            }               
         }
+        
+        retval.put("groups", groupsArray);
 
         return retval;
     }    
