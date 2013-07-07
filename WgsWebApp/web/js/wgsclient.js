@@ -698,7 +698,7 @@ WgsClient.prototype = {
   },
           
   topicMatchesWithPattern: function(topicURI,pattern) {
-      topic = topic.replace("*", ".*");
+      topicURI = topicURI.replace("*", ".*");
       var re = new RegExp(pattern);
       return topicURI.match(re);
   },
