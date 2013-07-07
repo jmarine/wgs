@@ -6,8 +6,12 @@
 var channel = null;
 var showSite = false;
 
+chrome.alarms.onAlarm.addListener(onAlarm);
+chrome.alarms.create('reactivate', {periodInMinutes: 0.15});
+
 function openWgsSite() {
   chrome.app.window.create('wgs_gcm.html?gcmChannelId='+channel, {"hidden":true});
+  showSite = false;
 }
 
 // This function gets called in the packaged app model on launch.
@@ -18,75 +22,62 @@ chrome.app.runtime.onLaunched.addListener(function() {
     openWgsSite();
   } else {
     showSite = true;
-    startTimePushSetup();
-    setupPush();
+    pushSetup();
   }
 });
 
-/*
+/* This function gets called in the packaged app model on launch.
 chrome.app.runtime.onRestarted.addListener(function() {
-  console.log("Push Messaging Sample Client Restart!");
-
-  showSite = false;
-  startTimePushSetup();
-  setupPush();
+  console.log("Push Messaging Sample Client Restarted!");
+  channel = null;
+  pushSetup();
 });
 */
+
+// This function gets called on Chrome launch.
+chrome.runtime.onStartup.addListener(function() {
+  console.log("WGS on Chrome Startup");
+  pushSetup();
+});
+
+function onAlarm(alarm) {
+  console.log('Got alarm', alarm);
+  if (alarm && alarm.name == 'reactivate') {
+    pushSetup();
+  }
+}
 
 // This function gets called in the packaged app model on install.
 // Typically on install you will get the channelId, and send it to your
 // server which will send Push Messages.
 chrome.runtime.onInstalled.addListener(function() {
-  startTimePushSetup();
+  pushSetup();
   console.log("Push Messaging Sample Client installed!");
 });
 
 // This function gets called in the packaged app model on shutdown.
 // You can override it if you wish to do clean up at shutdown time.
 chrome.runtime.onSuspend.addListener(function() {
-  //takedownPush();
-  console.log("Push Messaging Sample Client shutting down");
+  channel = null;
+  chrome.pushMessaging.onMessage.removeListener(messageCallback);
+  console.log("Push Messaging Sample Client onSuspend");
 });
 
 // This should only be called once on the instance of chrome where the app
 // is first installed for this user. It need not be called every time the
 // Push Messaging Client App starts.
-function startTimePushSetup() {
+function pushSetup() {
   // Start fetching the channel ID (it will arrive in the callback).
-  if(channel == null) chrome.pushMessaging.getChannelId(true, channelIdCallback);
-  console.log("getChannelId returned. Awaiting callback...");
-}
-
-// Register for push messages.
-// This should be called every time the Push Messaging App starts up.
-function setupPush() {
-
-  // Begin listening for Push Messages.
-  chrome.pushMessaging.onMessage.addListener(messageCallback);
-  console.log('called addListener');
-
-  // We can ensure that adding the listener took effect as intended.
-  var listeners = chrome.pushMessaging.onMessage.hasListeners();
-  console.log('hasListeners returned ' + listeners +
-              ' after calling addListener');
-}
-
-// Unregister for Push Messages (only call if you have previously
-// called setupPush).
-function takedownPush() {
-  //chrome.pushMessaging.onMessage.removeListener(messageCallback);
-  console.log('called removeListener');
+  if(channel == null) {
+	chrome.pushMessaging.getChannelId(true, channelIdCallback);
+  }
+  if(!chrome.pushMessaging.onMessage.hasListeners()) {
+        chrome.pushMessaging.onMessage.addListener(messageCallback);
+  }
 }
 
 // This callback recieves the Push Message from the push server.
 function messageCallback(message) {
-  console.log("push messaging callback seen");
-  console.log("payload is " + message.payload);
-  console.log("subChannel is " + message.subchannelId);
-
-  // This sample app will popup a notification when it gets a push message.
-  // Your app should instead take whatever action it does when a push message
-  // arrives.
   showPushMessage(message.payload, message.subchannelId.toString());
 }
 
@@ -107,7 +98,7 @@ function showPushMessage(payload, subChannel) {
       'images/logo24.png', 'WGS message',
       "Push message for you! " +
       payload +" [" + subChannel + "]");
-  notification.onclick = openWgsSite;
+  notification.onclick = function() { openWgsSite(); notification.cancel(); }
   notification.show();
   
 }
