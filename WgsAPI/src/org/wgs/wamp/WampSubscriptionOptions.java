@@ -1,9 +1,8 @@
 package org.wgs.wamp;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ObjectNode;
 
 
 public class WampSubscriptionOptions 
@@ -12,8 +11,8 @@ public class WampSubscriptionOptions
     public  enum MatchEnum { exact, prefix, wildcard };
 
     private MatchEnum    matchType;
-    private List<String> metaEvents;
     private boolean      eventsEnabled;
+    private HashSet<String> metaEvents;
     
     /*
     private boolean  eventIdRequested;
@@ -24,8 +23,8 @@ public class WampSubscriptionOptions
 
     public WampSubscriptionOptions(JsonNode node) {
         this.matchType = MatchEnum.exact;
-        this.metaEvents = new ArrayList<String>();
         this.eventsEnabled = true;
+        this.metaEvents = new HashSet<String>();
         
         if(node != null) {
             if(node.has("MATCH")) {
@@ -83,7 +82,7 @@ public class WampSubscriptionOptions
     /**
      * @return the metaEvents
      */
-    public List<String> getMetaEvents() {
+    public HashSet<String> getMetaEvents() {
         return metaEvents;
     }
 
@@ -91,24 +90,35 @@ public class WampSubscriptionOptions
      * @param metaEvents the metaEvents to set
      */
     public void setMetaEvents(List<String> metaEvents) {
-        this.metaEvents = metaEvents;
+        this.metaEvents = new HashSet<String>();
+        if(metaEvents != null) {
+            for(String metatopic : metaEvents) {
+                this.metaEvents.add(metatopic);
+            }
+        }
     }
 
     /**
      * @param arrayNode the JSON array node with the text elements to set
      */
     public void setMetaEvents(JsonNode arrayNode) {
-        this.metaEvents = new ArrayList<String>();
+        this.metaEvents = new HashSet<String>();
         if(arrayNode != null) {
             for(int i = 0; i < arrayNode.size(); i++) {
                 this.metaEvents.add(arrayNode.get(i).asText());
             }
         }
     }    
-    
-    public boolean hasMetaEventsEnabled()
+
+    public boolean hasMetaEvents()
     {
-        return (this.metaEvents.size() > 0);
+        return (metaEvents.size() > 0);
+    }
+        
+    
+    public boolean hasMetaEvent(String metatopic)
+    {
+        return (metaEvents.contains(metatopic));
     }
     
     

@@ -427,7 +427,7 @@ public class WampApplication
             try { 
                 module.onSubscribe(clientSocket, topic, options);
             } catch(Exception ex) {
-                if(options != null && options.hasMetaEventsEnabled()) {
+                if(options != null && options.hasMetaEvents()) {
                     try { 
                         ObjectNode metaevent = (new ObjectMapper()).createObjectNode();
                         metaevent.put("error", ex.getMessage());

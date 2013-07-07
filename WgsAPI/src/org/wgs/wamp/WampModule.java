@@ -89,7 +89,7 @@ public class WampModule
         if(subscription.refCount(+1) == 1) {
             topic.addSubscription(subscription);
             clientSocket.addSubscription(subscription);
-            if(options != null && options.hasMetaEventsEnabled()) {
+            if(options != null && options.hasMetaEvents()) {
                 app.publishMetaEvent(topic, WampMetaTopic.OK, null, clientSocket);
                 
                 if(options.hasEventsEnabled()) {
@@ -103,7 +103,7 @@ public class WampModule
         WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
         if(subscription.refCount(-1) <= 0) {
             WampSubscriptionOptions options = subscription.getOptions();
-            if(options!=null && options.hasMetaEventsEnabled() && options.hasEventsEnabled()) {
+            if(options!=null && options.hasMetaEvents() && options.hasEventsEnabled()) {
                 ObjectNode metaevent = subscription.toJSON();
                 app.publishMetaEvent(topic, WampMetaTopic.LEFT, metaevent, null);
             }
@@ -206,7 +206,7 @@ public class WampModule
         } else {
             for(String sid : topic.getSessionIds()) {
                 WampSubscription subscriber = topic.getSubscription(sid);
-                if(subscriber.getOptions() != null && subscriber.getOptions().hasMetaEventsEnabled()) {
+                if(subscriber.getOptions() != null && subscriber.getOptions().hasMetaEvent(metatopic)) {
                     WampSocket remoteSocket = subscriber.getSocket();
                     remoteSocket.sendSafe(msg);
                 }
