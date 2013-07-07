@@ -51,6 +51,9 @@ public class Group implements java.io.Serializable
     @Enumerated(EnumType.ORDINAL)
     private GroupState state;
     
+    @Column(name="turn")
+    private int  turn;
+    
     @Column(name="minMembers")
     private int  minMembers;
     
@@ -391,6 +394,22 @@ public class Group implements java.io.Serializable
         this.password = password;
     }
     
+    
+    /**
+     * @return the turn
+     */
+    public int getTurn() {
+        return turn;
+    }
+
+    /**
+     * @param turn the turn to set
+     */
+    public void setTurn(int turn) {
+        this.turn = turn;
+    }
+    
+    
     public ObjectNode toJSON()
     {
         ObjectMapper mapper = new ObjectMapper();
@@ -409,9 +428,11 @@ public class Group implements java.io.Serializable
         obj.put("alliances", isAlliancesAllowed());
         obj.put("description", getDescription());        
         obj.put("state", String.valueOf(getState()));
+        obj.put("turn", getTurn());
         obj.put("password", (password != null) && (password.length() > 0) );
         return obj;
     }
+
 
 }
 
