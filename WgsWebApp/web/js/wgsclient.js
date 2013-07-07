@@ -20,6 +20,7 @@ WgsClient.prototype = {
   groups: new Array(),
   calls: new Array(),
   topics: new Array(),
+  patternHandlers: new Array(),
   metaeventHandlers: new Array(),
   
   debug: function(str) {
@@ -122,16 +123,33 @@ WgsClient.prototype = {
   },
   
   subscribe: function(topic, event_cb, metaevent_cb, options) {
+        var wildcards = false;
         if(!options) options = {};
         options.events = (event_cb != null);
         options.metaevents = (metaevent_cb != null);
+        if(options.match && options.match.toLowerCase() == "prefix") {
+            topic = topic + "*";
+            options.match = "wildcard";
+        }
 
-        if(!this.topics[topic]) this.topics[topic] = [];
+        if(topic.indexOf("*") != -1) {
+            wildcards = true;
+            options.match = "wildcard";
+            if(!this.patternHandlers[topic]) this.patternHandlers[topic] = [];
+        } else {            
+            if(!this.topics[topic]) this.topics[topic] = [];
+        }
+        
         if(!this.metaeventHandlers[topic]) this.metaeventHandlers[topic] = [];
         
-        if(event_cb) this.topics[topic].push(event_cb);
-        if(metaevent_cb) this.metaeventHandlers[topic].push(metaevent_cb);
-        if(!options.clientSideOnly && ((event_cb && this.topics[topic].length==1) || (metaevent_cb && this.metaeventHandlers[topic].length==1)) ) {
+        if(event_cb) {
+            if(wildcards) this.patternHandlers[topic].push(event_cb);
+            else this.topics[topic].push(event_cb);
+        }
+        if(metaevent_cb) {
+            this.metaeventHandlers[topic].push(metaevent_cb);
+        }
+        if(!options.clientSideOnly && ((!wildcards && event_cb && this.topics[topic].length==1) || (wildcards && event_cb && this.patternHandlers[topic].length==1) || (metaevent_cb && this.metaeventHandlers[topic].length==1)) ) {
             var arr = [];
             arr[0] = this.isServerUsingWampVersion(2) ? 64 : 5;  // SUBSCRIBE
             arr[1] = topic;
@@ -140,7 +158,8 @@ WgsClient.prototype = {
         }
   },
   
-  unsubscribe: function(topic, event_cb, metaevent_cb, clientSideOnly) {
+  unsubscribe: function(topic, event_cb, metaevent_cb, options) {
+        var wildcards = false;
         var client = this;
 
         var clearEventHandlers = false;
@@ -148,31 +167,50 @@ WgsClient.prototype = {
         var indexOfEventHandlerToClear = -1;
         var indexOfMetaHandlerToClear = -1;
         
+        var clientSideOnly = options && options.clientSideOnly;
+        if(!options) options = {};
+        if(options.match && options.match.toLowerCase() == "prefix") {
+            topic = topic + "*";
+            options.match = "wildcard";
+        }
+        
         var callbacks = this.topics[topic];
+        if(topic.indexOf("*") != -1) {
+            wildcards = true;
+            options.match = "wildcard";
+            callbacks = this.patternHandlers[topic];
+        }
         if(event_cb && callbacks) {
             indexOfEventHandlerToClear = callbacks.indexOf(event_cb);
             if(indexOfEventHandlerToClear != -1) {
-                clearEventHandlers = (event_cb && this.topics[topic] && this.topics[topic].length<=1);
+                clearEventHandlers = (event_cb && callbacks.length<=1);
             }
         }
         callbacks = this.metaeventHandlers[topic];
         if(metaevent_cb && callbacks) {
             indexOfMetaHandlerToClear = callbacks.indexOf(metaevent_cb);
             if(indexOfMetaHandlerToClear != -1) {
-                clearMetaHandlers = (metaevent_cb && this.metaeventHandlers[topic] && this.metaeventHandlers[topic].length<=1);
+                clearMetaHandlers = (metaevent_cb && callbacks.length<=1);
             }
         }   
         
         
         var _clearHandlers = function() {
-            if(clearEventHandlers) delete client.topics[topic];
-            else if(indexOfEventHandlerToClear != -1) client.topics.splice(indexOfEventHandlerToClear,1);
+            var wildcards = (topic.indexOf("*") != -1);
+            if(wildcards) {
+                if(clearEventHandlers) delete client.patternHandlers[topic];
+                else if(indexOfEventHandlerToClear != -1) client.patternHandlers.splice(indexOfEventHandlerToClear,1);
+            } else {
+                if(clearEventHandlers) delete client.topics[topic];
+                else if(indexOfEventHandlerToClear != -1) client.topics.splice(indexOfEventHandlerToClear,1);
+            }
             
             if(clearMetaHandlers) delete client.metaeventHandlers[topic];
             else if(indexOfMetaHandlerToClear != -1) client.metaeventHandlers.splice(indexOfMetaHandlerToClear,1);
         }
             
         var otherSubscribedEvents = (!clearEventHandlers && this.topics[topic] && this.topics[topic].length>0);
+        if(wildcards) otherSubscribedEvents = otherSubscribedEvents || (!clearEventHandlers && this.patternHandlers[topic] && this.patternHandlers[topic].length>0);
         var otherSubscribedMetaEvents  = (!clearMetaHandlers && this.metaeventHandlers[topic] && this.metaeventHandlers[topic].length>0);
         if(!this.metaeventHandlers[topic] || this.metaeventHandlers[topic].length == 0) {
             _clearHandlers();
@@ -450,6 +488,14 @@ WgsClient.prototype = {
                       callback.call(client, arr[2], topicURI);                
                   });
               } else {
+
+                  for(var pattern in client.patternHandlers) {
+                      if(client.topicMatchesWithPattern(topicURI,pattern)) {
+                          client.patternHandlers[pattern].forEach(function(callback) {
+                             callback.call(client, arr[2], topicURI);                
+                          });
+                      }
+                  }
                   // client.debug("topic not found: " + topic);
               }
 
@@ -572,7 +618,7 @@ WgsClient.prototype = {
   exitGroup: function(gid, callback) {
       var client = this;
       this.call("https://wgs.org#exit_group", gid).then(callback, callback);
-      this.unsubscribe("https://wgs.org#group_event:" + gid, client._update_group_users, null, true);
+      this.unsubscribe("https://wgs.org#group_event:" + gid, client._update_group_users, null, { "clientSideOnly":true});
       delete this.groups[gid];
   },
 
@@ -649,6 +695,12 @@ WgsClient.prototype = {
       args[1] = data;
       
       this.call("https://wgs.org#send_team_message", args).then(callback, callback);
-  }
+  },
+          
+  topicMatchesWithPattern: function(topicURI,pattern) {
+      topic = topic.replace("*", ".*");
+      var re = new RegExp(pattern);
+      return topicURI.match(re);
+  },
   
 }
