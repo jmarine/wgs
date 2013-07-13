@@ -40,7 +40,7 @@ public class WampApplication
     public  static final int WAMPv1 = 1;
     public  static final int WAMPv2 = 2;    
 
-    public  static final String WAMP_ERROR_URI = "http://wamp.ws/err#";
+    public  static final String WAMP_ERROR_URI = "http://wamp.ws/err";
     
     private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
 
@@ -103,7 +103,7 @@ public class WampApplication
     
     public WampModule getWampModule(String moduleBaseURI, WampModule defaultModule)
     {
-        WampModule module = modules.get(moduleBaseURI);
+        WampModule module = modules.get(normalizeNamespace(moduleBaseURI));
         if(module == null && defaultModule != null) module = defaultModule;
         return module;
     }
@@ -252,12 +252,20 @@ public class WampApplication
         
     }
     
+    private String normalizeNamespace(String ns) 
+    {
+        int schemaPos = ns.indexOf(":");
+        if(schemaPos != -1) ns = ns.substring(schemaPos+1);
+        if(!ns.endsWith("#")) ns = ns + "#";
+        return ns;
+    }
+    
     @SuppressWarnings("unchecked")
     public void registerWampModule(Class moduleClass)
     {
         try {
             WampModule module = (WampModule)moduleClass.getConstructor(WampApplication.class).newInstance(this);
-            modules.put(module.getBaseURL(), module);
+            modules.put(normalizeNamespace(module.getBaseURL()), module);
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "WgsEndpoint: Error registering WGS module", ex);
         }        

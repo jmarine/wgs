@@ -19,7 +19,7 @@ import org.wgs.util.PBKDF2;
 import org.wgs.util.Storage;
 
 
-@WampNamespace("http://api.wamp.ws/procedure#")
+@WampNamespace("http://api.wamp.ws/procedure")
 public class WampAPI extends WampModule 
 {
     public WampAPI(WampApplication app)
@@ -32,10 +32,10 @@ public class WampAPI extends WampModule
     public String authRequest(WampSocket socket, String authKey, ObjectNode extra) throws Exception
     {
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
-            throw new WampException(WampApplication.WAMP_ERROR_URI + "already-authenticated", "already authenticated");
+            throw new WampException(WampApplication.WAMP_ERROR_URI + "#already-authenticated", "already authenticated");
         }
         if(socket.getSessionData().containsKey("_clientPendingAuthInfo")) {
-            throw new WampException(WampApplication.WAMP_ERROR_URI +  "authentication-already-requested", "authentication request already issues - authentication pending");
+            throw new WampException(WampApplication.WAMP_ERROR_URI + "#authentication-already-requested", "authentication request already issues - authentication pending");
         }
         
         ObjectNode res = getAuthPermissions(authKey);
@@ -71,10 +71,10 @@ public class WampAPI extends WampModule
     public ObjectNode auth(WampSocket socket, String signature) throws Exception
     {
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
-            throw new WampException(WampApplication.WAMP_ERROR_URI + "already-authenticated", "already authenticated");
+            throw new WampException(WampApplication.WAMP_ERROR_URI + "#already-authenticated", "already authenticated");
         }
         if(!socket.getSessionData().containsKey("_clientPendingAuthInfo")) {
-            throw new WampException(WampApplication.WAMP_ERROR_URI + "no-authentication-requested", "no authentication previously requested");
+            throw new WampException(WampApplication.WAMP_ERROR_URI + "#no-authentication-requested", "no authentication previously requested");
         }
 
         ObjectNode info = (ObjectNode)socket.getSessionData().remove("_clientPendingAuthInfo");;
@@ -83,7 +83,7 @@ public class WampAPI extends WampModule
         if(clientPendingAuthSig == null) clientPendingAuthSig = "";
         
         if(!signature.equals(clientPendingAuthSig)) {
-            throw new WampException(WampApplication.WAMP_ERROR_URI + "invalid-signature", "signature for authentication request is invalid");
+            throw new WampException(WampApplication.WAMP_ERROR_URI + "#invalid-signature", "signature for authentication request is invalid");
         }
         
         String authKey = info.get("authkey").asText();

@@ -45,7 +45,6 @@ public class WampModule
         String retval = "";
         WampNamespace ns = this.getClass().getAnnotation(WampNamespace.class);
         if(ns != null) retval = ns.value();
-        if(!retval.endsWith("#")) retval = retval + "#";
         return retval;
     }
     

@@ -126,7 +126,7 @@ public class WampCallController implements Runnable
         } finally {
             clientSocket.removeRpcController(callID);
             if (isCancelled()) {
-                clientSocket.sendCallError(callErrorMsgType, callID, WampApplication.WAMP_ERROR_URI + "CanceledByCaller", "RPC cancelled by caller: " + callID, null);
+                clientSocket.sendCallError(callErrorMsgType, callID, WampApplication.WAMP_ERROR_URI + "#CanceledByCaller", "RPC cancelled by caller: " + callID, null);
             }
         }
     }
