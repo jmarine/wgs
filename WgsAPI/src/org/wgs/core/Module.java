@@ -21,6 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.persistence.EntityManager;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -642,6 +644,14 @@ public class Module extends WampModule
 
         Application app = applications.get(appId);
         if(app != null) {
+            EntityManager manager = Storage.getEntityManager();
+            Query query = manager.createQuery("DELETE FROM AppGroup g WHERE g.application = :app");
+            query.setParameter("app", app);
+            EntityTransaction tx = manager.getTransaction();
+            tx.begin();
+            int rows = query.executeUpdate();
+            tx.commit();
+            manager.close();
             Storage.removeEntity(app);
             unregisterApplication(app);
             event = broadcastAppInfo(socket, app, "app_deleted", true);

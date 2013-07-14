@@ -415,6 +415,7 @@ public class Group implements java.io.Serializable
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode obj = mapper.createObjectNode();
         obj.put("gid", getGid());
+        obj.put("appId", getApplication().getAppId());
         obj.put("admin", (adminUserId != null) ? adminUserId.toString() : "" );
         obj.put("automatch", isAutoMatchEnabled());
         obj.put("hidden", isHidden());

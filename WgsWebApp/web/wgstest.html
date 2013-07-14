@@ -121,15 +121,15 @@ var notificationChannel = null;
 
 $(document).ready(function(){
     $('#apps').change(function() {
-        var app =  $("#apps").val();
+        var appId = $("#apps").val();
         $('#btn_delete_app').each(function() {
-          this.disabled = (app=="*");
+          this.disabled = (appId=="*");
         });
         $('#btn_automatch_group_list').each(function() {
-          this.disabled = (app=="*");
+          this.disabled = (appId=="*");
         });
         $('#btn_new_group').each(function() {
-          this.disabled = (app=="*");
+          this.disabled = (appId=="*");
         });
     });
     
@@ -309,7 +309,7 @@ function update_apps(response) {
     if(response.apps) { 
         apps = [];
         response.apps.forEach(function(app) {
-            apps[app.name] = app;
+            apps[app.appId] = app;
         });
         // listApps:
         $('#btn_delete_app').attr("disabled", "true");
@@ -326,10 +326,12 @@ function update_apps(response) {
             $("#apps").append($("<option>").attr("value", response.appId));
         }
         $("#apps option[value='"+response.appId+"']").text(getAppDescription(response));
+        apps[response.appId] = response;
         
     } else if(response.cmd == "app_deleted") {
         
         $("#apps option[value='"+response.appId+"']").remove();
+        delete apps[response.appId];
     }
 }
 
@@ -361,17 +363,17 @@ function hide_app_params() {
 }
 
 function show_new_group_params() {
-    var app = $("#apps option:selected").text();
+    var appId = $("#apps").val();
     
     var roles = "";
-    apps[app].roles.forEach(function(role) {
+    apps[appId].roles.forEach(function(role) {
         roles += '<option value="' + role.name + '">' + role.name + '</option>';
     });    
 
     $("#new_grp_role option").remove();
     $("#new_grp_role").append(roles);
 
-    $("#new_group_params fieldset legend").html("New group: " + app);
+    $("#new_group_params fieldset legend").html("New group: " + apps[appId].name);
     $("#group_list").hide();
     $("#new_group_params").slideDown(500);
 }
@@ -395,7 +397,7 @@ function getGroupListItem(group) {
    var viewButton = "";
    if(group.observable) viewButton = "<br><button onclick=\"javascript:view_group('" + group.gid + "')\">View</button>";
    
-   opt.append('<td>Chess</td>');
+   opt.append('<td>' + apps[group.appId].name + '</td>');
    opt.append('<td>' + group.state + (group.password? "<br>(password)" : "" ) + '</td>');
    opt.append('<td>' + group.num + "/" + group.max + viewButton + "</td>");
    
@@ -479,7 +481,7 @@ function app_metaevent(topicURI, metatopic, metaevent) {
 }
 
 function hide_group_list() {
-    var appId = $("#apps option:selected").attr("value");
+    var appId = $("#apps").val();
     $("#group_list").hide();
     $("#app_list").show();
     $("#lobby").slideDown(500);
@@ -487,7 +489,7 @@ function hide_group_list() {
 }
 
 function list_groups() {
-    var appId = $("#apps option:selected").attr("value");
+    var appId = $("#apps").val();
     $("#groups option").remove();
     wgsclient.subscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, { "clientSideOnly":true});
     wgsclient.listGroups(appId, function(response) {
@@ -502,7 +504,7 @@ function list_groups() {
 }
 
 function delete_app() {
-    var appId = $("#apps option:selected").attr("value");
+    var appId = $("#apps").val();
     if(confirm("Do you really want to delete the application?")) {
         wgsclient.deleteApp(appId, function(response) {
             if(!response.valid) {
@@ -583,7 +585,7 @@ function reserve_group_slot(gid,slot) {
 }
 
 function open_group(gid, options) {
-    var appId = $("#apps option:selected").attr("value");
+    var appId = $("#apps").val();
     if(gid == "automatch") $("#back_section").val("app_list");
     else $("#back_section").val("group_list");
     
@@ -657,7 +659,7 @@ function show_group(group) {
                 roleFixed = true;
             }
 
-            append_group_member(false, memberId, member, currentUserSelected, roleFixed, apps[currentGroup.app.name].ai);
+            append_group_member(false, memberId, member, currentUserSelected, roleFixed, apps[currentGroup.appId].ai);
 
         });
     }
@@ -685,12 +687,12 @@ function show_group(group) {
 
 function add_group_member(added) {
     var members = $("#group_params table[id='members'] tbody tr");
-    append_group_member(added, members.size(), {}, false, false, apps[currentGroup.app.name].ai);
+    append_group_member(added, members.size(), {}, false, false, apps[currentGroup.appId].ai);
 }
 
 function update_member(field, as_previous_client) 
 {
-    var appId = $("#apps option:selected").attr("value");
+    var appId = $("#apps").val();
     var gid = $("#group_gid").val();
     var option = $("#" + field + " option:selected");
     var selectedValue = option.val();
@@ -713,7 +715,7 @@ function update_member(field, as_previous_client)
 
 function update_client_state(state)
 {
-    var appId = $("#apps option:selected").attr("value");
+    var appId = $("#apps").val();
     var gid = $("#group_gid").val();
     wgsclient.updateMember(appId, gid, state, NaN, false, false, false, false, false, update_group_callback);
 }
@@ -756,7 +758,7 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
     }
 
     var roleOptions = "";
-    currentGroup.app.roles.forEach(function(role) {
+    apps[currentGroup.appId].roles.forEach(function(role) {
         if(!roleFixed || (memberRole==role.name) || memberSid == wgsclient.sid || (wgsclient.user == $("#group_admin").val()) ) {
             roleOptions += '<option value="' + role.name + '" ' + ((memberRole==role.name)? "selected" : "") + '>' + role.name + '</option>';
         }
@@ -796,7 +798,7 @@ function append_group_member(added, memberId, member, currentUserSelected, roleF
     html += '<td><select id="member' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
 
     html += '</select></td><td><select id="role' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
-    currentGroup.app.roles.forEach(function(role) {
+    apps[currentGroup.appId].roles.forEach(function(role) {
         if(!roleFixed || added || (memberRole==role.name)) {
             html += '<option value="' + role.name + '" ' + ((memberRole==role.name)? "selected" : "") + '>' + role.name + '</option>';
         }
@@ -814,7 +816,7 @@ function append_group_member(added, memberId, member, currentUserSelected, roleF
 }
 
 function remove_last_member(memberId) {
-    var appId = $("#apps option:selected").attr("value");
+    var appId = $("#apps").val();
     var gid = $("#group_gid").val();
     var slot = $("#group_params table[id='members'] tbody tr").size();
     wgsclient.updateMember(appId, gid, "", -slot, false, false, false, false, false, function(response) {
@@ -847,7 +849,7 @@ function update_group_callback(response) {
                 var member = wgsclient.getGroupMember(response.gid, memberId);
                 var currentUserSelected = (wgsclient.sid == member.sid);
                 var roleFixed = (member.role != "") && (member.sid != "") && (wgsclient.sid != member.sid);
-                populate_group_member_fields(false, memberId, member, currentUserSelected, roleFixed, apps[currentGroup.app.name].ai);
+                populate_group_member_fields(false, memberId, member, currentUserSelected, roleFixed, apps[currentGroup.appId].ai);
             }
 
             if(response.cmd == "group_updated") {
@@ -878,7 +880,7 @@ function update_group_callback(response) {
 }
 
 function update_group(state, data) {
-    var appId = $("#apps option:selected").attr("value");
+    var appId = $("#apps").val();
     var gid = $("#group_gid").val();
     var automatch = $("#grp_automatch").is(':checked');
     var hidden = $("#grp_hidden").is(':checked');
