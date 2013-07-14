@@ -645,13 +645,28 @@ public class Module extends WampModule
         Application app = applications.get(appId);
         if(app != null) {
             EntityManager manager = Storage.getEntityManager();
-            Query query = manager.createQuery("DELETE FROM AppGroup g WHERE g.application = :app");
-            query.setParameter("app", app);
             EntityTransaction tx = manager.getTransaction();
             tx.begin();
-            int rows = query.executeUpdate();
+            
+            Query query1 = manager.createQuery("DELETE FROM GroupAction a WHERE a.applicationGroup.application = :app");
+            query1.setParameter("app", app);
+            int rows1 = query1.executeUpdate();
+            
+            Query query2 = manager.createQuery("DELETE FROM GroupMember m WHERE m.applicationGroup.application = :app");
+            query2.setParameter("app", app);
+            int rows2 = query2.executeUpdate();
+            
+            Query query3 = manager.createQuery("DELETE FROM AppGroup g WHERE g.application = :app");
+            query3.setParameter("app", app);
+            int rows3 = query3.executeUpdate();
+            
+            Query query4 = manager.createQuery("DELETE FROM LeaderBoard lb WHERE lb.application = :app");
+            query4.setParameter("app", app);
+            int rows4 = query4.executeUpdate();
+            
             tx.commit();
             manager.close();
+            
             Storage.removeEntity(app);
             unregisterApplication(app);
             event = broadcastAppInfo(socket, app, "app_deleted", true);

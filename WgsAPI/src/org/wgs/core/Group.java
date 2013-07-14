@@ -89,7 +89,7 @@ public class Group implements java.io.Serializable
     @Column(name="hidden")
     private boolean hidden;
 
-    @OneToMany(mappedBy = "applicationGroup", fetch=FetchType.EAGER, cascade = { CascadeType.ALL })
+    @OneToMany(mappedBy = "applicationGroup", fetch=FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true)
     @OrderBy("slot")
     private ArrayList<Member> members = new ArrayList<Member>();
 
