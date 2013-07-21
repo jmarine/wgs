@@ -6,8 +6,8 @@
 var channel = null;
 var showSite = false;
 
+chrome.alarms.create("reactivate", {when: 5000, periodInMinutes: 1 });
 chrome.alarms.onAlarm.addListener(onAlarm);
-chrome.alarms.create('reactivate', {periodInMinutes: 0.15});
 
 function openWgsSite() {
   chrome.app.window.create('wgs_gcm.html?gcmChannelId='+channel, {"hidden":true});
@@ -41,7 +41,9 @@ chrome.runtime.onStartup.addListener(function() {
 });
 
 function onAlarm(alarm) {
-  console.log('Got alarm', alarm);
+
+  console.info("alarm name = " + alarm.name);
+
   if (alarm && alarm.name == 'reactivate') {
     pushSetup();
   }
@@ -68,6 +70,7 @@ chrome.runtime.onSuspend.addListener(function() {
 // Push Messaging Client App starts.
 function pushSetup() {
   // Start fetching the channel ID (it will arrive in the callback).
+  console.info("pushSetup");
   if(channel == null) {
 	chrome.pushMessaging.getChannelId(true, channelIdCallback);
   }
@@ -100,5 +103,4 @@ function showPushMessage(payload, subChannel) {
       payload +" [" + subChannel + "]");
   notification.onclick = function() { openWgsSite(); notification.cancel(); }
   notification.show();
-  
 }

@@ -2,7 +2,7 @@
    "app": {
       "background": {
          "scripts": [ "background.js" ],
-         "persistent": true
+         "persistent": false
       }
    },
    "description": "WGS with push notifications.",
@@ -14,7 +14,7 @@
    "manifest_version": 2,
    "name": "WGS",
    "permissions": [ "alarms", "notifications", "pushMessaging" ],
-   "version": "1.3.27",
+   "version": "1.3.29",
    "web_accessible_resources": [
     "images/logo24.png"
   ],
