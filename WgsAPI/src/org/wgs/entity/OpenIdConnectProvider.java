@@ -14,9 +14,9 @@ import org.codehaus.jackson.node.ObjectNode;
 
 
 @Entity
-@Table(name="OIC_PROVIDER")
+@Table(name="OIDC_PROVIDER")
 @NamedQueries({
-  @NamedQuery(name="oic_provider.findDynamic", query="SELECT OBJECT(p) FROM OpenIdConnectProvider p WHERE p.dynamic = true")
+  @NamedQuery(name="OpenIdConnectProvider.findDynamic", query="SELECT OBJECT(p) FROM OpenIdConnectProvider p WHERE p.dynamic = true")
 })
 public class OpenIdConnectProvider implements Serializable
 {

@@ -264,7 +264,7 @@ public class Module extends WampModule
         try {
             manager = Storage.getEntityManager();
 
-            TypedQuery<OpenIdConnectClient> queryClients = manager.createNamedQuery("oic_client.findByRedirectUri", OpenIdConnectClient.class);
+            TypedQuery<OpenIdConnectClient> queryClients = manager.createNamedQuery("OpenIdConnectClient.findByRedirectUri", OpenIdConnectClient.class);
             queryClients.setParameter("uri", redirectUri);
             for(OpenIdConnectClient oic : queryClients.getResultList()) {
                 String providerDomain = oic.getProvider().getDomain();
@@ -297,7 +297,7 @@ public class Module extends WampModule
                 }
             }
             
-            TypedQuery<OpenIdConnectProvider> queryProviders = manager.createNamedQuery("oic_provider.findDynamic", OpenIdConnectProvider.class);
+            TypedQuery<OpenIdConnectProvider> queryProviders = manager.createNamedQuery("OpenIdConnectProvider.findDynamic", OpenIdConnectProvider.class);
             for(OpenIdConnectProvider provider : queryProviders.getResultList()) {
                 String domain = provider.getDomain();
                 if(!domains.contains(domain) && !"defaultProvider".equals(domain)) {
@@ -438,7 +438,7 @@ public class Module extends WampModule
             manager = Storage.getEntityManager();
             OpenIdConnectClientPK oicId = new OpenIdConnectClientPK(providerDomain, redirectUri);
             OpenIdConnectClient oic = manager.find(OpenIdConnectClient.class, oicId);
-            if(oic == null) throw new WampException(WGS_URL + "#unknown_oic_provider", "Unknown OpenId Connect provider domain");
+            if(oic == null) throw new WampException(WGS_URL + "#unknown_oidc_provider", "Unknown OpenId Connect provider domain");
 
             String accessTokenResponse = oic.getAccessTokenResponse(code);
             logger.fine("AccessToken endpoint response: " + accessTokenResponse);

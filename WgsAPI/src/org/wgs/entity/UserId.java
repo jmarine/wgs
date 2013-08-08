@@ -11,7 +11,7 @@ public class UserId implements java.io.Serializable
     @Column(name="uid", nullable = false)    
     private String uid;
     
-    @Column(name="oic_provider", nullable = false)    
+    @Column(name="oidc_provider", nullable = false)    
     private String openIdConnectProviderDomain;    
     
     public UserId() { }

@@ -78,8 +78,8 @@ public class User implements Serializable, Principal
     @ManyToMany(fetch = FetchType.LAZY)
     @OrderBy(value = "name")
     @JoinTable(name="USR_FRIEND", 
-            joinColumns={@JoinColumn(name="user_id", referencedColumnName = "uid"), @JoinColumn(name="user_provider", referencedColumnName="oic_provider")}, 
-            inverseJoinColumns={@JoinColumn(name="friend_id", referencedColumnName = "uid"), @JoinColumn(name="friend_provider", referencedColumnName="oic_provider")})
+            joinColumns={@JoinColumn(name="user_id", referencedColumnName = "uid"), @JoinColumn(name="user_provider", referencedColumnName="oidc_provider")}, 
+            inverseJoinColumns={@JoinColumn(name="friend_id", referencedColumnName = "uid"), @JoinColumn(name="friend_provider", referencedColumnName="oidc_provider")})
     private List<User> friends;
     
     /**

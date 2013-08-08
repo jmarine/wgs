@@ -40,7 +40,7 @@ public class Score implements java.io.Serializable
     @ManyToOne(fetch= FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name="uid", referencedColumnName = "uid"),
-        @JoinColumn(name="oic_provider", referencedColumnName = "oic_provider")
+        @JoinColumn(name="oidc_provider", referencedColumnName = "oidc_provider")
     })      
     private User   user;
     

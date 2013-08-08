@@ -25,9 +25,9 @@ import org.wgs.util.Storage;
 
 
 @Entity
-@Table(name="OIC_CLIENT")
+@Table(name="OIDC_CLIENT")
 @NamedQueries({
-  @NamedQuery(name="oic_client.findByRedirectUri", query="SELECT OBJECT(p) FROM OpenIdConnectClient p WHERE p.redirectUri like :uri")
+  @NamedQuery(name="OpenIdConnectClient.findByRedirectUri", query="SELECT OBJECT(p) FROM OpenIdConnectClient p WHERE p.redirectUri like :uri")
 })
 @IdClass(OpenIdConnectClientPK.class)
 public class OpenIdConnectClient implements Serializable
