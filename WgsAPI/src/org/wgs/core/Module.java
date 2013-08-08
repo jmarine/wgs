@@ -707,8 +707,24 @@ public class Module extends WampModule
                 Application app = applications.get(appId);
                 if(app != null) {
                     autoMatchMode = true;
-                    g = app.getNextAutoMatchGroup();
-                    if(g != null) valid = true;
+                    
+                    EntityManager manager = Storage.getEntityManager();
+                    String jpaQuery = "SELECT DISTINCT OBJECT(g) FROM AppGroup g WHERE g.state = org.wgs.core.GroupState.OPEN AND g.autoMatchEnabled = TRUE AND g.autoMatchCompleted = FALSE AND g.application = :application";
+                    // TODO: automatch criteria (role, ELO range, game variant, time criteria,...)                    
+                    
+                    TypedQuery<Group> groupQuery = manager.createQuery(jpaQuery, Group.class);
+                    groupQuery.setParameter("application", app);
+                    List<Group> groupList = groupQuery.getResultList();
+                    for(Group tmp : groupList) {
+                        valid = (tmp != null) && (tmp.isAutoMatchEnabled() && !tmp.isAutoMatchCompleted() && tmp.getState()==GroupState.OPEN);
+                        if(valid) {
+                            g = groups.get(tmp.getGid());
+                            break;
+                        }
+                    } 
+                    
+                    manager.close();
+
                 }                
                 logger.log(Level.INFO, "open_group: search group for automatch");
             } else {
@@ -968,7 +984,6 @@ public class Module extends WampModule
             if(node.has("automatch")) {
                 boolean autoMatchMode = node.get("automatch").asBoolean();
                 g.setAutoMatchEnabled(autoMatchMode);
-                g.getApplication().addAutoMatchGroup(g);
                 broadcastGroupInfo = true;
             } 
 
@@ -1290,7 +1305,6 @@ public class Module extends WampModule
                             
                             if(g.isAutoMatchEnabled() && g.isAutoMatchCompleted()) {
                                 g.setAutoMatchCompleted(false);
-                                g.getApplication().addAutoMatchGroup(g);
                             }                            
                             
                             ObjectNode obj = member.toJSON();

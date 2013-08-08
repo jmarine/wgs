@@ -98,8 +98,6 @@ public class Application implements Serializable {
     @Transient
     private HashMap<String,Group> groupsByGid = new HashMap<String,Group>();
 
-    @Transient
-    private Queue<Group> openGroupsForAutoMatch = new LinkedList<Group>();
 
     
     public void setAppId(String id) {
@@ -307,26 +305,6 @@ public class Application implements Serializable {
     }
     
 
-    public void addAutoMatchGroup(Group g)
-    {
-        boolean valid = (g == null) || (g.isAutoMatchEnabled() && !g.isAutoMatchCompleted() && g.getState()==GroupState.OPEN);
-        if(valid) openGroupsForAutoMatch.add(g);
-    }
-    
-    public Group getNextAutoMatchGroup()
-    {
-        Group g = null;
-        boolean valid = false;
-        
-        while(!valid) {
-            g = openGroupsForAutoMatch.peek();
-            valid = (g == null) || (g.isAutoMatchEnabled() && !g.isAutoMatchCompleted() && g.getState()==GroupState.OPEN);
-            if(g!=null && !valid) openGroupsForAutoMatch.poll();
-        } 
-        
-        return g;
-    }
-    
     public Collection<Group> getGroupsByState(GroupState state)
     {
         ArrayList<Group> retval = new ArrayList<Group>();
@@ -341,15 +319,11 @@ public class Application implements Serializable {
     public void addGroup(Group grp)
     {
         groupsByGid.put(grp.getGid(), grp);
-        if(grp.isAutoMatchEnabled()) {
-            addAutoMatchGroup(grp);
-        }
     }
 
     public void removeGroup(Group grp)
     {
         groupsByGid.remove(grp.getGid());
-        openGroupsForAutoMatch.remove(grp);
     }
 
     public void addRole(Role r)
