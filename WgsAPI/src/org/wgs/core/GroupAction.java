@@ -1,5 +1,6 @@
 package org.wgs.core;
 
+import javax.persistence.CascadeType;
 import org.wgs.entity.User;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -51,7 +52,7 @@ public class GroupAction implements java.io.Serializable
     })      
     private Member member;    
     
-    @ManyToOne(fetch= FetchType.EAGER)
+    @ManyToOne(fetch= FetchType.EAGER, cascade = { CascadeType.DETACH } )
     @JoinColumns({
         @JoinColumn(name="uid", referencedColumnName = "uid"),
         @JoinColumn(name="oidc_provider", referencedColumnName = "oidc_provider")

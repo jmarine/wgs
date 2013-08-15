@@ -22,6 +22,7 @@ import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.Table;
+import javax.persistence.Version;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
 import org.wgs.entity.UserId;
@@ -96,6 +97,9 @@ public class Group implements java.io.Serializable
     @ManyToOne(fetch=FetchType.LAZY)
     private Application application;
 
+    @Version
+    private long version;
+    
     /**
      * @return the state
      */
@@ -408,6 +412,24 @@ public class Group implements java.io.Serializable
     public void setTurn(int turn) {
         this.turn = turn;
     }
+    
+    
+    
+    /**
+     * @return the version
+     */
+    public long getVersion() {
+        return version;
+    }
+
+    /**
+     * @param version the version to set
+     */
+    public void setVersion(long version) {
+        this.version = version;
+    }
+
+    
     
     
     public ObjectNode toJSON()

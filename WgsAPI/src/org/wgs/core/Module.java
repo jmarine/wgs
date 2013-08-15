@@ -22,6 +22,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
+import javax.persistence.LockModeType;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import org.codehaus.jackson.JsonNode;
@@ -699,6 +700,10 @@ public class Module extends WampModule
         if( (options != null) && (options.has("spectator")) ) {
             spectator = options.get("spectator").asBoolean(false);
         }
+
+        
+        EntityManager manager = Storage.getEntityManager();
+        manager.getTransaction().begin();
         
         Client client = clients.get(socket.getSessionId());
         
@@ -708,23 +713,22 @@ public class Module extends WampModule
                 if(app != null) {
                     autoMatchMode = true;
                     
-                    EntityManager manager = Storage.getEntityManager();
                     String jpaQuery = "SELECT DISTINCT OBJECT(g) FROM AppGroup g WHERE g.state = org.wgs.core.GroupState.OPEN AND g.autoMatchEnabled = TRUE AND g.autoMatchCompleted = FALSE AND g.application = :application";
                     // TODO: automatch criteria (role, ELO range, game variant, time criteria,...)                    
-                    
                     TypedQuery<Group> groupQuery = manager.createQuery(jpaQuery, Group.class);
                     groupQuery.setParameter("application", app);
                     List<Group> groupList = groupQuery.getResultList();
                     for(Group tmp : groupList) {
                         valid = (tmp != null) && (tmp.isAutoMatchEnabled() && !tmp.isAutoMatchCompleted() && tmp.getState()==GroupState.OPEN);
                         if(valid) {
+                            manager.lock(tmp, LockModeType.PESSIMISTIC_WRITE);
                             g = groups.get(tmp.getGid());
+                            if(g != null) g.setVersion(tmp.getVersion());
+                            else g = tmp;
                             break;
                         }
                     } 
                     
-                    manager.close();
-
                 }                
                 logger.log(Level.INFO, "open_group: search group for automatch");
             } else {
@@ -933,7 +937,7 @@ public class Module extends WampModule
             
             broadcastAppEventInfo(socket, g, created? "group_created" : "group_updated", false);
             
-            Storage.saveEntity(g);
+            g.setVersion(Storage.saveEntity(g).getVersion());
 
         }
 
@@ -955,6 +959,10 @@ public class Module extends WampModule
                     
             socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), event, true, false);  // exclude Me
         }
+        
+        
+        manager.getTransaction().commit();
+        manager.close();
         
         return response;
     }
@@ -1041,7 +1049,7 @@ public class Module extends WampModule
             
             response.put("members", getMembers(gid,0));            
 
-            Storage.saveEntity(g);
+            g.setVersion(Storage.saveEntity(g).getVersion());
             
             valid = true;
         }
@@ -1199,7 +1207,7 @@ public class Module extends WampModule
                 //response.putAll(g.toJSON());
                 broadcastAppEventInfo(socket, g, "group_updated", false);  // exclude Me
                 socket.publishEvent(wampApp.getTopic(getFQtopicURI("group_event:"+g.getGid())), response, false, false);
-                Storage.saveEntity(g);
+                g.setVersion(Storage.saveEntity(g).getVersion());
             }  
             return response;
     }
@@ -1310,7 +1318,7 @@ public class Module extends WampModule
                             ObjectNode obj = member.toJSON();
                             membersArray.add(obj);
                             
-                            Storage.saveEntity(g);
+                            g.setVersion(Storage.saveEntity(g).getVersion());
 
                         } else {
                             num_members++;
