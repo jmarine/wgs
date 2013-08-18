@@ -10,6 +10,7 @@ package org.wgs.core;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
@@ -83,6 +84,16 @@ public class Module extends WampModule
     }
 
     
+    public Client getClient(String sessionId)
+    {
+        return clients.get(sessionId);
+    }
+    
+    public Group getGroup(String gid)
+    {
+        return groups.get(gid);
+    }
+    
     private String getFQtopicURI(String topicName)
     {
         return WGS_URL + "#" + topicName;
@@ -94,12 +105,13 @@ public class Module extends WampModule
         Object retval = null;
         if(method.equals("list_groups")) {
             String appId = args.get(0).asText();
-            WampSubscriptionOptions options = new WampSubscriptionOptions(null);
+            JsonNode filterOptions = args.get(1);
+            GroupFilter options = new GroupFilter(this, filterOptions);
             options.setMetaEvents(java.util.Arrays.asList("http://wamp.ws/sub#joined", "http://wamp.ws/sub#left"));
             if(appId.indexOf("*") != -1) options.setMatchType(WampSubscriptionOptions.MatchEnum.wildcard);
              
             wampApp.subscribeClientWithTopic(socket, getFQtopicURI("app_event:"+appId), options);
-            retval = listGroups(appId);
+            retval = listGroups(socket, appId, options);
         } else {
             retval = super.onCall(task, socket, method, args, callOptions);
         }
@@ -1383,10 +1395,10 @@ public class Module extends WampModule
     }    
     
     
-    private ObjectNode listGroups(String appId) throws Exception
+    private ObjectNode listGroups(WampSocket socket, String appId, GroupFilter options) throws Exception
     {
         System.out.println("Listing groups for app: '" + appId + "'");
-
+        Client client = clients.get(socket.getSessionId());
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode retval = mapper.createObjectNode();        
         ArrayNode groupsArray = mapper.createArrayNode();
@@ -1394,18 +1406,20 @@ public class Module extends WampModule
         if(app != null) {
             retval.put("app", app.toJSON());
             for(Group group : app.getGroupsByState(null)) {
-                if(group.isHidden()) continue;
-                ObjectNode obj = group.toJSON();
-                obj.put("members", getMembers(group.getGid(),0));                
-                groupsArray.add(obj);
+                if(!group.isHidden() && options.subscribeGroup(group, client)) {
+                    ObjectNode obj = group.toJSON();
+                    obj.put("members", getMembers(group.getGid(),0));                
+                    groupsArray.add(obj);
+                }
             }   
         } else {
             retval.put("app", "*");
             for(Group group : groups.values()) {
-                if(group.isHidden()) continue;
-                ObjectNode obj = group.toJSON();
-                obj.put("members", getMembers(group.getGid(),0));                
-                groupsArray.add(obj);
+                if(!group.isHidden() && options.subscribeGroup(group, client)) {
+                    ObjectNode obj = group.toJSON();
+                    obj.put("members", getMembers(group.getGid(),0));                
+                    groupsArray.add(obj);
+                }
             }               
         }
         
@@ -1500,5 +1514,5 @@ public class Module extends WampModule
         
         return position;
     }    
-    
+
 }

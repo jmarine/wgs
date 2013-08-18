@@ -5,6 +5,7 @@
                 <link rel="stylesheet" href="css2/jquery-ui.css" />
 		<script type="text/javascript" src="js/jquery-1.8.3.js"></script>
 		<script type="text/javascript" src="js/jquery-ui-1.9.2.js"></script>
+                <script type="text/javascript" src="js/mustache-0.7.2.js"></script>
                 <script type="text/javascript" src="js/md5.js"></script>
                 <script type="text/javascript" src="js/hmac-sha256.js"></script>
                 <script type="text/javascript" src="js/pbkdf2.js"></script>
@@ -485,6 +486,11 @@ function app_metaevent(topicURI, metatopic, metaevent) {
     //alert(topicURI + "\n" + metatopic + "\n" + JSON.stringify(metaevent));
 }
 
+function toggle_group_scope() {
+    hide_group_list();
+    list_groups();
+}
+
 function hide_group_list() {
     var appId = $("#apps").val();
     $("#group_list").hide();
@@ -492,11 +498,12 @@ function hide_group_list() {
     wgsclient.unsubscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, false);
 }
 
-function list_groups() {
+function list_groups(scope) {
     var appId = $("#apps").val();
+    if(!scope) scope = $("input[name=group_scope]:checked").val();
     $("#groups option").remove();
     wgsclient.subscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, { "clientSideOnly":true});
-    wgsclient.listGroups(appId, function(response) {
+    wgsclient.listGroups(appId, { scope: scope }, function(response) {
         if(response.valid) {
             currentApp = response.app;
             update_groups(response);
@@ -594,8 +601,6 @@ function reserve_group_slot(gid,slot) {
 
 function open_group(gid, options) {
     var appId = $("#apps").val();
-    if(gid == "automatch") $("#back_section").val("app_list");
-    else $("#back_section").val("group_list");
     
     wgsclient.unsubscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, false);
     wgsclient.openGroup(appId, gid, options, function(response) {
@@ -752,7 +757,7 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
     if(added || memberUser == "" || memberSid == wgsclient.sid || (wgsclient.user == $("#group_admin").val()) ) {
         userOptions += '<option value="">Empty</option>';
         userOptions += '<option value="user:'+wgsclient.sid+'" ' + ((currentUserSelected && memberType=="user")? "selected" : "") + '>Me</option>';
-        if(ai) userOptions += '<option value="computer:'+wgsclient.sid+'" ' + ((currentUserSelected && memberType=="computer")? "selected" : "") + '>MyComputer</option>';
+        if(ai) userOptions += '<option value="computer:'+wgsclient.sid+'" ' + ((currentUserSelected && memberType=="computer")? "selected" : "") + '>Computer</option>';
         var connections = wgsclient.getGroupConnections(currentGroup.gid);
         for(var sid in connections) {
             if( (wgsclient.user == $("#group_admin").val()) && (sid != wgsclient.sid) && (memberSid != sid) ) {
@@ -914,12 +919,8 @@ function exit_group(toOfflineMode) {
             //wgsclient.setSubscriptionStatus("https://wgs.org#app_event:" + $("#apps").val(), null, null );        
             
             if(!toOfflineMode) {
-                var back_section = $("#back_section").val();
                 $("#group_params").hide();
-
-                // $("#" + back_section).slideDown(500); 
-                if(back_section == "group_list") list_groups();
-                else list_apps();
+                list_groups();
             }
             
         });
@@ -1148,8 +1149,7 @@ function openid_connect_menu(self) {
       <legend>Applications</legend>
     <select id="apps" name="apps" size="8" style="width: 100%">
     </select><br>
-    <button id="btn_automatch_group" onclick="open_group('automatch');" disabled >Auto-Match</button>
-    <button id="btn_select_app" onclick="list_groups();" disabled >Show groups</button>
+    <button id="btn_select_app" onclick="list_groups('mine');" disabled >Select</button>
     <button id="btn_new_app" onclick="show_app_params();">New</button>
     <button id="btn_delete_app" onclick="delete_app();" disabled >Delete</button>
     </fieldset>
@@ -1192,6 +1192,8 @@ function openid_connect_menu(self) {
   <div id="group_list" class="section hidden">
     <fieldset id="group_list_fieldset">
       <legend>Groups</legend>
+      <label for="group_scope">Filter groups:</label><input type="radio" name="group_scope" value="mine" checked onclick="javascript:toggle_group_scope()">Mine</input><input type="radio" name="group_scope" value="friends" onclick="javascript:toggle_group_scope()">Friends' & mine</input><input type="radio" name="group_scope" value="all" onclick="javascript:toggle_group_scope()">All</input><br/>
+      
     <!--<select id="groups" name="groups" size="8" style="width: 100%"></select>-->
       <div id="groupsHeader" class="scrollTableHeader" style="overflow:hidden;width:100%">
         <table cellspacing="0" cellpadding="0" border="0" >
@@ -1272,7 +1274,6 @@ function openid_connect_menu(self) {
         <label for="grp_observable">Observable:</label><input type="checkbox" name="grp_observable" id="grp_observable" onchange="javascript:update_group()"/><br/>
         <input type="hidden" id="group_gid" name="group_gid" value="" />
         <input type="hidden" id="group_admin" name="group_admin" value="" />
-        <input type="hidden" id="back_section" name="group_list" value="" />
     </div>
     <button id="start_group" onclick="start_group();">Start</button>
     <button id="toggle_client_state" onclick="toggle_client_state();">Ready</button>

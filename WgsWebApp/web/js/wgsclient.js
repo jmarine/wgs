@@ -531,8 +531,9 @@ WgsClient.prototype = {
         });
   },
   
-  listGroups: function(appId, callback) {
-      this.call("https://wgs.org#list_groups", appId).then(callback, callback);
+  listGroups: function(appId, filters, callback) {
+      var args = [ appId, filters ];
+      this.call("https://wgs.org#list_groups", args).then(callback, callback);
   },
 
   newApp: function(name, domain, version, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, callback) {
@@ -587,7 +588,7 @@ WgsClient.prototype = {
           
           if(msg.members) {
               msg.members.forEach(function(item) {
-                  client.groups[gid].connections[item.sid] = item;
+                  if(item.sid.length > 0) client.groups[gid].connections[item.sid] = item;
                   if(isFinite(item.slot)) client.groups[gid].members[item.slot] = item;
               });
           }

@@ -172,7 +172,7 @@ public class WampModule
             if((excluded==null) || (!excluded.contains(sid))) {
                 WampSubscription subscription = topic.getSubscription(sid);
                 WampSubscriptionOptions subOptions = subscription.getOptions();
-                if(subOptions != null && subOptions.hasEventsEnabled()) {
+                if(subOptions != null && subOptions.hasEventsEnabled() && subOptions.isEligibleForEvent(subscription, event)) {
                     WampSocket socket = subscription.getSocket();
                     synchronized(socket) {
                         if(socket != null && socket.isOpen() && !excluded.contains(sid)) {

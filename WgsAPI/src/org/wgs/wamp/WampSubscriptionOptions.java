@@ -14,14 +14,9 @@ public class WampSubscriptionOptions
     private boolean      eventsEnabled;
     private HashSet<String> metaEvents;
     
-    /*
-    private boolean  eventIdRequested;
-    private boolean  publisherIdRequested;
-    private int      numberEventsToSendOnSubscription;
-    private long     sinceTimeEventsToSendOnSubscription;
-    */
 
-    public WampSubscriptionOptions(JsonNode node) {
+    public WampSubscriptionOptions(JsonNode node) 
+    {
         this.matchType = MatchEnum.exact;
         this.eventsEnabled = true;
         this.metaEvents = new HashSet<String>();
@@ -131,6 +126,10 @@ public class WampSubscriptionOptions
         return (this.eventsEnabled);
     }    
     
+    public boolean isEligibleForEvent(WampSubscription subscription, JsonNode event)
+    {
+        return true;
+    }
     
 /*
     public boolean isPublisherIdRequested() {
