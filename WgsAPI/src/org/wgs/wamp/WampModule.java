@@ -85,7 +85,9 @@ public class WampModule
     public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
         WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
         if(subscription == null) subscription = new WampSubscription(clientSocket, topic.getURI(), options);
-        if(subscription.refCount(+1) == 1) {
+        if(subscription.refCount(+1) > 1) {
+            subscription.getOptions().updateOptions(options);
+        } else {
             topic.addSubscription(subscription);
             clientSocket.addSubscription(subscription);
             if(options != null && options.hasMetaEvents()) {
@@ -95,7 +97,7 @@ public class WampModule
                     app.publishMetaEvent(topic, WampMetaTopic.JOINED, subscription.toJSON(), null);
                 }
             }
-        }         
+        }
     }
 
     public void onUnsubscribe(WampSocket clientSocket, WampTopic topic) throws Exception { 

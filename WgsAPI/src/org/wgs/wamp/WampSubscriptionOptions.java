@@ -131,6 +131,12 @@ public class WampSubscriptionOptions
         return true;
     }
     
+    public void updateOptions(WampSubscriptionOptions opts)
+    {
+        this.eventsEnabled = this.eventsEnabled || opts.eventsEnabled;
+        this.metaEvents.addAll(opts.metaEvents);
+    }
+    
 /*
     public boolean isPublisherIdRequested() {
         return publisherIdRequested;

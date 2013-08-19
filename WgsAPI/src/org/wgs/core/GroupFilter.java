@@ -65,6 +65,18 @@ public class GroupFilter extends WampSubscriptionOptions
         return false;
     }
     
+    
+    @Override
+    public void updateOptions(WampSubscriptionOptions options)
+    {
+        super.updateOptions(options);
+        if(options != null && options instanceof GroupFilter) {
+            this.scope = ((GroupFilter)options).scope;
+            this.subscriptions = new HashSet<String>();
+        }
+    }
+    
+    
     @Override
     public boolean isEligibleForEvent(WampSubscription subscription, JsonNode event) 
     {

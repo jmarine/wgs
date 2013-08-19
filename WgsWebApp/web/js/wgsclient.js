@@ -19,7 +19,7 @@ WgsClient.prototype = {
   state: WgsClient.DISCONNECTED,
   groups: new Array(),
   calls: new Array(),
-  topics: new Array(),
+  topicHandlers: new Array(),
   patternHandlers: new Array(),
   metaeventHandlers: new Array(),
   
@@ -137,19 +137,19 @@ WgsClient.prototype = {
             options.match = "wildcard";
             if(!this.patternHandlers[topic]) this.patternHandlers[topic] = [];
         } else {            
-            if(!this.topics[topic]) this.topics[topic] = [];
+            if(!this.topicHandlers[topic]) this.topicHandlers[topic] = [];
         }
         
         if(!this.metaeventHandlers[topic]) this.metaeventHandlers[topic] = [];
         
         if(event_cb) {
             if(wildcards) this.patternHandlers[topic].push(event_cb);
-            else this.topics[topic].push(event_cb);
+            else this.topicHandlers[topic].push(event_cb);
         }
         if(metaevent_cb) {
             this.metaeventHandlers[topic].push(metaevent_cb);
         }
-        if(!options.clientSideOnly && ((!wildcards && event_cb && this.topics[topic].length==1) || (wildcards && event_cb && this.patternHandlers[topic].length==1) || (metaevent_cb && this.metaeventHandlers[topic].length==1)) ) {
+        if(!options.clientSideOnly) {
             var arr = [];
             arr[0] = this.isServerUsingWampVersion(2) ? 64 : 5;  // SUBSCRIBE
             arr[1] = topic;
@@ -159,59 +159,45 @@ WgsClient.prototype = {
   },
   
   unsubscribe: function(topic, event_cb, metaevent_cb, options) {
-        var wildcards = false;
         var client = this;
-
-        var clearEventHandlers = false;
-        var clearMetaHandlers = false;
         var indexOfEventHandlerToClear = -1;
         var indexOfMetaHandlerToClear = -1;
-        
         var clientSideOnly = options && options.clientSideOnly;
+        
         if(!options) options = {};
         if(options.match && options.match.toLowerCase() == "prefix") {
             topic = topic + "*";
             options.match = "wildcard";
         }
         
-        var callbacks = this.topics[topic];
+        var callbacks = this.topicHandlers[topic];
         if(topic.indexOf("*") != -1) {
-            wildcards = true;
             options.match = "wildcard";
             callbacks = this.patternHandlers[topic];
         }
         if(event_cb && callbacks) {
             indexOfEventHandlerToClear = callbacks.indexOf(event_cb);
-            if(indexOfEventHandlerToClear != -1) {
-                clearEventHandlers = (event_cb && callbacks.length<=1);
-            }
         }
-        callbacks = this.metaeventHandlers[topic];
-        if(metaevent_cb && callbacks) {
-            indexOfMetaHandlerToClear = callbacks.indexOf(metaevent_cb);
-            if(indexOfMetaHandlerToClear != -1) {
-                clearMetaHandlers = (metaevent_cb && callbacks.length<=1);
-            }
+
+        if(metaevent_cb && this.metaeventHandlers[topic]) {
+            indexOfMetaHandlerToClear = this.metaeventHandlers[topic].indexOf(metaevent_cb);
         }   
         
         
         var _clearHandlers = function() {
             var wildcards = (topic.indexOf("*") != -1);
             if(wildcards) {
-                if(clearEventHandlers) delete client.patternHandlers[topic];
+                if(event_cb && callbacks && callbacks.length<=1 && indexOfEventHandlerToClear!=-1) delete client.patternHandlers[topic];
                 else if(indexOfEventHandlerToClear != -1) client.patternHandlers.splice(indexOfEventHandlerToClear,1);
             } else {
-                if(clearEventHandlers) delete client.topics[topic];
-                else if(indexOfEventHandlerToClear != -1) client.topics.splice(indexOfEventHandlerToClear,1);
+                if(event_cb && callbacks && callbacks.length<=1 && indexOfEventHandlerToClear!=-1) delete client.topicHandlers[topic];
+                else if(indexOfEventHandlerToClear != -1) client.topicHandlers.splice(indexOfEventHandlerToClear,1);
             }
             
-            if(clearMetaHandlers) delete client.metaeventHandlers[topic];
+            if(metaevent_cb && client.metaeventHandlers[topic] && client.metaeventHandlers[topic].length<=1 && indexOfMetaHandlerToClear != -1) delete client.metaeventHandlers[topic];
             else if(indexOfMetaHandlerToClear != -1) client.metaeventHandlers.splice(indexOfMetaHandlerToClear,1);
         }
             
-        var otherSubscribedEvents = (!clearEventHandlers && this.topics[topic] && this.topics[topic].length>0);
-        if(wildcards) otherSubscribedEvents = otherSubscribedEvents || (!clearEventHandlers && this.patternHandlers[topic] && this.patternHandlers[topic].length>0);
-        var otherSubscribedMetaEvents  = (!clearMetaHandlers && this.metaeventHandlers[topic] && this.metaeventHandlers[topic].length>0);
         if(!this.metaeventHandlers[topic] || this.metaeventHandlers[topic].length == 0) {
             _clearHandlers();
         } else {
@@ -223,12 +209,11 @@ WgsClient.prototype = {
             });
         }        
         
-        if(!clientSideOnly && (clearEventHandlers || clearMetaHandlers)) {
+        if(!clientSideOnly) {
             // send unsubscribe message to server (when all eventHandlers or metaeventHandlers are cleared)
             var arr = [];
             arr[0] = this.isServerUsingWampVersion(2) ? 65 : 6;  // Unsubscribe message type
             arr[1] = topic;  
-            arr[2] = { "events": otherSubscribedEvents, "metaevents": otherSubscribedMetaEvents };
             this.send(JSON.stringify(arr));
         }   
 
@@ -483,8 +468,8 @@ WgsClient.prototype = {
               }            
           } else if(arr[0] == 8 || arr[0] == 128) {  // EVENT
               var topicURI = arr[1];
-              if(client.topics[topicURI]) {
-                  client.topics[topicURI].forEach(function(callback) {
+              if(client.topicHandlers[topicURI]) {
+                  client.topicHandlers[topicURI].forEach(function(callback) {
                       callback.call(client, arr[2], topicURI);                
                   });
               } else {
