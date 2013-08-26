@@ -558,6 +558,9 @@ WgsClient.prototype = {
       var client = this;
       if(msg.connections) {
           client.groups[msg.gid] = new Object();
+          client.groups[msg.gid].min = msg.min;
+          client.groups[msg.gid].max = msg.max;
+          client.groups[msg.gid].delta = msg.delta;
           client.groups[msg.gid].members = msg.members;
           client.groups[msg.gid].connections = new Array();
           msg.connections.forEach(function(con) { 
@@ -607,6 +610,14 @@ WgsClient.prototype = {
       this.unsubscribe("https://wgs.org#group_event:" + gid, client._update_group_users, null, { "clientSideOnly":true});
       delete this.groups[gid];
   },
+          
+  getGroupMinMembers: function(gid) {          
+    return this.groups[gid].min;
+  },          
+
+  getGroupMaxMembers: function(gid) {          
+    return this.groups[gid].max;
+  },          
 
   getGroupConnections: function(gid) {
       return this.groups[gid].connections;
@@ -619,7 +630,7 @@ WgsClient.prototype = {
   getGroupMember: function(gid,slot) {
       return this.groups[gid].members[slot];
   },
-
+          
   updateGroup: function(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, callback) {
       var client = this;
       var msg = Object();

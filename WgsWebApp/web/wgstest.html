@@ -673,7 +673,8 @@ function show_group(group) {
                 roleFixed = true;
             }
 
-            append_group_member(false, memberId, member, currentUserSelected, roleFixed, currentApp.ai);
+            var added = wgsclient.user == $("#group_admin").val() && index >= wgsclient.getGroupMinMembers(group.gid);
+            append_group_member(added, memberId, member, currentUserSelected, roleFixed, currentApp.ai);
 
         });
     }
@@ -835,6 +836,10 @@ function remove_last_member(memberId) {
     wgsclient.updateMember(appId, gid, "", -slot, false, false, false, false, false, function(response) {
         if(!response.valid) {
             alert("error while removing slot");
+        } else {
+            $("button.remove_member").each(function(index, item) { 
+                if(index+1 == $("button.remove_member").size()) $(item).show();
+            });
         }
     });
 }
@@ -853,7 +858,7 @@ function update_group_callback(response) {
                 });
             } else {
                 for(var index = num_members-old_members.size(); index > 0; index--) {
-                    add_group_member(true);
+                    add_group_member(wgsclient.user == $("#group_admin").val());
                 }
             }
 
@@ -862,7 +867,8 @@ function update_group_callback(response) {
                 var member = wgsclient.getGroupMember(response.gid, memberId);
                 var currentUserSelected = (wgsclient.sid == member.sid);
                 var roleFixed = (member.role != "") && (member.sid != "") && (wgsclient.sid != member.sid);
-                populate_group_member_fields(false, memberId, member, currentUserSelected, roleFixed, currentApp.ai);
+                var added = wgsclient.user == $("#group_admin").val() && index >= wgsclient.getGroupMinMembers(response.gid);
+                populate_group_member_fields(added, memberId, member, currentUserSelected, roleFixed, currentApp.ai);
             }
 
             if(response.cmd == "group_updated") {
@@ -884,6 +890,11 @@ function update_group_callback(response) {
                         // $("#team"+index).attr("disabled","disabled");
                     }
                 }
+                
+                $("button.remove_member").each(function(index, item) { 
+                    if(index+1 == $("button.remove_member").size()) $(item).show();
+                });
+            
             }
 
 
