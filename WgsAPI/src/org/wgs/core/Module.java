@@ -731,9 +731,9 @@ public class Module extends WampModule
                     groupQuery.setParameter("application", app);
                     List<Group> groupList = groupQuery.getResultList();
                     for(Group tmp : groupList) {
+                        manager.lock(tmp, LockModeType.PESSIMISTIC_WRITE);
                         valid = (tmp != null) && (tmp.isAutoMatchEnabled() && !tmp.isAutoMatchCompleted() && tmp.getState()==GroupState.OPEN);
                         if(valid) {
-                            manager.lock(tmp, LockModeType.PESSIMISTIC_WRITE);
                             g = groups.get(tmp.getGid());
                             if(g != null) g.setVersion(tmp.getVersion());
                             else g = tmp;
