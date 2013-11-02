@@ -738,6 +738,8 @@ public class Module extends WampModule
                             if(g != null) g.setVersion(tmp.getVersion());
                             else g = tmp;
                             break;
+                        } else {
+                            manager.lock(tmp, LockModeType.NONE);  // FIXME: MySQL holds lock
                         }
                     } 
                     
