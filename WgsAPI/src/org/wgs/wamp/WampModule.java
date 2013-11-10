@@ -85,6 +85,7 @@ public class WampModule
     public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
         WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
         if(subscription == null) subscription = new WampSubscription(clientSocket, topic.getURI(), options);
+
         if(subscription.refCount(+1) > 1) {
             subscription.getOptions().updateOptions(options);
         } else {

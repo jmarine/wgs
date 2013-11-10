@@ -20,6 +20,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageListener;
+import javax.jms.TextMessage;
+import javax.jms.Topic;
+import javax.jms.TopicConnection;
+import javax.jms.TopicSession;
 import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
 import javax.websocket.Decoder;
@@ -31,6 +38,7 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
+import org.wgs.util.MessageBroker;
 
 
 public class WampApplication 
@@ -312,8 +320,7 @@ public class WampApplication
     {
         WampTopic topic = topics.get(topicFQname);
         if(topic == null) {
-            topic = new WampTopic(options);
-            topic.setURI(topicFQname);
+            topic = new WampTopic(topicFQname, options);
             topics.put(topicFQname, topic);
             
             for(WampTopicPattern topicPattern : topicPatterns.values()) {
@@ -431,6 +438,38 @@ public class WampApplication
         } 
         
         for(WampTopic topic : topics) {
+            if(topic.getJmsTopicConnection() == null) {
+                try {
+                    topic.setJmsTopicConnection(MessageBroker.subscribeMessageListener(topic.getURI(), 0L, 0L, new MessageListener() {
+                        @Override
+                        public void onMessage(Message receivedMessageFromBroker) {
+                            try {
+                                System.out.println ("Received message from broker " + ((TextMessage)receivedMessageFromBroker).getText());
+                                
+                                String publisherId = receivedMessageFromBroker.getStringProperty("publisherId");
+                                WampTopic topic = getTopic(receivedMessageFromBroker.getStringProperty("topic"));
+                                String eventData = ((TextMessage)receivedMessageFromBroker).getText();
+                                
+                                ObjectMapper mapper = new ObjectMapper();
+                                JsonNode event = (JsonNode)mapper.readTree(eventData);
+                                
+                                // TODO: check subscription options (sinceN, sinceTime)
+                                // TODO: check eligible, ecluded, ecludeMe
+                                WampPublishOptions options = null;
+                                WampModule module = getWampModule(topic.getBaseURI(), getDefaultWampModule());
+                                module.onEvent(publisherId, topic, event, options);
+                                
+                                // publishEvent(String publisherId, WampTopic topic, JsonNode event, WampPublishOptions options)                             
+                            } catch (Exception ex) {
+                                logger.log(Level.SEVERE, "Error receiving message from broker", ex);
+                            }
+                        }
+                    }));
+                } catch (Exception ex) {
+                    logger.log(Level.SEVERE, "Error subscribing to topic in broker", ex);
+                }
+            }
+            
             WampModule module = getWampModule(topic.getBaseURI(), getDefaultWampModule());
             try { 
                 module.onSubscribe(clientSocket, topic, options);
@@ -475,6 +514,12 @@ public class WampApplication
                 try { 
                     WampModule module = getWampModule(topic.getBaseURI(), getDefaultWampModule());
                     module.onUnsubscribe(clientSocket, topic);
+                    
+                    if(topic.getSubscriptionCount() == 0) {
+                        TopicConnection con = topic.getJmsTopicConnection();
+                        con.close();
+                        con.stop();
+                    }
                 } catch(Exception ex) {
                     logger.log(Level.FINE, "Error in unsubscription to topic", ex);
                 }          
@@ -502,8 +547,11 @@ public class WampApplication
     {
         logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         try {
-            WampModule module = getWampModule(topic.getBaseURI(), getDefaultWampModule());
-            module.onEvent(publisherId, topic, event, options);
+            //WampModule module = getWampModule(topic.getBaseURI(), getDefaultWampModule());
+            //module.onEvent(publisherId, topic, event, options);
+            
+            MessageBroker.publish(topic.getURI(), 0L, event.toString(), null, null, publisherId);
+            
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "Error in publishing event to topic", ex);
         }

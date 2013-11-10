@@ -5,16 +5,25 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.jms.TopicConnection;
+import javax.persistence.Transient;
 
 
 public class WampTopic 
 {
     private String uri;
     private WampTopicOptions options;
+    
+    @Transient
+    private TopicConnection jmsTopicConnection;
+    
+    @Transient
     private Map<String,WampSubscription> subscriptions = new ConcurrentHashMap<String,WampSubscription>();
 
+    public WampTopic() { }
     
-    public WampTopic(WampTopicOptions options) {
+    public WampTopic(String uri, WampTopicOptions options) {
+        setURI(uri);
         if(options == null) options = new WampTopicOptions(); // default values
         this.options = options;
     }
@@ -44,6 +53,8 @@ public class WampTopic
         else return uri.substring(0, pos+1);
     }
 
+    
+    
     /**
      * @return the sockets
      */
@@ -78,5 +89,19 @@ public class WampTopic
     {
         return subscriptions.size();
     }    
+
+    /**
+     * @return the jmsSubscriber
+     */
+    public TopicConnection getJmsTopicConnection() {
+        return jmsTopicConnection;
+    }
+
+    /**
+     * @param jmsSubscriber the jmsSubscriber to set
+     */
+    public void setJmsTopicConnection(TopicConnection jmsTopicConnection) {
+        this.jmsTopicConnection = jmsTopicConnection;
+    }
 
 }

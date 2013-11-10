@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import javax.jms.TopicConnectionFactory;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 
@@ -32,31 +33,37 @@ public class Server
 {
     public static void main(String[] args) throws Exception 
     {
-        // create a Grizzly HttpServer to server static resources from 'webapp', on PORT.
-        System.setProperty(Context.INITIAL_CONTEXT_FACTORY, "org.apache.naming.java.javaURLContextFactory");
-        System.setProperty(Context.URL_PKG_PREFIXES, "org.apache.naming");                    
-        InitialContext ctx = new InitialContext();
-        ctx.createSubcontext("jdbc");
-        ctx.createSubcontext("concurrent");
-        
-        ExecutorService execService = Executors.newCachedThreadPool();
-        ctx.bind("concurrent/WampRpcExecutorService", execService);
-       
         String configFileName = "wgs.properties";
         if(args.length > 0) configFileName = args[0];
-        
 
         FileReader configReader = null;
-        Properties wampConfig = new Properties();
+        Properties serverConfig = new Properties();
         try {
             configReader = new FileReader(configFileName);
-            wampConfig.load(configReader);
+            serverConfig.load(configReader);
         } finally {
             if(configReader != null) {
                 configReader.close(); 
                 configReader=null;
             }            
         }
+
+        // create a Grizzly HttpServer to server static resources from 'webapp', on PORT.
+        System.setProperty(Context.INITIAL_CONTEXT_FACTORY, serverConfig.getProperty("java.naming.factory.initial", "org.apache.naming.java.javaURLContextFactory"));
+        System.setProperty(Context.URL_PKG_PREFIXES, serverConfig.getProperty("java.naming.factory.url.pkgs", "org.apache.naming"));
+        
+        InitialContext ctx = new InitialContext();
+        ctx.createSubcontext("jdbc");
+        ctx.createSubcontext("concurrent");
+        ctx.createSubcontext("jms");
+        
+        ExecutorService execService = Executors.newCachedThreadPool();
+        ctx.bind("concurrent/WampRpcExecutorService", execService);
+
+        System.out.println("Starting OpenMQ broker...");
+        TopicConnectionFactory cf = MessageBroker.startEmbeddedBroker(serverConfig);
+        ctx.bind("jms/TopicConnectionFactory", cf);        
+        
         
         //System.setProperty("webocket.servercontainer.classname", "org.glassfish.tyrus.TyrusContainerProvider");
         //ServerContainer websocketServerContainer = ContainerProvider.getServerContainer();
@@ -64,42 +71,42 @@ public class Server
         
         TyrusServerContainer server = null;        
         try {
-            String docroot = wampConfig.getProperty("docroot");
+            String docroot = serverConfig.getProperty("docroot");
             
-            TyrusContainer tyrusContainer = new org.glassfish.tyrus.container.grizzly.WssGrizzlyEngine(wampConfig);
-            TyrusServer tyrusServer = tyrusContainer.createServer(docroot, Integer.parseInt(wampConfig.getProperty("ws-port")));
+            TyrusContainer tyrusContainer = new org.glassfish.tyrus.container.grizzly.WssGrizzlyEngine(serverConfig);
+            TyrusServer tyrusServer = tyrusContainer.createServer(docroot, Integer.parseInt(serverConfig.getProperty("ws-port")));
 
-            //TyrusServerConfiguration serverConfig = new TyrusServerConfiguration();
+            //TyrusServerConfiguration tyrusServerConfig = new TyrusServerConfiguration();
             Set<ServerEndpointConfig> dynamicallyAddedEndpointConfigs = new HashSet<ServerEndpointConfig>();
             
-            String databases = wampConfig.getProperty("databases");
+            String databases = serverConfig.getProperty("databases");
             if(databases != null) {
                 StringTokenizer tokenizer = new StringTokenizer(databases, ",");
                 while(tokenizer.hasMoreTokens()) {
                     String db = tokenizer.nextToken();
-                    String jndi = wampConfig.getProperty("database." + db + ".jndi");
-                    String url = wampConfig.getProperty("database." + db + ".url");
+                    String jndi = serverConfig.getProperty("database." + db + ".jndi");
+                    String url = serverConfig.getProperty("database." + db + ".url");
                     EmbeddedConnectionPoolDataSource40 ds = new EmbeddedConnectionPoolDataSource40();
                     ds.setDatabaseName(url);
                     ctx.bind(jndi, ds);
                 } 
             }
 
-            String contexts = wampConfig.getProperty("contexts");
+            String contexts = serverConfig.getProperty("contexts");
             if(contexts != null) {
                 StringTokenizer tkContexts = new StringTokenizer(contexts, ",");
                 while(tkContexts.hasMoreTokens()) {
                     String context = tkContexts.nextToken();
-                    String uri = wampConfig.getProperty("context." + context + ".uri");
+                    String uri = serverConfig.getProperty("context." + context + ".uri");
 
                     System.out.println("Creating WAMP context URI: " + uri);
                     
-                    int wampVersion = Integer.parseInt(wampConfig.getProperty("context." + context + ".wampVersion", "1"));
+                    int wampVersion = Integer.parseInt(serverConfig.getProperty("context." + context + ".wampVersion", "1"));
                     WampApplication wampApplication = new WampApplication(wampVersion, WampEndpoint.class, uri);
-                    //serverConfig = serverConfig.endpoint(WampEndpoint.class, uri);
+                    //tyrusServerConfig = tyrusServerConfig.endpoint(WampEndpoint.class, uri);
                     //server.publishServer(WampEndpoint.class  /* , uri */ );
                     
-                    String topics = wampConfig.getProperty("context." + context + ".topics");
+                    String topics = serverConfig.getProperty("context." + context + ".topics");
                     if(topics != null) {
                         StringTokenizer tkTopics = new StringTokenizer(topics, ",");
                         while(tkTopics.hasMoreTokens()) {
@@ -109,7 +116,7 @@ public class Server
                         }
                     }                    
                     
-                    String modules = wampConfig.getProperty("context." + context + ".modules");
+                    String modules = serverConfig.getProperty("context." + context + ".modules");
                     if(modules != null) {
                         StringTokenizer tkModules = new StringTokenizer(modules, ",");
                         while(tkModules.hasMoreTokens()) {
@@ -136,6 +143,13 @@ public class Server
             
         } finally {
 
+            try {
+                MessageBroker.stopEmbeddedBroker();
+            } catch (Exception ex) {
+                System.err.println("OpenMQ broker shutdown error: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+            
             if(server != null) {
                 try { 
                     server.stop();
