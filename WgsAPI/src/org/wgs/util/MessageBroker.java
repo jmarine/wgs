@@ -23,9 +23,10 @@ import com.sun.messaging.jmq.jmsservice.BrokerEventListener;
 
 public class MessageBroker 
 {
+
     private static BrokerInstance brokerInstance = null;
 
-
+    
     public static TopicConnectionFactory startEmbeddedBroker(Properties serverConfig) throws Exception
     {
         String[] args = { 
@@ -47,6 +48,15 @@ public class MessageBroker
         return tcf;
     }
     
+    public static void stopEmbeddedBroker() 
+    {
+        if(brokerInstance != null) {
+            brokerInstance.stop();
+            brokerInstance.shutdown();
+        }
+    }
+    
+
     public static TopicConnection getTopicConnection() throws Exception
     {
         InitialContext jndi = new InitialContext();
@@ -65,32 +75,25 @@ public class MessageBroker
         return topicName;
     }
     
-    public static Topic createTopic(String topicName) throws Exception
-    {
-        TopicConnection connection = getTopicConnection();
-        TopicSession session = connection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
-        Topic topic = session.createTopic(normalizeTopicName(topicName));
-        session.close();
-        connection.close();
-        return topic;
-    }
     
     public static TopicConnection subscribeMessageListener(String topicName, long sinceTime, long sinceN, MessageListener listener) throws Exception 
     {
         TopicConnection connection = getTopicConnection();
         TopicSession subSession = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
         Topic jmsTopic = subSession.createTopic(normalizeTopicName(topicName));
-        
+
         String selector = "";
         if(sinceTime > 0L) selector = "JMSTimestamp >= " + sinceTime;
         if(sinceN > 0L) {
             if(selector.length() > 0) selector += " and ";
             selector = "id >= " + sinceN;
         }
-        
+
         TopicSubscriber subscriber = subSession.createSubscriber(jmsTopic, selector, false);
         subscriber.setMessageListener(listener);
         connection.start();
+        
+        System.out.println("Subscribed to " + topicName);
         return connection;
     }
     
@@ -110,23 +113,15 @@ public class MessageBroker
         if(eligible != null)    msg.setStringProperty("eligible", eligible);
         if(exclude != null)     msg.setStringProperty("exclude", exclude);
         if(publisherId != null) msg.setStringProperty("publisherId", publisherId);
-        
+
         publisher.send(msg);
         publisher.close();
         pubSession.close();
+        connection.close();
         
-        System.out.println ("Message sent to broker " + eventPayload);
+        System.out.println ("Message sent to topic " + topicName + ": " + eventPayload);
     }
 
-    
-    public static void stopEmbeddedBroker() 
-    {
-        if(brokerInstance != null) {
-            brokerInstance.stop();
-            brokerInstance.shutdown();
-        }
-    }
-    
 
 }
 

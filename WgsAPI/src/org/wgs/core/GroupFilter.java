@@ -94,8 +94,12 @@ public class GroupFilter extends WampSubscriptionOptions
                 return true;
             } else {
                 Group  group = module.getGroup(gid);
-                Client client = module.getClient(subscription.getSocket().getSessionId());
-                return subscribeGroup(group, client);
+                if(group == null) {
+                    return false;
+                } else {
+                    Client client = module.getClient(subscription.getSocket().getSessionId());
+                    return subscribeGroup(group, client);
+                }
             }
         }
         return false;

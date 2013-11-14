@@ -440,15 +440,18 @@ public class WampApplication
         for(WampTopic topic : topics) {
             if(topic.getJmsTopicConnection() == null) {
                 try {
-                    topic.setJmsTopicConnection(MessageBroker.subscribeMessageListener(topic.getURI(), 0L, 0L, new MessageListener() {
+                    long sinceN = 0L;       // options.getSinceN();
+                    long sinceTime = 0L;    // options.getSinceTime();
+                    topic.setJmsTopicConnection(MessageBroker.subscribeMessageListener(topic.getURI(), sinceTime, sinceN, new MessageListener() {
                         @Override
                         public void onMessage(Message receivedMessageFromBroker) {
                             try {
-                                System.out.println ("Received message from broker " + ((TextMessage)receivedMessageFromBroker).getText());
+                                System.out.println ("Received message from broker.");
                                 
                                 String publisherId = receivedMessageFromBroker.getStringProperty("publisherId");
-                                WampTopic topic = getTopic(receivedMessageFromBroker.getStringProperty("topic"));
+                                String topicName = receivedMessageFromBroker.getStringProperty("topic");
                                 String eventData = ((TextMessage)receivedMessageFromBroker).getText();
+                                System.out.println ("Received message from topic " + topicName + ": " + eventData);
                                 
                                 ObjectMapper mapper = new ObjectMapper();
                                 JsonNode event = (JsonNode)mapper.readTree(eventData);
@@ -456,6 +459,7 @@ public class WampApplication
                                 // TODO: check subscription options (sinceN, sinceTime)
                                 // TODO: check eligible, ecluded, ecludeMe
                                 WampPublishOptions options = null;
+                                WampTopic topic = getTopic(topicName);
                                 WampModule module = getWampModule(topic.getBaseURI(), getDefaultWampModule());
                                 module.onEvent(publisherId, topic, event, options);
                                 
@@ -518,7 +522,8 @@ public class WampApplication
                     if(topic.getSubscriptionCount() == 0) {
                         TopicConnection con = topic.getJmsTopicConnection();
                         con.close();
-                        con.stop();
+                        //con.stop();
+                        topic.setJmsTopicConnection(null);
                     }
                 } catch(Exception ex) {
                     logger.log(Level.FINE, "Error in unsubscription to topic", ex);
