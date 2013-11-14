@@ -1,5 +1,6 @@
 package org.wgs.util;
 
+import com.sun.messaging.AdminConnectionFactory;
 import java.util.Properties;
 
 import javax.jms.TopicConnection;
@@ -19,6 +20,13 @@ import com.sun.messaging.jmq.jmsclient.runtime.BrokerInstance;
 import com.sun.messaging.jmq.jmsclient.runtime.ClientRuntime;
 import com.sun.messaging.jmq.jmsservice.BrokerEvent;
 import com.sun.messaging.jmq.jmsservice.BrokerEventListener;
+import com.sun.messaging.jms.management.server.DestinationOperations;
+import com.sun.messaging.jms.management.server.DestinationType;
+import com.sun.messaging.jms.management.server.MQObjectName;
+import java.util.Set;
+import javax.management.MBeanServerConnection;
+import javax.management.ObjectName;
+import javax.management.remote.JMXConnector;
 
 
 public class MessageBroker 
@@ -54,6 +62,22 @@ public class MessageBroker
             brokerInstance.stop();
             brokerInstance.shutdown();
         }
+    }
+    
+    
+    public static void destroyTopic(String topicName) throws Exception
+    {
+        AdminConnectionFactory acf = new AdminConnectionFactory();
+        JMXConnector jmxc = acf.createConnection("admin", "admin");
+        MBeanServerConnection mbsc = jmxc.getMBeanServerConnection();
+
+        ObjectName destMgrMonitorName = new ObjectName(MQObjectName.DESTINATION_MANAGER_CONFIG_MBEAN_NAME);
+
+        Object opParams[] = { DestinationType.TOPIC, normalizeTopicName(topicName) };
+        String opSig[] = { String.class.getName(), String.class.getName() };
+
+        mbsc.invoke(destMgrMonitorName, DestinationOperations.DESTROY, opParams, opSig);
+        jmxc.close();
     }
     
 
@@ -97,7 +121,7 @@ public class MessageBroker
         return connection;
     }
     
-    public static void publish(String topicName, long id, String eventPayload, String eligible, String exclude, String publisherId) throws Exception
+    public static void publish(long id, String topicName, String eventPayload, String metaTopic, Set eligible, Set exclude, String publisherId) throws Exception
     {
         TopicConnection connection = getTopicConnection();
 
@@ -110,9 +134,16 @@ public class MessageBroker
         TextMessage msg = pubSession.createTextMessage(eventPayload);
         msg.setStringProperty("topic", topicName);
         if(id != 0L)            msg.setLongProperty("id", id);
-        if(eligible != null)    msg.setStringProperty("eligible", eligible);
-        if(exclude != null)     msg.setStringProperty("exclude", exclude);
         if(publisherId != null) msg.setStringProperty("publisherId", publisherId);
+        if(metaTopic != null)   msg.setStringProperty("metaTopic", metaTopic);
+        if(eligible != null) {
+            String str = eligible.toString();
+            msg.setStringProperty("eligible", str.substring(1, str.length()-1));
+        }
+        if(exclude != null) {
+            String str = exclude.toString();
+            msg.setStringProperty("exclude", str.substring(1, str.length()-1));
+        }
 
         publisher.send(msg);
         publisher.close();

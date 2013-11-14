@@ -11,9 +11,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -59,7 +61,7 @@ public class WampApplication
     private Map<String,WampModule> modules;
     private TreeMap<String,WampTopic> topics;
     private TreeMap<String,WampTopicPattern> topicPatterns;
-    private ConcurrentHashMap<Session,WampSocket> sockets;
+    private ConcurrentHashMap<String,WampSocket> sockets;
     private WampModule defaultModule;
     private ExecutorService executorService;
     
@@ -75,7 +77,7 @@ public class WampApplication
         this.endpointClass = endpointClass;
         this.path = path;
         
-        this.sockets = new ConcurrentHashMap<Session,WampSocket>();
+        this.sockets = new ConcurrentHashMap<String,WampSocket>();
         this.modules = new HashMap<String,WampModule>();
         this.topics = new TreeMap<String,WampTopic>();
         this.topicPatterns = new TreeMap<String,WampTopicPattern>();
@@ -99,9 +101,13 @@ public class WampApplication
         return !val;
     }
     
-    private WampSocket getWampSocket(Session session)
+    private WampSocket getWampSocket(String sessionId)
     {
-        return sockets.get(session);
+        if(sessionId == null) {
+            return null;
+        } else {
+            return sockets.get(sessionId);
+        }
     }
 
     
@@ -125,7 +131,7 @@ public class WampApplication
         System.out.println("##################### Session opened");
         
         final WampSocket clientSocket = new WampSocket(this, session);
-        sockets.put(session, clientSocket);
+        sockets.put(session.getId(), clientSocket);
         
         for(WampModule module : modules.values()) {
             try { 
@@ -229,7 +235,7 @@ public class WampApplication
     
     public void onWampClose(Session session, CloseReason reason) 
     {
-        WampSocket clientSocket = sockets.remove(session);
+        WampSocket clientSocket = sockets.remove(session.getId());
         if(clientSocket != null) {
 
             try { clientSocket.close(reason); }
@@ -450,20 +456,32 @@ public class WampApplication
                                 
                                 String publisherId = receivedMessageFromBroker.getStringProperty("publisherId");
                                 String topicName = receivedMessageFromBroker.getStringProperty("topic");
+                                String metaTopic = receivedMessageFromBroker.getStringProperty("metaTopic");
                                 String eventData = ((TextMessage)receivedMessageFromBroker).getText();
                                 System.out.println ("Received message from topic " + topicName + ": " + eventData);
                                 
-                                ObjectMapper mapper = new ObjectMapper();
-                                JsonNode event = (JsonNode)mapper.readTree(eventData);
+                                JsonNode event = null;
+                                if(eventData != null) {
+                                    ObjectMapper mapper = new ObjectMapper();
+                                    event = (JsonNode)mapper.readTree(eventData);
+                                }
                                 
                                 // TODO: check subscription options (sinceN, sinceTime)
-                                // TODO: check eligible, ecluded, ecludeMe
-                                WampPublishOptions options = null;
+                                
+                                String eligible = receivedMessageFromBroker.getStringProperty("eligible");
+                                String excluded = receivedMessageFromBroker.getStringProperty("excluded");
                                 WampTopic topic = getTopic(topicName);
                                 WampModule module = getWampModule(topic.getBaseURI(), getDefaultWampModule());
-                                module.onEvent(publisherId, topic, event, options);
+                                if(metaTopic == null) {
+                                    WampPublishOptions options = new WampPublishOptions();
+                                    options.setEligible(parseSessionIDs(eligible));
+                                    options.setExcluded(parseSessionIDs(excluded));
+                                    module.onEvent(publisherId, topic, event, options);
+                                } else {
+                                    module.onMetaEvent(topic, metaTopic, event, getWampSocket(eligible));
+                                }
                                 
-                                // publishEvent(String publisherId, WampTopic topic, JsonNode event, WampPublishOptions options)                             
+
                             } catch (Exception ex) {
                                 logger.log(Level.SEVERE, "Error receiving message from broker", ex);
                             }
@@ -535,6 +553,20 @@ public class WampApplication
     }
     
     
+    private HashSet<String> parseSessionIDs(String ids) 
+    {
+        HashSet<String> retval = null;
+        if(ids != null) {
+            retval = new HashSet<String>();
+            StringTokenizer stk = new StringTokenizer(ids, "," , false);
+            while(stk.hasMoreTokens()) {
+                String id = stk.nextToken();
+                retval.add(id);
+            }
+        }
+        return retval;
+    }
+    
     private void processPublishMessage(WampSocket clientSocket, ArrayNode request) throws Exception 
     {
         String topicName = clientSocket.normalizeURI(request.get(1).asText());
@@ -555,7 +587,7 @@ public class WampApplication
             //WampModule module = getWampModule(topic.getBaseURI(), getDefaultWampModule());
             //module.onEvent(publisherId, topic, event, options);
             
-            MessageBroker.publish(topic.getURI(), 0L, event.toString(), null, null, publisherId);
+            MessageBroker.publish(0L, topic.getURI(), event.toString(), null, options.getEligible(), options.getExcluded(), publisherId);
             
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "Error in publishing event to topic", ex);
@@ -566,8 +598,12 @@ public class WampApplication
     {
         logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),metaevent});
         try {
-            WampModule module = getWampModule(topic.getBaseURI(), getDefaultWampModule());
-            module.onMetaEvent(topic, metatopic, metaevent, toClient);
+            //WampModule module = getWampModule(topic.getBaseURI(), getDefaultWampModule());
+            //module.onMetaEvent(topic, metatopic, metaevent, toClient);
+            HashSet eligible = new HashSet();
+            if(toClient != null) eligible.add(toClient.getSessionId());
+            String metaEventPayload = (metaevent != null)? metaevent.toString() : null;
+            MessageBroker.publish(0L, topic.getURI(), metaEventPayload, metatopic, eligible, null, null);
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "Error in publishing metaevent to topic", ex);
         }        

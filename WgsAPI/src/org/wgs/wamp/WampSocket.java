@@ -275,6 +275,7 @@ public class WampSocket
         if(excludeMe) excludedSet.add(this.getSessionId());
         WampPublishOptions options = new WampPublishOptions();
         options.setExcludeMe(excludeMe);
+        options.setExcluded(excludedSet);
         options.setIdentifyMe(identifyMe);
         app.publishEvent(this.getSessionId(), topic, event, options);
     }

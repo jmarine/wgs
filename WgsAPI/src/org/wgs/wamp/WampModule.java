@@ -122,13 +122,22 @@ public class WampModule
         if(request.get(0).asInt() == 66) {
             // WAMP v2
             options.init(request.get(3));
+            if(options.hasExcludeMe()) {
+                Set<String> excludedSet = options.getExcluded();
+                if(excludedSet == null) excludedSet = new HashSet<String>();
+                excludedSet.add(clientSocket.getSessionId());
+            }
         } else {
             // WAMP v1
             if(request.size() == 4) {
                 // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
                 try {
                     boolean excludeMe = request.get(3).asBoolean();
-                    options.setExcludeMe(excludeMe);
+                    options.setExcludeMe(excludeMe);                    
+                    if(excludeMe) {
+                        HashSet<String> excludedSet = new HashSet<String>();
+                        excludedSet.add(clientSocket.getSessionId());
+                    }
                 } catch(Exception ex) {
                     HashSet<String> excludedSet = new HashSet<String>();
                     ArrayNode excludedArray = (ArrayNode)request.get(3);
