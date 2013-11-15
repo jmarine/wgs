@@ -539,8 +539,8 @@ public class WampApplication
                     
                     if(topic.getSubscriptionCount() == 0) {
                         TopicConnection con = topic.getJmsTopicConnection();
-                        con.close();
-                        //con.stop();
+                        con.stop();
+                        con.close();                        
                         topic.setJmsTopicConnection(null);
                     }
                 } catch(Exception ex) {
