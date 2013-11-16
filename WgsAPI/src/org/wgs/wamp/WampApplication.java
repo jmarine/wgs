@@ -524,7 +524,7 @@ public class WampApplication
             String topicPatternKey = options.getMatchType().toString() + ">" + topicUriOrPattern;
             WampTopicPattern topicPattern = topicPatterns.get(topicPatternKey);
             WampSubscription subscription = topicPattern.getSubscription(clientSocket.getSessionId());
-            if(subscription.refCount(-1) <= 0) clientSocket.removeSubscription(topicUriOrPattern);
+            if(subscription.refCount(-1) <= 0) topicPattern.removeSubscription(subscription);
             /** Don't clear topicPatterns for future clients
             // topicPatterns.remove(topicPatternKey);
             */
@@ -600,7 +600,7 @@ public class WampApplication
         try {
             //WampModule module = getWampModule(topic.getBaseURI(), getDefaultWampModule());
             //module.onMetaEvent(topic, metatopic, metaevent, toClient);
-            HashSet eligible = new HashSet();
+            HashSet<String> eligible = new HashSet<String>();
             if(toClient != null) eligible.add(toClient.getSessionId());
             String metaEventPayload = (metaevent != null)? metaevent.toString() : null;
             MessageBroker.publish(0L, topic.getURI(), metaEventPayload, metatopic, eligible, null, null);

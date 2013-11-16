@@ -35,30 +35,36 @@ public class MessageBroker
     private static BrokerInstance brokerInstance = null;
 
     
-    public static TopicConnectionFactory startEmbeddedBroker(Properties serverConfig) throws Exception
+    public static TopicConnectionFactory start(Properties serverConfig) throws Exception
     {
-        String[] args = { 
-            "-imqhome", serverConfig.getProperty("imq.home"), 
-            "-varhome", serverConfig.getProperty("imq.varhome"), 
-            "-name",    serverConfig.getProperty("imq.instancename")
-        };
+        String imqHome = serverConfig.getProperty("imq.home");
+        if(imqHome != null) {
+            System.out.println("Starting OpenMQ broker...");
+            
+            String[] args = { 
+                "-imqhome", serverConfig.getProperty("imq.home"), 
+                "-varhome", serverConfig.getProperty("imq.varhome"), 
+                "-name",    serverConfig.getProperty("imq.instancename")
+            };
 
-        ClientRuntime clientRuntime = ClientRuntime.getRuntime();
-        brokerInstance = clientRuntime.createBrokerInstance();
+            ClientRuntime clientRuntime = ClientRuntime.getRuntime();
+            brokerInstance = clientRuntime.createBrokerInstance();
 
-        Properties props = brokerInstance.parseArgs(args);
-        BrokerEventListener listener = new EmbeddedBrokerEventListener();
-        brokerInstance.init(props, listener);
-        brokerInstance.start();
+            Properties props = brokerInstance.parseArgs(args);
+            BrokerEventListener listener = new EmbeddedBrokerEventListener();
+            brokerInstance.init(props, listener);
+            brokerInstance.start();
+        }
 
         com.sun.messaging.TopicConnectionFactory tcf = new com.sun.messaging.TopicConnectionFactory();
         tcf.setProperty(ConnectionConfiguration.imqAddressList, serverConfig.getProperty("imq.tcf.imqAddressList", "mq://localhost/direct"));
         return tcf;
     }
     
-    public static void stopEmbeddedBroker() 
+    public static void stop() 
     {
         if(brokerInstance != null) {
+            System.out.println("Stoping OpenMQ broker...");
             brokerInstance.stop();
             brokerInstance.shutdown();
         }
