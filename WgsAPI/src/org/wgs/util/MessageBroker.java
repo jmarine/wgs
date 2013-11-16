@@ -1,11 +1,10 @@
 package org.wgs.util;
 
-import com.sun.messaging.AdminConnectionFactory;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.jms.TopicConnection;
 import javax.jms.TopicConnectionFactory;
-import javax.jms.Message;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 import javax.jms.MessageListener;
@@ -13,8 +12,12 @@ import javax.jms.Topic;
 import javax.jms.TopicSession;
 import javax.jms.TopicPublisher;
 import javax.jms.TopicSubscriber;
+import javax.management.MBeanServerConnection;
+import javax.management.ObjectName;
+import javax.management.remote.JMXConnector;
 import javax.naming.InitialContext;
 
+import com.sun.messaging.AdminConnectionFactory;
 import com.sun.messaging.ConnectionConfiguration;
 import com.sun.messaging.jmq.jmsclient.runtime.BrokerInstance;
 import com.sun.messaging.jmq.jmsclient.runtime.ClientRuntime;
@@ -23,10 +26,7 @@ import com.sun.messaging.jmq.jmsservice.BrokerEventListener;
 import com.sun.messaging.jms.management.server.DestinationOperations;
 import com.sun.messaging.jms.management.server.DestinationType;
 import com.sun.messaging.jms.management.server.MQObjectName;
-import java.util.Set;
-import javax.management.MBeanServerConnection;
-import javax.management.ObjectName;
-import javax.management.remote.JMXConnector;
+
 
 
 public class MessageBroker 
@@ -165,11 +165,13 @@ public class MessageBroker
 
 class EmbeddedBrokerEventListener implements BrokerEventListener 
 {
+    @Override
     public void brokerEvent(BrokerEvent brokerEvent) 
     {
         System.out.println ("Received broker event: "+brokerEvent);
     }
 
+    @Override
     public boolean exitRequested(BrokerEvent event, Throwable thr) 
     {
         System.out.println ("Broker is requesting a shutdown because of: "+event+" with "+thr);
