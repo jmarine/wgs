@@ -164,8 +164,7 @@ public class Server
             execService = Executors.newCachedThreadPool();
             ctx.bind("concurrent/WampRpcExecutorService", execService);
             
-            TopicConnectionFactory cf = MessageBroker.start(serverConfig);
-            ctx.bind("jms/TopicConnectionFactory", cf);        
+            MessageBroker.start(serverConfig);
 
             setupDataSources(ctx, serverConfig);
 

@@ -82,19 +82,24 @@ public class WampAPI extends WampModule
         String clientPendingAuthSig = (String)socket.getSessionData().remove("_clientPendingAuthSig");
         if(clientPendingAuthSig == null) clientPendingAuthSig = "";
         
-        if(!signature.equals(clientPendingAuthSig)) {
-            throw new WampException(WampApplication.WAMP_ERROR_URI + "#invalid-signature", "signature for authentication request is invalid");
+        if(signature == null) {
+            socket.setUserPrincipal(null);
+            socket.setState(WampConnectionState.ANONYMOUS);
+        } else {
+            if(!signature.equals(clientPendingAuthSig)) {
+                throw new WampException(WampApplication.WAMP_ERROR_URI + "#invalid-signature", "signature for authentication request is invalid");
+            }
+
+            String authKey = info.get("authkey").asText();
+
+            UserId userId = new UserId(User.LOCAL_USER_DOMAIN, authKey);
+            User usr = Storage.findEntity(User.class, userId);
+            usr.setLastLoginTime(Calendar.getInstance());
+            usr = Storage.saveEntity(usr);
+
+            socket.setUserPrincipal(usr);
+            socket.setState(WampConnectionState.AUTHENTICATED);
         }
-        
-        String authKey = info.get("authkey").asText();
-        
-        UserId userId = new UserId(User.LOCAL_USER_DOMAIN, authKey);
-        User usr = Storage.findEntity(User.class, userId);
-        usr.setLastLoginTime(Calendar.getInstance());
-        usr = Storage.saveEntity(usr);
-        
-        socket.setUserPrincipal(usr);
-        socket.setState(WampConnectionState.AUTHENTICATED);
 
         return perms;
     }
@@ -116,11 +121,15 @@ public class WampAPI extends WampModule
     
     private String getAuthSecret(String authKey) 
     {
-        EntityManager manager = Storage.getEntityManager();
-        UserId userId = new UserId(User.LOCAL_USER_DOMAIN, authKey);
-        User usr = manager.find(User.class, userId);
-        manager.close();
-        return usr.getPassword();
+        if(authKey != null) {
+            EntityManager manager = Storage.getEntityManager();
+            UserId userId = new UserId(User.LOCAL_USER_DOMAIN, authKey);
+            User usr = manager.find(User.class, userId);
+            manager.close();
+            return usr.getPassword();
+        } else {
+            return "";
+        }
     }
     
     

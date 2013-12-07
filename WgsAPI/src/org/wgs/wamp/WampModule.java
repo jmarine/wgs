@@ -12,6 +12,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.NullNode;
 import org.codehaus.jackson.node.ObjectNode;
+import org.wgs.util.MessageBroker;
 
 
 
@@ -89,6 +90,9 @@ public class WampModule
         if(subscription.refCount(+1) > 1) {
             subscription.getOptions().updateOptions(options);
         } else {
+            long sinceN = 0L;       // options.getSinceN();
+            long sinceTime = 0L;    // options.getSinceTime();
+            MessageBroker.subscribeMessageListener(app, topic, sinceTime, sinceN);
             topic.addSubscription(subscription);
             clientSocket.addSubscription(subscription);
             if(options != null && options.hasMetaEvents()) {
@@ -111,6 +115,10 @@ public class WampModule
             }
             topic.removeSubscription(subscription.getSocket().getSessionId());
             clientSocket.removeSubscription(subscription.getTopicUriOrPattern());
+            
+            if(topic.getSubscriptionCount() == 0) {
+                MessageBroker.unsubscribeMessageListener(topic);
+            }
         }
     }
     

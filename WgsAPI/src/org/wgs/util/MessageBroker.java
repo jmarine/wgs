@@ -1,8 +1,13 @@
 package org.wgs.util;
 
 import java.util.Properties;
+import java.util.HashSet;
 import java.util.Set;
+import java.util.StringTokenizer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import javax.jms.Message;
 import javax.jms.TopicConnection;
 import javax.jms.TopicConnectionFactory;
 import javax.jms.Session;
@@ -26,39 +31,61 @@ import com.sun.messaging.jmq.jmsservice.BrokerEventListener;
 import com.sun.messaging.jms.management.server.DestinationOperations;
 import com.sun.messaging.jms.management.server.DestinationType;
 import com.sun.messaging.jms.management.server.MQObjectName;
+import java.util.Enumeration;
+import java.util.HashMap;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.wgs.wamp.WampApplication;
+import org.wgs.wamp.WampModule;
+import org.wgs.wamp.WampPublishOptions;
+import org.wgs.wamp.WampTopic;
 
 
 
-public class MessageBroker 
+public class MessageBroker
 {
-
-    private static BrokerInstance brokerInstance = null;
+    private static boolean          brokerEnabled = false;
+    private static BrokerInstance   brokerInstance = null;
 
     
-    public static TopicConnectionFactory start(Properties serverConfig) throws Exception
+    public static void start(Properties serverConfig) throws Exception
     {
-        String imqHome = serverConfig.getProperty("imq.home");
-        if(imqHome != null) {
-            System.out.println("Starting OpenMQ broker...");
+        String imqEnabled = serverConfig.getProperty("imq.enabled");
+        if(imqEnabled != null && imqEnabled.equalsIgnoreCase("true")) {
             
-            String[] args = { 
-                "-imqhome", serverConfig.getProperty("imq.home"), 
-                "-varhome", serverConfig.getProperty("imq.varhome"), 
-                "-name",    serverConfig.getProperty("imq.instancename")
-            };
+            String imqHome = serverConfig.getProperty("imq.home");
+            if(imqHome != null) {
+                String instanceName = serverConfig.getProperty("imq.instancename", "wgs");
+                System.out.println("Starting OpenMQ broker...");
 
-            ClientRuntime clientRuntime = ClientRuntime.getRuntime();
-            brokerInstance = clientRuntime.createBrokerInstance();
+                String[] args = { 
+                    "-imqhome", serverConfig.getProperty("imq.home"), 
+                    "-varhome", serverConfig.getProperty("imq.varhome"), 
+                    "-name",    instanceName
+                };
 
-            Properties props = brokerInstance.parseArgs(args);
-            BrokerEventListener listener = new EmbeddedBrokerEventListener();
-            brokerInstance.init(props, listener);
-            brokerInstance.start();
+                ClientRuntime clientRuntime = ClientRuntime.getRuntime();
+                brokerInstance = clientRuntime.createBrokerInstance();
+
+                Properties props = brokerInstance.parseArgs(args);
+                props.put("imq."+instanceName+".max_threads", serverConfig.getProperty("imq."+instanceName+".max_threads", "10000"));
+                BrokerEventListener listener = new EmbeddedBrokerEventListener();
+                brokerInstance.init(props, listener);
+                brokerInstance.start();
+            }
+
+            com.sun.messaging.TopicConnectionFactory tcf = null;
+            tcf = new com.sun.messaging.TopicConnectionFactory();
+            tcf.setProperty(ConnectionConfiguration.imqAddressList, serverConfig.getProperty("imq.tcf.imqAddressList", "mq://localhost/direct"));
+        
+            InitialContext jndi = new InitialContext();
+            jndi.bind("jms/TopicConnectionFactory", tcf);
+            
+            brokerEnabled = true;
         }
-
-        com.sun.messaging.TopicConnectionFactory tcf = new com.sun.messaging.TopicConnectionFactory();
-        tcf.setProperty(ConnectionConfiguration.imqAddressList, serverConfig.getProperty("imq.tcf.imqAddressList", "mq://localhost/direct"));
-        return tcf;
     }
     
     public static void stop() 
@@ -87,7 +114,7 @@ public class MessageBroker
     }
     
 
-    public static TopicConnection getTopicConnection() throws Exception
+    private static TopicConnection getTopicConnection() throws Exception
     {
         InitialContext jndi = new InitialContext();
         TopicConnectionFactory tcf = (TopicConnectionFactory)jndi.lookup("jms/TopicConnectionFactory");
@@ -100,67 +127,162 @@ public class MessageBroker
         if(index != -1) topicName = topicName.substring(index+3);
 
         topicName = topicName.replace(":", ".");
+        topicName = topicName.replace("/", ".");        
         topicName = topicName.replace("#", ".");
         topicName = topicName.replace("-", "_");
         return topicName;
     }
-    
-    
-    public static TopicConnection subscribeMessageListener(String topicName, long sinceTime, long sinceN, MessageListener listener) throws Exception 
+
+    public static void unsubscribeMessageListener(WampTopic topic) throws Exception 
     {
-        TopicConnection connection = getTopicConnection();
-        TopicSession subSession = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
-        Topic jmsTopic = subSession.createTopic(normalizeTopicName(topicName));
-
-        String selector = "";
-        if(sinceTime > 0L) selector = "JMSTimestamp >= " + sinceTime;
-        if(sinceN > 0L) {
-            if(selector.length() > 0) selector += " and ";
-            selector = "id >= " + sinceN;
-        }
-
-        TopicSubscriber subscriber = subSession.createSubscriber(jmsTopic, selector, false);
-        subscriber.setMessageListener(listener);
-        connection.start();
-        
-        System.out.println("Subscribed to " + topicName);
-        return connection;
+        TopicConnection con = topic.getJmsTopicConnection();
+        con.stop();
+        con.close();                        
+        topic.setJmsTopicConnection(null);
+        topic.setMessageListener(null);
     }
     
-    public static void publish(long id, String topicName, String eventPayload, String metaTopic, Set eligible, Set exclude, String publisherId) throws Exception
+    public static void subscribeMessageListener(WampApplication app, WampTopic wampTopic, long sinceTime, long sinceN) throws Exception 
     {
-        TopicConnection connection = getTopicConnection();
-
-        TopicSession pubSession = connection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
-
-        Topic topic = pubSession.createTopic(normalizeTopicName(topicName));
-        TopicPublisher publisher = pubSession.createPublisher(topic);
-
-        // send a message to the queue in the normal way
-        TextMessage msg = pubSession.createTextMessage(eventPayload);
-        msg.setStringProperty("topic", topicName);
-        if(id != 0L)            msg.setLongProperty("id", id);
-        if(publisherId != null) msg.setStringProperty("publisherId", publisherId);
-        if(metaTopic != null)   msg.setStringProperty("metaTopic", metaTopic);
-        if(eligible != null) {
-            String str = eligible.toString();
-            msg.setStringProperty("eligible", str.substring(1, str.length()-1));
-        }
-        if(exclude != null) {
-            String str = exclude.toString();
-            msg.setStringProperty("exclude", str.substring(1, str.length()-1));
-        }
-
-        publisher.send(msg);
-        publisher.close();
-        pubSession.close();
-        connection.close();
+        synchronized(wampTopic) {
+            MessageListener messageListener = new BrokerMessageListener(app);
+            wampTopic.setMessageListener(messageListener);
         
-        System.out.println ("Message sent to topic " + topicName + ": " + eventPayload);
+            if(brokerEnabled && wampTopic.getJmsTopicConnection() == null) {
+                String topicName = wampTopic.getURI();
+                TopicConnection connection = getTopicConnection();
+                TopicSession subSession = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
+                Topic jmsTopic = subSession.createTopic(normalizeTopicName(topicName));
+
+                String selector = "";
+                if(sinceTime > 0L) selector = "JMSTimestamp >= " + sinceTime;
+                if(sinceN > 0L) {
+                    if(selector.length() > 0) selector += " and ";
+                    selector = "id >= " + sinceN;
+                }
+
+                TopicSubscriber subscriber = subSession.createSubscriber(jmsTopic, selector, false);
+                subscriber.setMessageListener(messageListener);
+
+                connection.start();
+                wampTopic.setJmsTopicConnection(connection);
+
+                System.out.println("Subscribed to " + topicName);
+            }
+        }
+    }
+    
+    public static void publish(WampApplication app, WampTopic wampTopic, long id, JsonNode event, String metaTopic, Set<String> eligible, Set<String> exclude, String publisherId) throws Exception
+    {
+        ((BrokerMessageListener)wampTopic.getMessageListener()).onEvent(wampTopic,metaTopic,eligible,exclude,publisherId, event);  
+        
+        if(brokerEnabled) {
+            String topicName = wampTopic.getURI();
+            TopicConnection connection = getTopicConnection();
+
+            TopicSession pubSession = connection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
+
+            Topic topic = pubSession.createTopic(normalizeTopicName(topicName));
+            TopicPublisher publisher = pubSession.createPublisher(topic);
+
+            // send a message to the queue in the normal way
+            String eventPayLoad = (event != null)? event.toString() : null;
+            TextMessage msg = pubSession.createTextMessage(eventPayLoad);
+            msg.setStringProperty("topic", topicName);
+            if(id != 0L)            msg.setLongProperty("id", id);
+            if(publisherId != null) msg.setStringProperty("publisherId", publisherId);
+            if(metaTopic != null)   msg.setStringProperty("metaTopic", metaTopic);
+            if(eligible != null) {
+                String str = eligible.toString();
+                msg.setStringProperty("eligible", str.substring(1, str.length()-1));
+            }
+            if(exclude != null) {
+                String str = exclude.toString();
+                msg.setStringProperty("exclude", str.substring(1, str.length()-1));
+            }
+
+            msg.setStringProperty("ignoreOnInstance", app.getServerId());
+            publisher.send(msg);
+
+            publisher.close();
+            pubSession.close();
+            connection.close();
+
+            //System.out.println ("Message sent to topic " + topicName + ": " + eventPayload);
+        }
     }
 
+    private static class BrokerMessageListener implements MessageListener 
+    {
+        private static final Logger logger = Logger.getLogger(BrokerMessageListener.class.getName());
+        private final WampApplication app;
 
+        public BrokerMessageListener(WampApplication app) {
+            this.app = app;
+        }
+        
+        private HashSet<String> parseSessionIDs(String ids) 
+        {
+            HashSet<String> retval = null;
+            if(ids != null) {
+                retval = new HashSet<String>();
+                StringTokenizer stk = new StringTokenizer(ids, "," , false);
+                while(stk.hasMoreTokens()) {
+                    String id = stk.nextToken();
+                    retval.add(id);
+                }
+            }
+            return retval;
+        }        
+
+        @Override
+        public void onMessage(Message receivedMessageFromBroker) {
+            try {
+                //System.out.println ("Received message from broker.");
+                String publisherId = receivedMessageFromBroker.getStringProperty("publisherId");
+                String topicName = receivedMessageFromBroker.getStringProperty("topic");
+                String metaTopic = receivedMessageFromBroker.getStringProperty("metaTopic");
+                String ignoreOnInstance = receivedMessageFromBroker.getStringProperty("ignoreOnInstance");
+                if(ignoreOnInstance != null && ignoreOnInstance.equals(app.getServerId())) return;
+
+                String eventData = ((TextMessage)receivedMessageFromBroker).getText();
+                //System.out.println ("Received message from topic " + topicName + ": " + eventData);
+                
+                JsonNode event = null;
+                if(eventData != null) {
+                    ObjectMapper mapper = new ObjectMapper();
+                    event = (JsonNode)mapper.readTree(eventData);
+                }
+                
+                Set eligible = parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible"));
+                Set excluded = parseSessionIDs(receivedMessageFromBroker.getStringProperty("excluded"));
+
+                WampTopic topic = app.getTopic(topicName);
+                onEvent(topic, metaTopic, eligible, excluded, publisherId, event);
+                
+            } catch (Exception ex) {
+                logger.log(Level.SEVERE, "Error receiving message from broker", ex);
+            }
+        }
+        
+        public void onEvent(WampTopic topic, String metaTopic, Set<String> eligible, Set<String> excluded, String publisherId, JsonNode event) throws Exception 
+        {
+            WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+            if(metaTopic == null) {
+                WampPublishOptions options = new WampPublishOptions();
+                options.setEligible(eligible);
+                options.setExcluded(excluded);
+                module.onEvent(publisherId, topic, event, options);
+            } else {
+                String sid = (eligible != null && eligible.size() > 0) ? eligible.iterator().next() : null;
+                module.onMetaEvent(topic, metaTopic, event, app.getWampSocket(sid));
+            }
+        }
+    }
+    
 }
+
+
 
 
 class EmbeddedBrokerEventListener implements BrokerEventListener 
@@ -180,3 +302,5 @@ class EmbeddedBrokerEventListener implements BrokerEventListener
     }
 
 }
+
+
