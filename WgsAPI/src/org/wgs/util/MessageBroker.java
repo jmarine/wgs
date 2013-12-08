@@ -93,13 +93,34 @@ public class MessageBroker
         }
     }
     
+
     public static void stop() 
     {
+        if(topicConnection != null) {
+            try {
+                topicConnection.stop();
+                topicConnection.close();
+            } catch(Exception ex) { }
+        }
+        
         if(brokerInstance != null) {
             System.out.println("Stoping OpenMQ broker...");
             brokerInstance.stop();
             brokerInstance.shutdown();
         }
+    }
+    
+    
+    private synchronized static TopicConnection getTopicConnection(boolean newConnection) throws Exception
+    {
+        TopicConnection retval = topicConnection;
+        if(newConnection || topicConnection == null) {
+            InitialContext jndi = new InitialContext();
+            TopicConnectionFactory tcf = (TopicConnectionFactory)jndi.lookup("jms/TopicConnectionFactory");
+            retval = tcf.createTopicConnection();
+            if(!newConnection && topicConnection == null) topicConnection = retval;
+        }
+        return retval;
     }
     
     
@@ -119,18 +140,6 @@ public class MessageBroker
     }
     
 
-    private synchronized static TopicConnection getTopicConnection(boolean newConnection) throws Exception
-    {
-        TopicConnection retval = topicConnection;
-        if(newConnection || topicConnection == null) {
-            InitialContext jndi = new InitialContext();
-            TopicConnectionFactory tcf = (TopicConnectionFactory)jndi.lookup("jms/TopicConnectionFactory");
-            retval = tcf.createTopicConnection();
-            if(topicConnection == null) topicConnection = retval;
-        }
-        return retval;
-    }
-    
     private static String normalizeTopicName(String topicName) 
     {
         int index = topicName.indexOf("://");
@@ -143,14 +152,6 @@ public class MessageBroker
         return topicName;
     }
 
-    public static void unsubscribeMessageListener(WampTopic topic) throws Exception 
-    {
-        TopicConnection con = topic.getJmsTopicConnection();
-        con.stop();
-        con.close();                        
-        topic.setJmsTopicConnection(null);
-        //topic.setMessageListener(null);
-    }
     
     public static void subscribeMessageListener(WampTopic wampTopic, long sinceTime, long sinceN) throws Exception 
     {
@@ -180,6 +181,16 @@ public class MessageBroker
                 System.out.println("Subscribed to " + topicName);
             }
         }
+    }
+    
+    
+    public static void unsubscribeMessageListener(WampTopic topic) throws Exception 
+    {
+        TopicConnection con = topic.getJmsTopicConnection();
+        con.stop();
+        con.close();                        
+        topic.setJmsTopicConnection(null);
+        //topic.setMessageListener(null);
     }
     
     
