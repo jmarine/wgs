@@ -52,6 +52,8 @@ public class MessageBroker
     private static boolean          brokerEnabled = false;
     private static BrokerInstance   brokerInstance = null;
     private static String           brokerId = "wgs-" + UUID.randomUUID().toString();
+    
+    private static TopicConnection  topicConnection = null;
    
     
     public static void start(Properties serverConfig) throws Exception
@@ -117,11 +119,16 @@ public class MessageBroker
     }
     
 
-    private static TopicConnection getTopicConnection() throws Exception
+    private synchronized static TopicConnection getTopicConnection(boolean newConnection) throws Exception
     {
-        InitialContext jndi = new InitialContext();
-        TopicConnectionFactory tcf = (TopicConnectionFactory)jndi.lookup("jms/TopicConnectionFactory");
-        return tcf.createTopicConnection();
+        TopicConnection retval = topicConnection;
+        if(newConnection || topicConnection == null) {
+            InitialContext jndi = new InitialContext();
+            TopicConnectionFactory tcf = (TopicConnectionFactory)jndi.lookup("jms/TopicConnectionFactory");
+            retval = tcf.createTopicConnection();
+            if(topicConnection == null) topicConnection = retval;
+        }
+        return retval;
     }
     
     private static String normalizeTopicName(String topicName) 
@@ -153,7 +160,7 @@ public class MessageBroker
         
             if(brokerEnabled && wampTopic.getJmsTopicConnection() == null) {
                 String topicName = wampTopic.getURI();
-                TopicConnection connection = getTopicConnection();
+                TopicConnection connection = getTopicConnection(true);
                 TopicSession subSession = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
                 Topic jmsTopic = subSession.createTopic(normalizeTopicName(topicName));
 
@@ -182,7 +189,7 @@ public class MessageBroker
         
         if(brokerEnabled) {
             String topicName = wampTopic.getURI();
-            TopicConnection connection = getTopicConnection();
+            TopicConnection connection = getTopicConnection(false);
 
             TopicSession pubSession = connection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
 
@@ -210,7 +217,7 @@ public class MessageBroker
 
             publisher.close();
             pubSession.close();
-            connection.close();
+            //connection.close();
 
             //System.out.println ("Message sent to topic " + topicName + ": " + eventPayload);
         }
