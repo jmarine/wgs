@@ -154,22 +154,8 @@ public class WampApplication
 
         
         // Send WELCOME message to client:
-        ObjectMapper mapper = new ObjectMapper();
-        ArrayNode response = mapper.createArrayNode();
-        ObjectNode helloDetails = mapper.createObjectNode();
-        response.add(0);  // WELCOME message code
-        response.add(clientSocket.getSessionId());
-        switch(wampVersion) {
-            case WampApplication.WAMPv1:
-                response.add(1);  // WAMP v1
-                response.add(getServerId());
-                break;
-            default:
-                response.add(helloDetails);  // WAMP v2
-                break;
-        }
-        clientSocket.sendWampResponse(response);
-        
+        WampProtocol.sendWelcomeMessage(this, clientSocket);
+       
     }   
 
     public void onWampMessage(WampSocket clientSocket, ArrayNode request) throws Exception

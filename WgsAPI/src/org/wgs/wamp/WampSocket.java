@@ -170,12 +170,6 @@ public class WampSocket
     }
 
     
-    public void sendWampResponse(ArrayNode response) {
-        String message = response.toString();
-        sendSafe(message);
-    }
-    
-    
     public void close(CloseReason reason)
     {
         this.connected = false;
@@ -187,64 +181,6 @@ public class WampSocket
     }
     
     
-    protected void sendCallResult(int callResponseMsgType, String callID, ArrayNode args)
-    {
-        StringBuilder response = new StringBuilder();
-        if(args == null) {
-            ObjectMapper mapper = new ObjectMapper();
-            args = mapper.createArrayNode();
-            args.add((String)null);
-        }
-
-        response.append("[");
-        response.append(callResponseMsgType);
-        response.append(",");
-        response.append(app.encodeJSON(callID));
-        for(int i = 0; i < args.size(); i++) {
-            response.append(",");
-            try { 
-                JsonNode obj = args.get(i); 
-                if(obj instanceof TextNode) {
-                    response.append(app.encodeJSON(obj.asText()));
-                } else {
-                    response.append(obj); 
-                }
-            }
-            catch(Exception ex) { response.append("null"); }
-        }
-        response.append("]");
-        sendSafe(response.toString());
-    }    
-    
-    
-    protected void sendCallError(int callErrorMsgType, String callID, String errorURI, String errorDesc, Object errorDetails)
-    {
-        if(errorURI == null) errorURI = WampException.WAMP_GENERIC_ERROR_URI;
-        if(errorDesc == null) errorDesc = "";
-
-        StringBuilder response = new StringBuilder();
-        response.append("[");
-        response.append(callErrorMsgType);
-        response.append(",");
-        response.append(app.encodeJSON(callID));
-
-        response.append(",");
-        response.append(app.encodeJSON(errorURI));
-        response.append(",");
-        response.append(app.encodeJSON(errorDesc));
-        
-        if(errorDetails != null) {
-            response.append(",");
-            if(errorDetails instanceof String) {
-                response.append(app.encodeJSON((String)errorDetails));
-            } else {
-                response.append(app.encodeJSON(errorDetails.toString()));
-            }
-        }
-
-        response.append("]");
-        sendSafe(response.toString());
-    }    
     
     public int getWampVersion() {
         return versionSupport;
