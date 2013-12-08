@@ -70,7 +70,7 @@ public class WampCallController implements Runnable
             ArrayNode args = null;
             WampCallOptions callOptions = null;
             ObjectMapper mapper = new ObjectMapper();
-            if (clientSocket.getWampVersion() > 1) {
+            if (clientSocket.getWampVersion() >= WampApplication.WAMPv2) {
                 args = mapper.createArrayNode();
                 if (request.size() > 2) {
                     if (request.get(3) instanceof ArrayNode) {

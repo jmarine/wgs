@@ -17,7 +17,7 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
-import javax.jms.TopicConnectionFactory;
+
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -28,6 +28,7 @@ import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.TyrusContainer;
 import org.glassfish.tyrus.spi.TyrusServer;
 import org.wgs.wamp.WampApplication;
+import org.wgs.wamp.WampServices;
 import org.wgs.wamp.WampEndpoint;
 
 
@@ -117,7 +118,7 @@ public class Server
                     while(tkTopics.hasMoreTokens()) {
                         String topic = tkTopics.nextToken();
                         System.out.println("> Creating topic at "+uri+": " + topic);
-                        wampApplication.createTopic(topic, null);
+                        WampServices.createTopic(wampApplication, topic, null);
                     }
                 }                    
 

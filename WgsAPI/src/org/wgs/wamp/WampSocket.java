@@ -182,7 +182,7 @@ public class WampSocket
         app.onWampClose(session, reason);
     }
     
-    protected boolean isOpen() {
+    public boolean isOpen() {
         return connected && session.isOpen();
     }
     
@@ -277,7 +277,7 @@ public class WampSocket
         options.setExcludeMe(excludeMe);
         options.setExcluded(excludedSet);
         options.setIdentifyMe(identifyMe);
-        app.publishEvent(this.getSessionId(), topic, event, options);
+        WampServices.publishEvent(this.getSessionId(), topic, event, options);
     }
 
     

@@ -92,14 +92,14 @@ public class WampModule
         } else {
             long sinceN = 0L;       // options.getSinceN();
             long sinceTime = 0L;    // options.getSinceTime();
-            MessageBroker.subscribeMessageListener(app, topic, sinceTime, sinceN);
+            MessageBroker.subscribeMessageListener(topic, sinceTime, sinceN);
             topic.addSubscription(subscription);
             clientSocket.addSubscription(subscription);
             if(options != null && options.hasMetaEvents()) {
-                app.publishMetaEvent(topic, WampMetaTopic.OK, null, clientSocket);
+                WampServices.publishMetaEvent(topic, WampMetaTopic.OK, null, clientSocket);
                 
                 if(options.hasEventsEnabled()) {
-                    app.publishMetaEvent(topic, WampMetaTopic.JOINED, subscription.toJSON(), null);
+                    WampServices.publishMetaEvent(topic, WampMetaTopic.JOINED, subscription.toJSON(), null);
                 }
             }
         }
@@ -111,7 +111,7 @@ public class WampModule
             WampSubscriptionOptions options = subscription.getOptions();
             if(options!=null && options.hasMetaEvents() && options.hasEventsEnabled()) {
                 ObjectNode metaevent = subscription.toJSON();
-                app.publishMetaEvent(topic, WampMetaTopic.LEFT, metaevent, null);
+                WampServices.publishMetaEvent(topic, WampMetaTopic.LEFT, metaevent, null);
             }
             topic.removeSubscription(subscription.getSocket().getSessionId());
             clientSocket.removeSubscription(subscription.getTopicUriOrPattern());
@@ -170,67 +170,9 @@ public class WampModule
             }
         }
         
-        app.publishEvent(clientSocket.getSessionId(), topic, event, options);
+        WampServices.publishEvent(clientSocket.getSessionId(), topic, event, options);
         
     }
 
-    
-    public void onEvent(String publisherId, WampTopic topic, JsonNode event, WampPublishOptions pubOptions) throws Exception { 
-        String msgByVersion[] = new String[WampApplication.WAMPv2+1];  // Cache EVENT message for each WAMP version
-
-        if(pubOptions == null) pubOptions = new WampPublishOptions(null);
-
-        Set<String> eligible = pubOptions.getEligible();
-        if(eligible == null) eligible = topic.getSessionIds();
-        else eligible.retainAll(topic.getSessionIds());
-        
-        Set<String> excluded = pubOptions.getExcluded();
-        if(excluded == null) excluded = new HashSet<String>();        
-        if(pubOptions.hasExcludeMe()) excluded.add(publisherId);
-        
-        for (String sid : eligible) {
-            if((excluded==null) || (!excluded.contains(sid))) {
-                WampSubscription subscription = topic.getSubscription(sid);
-                WampSubscriptionOptions subOptions = subscription.getOptions();
-                if(subOptions != null && subOptions.hasEventsEnabled() && subOptions.isEligibleForEvent(subscription, event)) {
-                    WampSocket socket = subscription.getSocket();
-                    synchronized(socket) {
-                        if(socket != null && socket.isOpen() && !excluded.contains(sid)) {
-                            if(socket.supportVersion(WampApplication.WAMPv2)) {
-                                if(msgByVersion[WampApplication.WAMPv2] == null) {
-                                    String eventDetails = (!pubOptions.hasIdentifyMe())? "" : ", { \"PUBLISHER\": \"" + publisherId + "\" }";
-                                    msgByVersion[WampApplication.WAMPv2] = "[128,\"" + topic.getURI() + "\", " + event.toString() + eventDetails + "]";
-                                }
-                                socket.sendSafe(msgByVersion[WampApplication.WAMPv2]);
-                            } else {
-                                if(msgByVersion[WampApplication.WAMPv1] == null) msgByVersion[WampApplication.WAMPv1] = "[8,\"" + topic.getURI() + "\", " + event.toString() + "]";
-                                socket.sendSafe(msgByVersion[WampApplication.WAMPv1]);
-                            }
-                        }
-                    }
-                }
-            }
-        }      
-    }
-    
-    
-    public void onMetaEvent(WampTopic topic, String metatopic, JsonNode metaevent, WampSocket toClient) throws Exception 
-    { 
-        String msg = "[129,\"" + topic.getURI() + "\", \"" + metatopic + "\"";
-        if(metaevent != null) msg += ", " + metaevent.toString();
-        msg += "]";
-        
-        if(toClient != null) {
-            toClient.sendSafe(msg);
-        } else {
-            for(String sid : topic.getSessionIds()) {
-                WampSubscription subscriber = topic.getSubscription(sid);
-                if(subscriber.getOptions() != null && subscriber.getOptions().hasMetaEvent(metatopic)) {
-                    WampSocket remoteSocket = subscriber.getSocket();
-                    remoteSocket.sendSafe(msg);
-                }
-            }
-        }
-    }
     
 }
