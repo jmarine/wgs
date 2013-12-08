@@ -138,14 +138,13 @@ public class WampApplication
 
             @Override
             public void onMessage(String message) {
-
                 try {
-                    logger.log(Level.FINE, "onMessage: {0}", new Object[]{message});
+                    //logger.log(Level.FINE, "onMessage: {0}", new Object[]{message});
                     ObjectMapper mapper = new ObjectMapper();
                     ArrayNode request = (ArrayNode)mapper.readTree(message);                    
                     WampApplication.this.onWampMessage(clientSocket, request);
                 } catch(Exception ex) { 
-                    System.out.println("Error processing message: " + ex);
+                    logger.log(Level.SEVERE, "Error processing message: "+message, ex);
                 }
             }
             
@@ -161,10 +160,10 @@ public class WampApplication
     public void onWampMessage(WampSocket clientSocket, ArrayNode request) throws Exception
     {
 
-        logger.log(Level.FINE, "onWampMessage.data = {0}", new Object[]{request});
+        //logger.log(Level.FINE, "onWampMessage.data = {0}", new Object[]{request});
 
         int requestType = request.get(0).asInt();
-        logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
+        //logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
 
 
         switch(requestType) {

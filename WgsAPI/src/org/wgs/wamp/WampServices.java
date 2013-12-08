@@ -242,7 +242,7 @@ public class WampServices
     
     public static void publishEvent(String publisherId, WampTopic topic, JsonNode event, WampPublishOptions options) 
     {
-        logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
+        //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         try {
             MessageBroker.publish(topic, 0L, event, null, options.getEligible(), options.getExcluded(), (options.hasIdentifyMe()? publisherId : null));
         } catch(Exception ex) {
@@ -252,7 +252,7 @@ public class WampServices
     
     public static void publishMetaEvent(WampTopic topic, String metatopic, JsonNode metaevent, WampSocket toClient) 
     {
-        logger.log(Level.INFO, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),metaevent});
+        //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),metaevent});
         try {
             HashSet<String> eligible = new HashSet<String>();
             if(toClient != null) eligible.add(toClient.getSessionId());
