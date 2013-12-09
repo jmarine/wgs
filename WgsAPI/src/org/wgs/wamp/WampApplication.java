@@ -65,7 +65,7 @@ public class WampApplication
             executorService = (ExecutorService)ctx.lookup("concurrent/WampRpcExecutorService");
         } catch(Exception ex) { }
         
-        this.wampVersion = WAMPv1;
+        this.wampVersion = version;
         this.endpointClass = endpointClass;
         this.path = path;
         
