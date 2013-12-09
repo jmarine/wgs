@@ -5,8 +5,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.jms.MessageListener;
-import javax.jms.TopicConnection;
+
 import javax.persistence.Transient;
 
 
@@ -16,17 +15,12 @@ public class WampTopic
     private WampTopicOptions options;
 
     @Transient
-    private MessageListener messageListener;
-    
-    @Transient
-    private TopicConnection jmsTopicConnection;
-    
-    @Transient
     private Map<String,WampSubscription> subscriptions = new ConcurrentHashMap<String,WampSubscription>();
 
     public WampTopic() { }
     
-    public WampTopic(String uri, WampTopicOptions options) {
+    public WampTopic(String uri, WampTopicOptions options) 
+    {
         setURI(uri);
         if(options == null) options = new WampTopicOptions(); // default values
         this.options = options;
@@ -93,33 +87,5 @@ public class WampTopic
     {
         return subscriptions.size();
     }    
-
-    /**
-     * @return the jmsSubscriber
-     */
-    public TopicConnection getJmsTopicConnection() {
-        return jmsTopicConnection;
-    }
-
-    /**
-     * @param jmsSubscriber the jmsSubscriber to set
-     */
-    public void setJmsTopicConnection(TopicConnection jmsTopicConnection) {
-        this.jmsTopicConnection = jmsTopicConnection;
-    }
-
-    /**
-     * @return the messageListener
-     */
-    public MessageListener getMessageListener() {
-        return messageListener;
-    }
-
-    /**
-     * @param messageListener the messageListener to set
-     */
-    public void setMessageListener(MessageListener messageListener) {
-        this.messageListener = messageListener;
-    }
 
 }

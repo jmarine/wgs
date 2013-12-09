@@ -1,9 +1,11 @@
 package org.wgs.util;
 
-import java.util.Properties;
 import java.util.HashSet;
+import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -31,18 +33,12 @@ import com.sun.messaging.jmq.jmsservice.BrokerEventListener;
 import com.sun.messaging.jms.management.server.DestinationOperations;
 import com.sun.messaging.jms.management.server.DestinationType;
 import com.sun.messaging.jms.management.server.MQObjectName;
-import java.util.UUID;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.WampProtocol;
-import org.wgs.wamp.WampPublishOptions;
-import org.wgs.wamp.WampServices;
 
-import org.wgs.wamp.WampSocket;
-import org.wgs.wamp.WampSubscription;
-import org.wgs.wamp.WampSubscriptionOptions;
+import org.wgs.wamp.WampProtocol;
+import org.wgs.wamp.WampServices;
 import org.wgs.wamp.WampTopic;
 
 
@@ -55,6 +51,7 @@ public class MessageBroker
     private static String           brokerId = "wgs-" + UUID.randomUUID().toString();
     
     private static TopicConnection  reusableTopicConnection = null;
+    private static ConcurrentHashMap<WampTopic,TopicConnection> topicSubscriptions = new ConcurrentHashMap<WampTopic,TopicConnection>();
    
     
     public static void start(Properties serverConfig) throws Exception
@@ -162,12 +159,11 @@ public class MessageBroker
     public static void subscribeMessageListener(WampTopic wampTopic, long sinceTime, long sinceN) throws Exception 
     {
         synchronized(wampTopic) {
-            MessageListener messageListener = new BrokerMessageListener();
-            //wampTopic.setMessageListener(messageListener);
-        
-            if(brokerEnabled && wampTopic.getJmsTopicConnection() == null) {
+            if(brokerEnabled && !topicSubscriptions.containsKey(wampTopic)) {
                 String topicName = wampTopic.getURI();
                 TopicConnection connection = getTopicConnection(true);
+                topicSubscriptions.put(wampTopic, connection);
+                
                 TopicSession subSession = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
                 Topic jmsTopic = subSession.createTopic(normalizeTopicName(topicName));
 
@@ -179,10 +175,8 @@ public class MessageBroker
                 }
 
                 TopicSubscriber subscriber = subSession.createSubscriber(jmsTopic, selector, false);
-                subscriber.setMessageListener(messageListener);
-
+                subscriber.setMessageListener(new BrokerMessageListener());
                 connection.start();
-                wampTopic.setJmsTopicConnection(connection);
 
                 System.out.println("Subscribed to " + topicName);
             }
@@ -192,10 +186,11 @@ public class MessageBroker
     
     public static void unsubscribeMessageListener(WampTopic topic) throws Exception 
     {
-        TopicConnection con = topic.getJmsTopicConnection();
-        con.stop();
-        closeTopicConnection(con, true);
-        topic.setJmsTopicConnection(null);
+        if(brokerEnabled) {
+            TopicConnection con = topicSubscriptions.remove(topic);
+            con.stop();
+            closeTopicConnection(con, true);
+        }
     }
     
     
