@@ -91,26 +91,5 @@ public class WampPublishOptions
     }
     
     
-    public static String serializeSessionIDs(Set<String> ids) 
-    {
-        String str = ids.toString();
-        return str.substring(1, str.length()-1);
-    }
-    
-    public static HashSet<String> parseSessionIDs(String ids) 
-    {
-        HashSet<String> retval = null;
-        if(ids != null) {
-            retval = new HashSet<String>();
-            StringTokenizer stk = new StringTokenizer(ids, "," , false);
-            while(stk.hasMoreTokens()) {
-                String id = stk.nextToken();
-                retval.add(id);
-            }
-        }
-        return retval;
-    }        
-    
-    
 }
 

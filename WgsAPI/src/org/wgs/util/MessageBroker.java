@@ -215,8 +215,8 @@ public class MessageBroker
             if(id != 0L)            msg.setLongProperty("id", id);
             if(publisherId != null) msg.setStringProperty("publisherId", publisherId);
             if(metaTopic != null)   msg.setStringProperty("metaTopic", metaTopic);
-            if(eligible != null)    msg.setStringProperty("eligible", WampPublishOptions.serializeSessionIDs(eligible));
-            if(exclude != null)     msg.setStringProperty("exclude", WampPublishOptions.serializeSessionIDs(exclude));
+            if(eligible != null)    msg.setStringProperty("eligible", serializeSessionIDs(eligible));
+            if(exclude != null)     msg.setStringProperty("exclude", serializeSessionIDs(exclude));
 
             msg.setStringProperty("ignoreOnInstance", brokerId);
             publisher.send(msg);
@@ -239,7 +239,29 @@ public class MessageBroker
             // METAEVENT data (WAMP v2)
             WampProtocol.sendMetaEvents(topic, metaTopic, eligible, event);
         }
-    }        
+    }       
+    
+    
+    private static String serializeSessionIDs(Set<String> ids) 
+    {
+        String str = ids.toString();
+        return str.substring(1, str.length()-1);
+    }
+    
+    
+    private static HashSet<String> parseSessionIDs(String ids) 
+    {
+        HashSet<String> retval = null;
+        if(ids != null) {
+            retval = new HashSet<String>();
+            StringTokenizer stk = new StringTokenizer(ids, "," , false);
+            while(stk.hasMoreTokens()) {
+                String id = stk.nextToken();
+                retval.add(id);
+            }
+        }
+        return retval;
+    }     
     
     
     private static class BrokerMessageListener implements MessageListener 
@@ -263,8 +285,8 @@ public class MessageBroker
                     event = (JsonNode)mapper.readTree(eventData);
                 }
                 
-                Set eligible = WampPublishOptions.parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible"));
-                Set exclude  = WampPublishOptions.parseSessionIDs(receivedMessageFromBroker.getStringProperty("exclude"));
+                Set eligible = parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible"));
+                Set exclude  = parseSessionIDs(receivedMessageFromBroker.getStringProperty("exclude"));
 
                 WampTopic topic = WampServices.getTopic(topicName);
                 broadcastClusterEventToLocalNodeClients(topic, metaTopic, eligible, exclude, publisherId, event);
