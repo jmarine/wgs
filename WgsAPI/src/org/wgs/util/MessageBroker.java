@@ -54,7 +54,7 @@ public class MessageBroker
     private static BrokerInstance   brokerInstance = null;
     private static String           brokerId = "wgs-" + UUID.randomUUID().toString();
     
-    private static TopicConnection  topicConnection = null;
+    private static TopicConnection  reusableTopicConnection = null;
    
     
     public static void start(Properties serverConfig) throws Exception
@@ -97,10 +97,10 @@ public class MessageBroker
 
     public static void stop() 
     {
-        if(topicConnection != null) {
+        if(reusableTopicConnection != null) {
             try {
-                topicConnection.stop();
-                topicConnection.close();
+                //topicConnection.stop();
+                reusableTopicConnection.close();
             } catch(Exception ex) { }
         }
         
@@ -112,16 +112,21 @@ public class MessageBroker
     }
     
     
-    private synchronized static TopicConnection getTopicConnection(boolean newConnection) throws Exception
+    private synchronized static TopicConnection getTopicConnection(boolean createConnection) throws Exception
     {
-        TopicConnection retval = topicConnection;
-        if(newConnection || topicConnection == null) {
+        TopicConnection retval = reusableTopicConnection;
+        if(createConnection || reusableTopicConnection == null) {
             InitialContext jndi = new InitialContext();
             TopicConnectionFactory tcf = (TopicConnectionFactory)jndi.lookup("jms/TopicConnectionFactory");
             retval = tcf.createTopicConnection();
-            if(!newConnection && topicConnection == null) topicConnection = retval;
+            if(!createConnection && reusableTopicConnection == null) reusableTopicConnection = retval;
         }
         return retval;
+    }
+    
+    private static void closeTopicConnection(TopicConnection con, boolean wasCreated) throws Exception
+    {
+        if(wasCreated) con.close();
     }
     
     
@@ -189,9 +194,8 @@ public class MessageBroker
     {
         TopicConnection con = topic.getJmsTopicConnection();
         con.stop();
-        con.close();                        
+        closeTopicConnection(con, true);
         topic.setJmsTopicConnection(null);
-        //topic.setMessageListener(null);
     }
     
     
@@ -223,7 +227,7 @@ public class MessageBroker
 
             publisher.close();
             pubSession.close();
-            //connection.close();
+            closeTopicConnection(connection, false);
 
             //System.out.println ("Message sent to topic " + topicName + ": " + eventPayload);
         }
