@@ -1,5 +1,6 @@
 package org.wgs.wamp;
 
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 import org.codehaus.jackson.JsonNode;
@@ -16,7 +17,6 @@ public class WampProtocol
         // Send WELCOME message to client:
         ObjectMapper mapper = new ObjectMapper();
         ArrayNode response = mapper.createArrayNode();
-        ObjectNode helloDetails = mapper.createObjectNode();
         response.add(0);  // WELCOME message code
         response.add(clientSocket.getSessionId());
         switch(app.getWampVersion()) {
@@ -24,8 +24,17 @@ public class WampProtocol
                 response.add(1);  // WAMP v1
                 response.add(app.getServerId());
                 break;
-            default:
-                response.add(helloDetails);  // WAMP v2
+            case WampApplication.WAMPv2:
+                ObjectNode features = mapper.createObjectNode();
+                features.put("ProgressiveResults", 1);
+                features.put("CallTimeouts", 0);
+                features.put("PartitionedCalls", 0);
+                features.put("CancelCalls", 1);
+
+                ObjectNode helloDetails = mapper.createObjectNode();
+                helloDetails.put("agent", "wgs");
+                helloDetails.put("features", features);
+                response.add(helloDetails);  
                 break;
         }
         

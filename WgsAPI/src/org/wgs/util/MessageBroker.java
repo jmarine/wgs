@@ -37,6 +37,7 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampProtocol;
+import org.wgs.wamp.WampPublishOptions;
 import org.wgs.wamp.WampServices;
 
 import org.wgs.wamp.WampSocket;
@@ -214,14 +215,8 @@ public class MessageBroker
             if(id != 0L)            msg.setLongProperty("id", id);
             if(publisherId != null) msg.setStringProperty("publisherId", publisherId);
             if(metaTopic != null)   msg.setStringProperty("metaTopic", metaTopic);
-            if(eligible != null) {
-                String str = eligible.toString();
-                msg.setStringProperty("eligible", str.substring(1, str.length()-1));
-            }
-            if(exclude != null) {
-                String str = exclude.toString();
-                msg.setStringProperty("exclude", str.substring(1, str.length()-1));
-            }
+            if(eligible != null)    msg.setStringProperty("eligible", WampPublishOptions.serializeSessionIDs(eligible));
+            if(exclude != null)     msg.setStringProperty("exclude", WampPublishOptions.serializeSessionIDs(exclude));
 
             msg.setStringProperty("ignoreOnInstance", brokerId);
             publisher.send(msg);
@@ -249,20 +244,6 @@ public class MessageBroker
     
     private static class BrokerMessageListener implements MessageListener 
     {
-        private HashSet<String> parseSessionIDs(String ids) 
-        {
-            HashSet<String> retval = null;
-            if(ids != null) {
-                retval = new HashSet<String>();
-                StringTokenizer stk = new StringTokenizer(ids, "," , false);
-                while(stk.hasMoreTokens()) {
-                    String id = stk.nextToken();
-                    retval.add(id);
-                }
-            }
-            return retval;
-        }        
-
         @Override
         public void onMessage(Message receivedMessageFromBroker) {
             try {
@@ -282,11 +263,11 @@ public class MessageBroker
                     event = (JsonNode)mapper.readTree(eventData);
                 }
                 
-                Set eligible = parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible"));
-                Set excluded = parseSessionIDs(receivedMessageFromBroker.getStringProperty("excluded"));
+                Set eligible = WampPublishOptions.parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible"));
+                Set exclude  = WampPublishOptions.parseSessionIDs(receivedMessageFromBroker.getStringProperty("exclude"));
 
                 WampTopic topic = WampServices.getTopic(topicName);
-                broadcastClusterEventToLocalNodeClients(topic, metaTopic, eligible, excluded, publisherId, event);
+                broadcastClusterEventToLocalNodeClients(topic, metaTopic, eligible, exclude, publisherId, event);
                 
             } catch (Exception ex) {
                 logger.log(Level.SEVERE, "Error receiving message from broker", ex);

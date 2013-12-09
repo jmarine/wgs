@@ -1,8 +1,10 @@
 package org.wgs.wamp;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.StringTokenizer;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ObjectNode;
 
@@ -87,6 +89,27 @@ public class WampPublishOptions
     public void setIdentifyMe(boolean identifyMe) {
         this.identifyMe = identifyMe;
     }
+    
+    
+    public static String serializeSessionIDs(Set<String> ids) 
+    {
+        String str = ids.toString();
+        return str.substring(1, str.length()-1);
+    }
+    
+    public static HashSet<String> parseSessionIDs(String ids) 
+    {
+        HashSet<String> retval = null;
+        if(ids != null) {
+            retval = new HashSet<String>();
+            StringTokenizer stk = new StringTokenizer(ids, "," , false);
+            while(stk.hasMoreTokens()) {
+                String id = stk.nextToken();
+                retval.add(id);
+            }
+        }
+        return retval;
+    }        
     
     
 }
