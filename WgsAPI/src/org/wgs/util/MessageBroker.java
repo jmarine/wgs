@@ -51,7 +51,7 @@ public class MessageBroker
     private static String           brokerId = "wgs-" + UUID.randomUUID().toString();
     
     private static TopicConnection  reusableTopicConnection = null;
-    private static ConcurrentHashMap<WampTopic,TopicConnection> topicSubscriptions = new ConcurrentHashMap<WampTopic,TopicConnection>();
+    private static ConcurrentHashMap<WampTopic,TopicSubscriber> topicSubscriptions = new ConcurrentHashMap<WampTopic,TopicSubscriber>();
    
     
     public static void start(Properties serverConfig) throws Exception
@@ -96,7 +96,7 @@ public class MessageBroker
     {
         if(reusableTopicConnection != null) {
             try {
-                //topicConnection.stop();
+                //reusableTopicConnection.stop();
                 reusableTopicConnection.close();
             } catch(Exception ex) { }
         }
@@ -109,21 +109,19 @@ public class MessageBroker
     }
     
     
-    private synchronized static TopicConnection getTopicConnection(boolean createConnection) throws Exception
+    private synchronized static TopicConnection getTopicConnectionFromPool() throws Exception
     {
-        TopicConnection retval = reusableTopicConnection;
-        if(createConnection || reusableTopicConnection == null) {
+        if(reusableTopicConnection == null) {
             InitialContext jndi = new InitialContext();
             TopicConnectionFactory tcf = (TopicConnectionFactory)jndi.lookup("jms/TopicConnectionFactory");
-            retval = tcf.createTopicConnection();
-            if(!createConnection && reusableTopicConnection == null) reusableTopicConnection = retval;
+            reusableTopicConnection = tcf.createTopicConnection();
         }
-        return retval;
+        return reusableTopicConnection;
     }
     
-    private static void closeTopicConnection(TopicConnection con, boolean wasCreated) throws Exception
+    private static void releaseTopicConnectionToPool(TopicConnection topicConnection)
     {
-        if(wasCreated) con.close();
+        // topicConnection.close();   // don't close: it's now reused by all publishers/subscribers
     }
     
     
@@ -161,9 +159,8 @@ public class MessageBroker
         synchronized(wampTopic) {
             if(brokerEnabled && !topicSubscriptions.containsKey(wampTopic)) {
                 String topicName = wampTopic.getURI();
-                TopicConnection connection = getTopicConnection(true);
-                topicSubscriptions.put(wampTopic, connection);
-                
+                TopicConnection connection = getTopicConnectionFromPool();
+
                 TopicSession subSession = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
                 Topic jmsTopic = subSession.createTopic(normalizeTopicName(topicName));
 
@@ -174,9 +171,15 @@ public class MessageBroker
                     selector = "id >= " + sinceN;
                 }
 
-                TopicSubscriber subscriber = subSession.createSubscriber(jmsTopic, selector, false);
-                subscriber.setMessageListener(new BrokerMessageListener());
-                connection.start();
+                synchronized(connection) {
+                    connection.stop();
+                    TopicSubscriber subscriber = subSession.createSubscriber(jmsTopic, selector, false);
+                    subscriber.setMessageListener(new BrokerMessageListener());
+                    connection.start();
+                    topicSubscriptions.put(wampTopic, subscriber);
+                }
+                
+                releaseTopicConnectionToPool(connection);
 
                 System.out.println("Subscribed to " + topicName);
             }
@@ -187,9 +190,8 @@ public class MessageBroker
     public static void unsubscribeMessageListener(WampTopic topic) throws Exception 
     {
         if(brokerEnabled) {
-            TopicConnection con = topicSubscriptions.remove(topic);
-            con.stop();
-            closeTopicConnection(con, true);
+            TopicSubscriber subscriber = topicSubscriptions.remove(topic);
+            subscriber.close();
         }
     }
     
@@ -200,7 +202,7 @@ public class MessageBroker
         
         if(brokerEnabled) {
             String topicName = wampTopic.getURI();
-            TopicConnection connection = getTopicConnection(false);
+            TopicConnection connection = getTopicConnectionFromPool();
 
             TopicSession pubSession = connection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
 
@@ -217,12 +219,13 @@ public class MessageBroker
             if(eligible != null)    msg.setStringProperty("eligible", serializeSessionIDs(eligible));
             if(exclude != null)     msg.setStringProperty("exclude", serializeSessionIDs(exclude));
 
-            msg.setStringProperty("ignoreOnInstance", brokerId);
+            msg.setStringProperty("excludeBroker", brokerId);
             publisher.send(msg);
 
             publisher.close();
             pubSession.close();
-            closeTopicConnection(connection, false);
+            
+            releaseTopicConnectionToPool(connection);
 
             //System.out.println ("Message sent to topic " + topicName + ": " + eventPayload);
         }
@@ -272,8 +275,8 @@ public class MessageBroker
                 String publisherId = receivedMessageFromBroker.getStringProperty("publisherId");
                 String topicName = receivedMessageFromBroker.getStringProperty("topic");
                 String metaTopic = receivedMessageFromBroker.getStringProperty("metaTopic");
-                String ignoreOnInstance = receivedMessageFromBroker.getStringProperty("ignoreOnInstance");
-                if(ignoreOnInstance != null && ignoreOnInstance.equals(brokerId)) return;
+                String excludeBroker = receivedMessageFromBroker.getStringProperty("excludeBroker");
+                if(excludeBroker != null && excludeBroker.equals(brokerId)) return;
 
                 String eventData = ((TextMessage)receivedMessageFromBroker).getText();
                 //System.out.println ("Received message from topic " + topicName + ": " + eventData);
