@@ -43,8 +43,8 @@ public class WampCallController implements Runnable
         String method = "";
 
         int callMsgType = request.get(0).asInt();
-        int callResponseMsgType = (callMsgType == 2) ? 3 : 32;
-        int callErrorMsgType = (callMsgType == 2) ? 4 : 34;
+        int callResponseMsgType = (callMsgType == 2) ? 3 : 34;
+        int callErrorMsgType = (callMsgType == 2) ? 4 : 36;
 
         String callID  = request.get(1).asText();
         if(callID == null || callID.equals("")) {

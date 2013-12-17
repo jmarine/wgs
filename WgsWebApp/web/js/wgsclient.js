@@ -442,7 +442,7 @@ WgsClient.prototype = {
               }
               client.state = WgsState.WELCOMED;
               onstatechange(WgsState.WELCOMED);
-          } else if (arr[0] == 3 || arr[0] == 32) {  // CALLRESULT
+          } else if (arr[0] == 3 || arr[0] == 34) {  // CALLRESULT
               var call = arr[1];
               if(client.calls[call]) {       
                   var args = arr[2];
@@ -453,7 +453,7 @@ WgsClient.prototype = {
               } else {
                   client.debug("call not found: " + call);
               }
-          } else if (arr[0] == 4 || arr[0] == 34) {  // CALLERROR
+          } else if (arr[0] == 4 || arr[0] == 36) {  // CALLERROR
               var call = arr[1];
               if(client.calls[call]) {  
                   var args = {};
