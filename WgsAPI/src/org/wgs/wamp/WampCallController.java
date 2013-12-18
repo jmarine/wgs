@@ -48,7 +48,7 @@ public class WampCallController implements Runnable
 
         String callID  = request.get(1).asText();
         if(callID == null || callID.equals("")) {
-            WampProtocol.sendCallError(app, clientSocket, callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "CallID not present", null);
+            WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "CallID not present", null);
             return;
         }        
         
@@ -104,7 +104,7 @@ public class WampCallController implements Runnable
                 response.add(mapper.valueToTree(result));
             }
             if (!isCancelled()) {
-                WampProtocol.sendCallResult(app, clientSocket, callResponseMsgType, callID, response);
+                WampProtocol.sendCallResult(clientSocket, callResponseMsgType, callID, response);
                 done = true;
             }
         } catch (Throwable ex) {
@@ -114,19 +114,19 @@ public class WampCallController implements Runnable
             if (ex instanceof WampException) {
                 WampException wex = (WampException) ex;
                 if (!isCancelled()) {
-                    WampProtocol.sendCallError(app, clientSocket, callErrorMsgType, callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
+                    WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
                 }
                 logger.log(Level.FINE, "Error calling method " + method + ": " + wex.getErrorDesc());
             } else {
                 if (!isCancelled()) {
-                    WampProtocol.sendCallError(app, clientSocket, callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + method, ex.getMessage());
+                    WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + method, ex.getMessage());
                 }
                 logger.log(Level.SEVERE, "Error calling method " + method, ex);
             }
         } finally {
             clientSocket.removeRpcController(callID);
             if (isCancelled()) {
-                WampProtocol.sendCallError(app, clientSocket, callErrorMsgType, callID, WampApplication.WAMP_ERROR_URI + "#CanceledByCaller", "RPC cancelled by caller: " + callID, null);
+                WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampApplication.WAMP_ERROR_URI + "#CanceledByCaller", "RPC cancelled by caller: " + callID, null);
             }
         }
     }

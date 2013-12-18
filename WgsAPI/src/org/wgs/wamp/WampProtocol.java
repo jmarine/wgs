@@ -42,7 +42,7 @@ public class WampProtocol
     }
     
     
-    public static void sendCallResult(WampApplication app, WampSocket clientSocket, int callResponseMsgType, String callID, ArrayNode args)
+    public static void sendCallResult(WampSocket clientSocket, int callResponseMsgType, String callID, ArrayNode args)
     {
         StringBuilder response = new StringBuilder();
         if(args == null) {
@@ -54,13 +54,13 @@ public class WampProtocol
         response.append("[");
         response.append(callResponseMsgType);
         response.append(",");
-        response.append(app.encodeJSON(callID));
+        response.append(encodeJSON(callID));
         for(int i = 0; i < args.size(); i++) {
             response.append(",");
             try { 
                 JsonNode obj = args.get(i); 
                 if(obj instanceof TextNode) {
-                    response.append(app.encodeJSON(obj.asText()));
+                    response.append(encodeJSON(obj.asText()));
                 } else {
                     response.append(obj); 
                 }
@@ -72,7 +72,7 @@ public class WampProtocol
     }    
     
     
-    public static void sendCallError(WampApplication app, WampSocket clientSocket, int callErrorMsgType, String callID, String errorURI, String errorDesc, Object errorDetails)
+    public static void sendCallError(WampSocket clientSocket, int callErrorMsgType, String callID, String errorURI, String errorDesc, Object errorDetails)
     {
         if(errorURI == null) errorURI = WampException.WAMP_GENERIC_ERROR_URI;
         if(errorDesc == null) errorDesc = "";
@@ -81,19 +81,19 @@ public class WampProtocol
         response.append("[");
         response.append(callErrorMsgType);
         response.append(",");
-        response.append(app.encodeJSON(callID));
+        response.append(encodeJSON(callID));
 
         response.append(",");
-        response.append(app.encodeJSON(errorURI));
+        response.append(encodeJSON(errorURI));
         response.append(",");
-        response.append(app.encodeJSON(errorDesc));
+        response.append(encodeJSON(errorDesc));
         
         if(errorDetails != null) {
             response.append(",");
             if(errorDetails instanceof String) {
-                response.append(app.encodeJSON((String)errorDetails));
+                response.append(encodeJSON((String)errorDetails));
             } else {
-                response.append(app.encodeJSON(errorDetails.toString()));
+                response.append(encodeJSON(errorDetails.toString()));
             }
         }
 
@@ -165,5 +165,47 @@ public class WampProtocol
 
     }
 
+    
+    private static String encodeJSON(String orig) 
+    {
+        if(orig == null) return "null";
+        
+        StringBuilder buffer = new StringBuilder(orig.length());
+        buffer.append("\"");
+
+        for (int i = 0; i < orig.length(); i++) {
+            char c = orig.charAt(i);
+            switch (c) {
+                case '\b':
+                    buffer.append("\\b");
+                    break;
+                case '\f':
+                    buffer.append("\\f");
+                    break;
+                case '\n':
+                    buffer.append("<br />");
+                    break;
+                case '\r':
+                    // ignore
+                    break;
+                case '\t':
+                    buffer.append("\\t");
+                    break;
+                case '\'':
+                    buffer.append("\\'");
+                    break;
+                case '\"':
+                    buffer.append("\\\"");
+                    break;
+                case '\\':
+                    buffer.append("\\\\");
+                    break;
+                default:
+                    buffer.append(c);
+            }
+        }
+        buffer.append("\"");
+        return buffer.toString();
+    }    
     
 }

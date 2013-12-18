@@ -46,16 +46,16 @@ public class WampEndpoint extends Endpoint
     public void onApplicationStart(WampApplication app) { }
    
     @Override
-    public void onOpen(Session session, EndpointConfig endpointConfiguration) {
+    public void onOpen(Session session, EndpointConfig endpointConfig) {
         logger.fine("##################### Session opened");
         
-        String path = ((ServerEndpointConfig)endpointConfiguration).getPath();
-        application = (WampApplication)endpointConfiguration;
+        String path = ((ServerEndpointConfig)endpointConfig).getPath();
+        application = (WampApplication)endpointConfig;
         if(application.start()) onApplicationStart(application);
         
         this.session = session;
         
-        application.onWampOpen(session);
+        application.onWampOpen(session, endpointConfig);
     }
     
    

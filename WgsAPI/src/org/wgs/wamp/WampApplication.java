@@ -27,6 +27,7 @@ import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
 import javax.websocket.Decoder;
 import javax.websocket.Encoder;
+import javax.websocket.EndpointConfig;
 import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
@@ -119,7 +120,7 @@ public class WampApplication
     }
 
     
-    public void onWampOpen(final Session session) {
+    public void onWampOpen(final Session session, final EndpointConfig config) {
         System.out.println("##################### Session opened");
         
         final WampSocket clientSocket = new WampSocket(this, session);
@@ -298,52 +299,6 @@ public class WampApplication
         
     }
     
-    
-
-    
-    
-    public String encodeJSON(String orig) 
-    {
-        if(orig == null) return "null";
-        
-        StringBuilder buffer = new StringBuilder(orig.length());
-        buffer.append("\"");
-
-        for (int i = 0; i < orig.length(); i++) {
-            char c = orig.charAt(i);
-            switch (c) {
-                case '\b':
-                    buffer.append("\\b");
-                    break;
-                case '\f':
-                    buffer.append("\\f");
-                    break;
-                case '\n':
-                    buffer.append("<br />");
-                    break;
-                case '\r':
-                    // ignore
-                    break;
-                case '\t':
-                    buffer.append("\\t");
-                    break;
-                case '\'':
-                    buffer.append("\\'");
-                    break;
-                case '\"':
-                    buffer.append("\\\"");
-                    break;
-                case '\\':
-                    buffer.append("\\\\");
-                    break;
-                default:
-                    buffer.append(c);
-            }
-        }
-        buffer.append("\"");
-        return buffer.toString();
-    }
-
     
     @Override
     public Class<?> getEndpointClass() {
