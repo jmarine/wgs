@@ -24,9 +24,9 @@ import javax.naming.NamingException;
 import javax.websocket.server.ServerEndpointConfig;
 
 import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
+import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import org.glassfish.tyrus.server.TyrusServerContainer;
-import org.glassfish.tyrus.spi.TyrusContainer;
-import org.glassfish.tyrus.spi.TyrusServer;
+import org.glassfish.tyrus.spi.ServerContainer;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampServices;
 import org.wgs.wamp.WampEndpoint;
@@ -84,7 +84,7 @@ public class Server
 
     }
     
-    private static TyrusServerContainer setupWampContexts(Properties serverConfig) throws ClassNotFoundException
+    private static TyrusServerContainer setupWampContexts(Properties serverConfig) throws Exception
     {
         //System.setProperty("webocket.servercontainer.classname", "org.glassfish.tyrus.TyrusContainerProvider");
         //ServerContainer websocketServerContainer = ContainerProvider.getServerContainer();
@@ -92,11 +92,10 @@ public class Server
         
         String docroot = serverConfig.getProperty("docroot");
 
-        TyrusContainer tyrusContainer = new org.glassfish.tyrus.container.grizzly.WssGrizzlyEngine(serverConfig);
-        TyrusServer tyrusServer = tyrusContainer.createServer(docroot, Integer.parseInt(serverConfig.getProperty("ws-port")));
+        WssServerContainer tyrusContainer = new WssServerContainer(serverConfig);
+        TyrusServerContainer server = (TyrusServerContainer)tyrusContainer.createContainer(null);
 
-        //TyrusServerConfiguration tyrusServerConfig = new TyrusServerConfiguration();
-        Set<ServerEndpointConfig> dynamicallyAddedEndpointConfigs = new HashSet<ServerEndpointConfig>();
+        //Set<ServerEndpointConfig> dynamicallyAddedEndpointConfigs = new HashSet<ServerEndpointConfig>();
 
         String contexts = serverConfig.getProperty("contexts");
         if(contexts != null) {
@@ -134,13 +133,17 @@ public class Server
 
                 // register the application
                 // server.deploy(wampApplication.getEndpointClass().newInstance(), wampApplication);
-                dynamicallyAddedEndpointConfigs.add(wampApplication);
+                //dynamicallyAddedEndpointConfigs.add(wampApplication);
+                server.register(wampApplication);
+                
             }
         }
 
-        Set<Class<?>> emptyClassSet = new HashSet<Class<?>>();
-        TyrusServerContainer server = new TyrusServerContainer(tyrusServer, "", emptyClassSet, emptyClassSet, dynamicallyAddedEndpointConfigs);
+        //Set<Class<?>> emptyClassSet = new HashSet<Class<?>>();
+        //TyrusServerContainer server = new TyrusServerContainer(tyrusServer, "", emptyClassSet, emptyClassSet, dynamicallyAddedEndpointConfigs);
         //server.publishServer(WampApplication.class);
+
+        server.start(docroot, Integer.parseInt(serverConfig.getProperty("ws-port", "8080")));
 
         return server;
     }
@@ -171,7 +174,6 @@ public class Server
 
             // Start WAMP applications:
             server = setupWampContexts(serverConfig);        
-            server.start();
 
             // Wait manual termination:
             System.out.println("Press any key to stop the server...");
