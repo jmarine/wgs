@@ -7,22 +7,16 @@
 package org.wgs.wamp;
 
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
-import java.util.StringTokenizer;
-import java.util.TreeMap;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
 import javax.websocket.Decoder;
@@ -31,11 +25,10 @@ import javax.websocket.EndpointConfig;
 import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
+
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
-import org.wgs.util.MessageBroker;
 
 
 public class WampApplication 
@@ -43,7 +36,7 @@ public class WampApplication
     implements javax.websocket.server.ServerEndpointConfig
 {
     public  static final int WAMPv1 = 1;
-    public  static final int WAMPv2 = 2;    
+    public  static final int WAMPv2 = 2;   
 
     public  static final String WAMP_ERROR_URI = "http://wamp.ws/err";
 
@@ -125,7 +118,7 @@ public class WampApplication
         
         final WampSocket clientSocket = new WampSocket(this, session);
         sockets.put(session.getId(), clientSocket);
-        
+
         for(WampModule module : modules.values()) {
             try { 
                 module.onConnect(clientSocket); 
@@ -345,5 +338,18 @@ public class WampApplication
         return userProperties;
     }
 
-
+    @Override
+    public String getNegotiatedSubprotocol(List<String> supported, List<String> requested) {
+        String subprotocol = "wamp";
+        if (requested != null) {
+            for (String clientProtocol : requested) {
+                if (supported.contains(clientProtocol)) {
+                    subprotocol = clientProtocol;
+                    break;
+                }
+            }
+        }
+        return subprotocol;
+    }
+    
 }

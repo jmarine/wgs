@@ -1,6 +1,5 @@
 package org.wgs.wamp;
 
-import org.wgs.entity.User;
 import java.security.Principal;
 import java.util.Map;
 import java.util.UUID;
@@ -11,18 +10,17 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.Future;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.TextNode;
+
 
 
 public class WampSocket 
 {
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
+
+    public  enum WampEncoding { JSon, MsgPack };
     
     private WampApplication app;
     private boolean connected;
@@ -34,13 +32,14 @@ public class WampSocket
     private Map<String,WampCallController> rpcControllers;
     private WampConnectionState state;
     private Principal principal;
+    private long lastHeartBeat;
     private int versionSupport;
-    private int lastHeartBeat;
+    private WampEncoding wampEncoding;
     
 
     public WampSocket(WampApplication app, Session session) 
     {
-        this.lastHeartBeat = 0;
+        this.lastHeartBeat = 0L;
         this.versionSupport = 1;
         this.app = app;
         this.connected = true;
@@ -53,6 +52,24 @@ public class WampSocket
         subscriptions = new ConcurrentHashMap<String,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
         rpcControllers = new HashMap<String,WampCallController>();
+        
+        String subprotocol = session.getNegotiatedSubprotocol();
+        if(subprotocol != null) {
+            switch(subprotocol) {
+                case "wamp":
+                    setVersionSupport(WampApplication.WAMPv1);
+                    setEncoding(WampSocket.WampEncoding.JSon);
+                    break;
+                case "wamp.2.json":
+                    setVersionSupport(WampApplication.WAMPv2);
+                    setEncoding(WampSocket.WampEncoding.JSon);
+                    break;
+                case "wamp.2.msgpack":
+                    setVersionSupport(WampApplication.WAMPv2);
+                    setEncoding(WampSocket.WampEncoding.MsgPack);
+                    break;
+            }        
+        }
     }
 
     /**
@@ -194,11 +211,23 @@ public class WampSocket
         this.versionSupport = version;
     }
     
-    public int getLastHeartBeat() {
+    
+    public WampEncoding getEncoding()
+    {
+        return wampEncoding;
+    }
+    
+    public void setEncoding(WampEncoding wampEncoding)
+    {
+        this.wampEncoding = wampEncoding;
+    }
+    
+    
+    public long getLastHeartBeat() {
         return this.lastHeartBeat;
     }
 
-    public void setLastHeartBeat(int heartbeatSequenceNo) {
+    public void setLastHeartBeat(long heartbeatSequenceNo) {
         this.lastHeartBeat = heartbeatSequenceNo;
     }    
     
