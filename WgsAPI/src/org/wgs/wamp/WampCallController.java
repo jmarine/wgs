@@ -17,6 +17,13 @@ public class WampCallController implements Runnable
     private ArrayNode request;
     private Future<?> future;
     private WampCall<?> cancellableCall;
+    private ArrayNode  arguments;
+    private ObjectNode argumentsKw;
+    private WampCallOptions callOptions;
+    private Long callID;
+    private ArrayNode result = null;
+    private ObjectNode resultKw = null;
+    
     
     private boolean cancelled;
     private boolean done;
@@ -38,73 +45,67 @@ public class WampCallController implements Runnable
 
     @Override
     public void run() {
-        String procURI = clientSocket.normalizeURI(request.get(2).asText());
-        String baseURL = procURI;
-        String method = "";
+        String procedureURI = clientSocket.normalizeURI(request.get(3).asText());
+        WampModule module = app.getWampModule(procedureURI, app.getDefaultWampModule());
 
         int callMsgType = request.get(0).asInt();
-        int callResponseMsgType = (callMsgType == 2) ? 3 : 34;
-        int callErrorMsgType = (callMsgType == 2) ? 4 : 36;
+        int callResponseMsgType = (callMsgType == 2) ? 3 : 73;
+        int callErrorMsgType = (callMsgType == 2) ? 4 : 74;
 
-        String callID  = request.get(1).asText();
+        callID  = request.get(1).asLong();
         if(callID == null || callID.equals("")) {
             WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "CallID not present", null);
             return;
         }        
         
         clientSocket.addRpcController(callID, this);
-        WampModule module = app.getWampModule(baseURL, null);
-        if (module == null) {
-            int methodPos = procURI.indexOf("#");
-            if (methodPos != -1) {
-                baseURL = procURI.substring(0, methodPos + 1);
-                method = procURI.substring(methodPos + 1);
-                module = app.getWampModule(baseURL, app.getDefaultWampModule());
-            }
-        }
+        
         try {
             if (module == null) {
                 throw new Exception("ProcURI not implemented");
             }
-            
-            ArrayNode args = null;
-            WampCallOptions callOptions = null;
+
             ObjectMapper mapper = new ObjectMapper();
-            if (clientSocket.getWampVersion() >= WampApplication.WAMPv2) {
-                args = mapper.createArrayNode();
-                if (request.size() > 2) {
-                    if (request.get(3) instanceof ArrayNode) {
-                        args = (ArrayNode) request.get(3);
-                    } else {
-                        args.add(request.get(3));
-                    }
+            arguments = mapper.createArrayNode();
+            argumentsKw = mapper.createObjectNode();
+            setResult(mapper.createArrayNode());
+            setResultKw(mapper.createObjectNode());
+            if(clientSocket.getWampVersion() >= WampApplication.WAMPv2 && request.size() > 2) {
+                callOptions = new WampCallOptions((ObjectNode) request.get(2));
+                if (request.get(4) instanceof ArrayNode) {
+                    arguments = (ArrayNode) request.get(4);
+                } else {
+                    arguments.add(request.get(4));
                 }
-                if (request.size() > 3) {
-                    callOptions = new WampCallOptions((ObjectNode) request.get(4));
-                }
+                argumentsKw = (ObjectNode) request.get(5);
             } else {
-                args = mapper.createArrayNode();
                 for (int i = 3; i < request.size(); i++) {
-                    args.add(request.get(i));
+                    arguments.add(request.get(i));
                 }
             }
-            ArrayNode response = null;
+            
             if (callOptions == null) {
                 callOptions = new WampCallOptions(null);
             }
-            Object result = module.onCall(this, clientSocket, method, args, callOptions);
-            if(result != null && result instanceof WampCall) {
-                cancellableCall = (WampCall)result;
-                result = cancellableCall.call();
+
+            Object response = module.onCall(this, clientSocket, procedureURI, arguments, callOptions);
+            if(response != null && response instanceof WampCall) {
+                cancellableCall = (WampCall)response;
+                response = cancellableCall.call();
             }
-            if (result == null || result instanceof ArrayNode) {
-                response = (ArrayNode) result;
-            } else {
-                response = mapper.createArrayNode();
-                response.add(mapper.valueToTree(result));
+            if(response != null) {
+                if (response instanceof ObjectNode) {
+                    setResultKw((ObjectNode) response);
+
+                } else if (response instanceof ArrayNode) {
+                    setResult((ArrayNode) response);
+                    
+                } else {
+                    getResult().add(mapper.valueToTree(response));
+                }
             }
             if (!isCancelled()) {
-                WampProtocol.sendCallResult(clientSocket, callResponseMsgType, callID, response);
+                WampProtocol.sendCallResult(clientSocket, callResponseMsgType, callID, getResult(), getResultKw());
                 done = true;
             }
         } catch (Throwable ex) {
@@ -116,17 +117,17 @@ public class WampCallController implements Runnable
                 if (!isCancelled()) {
                     WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
                 }
-                logger.log(Level.FINE, "Error calling method " + method + ": " + wex.getErrorDesc());
+                logger.log(Level.FINE, "Error calling method " + procedureURI + ": " + wex.getErrorDesc());
             } else {
                 if (!isCancelled()) {
-                    WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + method, ex.getMessage());
+                    WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + procedureURI, ex.getMessage());
                 }
-                logger.log(Level.SEVERE, "Error calling method " + method, ex);
+                logger.log(Level.SEVERE, "Error calling method " + procedureURI, ex);
             }
         } finally {
             clientSocket.removeRpcController(callID);
             if (isCancelled()) {
-                WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampApplication.WAMP_ERROR_URI + "#CanceledByCaller", "RPC cancelled by caller: " + callID, null);
+                WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampApplication.WAMP_ERROR_URI + ".CanceledByCaller", "RPC cancelled by caller: " + callID, null);
             }
         }
     }
@@ -144,6 +145,71 @@ public class WampCallController implements Runnable
                 cancellableCall.cancel(cancelMode);
             }
         }
+    }
+
+    /**
+     * @return the arguments
+     */
+    public ArrayNode getArguments() {
+        return arguments;
+    }
+
+    /**
+     * @param arguments the arguments to set
+     */
+    public void setArguments(ArrayNode arguments) {
+        this.arguments = arguments;
+    }
+
+    /**
+     * @return the argumentsKw
+     */
+    public ObjectNode getArgumentsKw() {
+        return argumentsKw;
+    }
+
+
+    /**
+     * @return the options
+     */
+    public WampCallOptions getOptions() {
+        return callOptions;
+    }
+
+
+    /**
+     * @return the callID
+     */
+    public Long getCallID() {
+        return callID;
+    }
+
+    /**
+     * @return the result
+     */
+    public ArrayNode getResult() {
+        return result;
+    }
+
+    /**
+     * @param result the result to set
+     */
+    public void setResult(ArrayNode result) {
+        this.result = result;
+    }
+
+    /**
+     * @return the resultKw
+     */
+    public ObjectNode getResultKw() {
+        return resultKw;
+    }
+
+    /**
+     * @param resultKw the resultKw to set
+     */
+    public void setResultKw(ObjectNode resultKw) {
+        this.resultKw = resultKw;
     }
     
 }

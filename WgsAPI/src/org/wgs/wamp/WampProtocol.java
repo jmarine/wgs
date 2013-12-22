@@ -1,7 +1,7 @@
 package org.wgs.wamp;
 
-import java.math.BigDecimal;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -12,6 +12,16 @@ import org.codehaus.jackson.node.TextNode;
 
 public class WampProtocol 
 {
+    private static Random randomizer = new Random();
+    
+    
+    public static long newId()
+    {
+        synchronized(randomizer) {
+            return (((long)(randomizer.nextInt(67108864)) << 27) + randomizer.nextInt(134217728));  // 53 bits
+        }
+    }
+    
     public static void sendWelcomeMessage(WampApplication app, WampSocket clientSocket)
     {
         // Send WELCOME message to client:
@@ -25,15 +35,18 @@ public class WampProtocol
                 response.add(app.getServerId());
                 break;
             case WampApplication.WAMPv2:
-                ObjectNode features = mapper.createObjectNode();
-                features.put("ProgressiveResults", 1);
-                features.put("CallTimeouts", 0);
-                features.put("PartitionedCalls", 0);
-                features.put("CancelCalls", 1);
+                ObjectNode roles = mapper.createObjectNode();
+                ObjectNode broker = mapper.createObjectNode();
+                broker.put("exclude", 1);
+                broker.put("eligible", 1);
+                broker.put("exclude_me", 1);
+                broker.put("disclose_me", 1);
+                roles.put("broker", broker);
+                roles.put("dealer", mapper.createObjectNode());
 
                 ObjectNode helloDetails = mapper.createObjectNode();
                 helloDetails.put("agent", "wgs");
-                helloDetails.put("features", features);
+                helloDetails.put("roles", roles);
                 response.add(helloDetails);  
                 break;
         }
@@ -42,7 +55,7 @@ public class WampProtocol
     }
     
     
-    public static void sendCallResult(WampSocket clientSocket, int callResponseMsgType, String callID, ArrayNode args)
+    public static void sendCallResult(WampSocket clientSocket, int callResponseMsgType, Long callID, ArrayNode args, ObjectNode argsKw)
     {
         StringBuilder response = new StringBuilder();
         if(args == null) {
@@ -54,25 +67,17 @@ public class WampProtocol
         response.append("[");
         response.append(callResponseMsgType);
         response.append(",");
-        response.append(encodeJSON(callID));
-        for(int i = 0; i < args.size(); i++) {
-            response.append(",");
-            try { 
-                JsonNode obj = args.get(i); 
-                if(obj instanceof TextNode) {
-                    response.append(encodeJSON(obj.asText()));
-                } else {
-                    response.append(obj); 
-                }
-            }
-            catch(Exception ex) { response.append("null"); }
-        }
+        response.append(callID);
+        response.append(",");
+        response.append(args);
+        response.append(",");
+        response.append(argsKw);
         response.append("]");
         clientSocket.sendSafe(response.toString());
     }    
     
     
-    public static void sendCallError(WampSocket clientSocket, int callErrorMsgType, String callID, String errorURI, String errorDesc, Object errorDetails)
+    public static void sendCallError(WampSocket clientSocket, int callErrorMsgType, Long callID, String errorURI, String errorDesc, Object errorDetails)
     {
         if(errorURI == null) errorURI = WampException.WAMP_GENERIC_ERROR_URI;
         if(errorDesc == null) errorDesc = "";
@@ -81,20 +86,16 @@ public class WampProtocol
         response.append("[");
         response.append(callErrorMsgType);
         response.append(",");
-        response.append(encodeJSON(callID));
+        response.append(callID);
 
         response.append(",");
         response.append(encodeJSON(errorURI));
         response.append(",");
-        response.append(encodeJSON(errorDesc));
         
-        if(errorDetails != null) {
-            response.append(",");
-            if(errorDetails instanceof String) {
-                response.append(encodeJSON((String)errorDetails));
-            } else {
-                response.append(encodeJSON(errorDetails.toString()));
-            }
+        if(errorDetails == null) {
+            response.append(encodeJSON(errorDesc));
+        } else {
+            response.append(encodeJSON(errorDesc + ": " + errorDetails.toString()));
         }
 
         response.append("]");
@@ -103,7 +104,7 @@ public class WampProtocol
     }    
     
     
-    public static void sendEvents(WampTopic topic, Set<String> eligible, Set<String> excluded, String publisherId, JsonNode event) throws Exception 
+    public static void sendEvents(WampTopic topic, Set<Long> eligible, Set<Long> excluded, Long publisherId, JsonNode event) throws Exception 
     {
         // EVENT data
         String msgByVersion[] = new String[WampApplication.WAMPv2+1];  // Cache EVENT message for each WAMP version
@@ -111,10 +112,10 @@ public class WampProtocol
         if(eligible == null) eligible = topic.getSessionIds();
         else eligible.retainAll(topic.getSessionIds());
 
-        if(excluded == null) excluded = new HashSet<String>();        
+        if(excluded == null) excluded = new HashSet<Long>();        
         //if(excludeMe()) excluded.add(publisherId);
 
-        for (String sid : eligible) {
+        for (Long sid : eligible) {
             if((excluded==null) || (!excluded.contains(sid))) {
                 WampSubscription subscription = topic.getSubscription(sid);
                 WampSubscriptionOptions subOptions = subscription.getOptions();
@@ -125,7 +126,7 @@ public class WampProtocol
                             if(socket.supportVersion(WampApplication.WAMPv2)) {
                                 if(msgByVersion[WampApplication.WAMPv2] == null) {
                                     String eventDetails = (publisherId == null)? "" : ", { \"PUBLISHER\": \"" + publisherId + "\" }";
-                                    msgByVersion[WampApplication.WAMPv2] = "[128,\"" + topic.getURI() + "\", " + event.toString() + eventDetails + "]";
+                                    msgByVersion[WampApplication.WAMPv2] = "[40,\"" + topic.getURI() + "\", " + event.toString() + eventDetails + "]";
                                 }
                                 socket.sendSafe(msgByVersion[WampApplication.WAMPv2]);
                             } else {
@@ -140,12 +141,12 @@ public class WampProtocol
     }
 
     
-    public static void sendMetaEvents(WampTopic topic, String metaTopic, Set<String> eligible, JsonNode metaEvent) throws Exception 
+    public static void sendMetaEvents(WampTopic topic, String metaTopic, Set<Long> eligible, JsonNode metaEvent) throws Exception 
     {
         // METAEVENT data (only in WAMP v2)
-        String toClient = (eligible != null && eligible.size() > 0) ? eligible.iterator().next() : null;
+        Long toClient = (eligible != null && eligible.size() > 0) ? eligible.iterator().next() : null;
 
-        String msg = "[129,\"" + topic.getURI() + "\", \"" + metaTopic + "\"";
+        String msg = "[41,\"" + topic.getURI() + "\", \"" + metaTopic + "\"";
         if(metaEvent != null) msg += ", " + metaEvent.toString();
         msg += "]";
 
@@ -154,7 +155,7 @@ public class WampProtocol
             WampSocket remoteSocket = subscriber.getSocket();
             if(remoteSocket.supportVersion(WampApplication.WAMPv2)) remoteSocket.sendSafe(msg);
         } else {
-            for(String sid : topic.getSessionIds()) {
+            for(Long sid : topic.getSessionIds()) {
                 WampSubscription subscriber = topic.getSubscription(sid);
                 if(subscriber.getOptions() != null && subscriber.getOptions().hasMetaEvent(metaTopic)) {
                     WampSocket remoteSocket = subscriber.getSocket();

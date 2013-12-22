@@ -196,7 +196,7 @@ public class MessageBroker
     }
     
     
-    public static void publish(WampTopic wampTopic, long id, JsonNode event, String metaTopic, Set<String> eligible, Set<String> exclude, String publisherId) throws Exception
+    public static void publish(WampTopic wampTopic, long id, JsonNode event, String metaTopic, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
     {
         broadcastClusterEventToLocalNodeClients(wampTopic,metaTopic,eligible,exclude,publisherId, event);  
         
@@ -214,7 +214,8 @@ public class MessageBroker
             TextMessage msg = pubSession.createTextMessage(eventPayLoad);
             msg.setStringProperty("topic", topicName);
             if(id != 0L)            msg.setLongProperty("id", id);
-            if(publisherId != null) msg.setStringProperty("publisherId", publisherId);
+            if(publisherId != null) msg.setLongProperty("publisherId", publisherId);
+            else                    msg.setLongProperty("publisherId", -1L);
             if(metaTopic != null)   msg.setStringProperty("metaTopic", metaTopic);
             if(eligible != null)    msg.setStringProperty("eligible", serializeSessionIDs(eligible));
             if(exclude != null)     msg.setStringProperty("exclude", serializeSessionIDs(exclude));
@@ -232,7 +233,7 @@ public class MessageBroker
     }
 
     
-    private static void broadcastClusterEventToLocalNodeClients(WampTopic topic, String metaTopic, Set<String> eligible, Set<String> excluded, String publisherId, JsonNode event) throws Exception 
+    private static void broadcastClusterEventToLocalNodeClients(WampTopic topic, String metaTopic, Set<Long> eligible, Set<Long> excluded, Long publisherId, JsonNode event) throws Exception 
     {
         if(metaTopic == null) {
             // EVENT data
@@ -244,21 +245,21 @@ public class MessageBroker
     }       
     
     
-    private static String serializeSessionIDs(Set<String> ids) 
+    private static String serializeSessionIDs(Set<Long> ids) 
     {
         String str = ids.toString();
         return str.substring(1, str.length()-1);
     }
     
     
-    private static HashSet<String> parseSessionIDs(String ids) 
+    private static HashSet<Long> parseSessionIDs(String ids) 
     {
-        HashSet<String> retval = null;
+        HashSet<Long> retval = null;
         if(ids != null) {
-            retval = new HashSet<String>();
+            retval = new HashSet<Long>();
             StringTokenizer stk = new StringTokenizer(ids, "," , false);
             while(stk.hasMoreTokens()) {
-                String id = stk.nextToken();
+                Long id = Long.parseLong(stk.nextToken());
                 retval.add(id);
             }
         }
@@ -272,11 +273,12 @@ public class MessageBroker
         public void onMessage(Message receivedMessageFromBroker) {
             try {
                 //System.out.println ("Received message from broker.");
-                String publisherId = receivedMessageFromBroker.getStringProperty("publisherId");
-                String topicName = receivedMessageFromBroker.getStringProperty("topic");
-                String metaTopic = receivedMessageFromBroker.getStringProperty("metaTopic");
                 String excludeBroker = receivedMessageFromBroker.getStringProperty("excludeBroker");
                 if(excludeBroker != null && excludeBroker.equals(brokerId)) return;
+                String topicName = receivedMessageFromBroker.getStringProperty("topic");
+                String metaTopic = receivedMessageFromBroker.getStringProperty("metaTopic");
+                Long publisherId = receivedMessageFromBroker.getLongProperty("publisherId");
+                if(publisherId == -1L) publisherId = null;
 
                 String eventData = ((TextMessage)receivedMessageFromBroker).getText();
                 //System.out.println ("Received message from topic " + topicName + ": " + eventData);
@@ -287,8 +289,8 @@ public class MessageBroker
                     event = (JsonNode)mapper.readTree(eventData);
                 }
                 
-                Set eligible = parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible"));
-                Set exclude  = parseSessionIDs(receivedMessageFromBroker.getStringProperty("exclude"));
+                Set<Long> eligible = parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible"));
+                Set<Long> exclude  = parseSessionIDs(receivedMessageFromBroker.getStringProperty("exclude"));
 
                 WampTopic topic = WampServices.getTopic(topicName);
                 broadcastClusterEventToLocalNodeClients(topic, metaTopic, eligible, exclude, publisherId, event);

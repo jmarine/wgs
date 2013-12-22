@@ -11,10 +11,10 @@ import org.codehaus.jackson.node.ObjectNode;
 
 public class WampPublishOptions 
 {
-    private boolean     excludeMe;
-    private Set<String> excluded;
-    private Set<String> eligible;
-    private boolean     identifyMe;
+    private boolean   excludeMe;
+    private Set<Long> excluded;
+    private Set<Long> eligible;
+    private boolean   identifyMe;
         
     public WampPublishOptions() { }
     public WampPublishOptions(JsonNode node) { 
@@ -51,28 +51,28 @@ public class WampPublishOptions
     /**
      * @return the excluded
      */
-    public Set<String> getExcluded() {
+    public Set<Long> getExcluded() {
         return excluded;
     }
 
     /**
      * @param excluded the excluded to set
      */
-    public void setExcluded(Set<String> excluded) {
+    public void setExcluded(Set<Long> excluded) {
         this.excluded = excluded;
     }
 
     /**
      * @return the eligible
      */
-    public Set<String> getEligible() {
+    public Set<Long> getEligible() {
         return eligible;
     }
 
     /**
      * @param eligible the eligible to set
      */
-    public void setEligible(Set<String> eligible) {
+    public void setEligible(Set<Long> eligible) {
         this.eligible = eligible;
     }
 

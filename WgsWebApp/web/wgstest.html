@@ -345,10 +345,10 @@ function update_apps(response) {
 
 function list_apps() {
     $("#apps option").remove();
-    wgsclient.listApps(false, function(response) {
-        if(response.valid) {
-            wgsclient.subscribe("https://wgs.org#apps_event", update_apps, null, { "clientSideOnly":true});
-            update_apps(response);
+    wgsclient.listApps(false, function(result,resultKw) {
+        if(resultKw && resultKw.valid) {
+            wgsclient.subscribe("wgs.apps_event", update_apps, null, { "clientSideOnly":true});
+            update_apps(resultKw);
             $("#app_params").hide();
             $("#app_list").slideDown(500);
         }
@@ -418,7 +418,7 @@ function getGroupListItem(group) {
        var playerLabel = "Player " + count + (member.role? " ("+ member.role +")" : "");
        row.append("<td>" + playerLabel + ":</td>");
        
-       if(member.sid == "" && (member.user == "" || member.user == wgsclient.user) ) {
+       if(isFinite(member.sid) && (member.user == "" || member.user == wgsclient.user) ) {
            row.append("<td><button onclick=\"javascript:reserve_group_slot('" + group.gid + "'," + member.slot + ")\">Play</button></td>");
        } else {
            row.append("<td>" + member.name + "</td>");       
@@ -495,23 +495,23 @@ function hide_group_list() {
     var appId = $("#apps").val();
     $("#group_list").hide();
     $("#app_list").slideDown(500);
-    wgsclient.unsubscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, false);
+    wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, false);
 }
 
 function list_groups(scope) {
     var appId = $("#apps").val();
     if(!scope) scope = $("input[name=group_scope]:checked").val();
     $("#groups option").remove();
-    wgsclient.subscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, { "clientSideOnly":true});
-    wgsclient.listGroups(appId, { scope: scope }, function(response) {
-        if(response.valid) {
-            currentApp = response.app;
-            update_groups(response);
+    wgsclient.subscribe("wgs.app_event:" + appId, update_groups, app_metaevent, { "clientSideOnly":true});
+    wgsclient.listGroups(appId, { scope: scope }, function(result,resultKw) {
+        if(resultKw && resultKw.valid) {
+            currentApp = resultKw.app;
+            update_groups(resultKw);
             $("#app_list").hide();
             $("#group_list").slideDown(500);
-            $("#group_list fieldset legend").html("Groups: " + response.app.name);
+            $("#group_list fieldset legend").html("Groups: " + resultKw.app.name);
         } else {
-            wgsclient.unsubscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, false);
+            wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, false);
         }
     });
 }
@@ -602,14 +602,14 @@ function reserve_group_slot(gid,slot) {
 function open_group(gid, options) {
     var appId = $("#apps").val();
     
-    wgsclient.unsubscribe("https://wgs.org#app_event:" + appId, update_groups, app_metaevent, false);
-    wgsclient.openGroup(appId, gid, options, function(response) {
-       if(response.valid) {
-            //wgsclient.setSubscriptionStatus("https://wgs.org#app_event:" + appId, "busy", null );
-            currentApp = response.app;
-            if(response.gid != "") wgsclient.subscribe("https://wgs.org#group_event:" + response.gid, update_group_callback, null, { "clientSideOnly":true} );
-            show_group(response); 
-       } else if(response.errorURI == "https://wgs.org#incorrectpassword") {
+    wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, false);
+    wgsclient.openGroup(appId, gid, options, function(result,resultKw) {
+       if(resultKw && resultKw.valid) {
+            //wgsclient.setSubscriptionStatus("wgs.app_event:" + appId, "busy", null );
+            currentApp = resultKw.app;
+            if(resultKw.gid != "") wgsclient.subscribe("wgs.group_event:" + resultKw.gid, update_group_callback, null, { "clientSideOnly":true} );
+            show_group(resultKw); 
+       } else if(result.errorURI == "wgs.incorrectpassword") {
             var password = prompt("Introduce the password to access the group:");
             if(password) {
                 if(!options) options = {};
@@ -926,8 +926,8 @@ function exit_group(toOfflineMode) {
     var gid = $("#group_gid").val();
     if(gid.length > 0) {
         wgsclient.exitGroup(gid, function(response) {
-            wgsclient.unsubscribe("https://wgs.org#group_event:" + gid, update_group_callback, null, true);
-            //wgsclient.setSubscriptionStatus("https://wgs.org#app_event:" + $("#apps").val(), null, null );        
+            wgsclient.unsubscribe("wgs.group_event:" + gid, update_group_callback, null, true);
+            //wgsclient.setSubscriptionStatus("wgs.app_event:" + $("#apps").val(), null, null );        
             
             if(!toOfflineMode) {
                 $("#group_params").hide();

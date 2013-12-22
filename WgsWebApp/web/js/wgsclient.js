@@ -52,10 +52,8 @@ WgsClient.prototype = {
   },
   
   _newid: function() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
-        return v.toString(16);
-    });
+      var r = Math.random()*131072.0*131072.0*131072.0 + Math.random()*131072.0*131072.0 + Math.random()*131072.0;
+      return Math.floor(r);
   },
           
   setServerWampVersion: function(v) {
@@ -73,6 +71,11 @@ WgsClient.prototype = {
       arr[1] = this.serverSID;
       arr[2] = {};  // HelloDetails
       arr[2].agent = "wgsclient/2.0.0";
+      arr[2].roles = {};
+      arr[2].roles.publisher = {};
+      arr[2].roles.subscriber = {};
+      arr[2].roles.caller = {};
+      
       this.send(JSON.stringify(arr));
   },
           
@@ -83,24 +86,20 @@ WgsClient.prototype = {
       this.send(JSON.stringify(arr));
   },
  
-  prefix: function(str, url) {
-      var arr = [];
-      arr[0] = 1;  // PREFIX message is deprecated since WAMP v2
-      arr[1] = str;
-      arr[2] = url;
-      this.send(JSON.stringify(arr));
-  },
-          
-  call: function(cmd, args, wamp2OptionsOrWamp1ArgsAsArray) {
+  call: function(cmd, args, argumentsKw, wamp2OptionsOrWamp1ArgsAsArray) {
       var dfd = $.Deferred();
       var msg = [];
-      msg[0] = this.isServerUsingWampVersion(2) ? 16 : 2;  // CALL
+      msg[0] = this.isServerUsingWampVersion(2) ? 70 : 2;  // CALL
       msg[1] = this._newid();
-      msg[2] = cmd;
+      
       if(this.isServerUsingWampVersion(2)) {
-          msg[3] = (args && (args instanceof Array))? args : [ args ];
-          if(wamp2OptionsOrWamp1ArgsAsArray) msg[4] = wamp2OptionsOrWamp1ArgsAsArray;
+          msg[2] = (wamp2OptionsOrWamp1ArgsAsArray!=null) ? wamp2OptionsOrWamp1ArgsAsArray : {};
+          msg[3] = cmd;
+          msg[4] = (args!=null)? ((args instanceof Array)? args : [args] ) : [];
+          msg[5] = (argumentsKw!=null) ? argumentsKw : {};
       } else {
+          msg[2] = cmd;
+          msg[1] = new String(msg[1]);
           if(args && (args instanceof Array) && (!wamp2OptionsOrWamp1ArgsAsArray)) {
               for(var i = 0; i < args.length; i++) {
                   msg[3+i] = args[i];
@@ -113,10 +112,10 @@ WgsClient.prototype = {
       this.send(JSON.stringify(msg));
       return dfd.promise();
   },  
-          
+  
   callCancel: function(callID, options) {
       var arr = [];
-      arr[0] = 17;  // CALL_CANCEL
+      arr[0] = 71;  // CALL_CANCEL
       arr[1] = callID;
       if(options) arr[2] = options;
       this.send(JSON.stringify(arr));      
@@ -151,7 +150,7 @@ WgsClient.prototype = {
         }
         if(!options.clientSideOnly) {
             var arr = [];
-            arr[0] = this.isServerUsingWampVersion(2) ? 64 : 5;  // SUBSCRIBE
+            arr[0] = this.isServerUsingWampVersion(2) ? 10 : 5;  // SUBSCRIBE
             arr[1] = topic;
             if(this.isServerUsingWampVersion(2)) arr[2] = options;
             this.send(JSON.stringify(arr));
@@ -212,7 +211,7 @@ WgsClient.prototype = {
         if(!clientSideOnly) {
             // send unsubscribe message to server (when all eventHandlers or metaeventHandlers are cleared)
             var arr = [];
-            arr[0] = this.isServerUsingWampVersion(2) ? 65 : 6;  // Unsubscribe message type
+            arr[0] = this.isServerUsingWampVersion(2) ? 20 : 6;  // Unsubscribe message type
             arr[1] = topic;  
             this.send(JSON.stringify(arr));
         }   
@@ -221,7 +220,7 @@ WgsClient.prototype = {
   
   publish: function(topic, event, options) {
       var arr = [];
-      arr[0] = this.isServerUsingWampVersion(2) ? 66 : 7;  // PUBLISH
+      arr[0] = this.isServerUsingWampVersion(2) ? 30 : 7;  // PUBLISH
       arr[1] = topic;
       arr[2] = event;
       if(this.isServerUsingWampVersion(2) && options) arr[3] = options;
@@ -236,15 +235,15 @@ WgsClient.prototype = {
       var args = []
       args[0] = authKey;
       args[1] = authExtra;
-      this.call("http://api.wamp.ws/procedure#authreq", args).then(callback,callback);      
+      this.call("wamp.cra.request", args).then(callback,callback);      
   },
           
   auth: function(signature, callback) {
-      this.call("http://api.wamp.ws/procedure#auth", signature).then(callback,callback);      
+      this.call("wamp.cra.authenticate", signature).then(callback,callback);      
   },          
   
   getUserInfo: function(callback) {
-      this.call("https://wgs.org#get_user_info").then(callback,callback);
+      this.call("wgs.get_user_info").then(callback,callback);
   },
   
   login: function(user, password, onstatechange) {
@@ -258,34 +257,34 @@ WgsClient.prototype = {
             onstatechange(WgsState.ANONYMOUS);              
           } else {
             var authExtra = null; // { salt: "RANDOMTEXT", keylen: 32, iterations: 4096 };
-            client.authreq(user, authExtra, function(response) {
-                if(typeof(response) == "string") {
-                    var challenge = JSON.parse(response);
+            client.authreq(user, authExtra, function(result,resultKw) {
+                if(result && result.length > 0 && typeof(result[0]) == "string") {
+                    var challenge = JSON.parse(result[0]);
                     password = CryptoJS.MD5(password).toString();
                     if(challenge.extra && challenge.extra.salt) {
                         var key = CryptoJS.PBKDF2(password, challenge.extra.salt, { keySize: challenge.extra.keylen / 4, iterations: challenge.extra.iterations, hasher: CryptoJS.algo.SHA256 });
                         password = key.toString(CryptoJS.enc.Base64);                        
                     }
-                    var signature = CryptoJS.HmacSHA256(response, password).toString(CryptoJS.enc.Base64);
-                    client.auth(signature, function(response) {
-                        if(response.valid) {
-                            client.getUserInfo(function(response) {
-                                if(response.valid) {
+                    var signature = CryptoJS.HmacSHA256(result[0], password).toString(CryptoJS.enc.Base64);
+                    client.auth(signature, function(result,resultKw) {
+                        if(resultKw && resultKw.valid) {
+                            client.getUserInfo(function(result,resultKw) {
+                                if(resultKw.valid) {
                                     client.user = user;
                                     client.state = WgsState.AUTHENTICATED;
-                                    onstatechange(WgsState.AUTHENTICATED, response);
+                                    onstatechange(WgsState.AUTHENTICATED, resultKw);
                                 } else {
-                                    var errorCode = response.errorURI;
-                                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                                    var errorCode = result.errorURI;
+                                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode));
                                 }
                             });
                         } else {
-                            var errorCode = response.errorURI;
-                            onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                            var errorCode = result.errorURI;
+                            onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode));
                         }
                     });
                 } else {
-                    var errorCode = response.errorURI;
+                    var errorCode = result.errorURI;
                     onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
                 }
             });
@@ -304,7 +303,7 @@ WgsClient.prototype = {
             msg.user = user;
             msg.password = CryptoJS.MD5(password).toString();
             msg.email = email;
-            client.call("https://wgs.org#register", msg).then(
+            client.call("wgs.register", msg).then(
                 function(response) {
                     client.user = response.user;
                     client.state = WgsState.AUTHENTICATED;
@@ -325,7 +324,7 @@ WgsClient.prototype = {
         if(state == WgsState.WELCOMED) {
             var msg = Object();
             msg.redirect_uri = redirectUri;
-            client.call("https://wgs.org#openid_connect_providers", msg).then(
+            client.call("wgs.openid_connect_providers", msg).then(
                 function(response) {
                     //client.close();
                     callback(response);
@@ -346,7 +345,7 @@ WgsClient.prototype = {
             msg.principal = principal;
             msg.redirect_uri = redirectUri;
             msg.state = notificationChannel;
-            client.call("https://wgs.org#openid_connect_login_url", msg).then(
+            client.call("wgs.openid_connect_login_url", msg).then(
                 function(response) {
                     client.close();
                     document.location.href = response;
@@ -372,7 +371,7 @@ WgsClient.prototype = {
             msg.redirect_uri = redirectUri;
             if(notificationChannel) msg.notification_channel = notificationChannel;
             
-            client.call("https://wgs.org#openid_connect_auth", msg).then(
+            client.call("wgs.openid_connect_auth", msg).then(
                 function(response) {
                     client.user = response.user;
                     client.state = WgsState.AUTHENTICATED;
@@ -442,18 +441,21 @@ WgsClient.prototype = {
               }
               client.state = WgsState.WELCOMED;
               onstatechange(WgsState.WELCOMED);
-          } else if (arr[0] == 3 || arr[0] == 34) {  // CALLRESULT
+          } else if (arr[0] == 3 || arr[0] == 73) {  // CALLRESULT
               var call = arr[1];
               if(client.calls[call]) {       
-                  var args = arr[2];
-                  if(!args) args = {};
-                  args.valid = true;
-                  client.calls[call].resolve(args);
+                  var result = (arr && arr.length >= 3)? arr[2] : [];
+                  var resultKw = (arr && arr.length >= 4)? arr[3] : {};
+                  if(!result) result = [];
+                  if(!resultKw) resultKw = {};
+                  result.valid = true;
+                  resultKw.valid = true;
+                  client.calls[call].resolve(result,resultKw);
                   delete client.calls[call];
               } else {
                   client.debug("call not found: " + call);
               }
-          } else if (arr[0] == 4 || arr[0] == 36) {  // CALLERROR
+          } else if (arr[0] == 4 || arr[0] == 74) {  // CALLERROR
               var call = arr[1];
               if(client.calls[call]) {  
                   var args = {};
@@ -466,7 +468,7 @@ WgsClient.prototype = {
               } else {
                   client.debug("call not found: " + call);
               }            
-          } else if(arr[0] == 8 || arr[0] == 128) {  // EVENT
+          } else if(arr[0] == 8 || arr[0] == 40) {  // EVENT
               var topicURI = arr[1];
               if(client.topicHandlers[topicURI]) {
                   client.topicHandlers[topicURI].forEach(function(callback) {
@@ -484,7 +486,7 @@ WgsClient.prototype = {
                   // client.debug("topic not found: " + topic);
               }
 
-          } else if(arr[0] == 129) {  // META-EVENT  (not supported by WAMP v1)
+          } else if(arr[0] == 41) {  // META-EVENT  (not supported by WAMP v1)
               var topicURI = arr[1];
               if(client.metaeventHandlers[topicURI]) {
                   client.metaeventHandlers[topicURI].forEach(function(callback) {
@@ -509,8 +511,8 @@ WgsClient.prototype = {
       var msg = Object();
       if(filterByDomain) msg.domain = document.domain.toString();
 
-      this.call("https://wgs.org#list_apps", msg).then(function(response) {
-          callback(response);
+      this.call("wgs.list_apps", [], msg).then(function(result,resultKw) {
+          callback(result,resultKw);
         }, function(response) {
           callback(response);
         });
@@ -518,7 +520,7 @@ WgsClient.prototype = {
   
   listGroups: function(appId, filters, callback) {
       var args = [ appId, filters ];
-      this.call("https://wgs.org#list_groups", args).then(callback, callback);
+      this.call("wgs.list_groups", args).then(callback, callback);
   },
 
   newApp: function(name, domain, version, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, callback) {
@@ -537,21 +539,21 @@ WgsClient.prototype = {
       msg.ai_available = ai_available;
       msg.roles = roles;
       
-      this.call("https://wgs.org#new_app", msg).then(callback, callback);
+      this.call("wgs.new_app", msg).then(callback, callback);
   },
 
   deleteApp: function(appId, callback) {
       var msg = Object();
       msg.app = appId;
           
-      this.call("https://wgs.org#delete_app", msg).then(callback, callback);
+      this.call("wgs.delete_app", msg).then(callback, callback);
   },  
   
   setSubscriptionStatus: function(topicURI, newStatus, callback) {
       var args = Array();
       args[0] = topicURI;
       args[1] = newStatus;
-      this.call("https://wgs.org#set_subscription_status", args).then(callback,callback);
+      this.call("wgs.set_subscription_status", args).then(callback,callback);
   },
   
   _update_group_users: function(msg, topicURI) {
@@ -597,17 +599,17 @@ WgsClient.prototype = {
       args[1] = gid? gid : null;
       args[2] = options;
 
-      this.call("https://wgs.org#open_group", args).then(function(response) {
-          client.subscribe("https://wgs.org#group_event:" + response.gid, client._update_group_users, null, { "clientSideOnly":true} );
-          client._update_group_users(response);
-          callback(response);
+      this.call("wgs.open_group", args).then(function(result,resultKw) {
+          client.subscribe("wgs.group_event:" + resultKw.gid, client._update_group_users, null, { "clientSideOnly":true} );
+          client._update_group_users(resultKw);
+          callback(result,resultKw);
       }, callback);
   },
   
   exitGroup: function(gid, callback) {
       var client = this;
-      this.call("https://wgs.org#exit_group", gid).then(callback, callback);
-      this.unsubscribe("https://wgs.org#group_event:" + gid, client._update_group_users, null, { "clientSideOnly":true});
+      this.call("wgs.exit_group", gid).then(callback, callback);
+      this.unsubscribe("wgs.group_event:" + gid, client._update_group_users, null, { "clientSideOnly":true});
       delete this.groups[gid];
   },
           
@@ -644,7 +646,7 @@ WgsClient.prototype = {
       if(state) msg.state = state;
       if(data) msg.data  = data;
      
-      this.call("https://wgs.org#update_group", msg).then(function(response) { 
+      this.call("wgs.update_group", msg).then(function(response) { 
           client._update_group_users(response);
           callback(response);
       }, 
@@ -668,7 +670,7 @@ WgsClient.prototype = {
         msg.team = team;
         msg.type = usertype;
       }
-      this.call("https://wgs.org#update_member", msg).then(function(response) { 
+      this.call("wgs.update_member", msg).then(function(response) { 
           client._update_group_users(response);
           callback(response);
       }, 
@@ -683,7 +685,7 @@ WgsClient.prototype = {
       args[0] = gid;
       args[1] = data;
       
-      this.call("https://wgs.org#send_group_message", args).then(callback, callback);
+      this.call("wgs.send_group_message", args).then(callback, callback);
   },
 
   sendTeamMessage: function(gid, data, callback) {
@@ -691,7 +693,7 @@ WgsClient.prototype = {
       args[0] = gid;
       args[1] = data;
       
-      this.call("https://wgs.org#send_team_message", args).then(callback, callback);
+      this.call("wgs.send_team_message", args).then(callback, callback);
   },
           
   topicMatchesWithPattern: function(topicURI,pattern) {

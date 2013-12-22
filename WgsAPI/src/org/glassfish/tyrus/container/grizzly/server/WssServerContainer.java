@@ -67,8 +67,9 @@ public class WssServerContainer extends GrizzlyServerContainer
             public void start(String rootPath, int port) throws IOException, DeploymentException {
 
                 server = HttpServer.createSimpleServer(rootPath, port);
+                server.getListener("grizzly").getKeepAlive().setIdleTimeoutInSeconds(-1);  // forever
                 server.getListener("grizzly").registerAddOn(new WebSocketAddOn(this));
-
+                
                 String wssPort = serverProperties.getProperty("wss-port");
                 if(wssPort != null) {
                     SSLContextConfigurator sslContextConfig = new SSLContextConfigurator(); 
@@ -82,6 +83,7 @@ public class WssServerContainer extends GrizzlyServerContainer
                     NetworkListener networkListener = new NetworkListener("wss", server.getListener("grizzly").getHost(), Integer.parseInt(wssPort));
                     networkListener.setSecure(true); 
                     networkListener.setSSLEngineConfig(new SSLEngineConfigurator(sslContextConfig, false, false, false));
+                    networkListener.getKeepAlive().setIdleTimeoutInSeconds(-1);  // forever
                     networkListener.registerAddOn(new WebSocketAddOn(this));
 
                     server.addListener(networkListener);

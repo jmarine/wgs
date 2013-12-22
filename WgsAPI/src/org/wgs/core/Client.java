@@ -18,7 +18,7 @@ public class Client
     private Map<String,Group> groups = new ConcurrentHashMap<String,Group>();
 
 
-    public String getSessionId() {
+    public Long getSessionId() {
         return socket.getSessionId();
     }
     

@@ -25,11 +25,11 @@ public class WampSocket
     private WampApplication app;
     private boolean connected;
     private Session session;
-    private String  sessionId;
+    private Long    sessionId;
     private Map     sessionData;
     private Map<String,String> prefixes;
     private Map<String,WampSubscription> subscriptions;
-    private Map<String,WampCallController> rpcControllers;
+    private Map<Long,WampCallController> rpcControllers;
     private WampConnectionState state;
     private Principal principal;
     private long lastHeartBeat;
@@ -47,11 +47,11 @@ public class WampSocket
         this.principal = session.getUserPrincipal();
         this.state = (principal != null) ? WampConnectionState.AUTHENTICATED : WampConnectionState.ANONYMOUS;
         
-        sessionId   = UUID.randomUUID().toString();
+        sessionId   = WampProtocol.newId();
         sessionData = new ConcurrentHashMap();
         subscriptions = new ConcurrentHashMap<String,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
-        rpcControllers = new HashMap<String,WampCallController>();
+        rpcControllers = new HashMap<Long,WampCallController>();
         
         String subprotocol = session.getNegotiatedSubprotocol();
         if(subprotocol != null) {
@@ -76,7 +76,7 @@ public class WampSocket
      * Get the session ID
      * @return the user name
      */
-    public String getSessionId() {
+    public Long getSessionId() {
         return sessionId;
     }
 
@@ -151,17 +151,17 @@ public class WampSocket
     }
 
     
-    public void addRpcController(String callID, WampCallController rpcController)
+    public void addRpcController(Long callID, WampCallController rpcController)
     {
         rpcControllers.put(callID, rpcController);
     }
     
-    public WampCallController getRpcController(String callID)
+    public WampCallController getRpcController(Long callID)
     {
         return rpcControllers.get(callID);
     }    
     
-    public WampCallController removeRpcController(String callID) {
+    public WampCallController removeRpcController(Long callID) {
         return rpcControllers.remove(callID);
     }
     
@@ -236,7 +236,7 @@ public class WampSocket
      */
     public void publishEvent(WampTopic topic, JsonNode event, boolean excludeMe, boolean identifyMe) {
         logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
-        Set<String> excludedSet = new HashSet<String>();
+        Set<Long> excludedSet = new HashSet<Long>();
         if(excludeMe) excludedSet.add(this.getSessionId());
         WampPublishOptions options = new WampPublishOptions();
         options.setExcludeMe(excludeMe);

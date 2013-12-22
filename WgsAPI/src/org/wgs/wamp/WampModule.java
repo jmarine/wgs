@@ -1,8 +1,6 @@
 package org.wgs.wamp;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,22 +13,21 @@ import org.codehaus.jackson.node.ObjectNode;
 import org.wgs.util.MessageBroker;
 
 
-
 public class WampModule 
 {
     private WampApplication app;
     private HashMap<String,Method> rpcs;
     
     public WampModule(WampApplication app) {
+        String moduleName = app.normalizeModuleName(getModuleName());
         this.app = app;
-
         rpcs = new HashMap<String,Method>();
         for(Method method : this.getClass().getMethods()) {
             WampRPC rpc = method.getAnnotation(WampRPC.class);
             if(rpc != null) {
                 String name = rpc.name();
                 if(name.length() == 0) name = method.getName();
-                rpcs.put(name, method);
+                rpcs.put(moduleName + name, method);
             }
         }
         
@@ -41,11 +38,12 @@ public class WampModule
         return app;
     }
     
-    public String getBaseURL() 
+    public String getModuleName() 
     {
         String retval = "";
-        WampNamespace ns = this.getClass().getAnnotation(WampNamespace.class);
+        WampModuleName ns = this.getClass().getAnnotation(WampModuleName.class);
         if(ns != null) retval = ns.value();
+        else retval = this.getClass().getPackage().getName();
         return retval;
     }
     
@@ -66,6 +64,8 @@ public class WampModule
                     params.add(clientSocket);
                 } else if(paramType.isInstance(app)) {    // WampApplication parameter info
                     params.add(app);
+                } else if(WampCallController.class.isAssignableFrom(paramType)) {
+                    params.add(task);                    
                 } else if(WampCallOptions.class.isAssignableFrom(paramType)) {
                     params.add(options);
                 } else if(ArrayNode.class.isAssignableFrom(paramType)) {
@@ -73,7 +73,7 @@ public class WampModule
                     argCount = args.size();
                 } else {
                     JsonNode val = args.get(argCount++);
-                    if(val instanceof NullNode) params.add(null);
+                    if(val == null || val instanceof NullNode) params.add(null);
                     else params.add(mapper.readValue(val, paramType));
                 }
             }
@@ -131,8 +131,8 @@ public class WampModule
             // WAMP v2
             options.init(request.get(3));
             if(options.hasExcludeMe()) {
-                Set<String> excludedSet = options.getExcluded();
-                if(excludedSet == null) excludedSet = new HashSet<String>();
+                Set<Long> excludedSet = options.getExcluded();
+                if(excludedSet == null) excludedSet = new HashSet<Long>();
                 excludedSet.add(clientSocket.getSessionId());
             }
         } else {
@@ -143,27 +143,27 @@ public class WampModule
                     boolean excludeMe = request.get(3).asBoolean();
                     options.setExcludeMe(excludeMe);                    
                     if(excludeMe) {
-                        HashSet<String> excludedSet = new HashSet<String>();
+                        HashSet<Long> excludedSet = new HashSet<Long>();
                         excludedSet.add(clientSocket.getSessionId());
                     }
                 } catch(Exception ex) {
-                    HashSet<String> excludedSet = new HashSet<String>();
+                    HashSet<Long> excludedSet = new HashSet<Long>();
                     ArrayNode excludedArray = (ArrayNode)request.get(3);
                     for(int i = 0; i < excludedArray.size(); i++) {
-                        excludedSet.add(excludedArray.get(i).asText());
+                        excludedSet.add(excludedArray.get(i).asLong());
                     }
                     options.setExcluded(excludedSet);
                 }
             } else if(request.size() == 5) {
-                HashSet<String> excludedSet = new HashSet<String>();
-                HashSet<String> eligibleSet = new HashSet<String>();
+                HashSet<Long> excludedSet = new HashSet<Long>();
+                HashSet<Long> eligibleSet = new HashSet<Long>();
                 ArrayNode excludedArray = (ArrayNode)request.get(3);
                 for(int i = 0; i < excludedArray.size(); i++) {
-                    excludedSet.add(excludedArray.get(i).asText());
+                    excludedSet.add(excludedArray.get(i).asLong());
                 }
                 ArrayNode eligibleArray = (ArrayNode)request.get(4);
                 for(int i = 0; i < eligibleArray.size(); i++) {
-                    eligibleSet.add(eligibleArray.get(i).asText());
+                    eligibleSet.add(eligibleArray.get(i).asLong());
                 }
                 options.setExcluded(excludedSet);
                 options.setEligible(eligibleSet);

@@ -66,7 +66,7 @@ public class WampApplication
         this.sockets = new ConcurrentHashMap<String,WampSocket>();
         this.modules = new HashMap<String,WampModule>();
         
-        this.registerWampModule(WampAPI.class);
+        this.registerWampModule(WampCRA.class);
         
         this.defaultModule = new WampModule(this);
         WampServices.registerApplication(path, this);
@@ -100,10 +100,21 @@ public class WampApplication
         return defaultModule;
     }
     
-    public WampModule getWampModule(String moduleBaseURI, WampModule defaultModule)
+    
+    public WampModule getWampModule(String moduleName, WampModule defaultModule)
     {
-        WampModule module = modules.get(normalizeNamespace(moduleBaseURI));
-        if(module == null && defaultModule != null) module = defaultModule;
+        WampModule module = null;
+        while(module == null && moduleName != null) {
+            module = modules.get(normalizeModuleName(moduleName));
+            if(module == null) {
+                int pos = moduleName.lastIndexOf(".");
+                if(pos != -1) moduleName = moduleName.substring(0, pos);
+                else moduleName = null;
+            }
+        } 
+        if(module == null) {
+            module = defaultModule;
+        }
         return module;
     }
     
@@ -128,6 +139,7 @@ public class WampApplication
         }        
 
 
+        session.setMaxIdleTimeout(0L);  // forever
         session.addMessageHandler(new MessageHandler.Whole<String>() {
 
             @Override
@@ -154,6 +166,7 @@ public class WampApplication
     public void onWampMessage(WampSocket clientSocket, ArrayNode request) throws Exception
     {
 
+        System.out.println("onWampMessage: " + request.toString());
         //logger.log(Level.FINE, "onWampMessage.data = {0}", new Object[]{request});
 
         int requestType = request.get(0).asInt();
@@ -172,28 +185,28 @@ public class WampApplication
                 }
                 break;
             case 2:
-            case 16:
+            case 70:
                 processCallMessage(clientSocket, request);
                 break;
-            case 17:
+            case 71:
                 processCallCancelMessage(clientSocket, request);
                 break;
             case 5:
-            case 64:
+            case 10:
                 JsonNode subOptionsNode = (request.size() > 2) ? request.get(2) : null;
                 WampSubscriptionOptions subOptions = new WampSubscriptionOptions(subOptionsNode);
                 String subscriptionTopicName = request.get(1).asText();
                 WampServices.subscribeClientWithTopic(this, clientSocket, subscriptionTopicName, subOptions);
                 break;
             case 6:
-            case 65:                
+            case 20:                
                 JsonNode unsubOptionsNode = (request.size() > 2) ? request.get(2) : null;
                 WampSubscriptionOptions unsubOptions = new WampSubscriptionOptions(unsubOptionsNode);
                 String unsubscriptionTopicName = request.get(1).asText();
                 WampServices.unsubscribeClientFromTopic(this, clientSocket, unsubscriptionTopicName, unsubOptions);
                 break;
             case 7:
-            case 66:                
+            case 30:                
                 WampServices.processPublishMessage(this, clientSocket, request);
                 break;                
             default:
@@ -237,12 +250,12 @@ public class WampApplication
         
     }
     
-    private String normalizeNamespace(String ns) 
+    public String normalizeModuleName(String moduleName) 
     {
-        int schemaPos = ns.indexOf(":");
-        if(schemaPos != -1) ns = ns.substring(schemaPos+1);
-        if(!ns.endsWith("#")) ns = ns + "#";
-        return ns;
+        int schemaPos = moduleName.indexOf(":");
+        if(schemaPos != -1) moduleName = moduleName.substring(schemaPos+1);
+        if(!moduleName.endsWith(".")) moduleName = moduleName + ".";
+        return moduleName;
     }
     
     @SuppressWarnings("unchecked")
@@ -250,7 +263,7 @@ public class WampApplication
     {
         try {
             WampModule module = (WampModule)moduleClass.getConstructor(WampApplication.class).newInstance(this);
-            modules.put(normalizeNamespace(module.getBaseURL()), module);
+            modules.put(normalizeModuleName(module.getModuleName()), module);
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "WgsEndpoint: Error registering WGS module", ex);
         }        
@@ -272,7 +285,7 @@ public class WampApplication
 
     private void processCallCancelMessage(WampSocket clientSocket, ArrayNode request) throws Exception
     {
-        String callID  = request.get(1).asText();
+        Long callID  = request.get(1).asLong();
         String cancelMode = (request.size() >= 3 && request.get(2).has("cancelmode")) ? request.get(2).get("cancelmode").asText() : "killnowait";
         WampCallController call = clientSocket.getRpcController(callID);
         call.cancel(cancelMode);

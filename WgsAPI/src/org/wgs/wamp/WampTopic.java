@@ -15,7 +15,7 @@ public class WampTopic
     private WampTopicOptions options;
 
     @Transient
-    private Map<String,WampSubscription> subscriptions = new ConcurrentHashMap<String,WampSubscription>();
+    private Map<Long,WampSubscription> subscriptions = new ConcurrentHashMap<Long,WampSubscription>();
 
     public WampTopic() { }
     
@@ -46,7 +46,7 @@ public class WampTopic
     }
     
     public String getBaseURI() {
-        int pos = uri.indexOf("#");
+        int pos = uri.lastIndexOf("#");
         if(pos == -1)  return uri;
         else return uri.substring(0, pos+1);
     }
@@ -64,11 +64,11 @@ public class WampTopic
     /**
      * @param socket the sockets to set
      */
-    public WampSubscription removeSubscription(String sessionId) {
+    public WampSubscription removeSubscription(Long sessionId) {
         return subscriptions.remove(sessionId);
     }
     
-    public WampSubscription getSubscription(String sessionId)
+    public WampSubscription getSubscription(Long sessionId)
     {
         return subscriptions.get(sessionId);
     }
@@ -78,7 +78,7 @@ public class WampTopic
         return subscriptions.values();
     }
 
-    public Set<String> getSessionIds()
+    public Set<Long> getSessionIds()
     {
         return subscriptions.keySet();
     } 

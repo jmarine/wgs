@@ -43,7 +43,7 @@ import org.wgs.wamp.WampCallOptions;
 import org.wgs.wamp.WampConnectionState;
 import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampModule;
-import org.wgs.wamp.WampNamespace;
+import org.wgs.wamp.WampModuleName;
 import org.wgs.wamp.WampPublishOptions;
 import org.wgs.wamp.WampRPC;
 import org.wgs.wamp.WampServices;
@@ -54,14 +54,14 @@ import org.wgs.wamp.WampTopic;
 import org.wgs.wamp.WampTopicOptions;
 
 
-@WampNamespace(Module.WGS_URL)
+@WampModuleName(Module.WGS_MODULE_NAME)
 public class Module extends WampModule 
 {
     private static final Logger logger = Logger.getLogger(Module.class.toString());
-    public  static final String WGS_URL = "https://wgs.org";
+    public  static final String WGS_MODULE_NAME = "wgs";
     
     private WampApplication wampApp = null;
-    private Map<String,Client> clients = new ConcurrentHashMap<String,Client>();
+    private Map<Long,Client> clients = new ConcurrentHashMap<Long,Client>();
     private Map<String, Application> applications = new ConcurrentHashMap<String,Application>();
     private Map<String, Group> groups = new ConcurrentHashMap<String,Group>();
     
@@ -85,7 +85,7 @@ public class Module extends WampModule
     }
 
     
-    public Client getClient(String sessionId)
+    public Client getClient(Long sessionId)
     {
         return clients.get(sessionId);
     }
@@ -97,14 +97,14 @@ public class Module extends WampModule
     
     private String getFQtopicURI(String topicName)
     {
-        return WGS_URL + "#" + topicName;
+        return WGS_MODULE_NAME + "." + topicName;
     }
 
     @Override
     public Object onCall(WampCallController task, WampSocket socket, String method, ArrayNode args, WampCallOptions callOptions) throws Exception 
     {
         Object retval = null;
-        if(method.equals("list_groups")) {
+        if(method.equals("wgs.list_groups")) {
             String appId = args.get(0).asText();
             JsonNode filterOptions = args.get(1);
             GroupFilter options = new GroupFilter(this, filterOptions);
@@ -159,7 +159,7 @@ public class Module extends WampModule
             WampSubscription subscription = topic.getSubscription(socket.getSessionId());
             if(subscription != null) {
                 subscription.setStatus(newStatus);
-                String metatopic = WGS_URL + "#status_updated";
+                String metatopic = WGS_MODULE_NAME + ".status_updated";
                 WampServices.publishMetaEvent(topic, metatopic, subscription.toJSON(), null);
             }
         }
@@ -180,7 +180,7 @@ public class Module extends WampModule
         usr = manager.find(User.class, userId);
         manager.close();
         
-        if(usr != null) throw new WampException(WGS_URL + "#userexists", "The user is reserved by another user");
+        if(usr != null) throw new WampException(WGS_MODULE_NAME + ".user_already_exists", "The user is reserved by another user");
         
         usr = new User();
         usr.setProfileCaducity(null);
@@ -207,12 +207,12 @@ public class Module extends WampModule
         Client client = clients.get(socket.getSessionId());
 
         if(client == null || client.getSocket().getState() != WampConnectionState.AUTHENTICATED) {
-            throw new WampException(WGS_URL + "#anonymous-user", "User not authenticated");
+            throw new WampException(WGS_MODULE_NAME + ".anonymous_user", "User not authenticated");
         }
         
         User usr = client.getUser();
         if(usr == null) {
-            throw new WampException(WGS_URL + "#unknown-user-info", "User info not registered");
+            throw new WampException(WGS_MODULE_NAME + ".unknown_userinfo", "User info not registered");
         }
         
         return usr.toJSON();
@@ -284,7 +284,7 @@ public class Module extends WampModule
             
         } catch(Exception ex) {
             
-            throw new WampException(WGS_URL + "#oic_error", "OpenID Connect provider error: " + ex.getMessage());
+            throw new WampException(WGS_MODULE_NAME + ".oic_error", "OpenID Connect provider error: " + ex.getMessage());
         
         } finally {
             if(manager != null) {
@@ -314,7 +314,7 @@ public class Module extends WampModule
                 URL url = new URL(normalizedIdentityURL); 
                 providerDomain = url.getHost();
             } finally {
-                if(providerDomain == null) throw new WampException(WGS_URL + "#oic_error", "Unsupported OpenID Connect principal format");
+                if(providerDomain == null) throw new WampException(WGS_MODULE_NAME + ".oic_error", "Unsupported OpenID Connect principal format");
             }
         }
         
@@ -381,7 +381,7 @@ public class Module extends WampModule
             
         } catch(Exception ex) {
             
-            throw new WampException(WGS_URL + "#oic_error", "OpenID Connect provider error: " + ex.getMessage());
+            throw new WampException(WGS_MODULE_NAME + ".oic_error", "OpenID Connect provider error: " + ex.getMessage());
         
         } finally {
             if(manager != null) {
@@ -409,7 +409,7 @@ public class Module extends WampModule
             manager = Storage.getEntityManager();
             OpenIdConnectClientPK oicId = new OpenIdConnectClientPK(providerDomain, redirectUri);
             OpenIdConnectClient oic = manager.find(OpenIdConnectClient.class, oicId);
-            if(oic == null) throw new WampException(WGS_URL + "#unknown_oidc_provider", "Unknown OpenId Connect provider domain");
+            if(oic == null) throw new WampException(WGS_MODULE_NAME + ".unknown_oidc_provider", "Unknown OpenId Connect provider domain");
 
             String accessTokenResponse = oic.getAccessTokenResponse(code);
             logger.fine("AccessToken endpoint response: " + accessTokenResponse);
@@ -513,7 +513,7 @@ public class Module extends WampModule
             }
         }
 
-        if(usr == null) throw new WampException(WGS_URL + "#oic_error", "OpenID Connect protocol error");
+        if(usr == null) throw new WampException(WGS_MODULE_NAME + ".oic_error", "OpenID Connect protocol error");
         return usr.toJSON();
     }    
     
@@ -553,7 +553,7 @@ public class Module extends WampModule
 
         boolean valid = false;
         Client client = clients.get(socket.getSessionId());
-        if(socket.getState() != WampConnectionState.AUTHENTICATED) throw new WampException(WGS_URL + "#unknownuser", "The user hasn't logged in");
+        if(socket.getState() != WampConnectionState.AUTHENTICATED) throw new WampException(WGS_MODULE_NAME + ".unknown_user", "The user hasn't logged in");
         
         // TODO: check user is administrator
         //if(!client.getUser().isAdministrator()) throw new WampException(MODULE_URL + "adminrequired", "The user is not and administrator");
@@ -643,7 +643,7 @@ public class Module extends WampModule
             event = broadcastAppInfo(socket, app, "app_deleted", true);
             return event;
         } else {
-            throw new WampException(WGS_URL + "#appidnotfound", "AppId " + appId + " doesn't exist");
+            throw new WampException(WGS_MODULE_NAME + ".appid_not_found", "AppId " + appId + " doesn't exist");
         }
     }
     
@@ -716,7 +716,7 @@ public class Module extends WampModule
             String pwd = g.getPassword();
             if( (pwd != null) && (pwd.length()>0) ) {
                 String pwd2 = (options!=null && options.has("password"))? options.get("password").asText() : "";
-                if(!pwd.equals(pwd2)) throw new WampException(WGS_URL + "#incorrectpassword", "Incorrect password");
+                if(!pwd.equals(pwd2)) throw new WampException(WGS_MODULE_NAME + ".incorrectpassword", "Incorrect password");
             }
             
         } else if(!spectator) {  
@@ -798,7 +798,7 @@ public class Module extends WampModule
             
             client.addGroup(g);
             ArrayNode conArray = mapper.createArrayNode();
-            for(String sid : topic.getSessionIds()) {
+            for(Long sid : topic.getSessionIds()) {
                     Client c = clients.get(sid);
                     User u = ((c!=null)? c.getUser() : null);
                     String user = ((u == null) ? "" : u.getFQid());
@@ -916,7 +916,7 @@ public class Module extends WampModule
         
         if(valid && !created && !joined) {
             User u = client.getUser();
-            String sid = client.getSessionId();
+            Long sid = client.getSessionId();
             String user = ( (u == null) ? "" : u.getFQid() );
 
             ObjectNode event = mapper.createObjectNode();
@@ -1154,7 +1154,7 @@ public class Module extends WampModule
                     
                 } else {
                     // UPDATE CLIENT STATE ("joined" <--> "ready")
-                    String sid = socket.getSessionId();
+                    Long sid = socket.getSessionId();
                     ArrayNode membersArray = mapper.createArrayNode();
                     JsonNode stateNode = data.get("state");
                     String state = (stateNode!=null && !stateNode.isNull()) ? stateNode.asText() : null;
@@ -1223,7 +1223,7 @@ public class Module extends WampModule
                 event.put("cmd", "team_message");
                 event.put("message", data); 
                 
-                Set<String> eligibleSet = new HashSet<String>();
+                Set<Long> eligibleSet = new HashSet<Long>();
 
                 for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                     Member member = g.getMember(slot);

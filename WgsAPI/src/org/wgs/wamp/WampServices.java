@@ -240,7 +240,7 @@ public class WampServices
     }
 
     
-    public static void publishEvent(String publisherId, WampTopic topic, JsonNode event, WampPublishOptions options) 
+    public static void publishEvent(Long publisherId, WampTopic topic, JsonNode event, WampPublishOptions options) 
     {
         //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         try {
@@ -254,7 +254,7 @@ public class WampServices
     {
         //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),metaevent});
         try {
-            HashSet<String> eligible = new HashSet<String>();
+            HashSet<Long> eligible = new HashSet<Long>();
             if(toClient != null) eligible.add(toClient.getSessionId());
             MessageBroker.publish(topic, 0L, metaevent, metatopic, eligible, null, null);
         } catch(Exception ex) {
