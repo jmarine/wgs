@@ -12,17 +12,28 @@ public class WampTopicPattern
     
     private String topicUriPattern;
     
+    private Long subscriptionId;
+    
     private Collection<WampTopic> topics;
     
     private Map<Long,WampSubscription> subscriptions;
 
     
-    public WampTopicPattern(WampSubscriptionOptions.MatchEnum matchType, String topicUriPattern, Collection<WampTopic> topics) 
+    public WampTopicPattern(Long subscriptionId, WampSubscriptionOptions.MatchEnum matchType, String topicUriPattern, Collection<WampTopic> topics) 
     {
+        this.subscriptionId = subscriptionId;
         this.matchType =  matchType;
         this.topicUriPattern = topicUriPattern;
         this.topics = topics;
         this.subscriptions = new ConcurrentHashMap<Long,WampSubscription>();
+    }
+    
+    
+    /**
+     * @return the requestId
+     */
+    public Long getSubscriptionId() {
+        return subscriptionId;
     }
     
     /**
@@ -46,22 +57,25 @@ public class WampTopicPattern
     
     public void addSubscription(WampSubscription subscription)
     {
-        subscriptions.put(subscription.getSocket().getSessionId(), subscription);
+        subscriptions.put(subscription.getId(), subscription);
     }
     
     public void removeSubscription(WampSubscription subscription)
     {
-        subscriptions.remove(subscription.getSocket().getSessionId());
+        subscriptions.remove(subscription.getId());
     }
     
-    public WampSubscription getSubscription(Long sessionId) 
+    public WampSubscription getSubscription(Long subscriptionId) 
     {
-        return subscriptions.get(sessionId);
+        return subscriptions.get(subscriptionId);
     }
     
     public Collection<WampSubscription> getSubscriptions()
     {
         return subscriptions.values();
     } 
-    
+
+
+
+   
 }

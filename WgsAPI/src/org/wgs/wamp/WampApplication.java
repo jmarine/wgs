@@ -193,17 +193,17 @@ public class WampApplication
                 break;
             case 5:
             case 10:
+                Long requestId1 = request.get(1).asLong();
                 JsonNode subOptionsNode = (request.size() > 2) ? request.get(2) : null;
                 WampSubscriptionOptions subOptions = new WampSubscriptionOptions(subOptionsNode);
-                String subscriptionTopicName = request.get(1).asText();
-                WampServices.subscribeClientWithTopic(this, clientSocket, subscriptionTopicName, subOptions);
+                String subscriptionTopicName = request.get(3).asText();
+                WampServices.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
                 break;
             case 6:
             case 20:                
-                JsonNode unsubOptionsNode = (request.size() > 2) ? request.get(2) : null;
-                WampSubscriptionOptions unsubOptions = new WampSubscriptionOptions(unsubOptionsNode);
-                String unsubscriptionTopicName = request.get(1).asText();
-                WampServices.unsubscribeClientFromTopic(this, clientSocket, unsubscriptionTopicName, unsubOptions);
+                Long requestId2 = request.get(1).asLong();
+                Long subscriptionId2 = request.get(2).asLong();
+                WampServices.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
                 break;
             case 7:
             case 30:                
@@ -236,13 +236,13 @@ public class WampApplication
             // First remove subscriptions to topic patterns:
             for(WampSubscription subscription : clientSocket.getSubscriptions()) {
                 if(subscription.getOptions().getMatchType() != WampSubscriptionOptions.MatchEnum.exact) {  // prefix or wildcards
-                    WampServices.unsubscribeClientFromTopic(this, clientSocket, subscription.getTopicUriOrPattern(), subscription.getOptions());
+                    WampServices.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
                 }
             }
 
             // Then, remove remaining subscriptions to single topics:
             for(WampSubscription subscription : clientSocket.getSubscriptions()) {
-                WampServices.unsubscribeClientFromTopic(this, clientSocket, subscription.getTopicUriOrPattern(), subscription.getOptions());
+                WampServices.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
             }        
             
             logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});

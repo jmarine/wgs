@@ -14,7 +14,7 @@ public class WampPublishOptions
     private boolean   excludeMe;
     private Set<Long> excluded;
     private Set<Long> eligible;
-    private boolean   identifyMe;
+    private boolean   discloseMe;
         
     public WampPublishOptions() { }
     public WampPublishOptions(JsonNode node) { 
@@ -25,11 +25,11 @@ public class WampPublishOptions
         
         if(node != null) {
             if(node.has("EXCLUDE_ME")) {
-                setExcludeMe(node.get("EXCLUDE_ME").asBoolean());
+                setExcludeMe(node.get("exclude_me").asInt() != 0);
             }     
             
             if(node.has("IDENTIFY_ME")) {
-                setIdentifyMe(node.get("IDENTIFY_ME").asBoolean());
+                setDiscloseMe(node.get("disclose_me").asInt() != 0);
             }                 
         }
     }
@@ -79,15 +79,15 @@ public class WampPublishOptions
     /**
      * @return the identifyMe
      */
-    public boolean hasIdentifyMe() {
-        return identifyMe;
+    public boolean hasDiscloseMe() {
+        return discloseMe;
     }
 
     /**
      * @param identifyMe the identifyMe to set
      */
-    public void setIdentifyMe(boolean identifyMe) {
-        this.identifyMe = identifyMe;
+    public void setDiscloseMe(boolean identifyMe) {
+        this.discloseMe = identifyMe;
     }
     
     

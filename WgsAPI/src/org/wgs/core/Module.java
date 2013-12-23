@@ -44,6 +44,7 @@ import org.wgs.wamp.WampConnectionState;
 import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampModuleName;
+import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampPublishOptions;
 import org.wgs.wamp.WampRPC;
 import org.wgs.wamp.WampServices;
@@ -111,7 +112,7 @@ public class Module extends WampModule
             options.setMetaEvents(java.util.Arrays.asList("http://wamp.ws/sub#joined", "http://wamp.ws/sub#left"));
             if(appId.indexOf("*") != -1) options.setMatchType(WampSubscriptionOptions.MatchEnum.wildcard);
              
-            WampServices.subscribeClientWithTopic(wampApp, socket, getFQtopicURI("app_event:"+appId), options);
+            WampServices.subscribeClientWithTopic(wampApp, socket, null, getFQtopicURI("app_event:"+appId), options);
             retval = listGroups(socket, appId, options);
         } else {
             retval = super.onCall(task, socket, method, args, callOptions);
@@ -136,13 +137,19 @@ public class Module extends WampModule
         }
         clients.put(socket.getSessionId(), client);
         
-        WampServices.subscribeClientWithTopic(wampApp, socket, getFQtopicURI("apps_event"), null);  // exact match
+        WampServices.subscribeClientWithTopic(wampApp, socket, null, getFQtopicURI("apps_event"), null);  // exact match
     }
     
     @Override
     public void onDisconnect(WampSocket socket) throws Exception {
         Client client = clients.get(socket.getSessionId());
-        WampServices.unsubscribeClientFromTopic(wampApp, socket, getFQtopicURI("apps_event"), null);  // exact match
+        
+        /*
+        for(WampSubscription subscription : socket.getSubscriptions(getFQtopicURI("apps_event")) {
+            WampServices.unsubscribeClientFromTopic(wampApp, socket, null, subscription.getId);  // exact match
+        }
+        */
+        
         socket.setState(WampConnectionState.OFFLINE);
         for(String gid : client.getGroups().keySet()) {
             exitGroup(socket, gid);
@@ -151,19 +158,6 @@ public class Module extends WampModule
         super.onDisconnect(socket);
     }
     
-    @WampRPC(name="set_subscription_status")
-    public void setSubscriptionStatus(WampSocket socket, String topicName, JsonNode newStatus) throws Exception
-    {
-        WampTopic topic = WampServices.getTopic(socket.normalizeURI(topicName));
-        if(topic != null) {
-            WampSubscription subscription = topic.getSubscription(socket.getSessionId());
-            if(subscription != null) {
-                subscription.setStatus(newStatus);
-                String metatopic = WGS_MODULE_NAME + ".status_updated";
-                WampServices.publishMetaEvent(topic, metatopic, subscription.toJSON(), null);
-            }
-        }
-    }
     
     @WampRPC(name="register")
     public ObjectNode registerUser(WampSocket socket, ObjectNode data) throws Exception
@@ -794,11 +788,12 @@ public class Module extends WampModule
             }
             WampSubscriptionOptions subscriptionOptions = new WampSubscriptionOptions(null);
             //subscriptionOptions.setPublisherIdRequested(true);
-            WampServices.subscribeClientWithTopic(wampApp, client.getSocket(), topicName, subscriptionOptions);
+            WampServices.subscribeClientWithTopic(wampApp, client.getSocket(), null, topicName, subscriptionOptions);
             
             client.addGroup(g);
             ArrayNode conArray = mapper.createArrayNode();
-            for(Long sid : topic.getSessionIds()) {
+            for(WampSubscription subscription : topic.getSubscriptions()) {
+                for(Long sid : subscription.getSessionIds()) {
                     Client c = clients.get(sid);
                     User u = ((c!=null)? c.getUser() : null);
                     String user = ((u == null) ? "" : u.getFQid());
@@ -811,6 +806,7 @@ public class Module extends WampModule
                     con.put("picture", picture);
                     con.put("sid", sid);
                     conArray.add(con);
+                }
             }
             response.put("connections", conArray);            
 
@@ -1236,8 +1232,8 @@ public class Module extends WampModule
                 if(eligibleSet.size() > 0) {
                     WampPublishOptions options = new WampPublishOptions();
                     options.setEligible(eligibleSet);
-                    options.setIdentifyMe(true);
-                    WampServices.publishEvent(socket.getSessionId(), WampServices.getTopic(getFQtopicURI("group_event:"+g.getGid())), event, options);
+                    options.setDiscloseMe(true);
+                    WampServices.publishEvent(WampProtocol.newId(), socket.getSessionId(), WampServices.getTopic(getFQtopicURI("group_event:"+g.getGid())), event, options);
                 }
             }
         }
@@ -1304,7 +1300,8 @@ public class Module extends WampModule
                 client.removeGroup(g);
                 
                 String topicName = getFQtopicURI("group_event:" + g.getGid());
-                for(WampTopic topic : WampServices.unsubscribeClientFromTopic(wampApp, socket, topicName, null)) {  // exact match
+                /*
+                for(WampTopic topic : WampServices.unsubscribeClientFromTopic(wampApp, socket, topicName)) {  // exact match
                     boolean deleted = false;
                     if(topic.getSubscriptionCount() == 0 && g.getState() != GroupState.STARTED) {
 
@@ -1330,6 +1327,7 @@ public class Module extends WampModule
                     
                     broadcastAppEventInfo(socket, g, deleted? "group_deleted" : "group_updated", false);
                 }
+                */
             }
 
             return response;

@@ -19,6 +19,8 @@ WgsClient.prototype = {
   state: WgsClient.DISCONNECTED,
   groups: new Array(),
   calls: new Array(),
+  subscriptionRequests: new Array(),
+  subscriptionsByTopicAndOptions: new Array(),
   topicHandlers: new Array(),
   patternHandlers: new Array(),
   metaeventHandlers: new Array(),
@@ -56,14 +58,6 @@ WgsClient.prototype = {
       return Math.floor(r);
   },
           
-  setServerWampVersion: function(v) {
-      this.serverWampVersion = v;
-  },
-          
-  isServerUsingWampVersion: function(v) {
-      return (this.serverWampVersion >= v);
-  },
-  
   hello: function() {
       this.serverSID = this._newid();
       var arr = [];
@@ -86,28 +80,16 @@ WgsClient.prototype = {
       this.send(JSON.stringify(arr));
   },
  
-  call: function(cmd, args, argumentsKw, wamp2OptionsOrWamp1ArgsAsArray) {
+  call: function(cmd, args, argumentsKw, wampOptions) {
       var dfd = $.Deferred();
       var msg = [];
-      msg[0] = this.isServerUsingWampVersion(2) ? 70 : 2;  // CALL
+      msg[0] = 70;
       msg[1] = this._newid();
-      
-      if(this.isServerUsingWampVersion(2)) {
-          msg[2] = (wamp2OptionsOrWamp1ArgsAsArray!=null) ? wamp2OptionsOrWamp1ArgsAsArray : {};
-          msg[3] = cmd;
-          msg[4] = (args!=null)? ((args instanceof Array)? args : [args] ) : [];
-          msg[5] = (argumentsKw!=null) ? argumentsKw : {};
-      } else {
-          msg[2] = cmd;
-          msg[1] = new String(msg[1]);
-          if(args && (args instanceof Array) && (!wamp2OptionsOrWamp1ArgsAsArray)) {
-              for(var i = 0; i < args.length; i++) {
-                  msg[3+i] = args[i];
-              }
-          } else {
-              msg[3] = args;
-          }
-      }
+      msg[2] = (wampOptions!=null) ? wampOptions : {};
+      msg[3] = cmd;
+      msg[4] = (args!=null)? ((args instanceof Array)? args : [args] ) : [];
+      msg[5] = (argumentsKw!=null) ? argumentsKw : {};
+
       this.calls[msg[1]] = dfd;
       this.send(JSON.stringify(msg));
       return dfd.promise();
@@ -150,11 +132,27 @@ WgsClient.prototype = {
         }
         if(!options.clientSideOnly) {
             var arr = [];
-            arr[0] = this.isServerUsingWampVersion(2) ? 10 : 5;  // SUBSCRIBE
-            arr[1] = topic;
-            if(this.isServerUsingWampVersion(2)) arr[2] = options;
+            arr[0] = 10;  // SUBSCRIBE
+            arr[1] = this._newid();
+            arr[2] = options;
+            arr[3] = topic;      
+            var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
+            this.subscriptionRequests[arr[1]] = topicAndOptionsKey;
             this.send(JSON.stringify(arr));
         }
+  },
+  
+  _getTopicAndOptionsKey: function(topicPattern,options)
+  {
+      if(!options) options = {};
+      if(!options.match) options.match = "exact";
+      return options.match.toLowerCase() + ":" + topicPattern;
+  },
+  
+  getSubscriptionIdByTopicOptions: function(topicPattern, options)
+  {
+      var topicAndOptionsKey = this._getTopicAndOptionsKey(topicPattern, options);
+      return this.subscriptionsByTopicAndOptions[topicAndOptionsKey];
   },
   
   unsubscribe: function(topic, event_cb, metaevent_cb, options) {
@@ -211,8 +209,9 @@ WgsClient.prototype = {
         if(!clientSideOnly) {
             // send unsubscribe message to server (when all eventHandlers or metaeventHandlers are cleared)
             var arr = [];
-            arr[0] = this.isServerUsingWampVersion(2) ? 20 : 6;  // Unsubscribe message type
-            arr[1] = topic;  
+            arr[0] = 20;  // Unsubscribe message type
+            arr[1] = this._newid();
+            arr[2] = this.getSubscriptionIdByTopicOptions(topic,options);
             this.send(JSON.stringify(arr));
         }   
 
@@ -220,10 +219,10 @@ WgsClient.prototype = {
   
   publish: function(topic, event, options) {
       var arr = [];
-      arr[0] = this.isServerUsingWampVersion(2) ? 30 : 7;  // PUBLISH
+      arr[0] = 30;  // PUBLISH
       arr[1] = topic;
       arr[2] = event;
-      if(this.isServerUsingWampVersion(2) && options) arr[3] = options;
+      arr[3] = (options) ? options : {};
       this.send(JSON.stringify(arr));
   }, 
 
@@ -415,6 +414,7 @@ WgsClient.prototype = {
           client.ws = ws;
           this.state = WgsState.CONNECTED;
           onstatechange(WgsState.CONNECTED);
+          client.hello();  // FIX: move to ws.onopen
         };
 
         ws.onclose = function(e) {
@@ -433,12 +433,8 @@ WgsClient.prototype = {
           client.debug("ws.onmessage: " + e.data);
           var arr = JSON.parse(e.data);
 
-          if (arr[0] == 0) {  // WELCOME (WAMPv1) / HELLO (WAMPv2)
+          if (arr[0] == 0) {  // HELLO (WAMPv2)
               client.sid = arr[1];
-              if(!isFinite(arr[2])) { // Version in WAMP v1
-                  client.setServerWampVersion(2);
-                  client.hello();  // WAMPv2
-              }
               client.state = WgsState.WELCOMED;
               onstatechange(WgsState.WELCOMED);
           } else if (arr[0] == 3 || arr[0] == 73) {  // CALLRESULT
@@ -468,6 +464,13 @@ WgsClient.prototype = {
               } else {
                   client.debug("call not found: " + call);
               }            
+              
+          } else if(arr[0] == 11) {  // SUBSCRIBED
+              var requestId = arr[1];
+              var subscriptionId = arr[2];
+              var topicAndOptionsKey = client.subscriptionRequests[requestId];
+              client.subscriptionsByTopicAndOptions[topicAndOptionsKey] = subscriptionId;
+              
           } else if(arr[0] == 8 || arr[0] == 40) {  // EVENT
               var topicURI = arr[1];
               if(client.topicHandlers[topicURI]) {
@@ -548,13 +551,6 @@ WgsClient.prototype = {
           
       this.call("wgs.delete_app", msg).then(callback, callback);
   },  
-  
-  setSubscriptionStatus: function(topicURI, newStatus, callback) {
-      var args = Array();
-      args[0] = topicURI;
-      args[1] = newStatus;
-      this.call("wgs.set_subscription_status", args).then(callback,callback);
-  },
   
   _update_group_users: function(msg, topicURI) {
       var client = this;

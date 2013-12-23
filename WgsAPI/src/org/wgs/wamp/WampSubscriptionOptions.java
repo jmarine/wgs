@@ -126,7 +126,7 @@ public class WampSubscriptionOptions
         return (this.eventsEnabled);
     }    
     
-    public boolean isEligibleForEvent(WampSubscription subscription, JsonNode event)
+    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, JsonNode event)
     {
         return true;
     }

@@ -25,6 +25,9 @@ public class WampServices
     
     private static TreeMap<String,WampTopicPattern> topicPatterns = new TreeMap<String,WampTopicPattern>();
     
+    private static TreeMap<Long,WampSubscription> topicSubscriptionsById = new TreeMap<Long,WampSubscription>();
+    private static TreeMap<String,WampSubscription> topicSubscriptionsByTopicURI = new TreeMap<String,WampSubscription>();
+    
     
     public static void registerApplication(String name, WampApplication wampApp)
     {
@@ -61,7 +64,9 @@ public class WampServices
                     topicPattern.getTopics().add(topic);
                     for(WampSubscription patternSubscription : topicPattern.getSubscriptions()) {
                         try { 
-                            subscribeClientWithTopic(app, patternSubscription.getSocket(), topic.getURI(), patternSubscription.getOptions());
+                            for(WampSocket socket : patternSubscription.getSockets()) {
+                                subscribeClientWithTopic(app, socket, null, topic.getURI(), patternSubscription.getOptions());
+                            }
                         } catch(Exception ex) {
                             logger.log(Level.FINE, "Error in subscription to topic", ex);
                         }                      
@@ -81,11 +86,13 @@ public class WampServices
             topics.remove(topicFQname);
             
             for(WampSubscription subscription : topic.getSubscriptions()) {
-                try { 
-                    unsubscribeClientFromTopic(app, subscription.getSocket(), topicFQname, subscription.getOptions());
-                } catch(Exception ex) {
-                    logger.log(Level.FINE, "Error in unsubscription to topic", ex);
-                }                      
+                for(WampSocket client : subscription.getSockets()) {
+                    try { 
+                        unsubscribeClientFromTopic(app, client, null, subscription.getId());
+                    } catch(Exception ex) {
+                        logger.log(Level.FINE, "Error in unsubscription to topic", ex);
+                    }                      
+                }
             }
             
             for(WampTopicPattern topicPattern : topicPatterns.values()) {
@@ -147,11 +154,12 @@ public class WampServices
     
     public static void processPublishMessage(WampApplication app, WampSocket clientSocket, ArrayNode request) throws Exception 
     {
-        String topicName = clientSocket.normalizeURI(request.get(1).asText());
+        Long publicationId = WampProtocol.newId();
+        String topicName = clientSocket.normalizeURI(request.get(3).asText());
         WampTopic topic = WampServices.getTopic(topicName);
         try {
             WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
-            module.onPublish(clientSocket, topic, request);
+            module.onPublish(publicationId, clientSocket, topic, request);
         } catch(Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
         }  
@@ -159,8 +167,10 @@ public class WampServices
     
     
     
-    public static Collection<WampTopic> subscribeClientWithTopic(WampApplication app, WampSocket clientSocket, String topicUriOrPattern, WampSubscriptionOptions options)
+    public static Collection<WampTopic> subscribeClientWithTopic(WampApplication app, WampSocket clientSocket, Long requestId, String topicUriOrPattern, WampSubscriptionOptions options)
     {
+        Long subscriptionId = null;
+        
         // FIXME: merge subscriptions options (events & metaevents),
         // when the 1st eventhandler and 1st metahandler is subscribed
         topicUriOrPattern = clientSocket.normalizeURI(topicUriOrPattern);
@@ -174,89 +184,87 @@ public class WampServices
         if(options.getMatchType() != WampSubscriptionOptions.MatchEnum.exact) {  // prefix or wildcards
             String topicPatternKey = options.getMatchType().toString() + ">" + topicUriOrPattern;
             WampTopicPattern topicPattern = topicPatterns.get(topicPatternKey);
+            
             if(topicPattern == null) {
-                topicPattern = new WampTopicPattern(options.getMatchType(), topicUriOrPattern, topics);
+                subscriptionId = WampProtocol.newId();                
+                topicPattern = new WampTopicPattern(subscriptionId, options.getMatchType(), topicUriOrPattern, topics);
                 topicPatterns.put(topicPatternKey, topicPattern);
             }
             
+            subscriptionId = topicPattern.getSubscriptionId();
             WampSubscription subscription = topicPattern.getSubscription(clientSocket.getSessionId());
-            if(subscription == null) subscription = new WampSubscription(clientSocket, topicUriOrPattern, options);
-            if(subscription.refCount(+1) == 1) topicPattern.addSubscription(subscription);
+            if(subscription == null) subscription = new WampSubscription(subscriptionId, topicUriOrPattern, topics, options);
+            if(subscription.addSocket(clientSocket)) topicPattern.addSubscription(subscription);
             //clientSocket.addSubscription(subscription);
         } 
         
         for(WampTopic topic : topics) {
             WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+            if(subscriptionId == null) subscriptionId = topic.getSubscriptionId();
+            
             try { 
-                module.onSubscribe(clientSocket, topic, options);
+                module.onSubscribe(clientSocket, subscriptionId, topic, options);
             } catch(Exception ex) {
                 if(options != null && options.hasMetaEvents()) {
                     try { 
                         ObjectNode metaevent = (new ObjectMapper()).createObjectNode();
                         metaevent.put("error", ex.getMessage());
-                        publishMetaEvent(topic, WampMetaTopic.DENIED, metaevent, clientSocket);
+                        publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.DENIED, metaevent, clientSocket);
                         logger.log(Level.FINE, "Error in subscription to topic", ex);
                     } catch(Exception ex2) { }
                 }
             }
         }
     
+        if(requestId != null) WampProtocol.sendSubscribed(clientSocket, requestId, subscriptionId);
+        
         return topics;
     }
     
     
-    public static Collection<WampTopic> unsubscribeClientFromTopic(WampApplication app, WampSocket clientSocket, String topicUriOrPattern, WampSubscriptionOptions options)
+    public static Collection<WampTopic> unsubscribeClientFromTopic(WampApplication app, WampSocket clientSocket, Long requestId, Long subscriptionId)
     {
-        topicUriOrPattern = clientSocket.normalizeURI(topicUriOrPattern);
-        if(options == null) options = new WampSubscriptionOptions(null);
-        if(options.getMatchType() == WampSubscriptionOptions.MatchEnum.prefix && !topicUriOrPattern.endsWith("*")) {
-            topicUriOrPattern = topicUriOrPattern + "*";
-        }
-        
-        Collection<WampTopic> topics = getTopics(options.getMatchType(), topicUriOrPattern);
-        if(options.getMatchType() != WampSubscriptionOptions.MatchEnum.exact) {  // prefix or wildcard
-            String topicPatternKey = options.getMatchType().toString() + ">" + topicUriOrPattern;
-            WampTopicPattern topicPattern = topicPatterns.get(topicPatternKey);
-            WampSubscription subscription = topicPattern.getSubscription(clientSocket.getSessionId());
-            if(subscription.refCount(-1) <= 0) topicPattern.removeSubscription(subscription);
-            /** Don't clear topicPatterns for future clients
-            // topicPatterns.remove(topicPatternKey);
-            */
-        }
-        
+        Collection<WampTopic> topics = null;
+
+        WampSubscription subscription = clientSocket.getSubscription(subscriptionId);
+        subscription.removeSocket(clientSocket.getSessionId());
+
+        topics = subscription.getTopics();
         for(WampTopic topic : topics) {
-            WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
+            if(subscriptionId == null) subscriptionId = topic.getSubscriptionId();            
             if(subscription != null) {
                 try { 
                     WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
-                    module.onUnsubscribe(clientSocket, topic);
+                    module.onUnsubscribe(clientSocket, subscriptionId, topic);
                 } catch(Exception ex) {
                     logger.log(Level.FINE, "Error in unsubscription to topic", ex);
                 }          
             }
         }
         
+        if(requestId != null) WampProtocol.sendUnsubscribed(clientSocket, requestId);
+                
         return topics;
     }
 
     
-    public static void publishEvent(Long publisherId, WampTopic topic, JsonNode event, WampPublishOptions options) 
+    public static void publishEvent(Long publicationId, Long publisherId, WampTopic topic, JsonNode event, WampPublishOptions options) 
     {
         //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         try {
-            MessageBroker.publish(topic, 0L, event, null, options.getEligible(), options.getExcluded(), (options.hasIdentifyMe()? publisherId : null));
+            MessageBroker.publish(publicationId, topic, event, null, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? publisherId : null));
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "Error in publishing event to topic", ex);
         }
     }   
     
-    public static void publishMetaEvent(WampTopic topic, String metatopic, JsonNode metaevent, WampSocket toClient) 
+    public static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, JsonNode metaevent, WampSocket toClient) 
     {
         //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),metaevent});
         try {
             HashSet<Long> eligible = new HashSet<Long>();
             if(toClient != null) eligible.add(toClient.getSessionId());
-            MessageBroker.publish(topic, 0L, metaevent, metatopic, eligible, null, null);
+            MessageBroker.publish(publicationId, topic, metaevent, metatopic, eligible, null, null);
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "Error in publishing metaevent to topic", ex);
         }        

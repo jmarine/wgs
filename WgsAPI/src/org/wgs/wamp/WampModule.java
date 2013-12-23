@@ -2,6 +2,7 @@ package org.wgs.wamp;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -83,11 +84,11 @@ public class WampModule
         throw new WampException(WampException.WAMP_GENERIC_ERROR_URI, "Method not implemented: " + methodName);
     }
     
-    public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
-        WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
-        if(subscription == null) subscription = new WampSubscription(clientSocket, topic.getURI(), options);
+    public void onSubscribe(WampSocket clientSocket, Long subscriptionId, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
+        WampSubscription subscription = topic.getSubscription(subscriptionId);
+        if(subscription == null) subscription = new WampSubscription(subscriptionId, topic.getURI(), Arrays.asList(topic), options);
 
-        if(subscription.refCount(+1) > 1) {
+        if(!subscription.addSocket(clientSocket)) {
             subscription.getOptions().updateOptions(options);
         } else {
             long sinceN = 0L;       // options.getSinceN();
@@ -96,40 +97,46 @@ public class WampModule
             topic.addSubscription(subscription);
             clientSocket.addSubscription(subscription);
             if(options != null && options.hasMetaEvents()) {
-                WampServices.publishMetaEvent(topic, WampMetaTopic.OK, null, clientSocket);
-                
                 if(options.hasEventsEnabled()) {
-                    WampServices.publishMetaEvent(topic, WampMetaTopic.JOINED, subscription.toJSON(), null);
+                    WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.JOINED, clientSocket.toJSON(), null);
+                }
+            }
+        }
+
+    }
+
+    public void onUnsubscribe(WampSocket clientSocket, Long subscriptionId, WampTopic topic) throws Exception { 
+        WampSubscription subscription = topic.getSubscription(subscriptionId);
+        if(subscription.getSocket(clientSocket.getSessionId()) != null) {
+            WampSubscriptionOptions options = subscription.getOptions();
+            if(options!=null && options.hasMetaEvents() && options.hasEventsEnabled()) {
+                ObjectNode metaEvent = clientSocket.toJSON();
+                WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.LEFT, metaEvent, null);
+            }
+
+            clientSocket.removeSubscription(subscription.getId());
+            subscription.removeSocket(clientSocket.getSessionId());
+            if(subscription.getSocketsCount() == 0) {
+                topic.removeSubscription(subscription.getId());
+            
+                if(topic.getSubscriptionCount() == 0) {
+                    MessageBroker.unsubscribeMessageListener(topic);
                 }
             }
         }
     }
-
-    public void onUnsubscribe(WampSocket clientSocket, WampTopic topic) throws Exception { 
-        WampSubscription subscription = topic.getSubscription(clientSocket.getSessionId());
-        if(subscription.refCount(-1) <= 0) {
-            WampSubscriptionOptions options = subscription.getOptions();
-            if(options!=null && options.hasMetaEvents() && options.hasEventsEnabled()) {
-                ObjectNode metaevent = subscription.toJSON();
-                WampServices.publishMetaEvent(topic, WampMetaTopic.LEFT, metaevent, null);
-            }
-            topic.removeSubscription(subscription.getSocket().getSessionId());
-            clientSocket.removeSubscription(subscription.getTopicUriOrPattern());
-            
-            if(topic.getSubscriptionCount() == 0) {
-                MessageBroker.unsubscribeMessageListener(topic);
-            }
-        }
-    }
     
-    public void onPublish(WampSocket clientSocket, WampTopic topic, ArrayNode request) throws Exception 
+    public void onPublish(Long publicationId, WampSocket clientSocket, WampTopic topic, ArrayNode request) throws Exception 
     {
         WampPublishOptions options = new WampPublishOptions();
-        JsonNode event = request.get(2);
+        Long requestId = null;
+        JsonNode event = null;
         
-        if(request.get(0).asInt() == 66) {
+        if(request.get(0).asInt() == 30) {
             // WAMP v2
-            options.init(request.get(3));
+            requestId = request.get(1).asLong();
+            event = request.get(4);
+            options.init(request.get(2));
             if(options.hasExcludeMe()) {
                 Set<Long> excludedSet = options.getExcluded();
                 if(excludedSet == null) excludedSet = new HashSet<Long>();
@@ -137,6 +144,7 @@ public class WampModule
             }
         } else {
             // WAMP v1
+            event = request.get(2);
             if(request.size() == 4) {
                 // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
                 try {
@@ -170,8 +178,9 @@ public class WampModule
             }
         }
         
-        WampServices.publishEvent(clientSocket.getSessionId(), topic, event, options);
+        WampServices.publishEvent(publicationId, clientSocket.getSessionId(), topic, event, options);
         
+        if(requestId != null) WampProtocol.sendPublished(clientSocket, requestId, publicationId);
     }
 
     

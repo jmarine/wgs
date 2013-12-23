@@ -78,7 +78,7 @@ public class GroupFilter extends WampSubscriptionOptions
     
     
     @Override
-    public boolean isEligibleForEvent(WampSubscription subscription, JsonNode event) 
+    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, JsonNode event) 
     {
         if (scope == Scope.all) {
             return true;
@@ -96,8 +96,8 @@ public class GroupFilter extends WampSubscriptionOptions
                 Group  group = module.getGroup(gid);
                 if(group == null) {
                     return false;
-                } else {
-                    Client client = module.getClient(subscription.getSocket().getSessionId());
+                } else if(sid != null) {
+                    Client client = module.getClient(sid);
                     return subscribeGroup(group, client);
                 }
             }

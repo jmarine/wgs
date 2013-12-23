@@ -39,6 +39,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampServices;
+import org.wgs.wamp.WampSubscription;
 import org.wgs.wamp.WampTopic;
 
 
@@ -196,9 +197,9 @@ public class MessageBroker
     }
     
     
-    public static void publish(WampTopic wampTopic, long id, JsonNode event, String metaTopic, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
+    public static void publish(Long id, WampTopic wampTopic, JsonNode event, String metaTopic, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
     {
-        broadcastClusterEventToLocalNodeClients(wampTopic,metaTopic,eligible,exclude,publisherId, event);  
+        broadcastClusterEventToLocalNodeClients(id, wampTopic,metaTopic,eligible,exclude,publisherId, event);  
         
         if(brokerEnabled) {
             String topicName = wampTopic.getURI();
@@ -233,14 +234,14 @@ public class MessageBroker
     }
 
     
-    private static void broadcastClusterEventToLocalNodeClients(WampTopic topic, String metaTopic, Set<Long> eligible, Set<Long> excluded, Long publisherId, JsonNode event) throws Exception 
+    private static void broadcastClusterEventToLocalNodeClients(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, Set<Long> excluded, Long publisherId, JsonNode event) throws Exception 
     {
         if(metaTopic == null) {
             // EVENT data
-            WampProtocol.sendEvents(topic, eligible, excluded, publisherId, event);
+            WampProtocol.sendEvents(publicationId, topic, eligible, excluded, publisherId, event);
         } else {
             // METAEVENT data (WAMP v2)
-            WampProtocol.sendMetaEvents(topic, metaTopic, eligible, event);
+            WampProtocol.sendMetaEvents(publicationId, topic, metaTopic, eligible, event);
         }
     }       
     
@@ -292,8 +293,13 @@ public class MessageBroker
                 Set<Long> eligible = parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible"));
                 Set<Long> exclude  = parseSessionIDs(receivedMessageFromBroker.getStringProperty("exclude"));
 
-                WampTopic topic = WampServices.getTopic(topicName);
-                broadcastClusterEventToLocalNodeClients(topic, metaTopic, eligible, exclude, publisherId, event);
+                /*
+                for(WampSubscription subscription : WampServices.getSubscriptions(topicName)) {
+                    for(WampTopic topic : subscription.getTopics()) {
+                        broadcastClusterEventToLocalNodeClients(subscription.getId(), topic, metaTopic, eligible, exclude, publisherId, event);
+                    }
+                }
+                */
                 
             } catch (Exception ex) {
                 logger.log(Level.SEVERE, "Error receiving message from broker", ex);

@@ -11,6 +11,7 @@ import javax.persistence.Transient;
 
 public class WampTopic 
 {
+    private Long   subscriptionId;
     private String uri;
     private WampTopicOptions options;
 
@@ -19,9 +20,10 @@ public class WampTopic
 
     public WampTopic() { }
     
-    public WampTopic(String uri, WampTopicOptions options) 
+    public WampTopic( String uri, WampTopicOptions options) 
     {
         setURI(uri);
+        this.subscriptionId = WampProtocol.newId();
         if(options == null) options = new WampTopicOptions(); // default values
         this.options = options;
     }
@@ -57,20 +59,19 @@ public class WampTopic
      * @return the sockets
      */
     public void addSubscription(WampSubscription subscription) {
-        WampSocket socket = subscription.getSocket();
-        subscriptions.put(socket.getSessionId(), subscription);
+        subscriptions.put(subscription.getId(), subscription);
     }
 
     /**
      * @param socket the sockets to set
      */
-    public WampSubscription removeSubscription(Long sessionId) {
-        return subscriptions.remove(sessionId);
+    public WampSubscription removeSubscription(Long subscriptionId) {
+        return subscriptions.remove(subscriptionId);
     }
     
-    public WampSubscription getSubscription(Long sessionId)
+    public WampSubscription getSubscription(Long subscriptionId)
     {
-        return subscriptions.get(sessionId);
+        return subscriptions.get(subscriptionId);
     }
     
     public Collection<WampSubscription> getSubscriptions()
@@ -78,14 +79,16 @@ public class WampTopic
         return subscriptions.values();
     }
 
-    public Set<Long> getSessionIds()
-    {
-        return subscriptions.keySet();
-    } 
-    
     public int getSubscriptionCount()
     {
         return subscriptions.size();
     }    
+
+    /**
+     * @return the requestId
+     */
+    public Long getSubscriptionId() {
+        return subscriptionId;
+    }
 
 }

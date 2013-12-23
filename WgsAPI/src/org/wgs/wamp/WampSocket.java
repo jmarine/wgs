@@ -1,5 +1,6 @@
 package org.wgs.wamp;
 
+import java.math.BigDecimal;
 import java.security.Principal;
 import java.util.Map;
 import java.util.UUID;
@@ -13,6 +14,8 @@ import java.util.Set;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
 import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ObjectNode;
 
 
 
@@ -28,7 +31,7 @@ public class WampSocket
     private Long    sessionId;
     private Map     sessionData;
     private Map<String,String> prefixes;
-    private Map<String,WampSubscription> subscriptions;
+    private Map<Long,WampSubscription> subscriptions;
     private Map<Long,WampCallController> rpcControllers;
     private WampConnectionState state;
     private Principal principal;
@@ -49,7 +52,7 @@ public class WampSocket
         
         sessionId   = WampProtocol.newId();
         sessionData = new ConcurrentHashMap();
-        subscriptions = new ConcurrentHashMap<String,WampSubscription>();        
+        subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
         rpcControllers = new HashMap<Long,WampCallController>();
         
@@ -137,13 +140,18 @@ public class WampSocket
 
     public void addSubscription(WampSubscription subscription)
     {
-        subscriptions.put(subscription.getTopicUriOrPattern(), subscription);
+        subscriptions.put(subscription.getId(), subscription);
     }
     
-    public WampSubscription removeSubscription(String topicUriOrPattern)
+    public WampSubscription removeSubscription(Long subscriptionId)
     {
-        return subscriptions.remove(topicUriOrPattern);
+        return subscriptions.remove(subscriptionId);
     }
+    
+    public WampSubscription getSubscription(Long subscriptionId)
+    {
+        return subscriptions.get(subscriptionId);
+    }    
     
     public Collection<WampSubscription> getSubscriptions()
     {
@@ -241,10 +249,17 @@ public class WampSocket
         WampPublishOptions options = new WampPublishOptions();
         options.setExcludeMe(excludeMe);
         options.setExcluded(excludedSet);
-        options.setIdentifyMe(identifyMe);
-        WampServices.publishEvent(this.getSessionId(), topic, event, options);
+        options.setDiscloseMe(identifyMe);
+        WampServices.publishEvent(WampProtocol.newId(), this.getSessionId(), topic, event, options);
     }
 
-    
+
+    public ObjectNode toJSON()
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode retval = mapper.createObjectNode();
+        retval.put("sessionId", sessionId);
+        return retval;
+    }
 
 }
