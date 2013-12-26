@@ -273,18 +273,18 @@ WgsClient.prototype = {
                                     client.state = WgsState.AUTHENTICATED;
                                     onstatechange(WgsState.AUTHENTICATED, resultKw);
                                 } else {
-                                    var errorCode = result.errorURI;
-                                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode));
+                                    var errorCode = resultKw.errorURI;
+                                    onstatechange(WgsState.ERROR, errorCode);
                                 }
                             });
                         } else {
-                            var errorCode = result.errorURI;
-                            onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode));
+                            var errorCode = resultKw.errorURI;
+                            onstatechange(WgsState.ERROR, errorCode);
                         }
                     });
                 } else {
-                    var errorCode = result.errorURI;
-                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                    var errorCode = resultKw.errorURI;
+                    onstatechange(WgsState.ERROR, errorCode);
                 }
             });
           }
@@ -303,14 +303,14 @@ WgsClient.prototype = {
             msg.password = CryptoJS.MD5(password).toString();
             msg.email = email;
             client.call("wgs.register", msg).then(
-                function(response) {
-                    client.user = response.user;
+                function(result,resultKw) {
+                    client.user = resultKw.user;
                     client.state = WgsState.AUTHENTICATED;
-                    onstatechange(WgsState.AUTHENTICATED, response);
+                    onstatechange(WgsState.AUTHENTICATED, resultKw);
                 }, 
-                function(response) {
-                    var errorCode = response.errorURI;
-                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                function(result,resultKw) {
+                    var errorCode = resultKw.errorURI;
+                    onstatechange(WgsState.ERROR, errorCode);
                 });
         }
       });
@@ -324,13 +324,13 @@ WgsClient.prototype = {
             var msg = Object();
             msg.redirect_uri = redirectUri;
             client.call("wgs.openid_connect_providers", msg).then(
-                function(response) {
+                function(result,resultKw) {
                     //client.close();
-                    callback(response);
+                    callback(result,resultKw);
                 }, 
-                function(response) {
+                function(result,resultKw) {
                     client.close();
-                    callback(response);
+                    callback(result,resultKw);
                 });
         } 
       });
@@ -345,14 +345,14 @@ WgsClient.prototype = {
             msg.redirect_uri = redirectUri;
             msg.state = notificationChannel;
             client.call("wgs.openid_connect_login_url", msg).then(
-                function(response) {
+                function(result,resultKw) {
                     client.close();
-                    document.location.href = response;
+                    document.location.href = result;
                     //window.open(response + "&nonce=" + escape(client.sid), "_blank");
                 }, 
-                function(response) {
-                    var errorCode = response.errorURI;
-                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                function(result,resultKw) {
+                    var errorCode = resultKw.errorURI;
+                    onstatechange(WgsState.ERROR, errorCode);
                 });
         }
       });
@@ -371,14 +371,14 @@ WgsClient.prototype = {
             if(notificationChannel) msg.notification_channel = notificationChannel;
             
             client.call("wgs.openid_connect_auth", msg).then(
-                function(response) {
-                    client.user = response.user;
+                function(result,resultKw) {
+                    client.user = resultKw.user;
                     client.state = WgsState.AUTHENTICATED;
-                    onstatechange(WgsState.AUTHENTICATED, response);
+                    onstatechange(WgsState.AUTHENTICATED, resultKw);
                 }, 
-                function(response) {
-                    var errorCode = response.errorURI;
-                    onstatechange(WgsState.ERROR, "error:" + errorCode.substring(errorCode.indexOf("#")+1));
+                function(result,resultKw) {
+                    var errorCode = resultKw.errorURI;
+                    onstatechange(WgsState.ERROR, errorCode);
                 });
         }
       });
@@ -405,7 +405,7 @@ WgsClient.prototype = {
           ws = new MozWebSocket(this.url);
         } else {
           this.debug("This Browser does not support WebSockets");
-          onstatechange(WgsState.ERROR, "error:ws");
+          onstatechange(WgsState.ERROR, "browser.websockets_not_supported");
           return;
         }
 
@@ -425,7 +425,7 @@ WgsClient.prototype = {
 
         ws.onerror = function(e) {
           client.debug("WebSocket error: " + e);
-          onstatechange(WgsState.ERROR, "error:ws");
+          onstatechange(WgsState.ERROR, "wgs.websocket.error");
           client.close();
         };
 

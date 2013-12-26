@@ -718,7 +718,7 @@ function update_member(field, as_previous_client)
         usertype = selectedValue.substring(0,userTypePos);
     }
     var user = option.text();
-    if(sid == "") user = "";
+    if(sid != 0) user = "";
     else if(sid == wgsclient.sid) user = "";
     var slot = parseInt(field.substring(6));
     var role = $("#role" + slot + " option:selected").val();
@@ -750,7 +750,7 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
     var memberState = member.state ? member.state : "empty";
     var memberUser  = member.user  ? member.user  : "";
     var memberName  = member.name  ? member.name  : "";
-    var memberSid   = member.sid   ? member.sid   : "";
+    var memberSid   = member.sid   ? member.sid   : 0;
     var memberType  = member.type  ? member.type  : "user";
     var memberRole  = member.role  ? member.role  : "";
     
@@ -1086,15 +1086,15 @@ function openid_connect_menu(self) {
     var redirectUri = clear_openid_connect_params(true);
     
     wgsclient = getWgsClient();
-    wgsclient.openIdConnectProviders(redirectUri, function(response) { 
+    wgsclient.openIdConnectProviders(redirectUri, function(result,resultKw) { 
 
         var providers = $("#openid_providers_menu");
         providers.find("li:gt(0)").each(function(){
             $(this).remove();
         });
 
-        if(response.valid) {
-            response.providers.forEach(function(provider) {
+        if(resultKw.valid) {
+            resultKw.providers.forEach(function(provider) {
                 var link = $("<a>");
                 link.text(provider.name);
                 link.attr("class", "ui-corner-all")
