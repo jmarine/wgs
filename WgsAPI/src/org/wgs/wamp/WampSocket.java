@@ -188,7 +188,7 @@ public class WampSocket
     {
         try {        
             Object msg = WampObject.getSerializer(getEncoding()).serialize(args);
-            sendWampSerializedObject(msg);
+            sendObject(msg);
 
         } catch(Exception e) {
             logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
@@ -198,7 +198,7 @@ public class WampSocket
     }
 
 
-    public synchronized void sendWampSerializedObject(Object msg) {
+    public synchronized void sendObject(Object msg) {
         try {
             if(isOpen()) {
                 session.getBasicRemote().sendObject(msg);

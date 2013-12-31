@@ -154,7 +154,7 @@ public class WampProtocol
                                 if(msg[enc.ordinal()] == null) {
                                     msg[enc.ordinal()] = WampObject.getSerializer(enc).serialize(response);
                                 }
-                                socket.sendWampSerializedObject(msg[enc.ordinal()]);
+                                socket.sendObject(msg[enc.ordinal()]);
                             }
                         }
                     }
@@ -192,7 +192,7 @@ public class WampProtocol
                             if(msg[enc.ordinal()] == null) {
                                 msg[enc.ordinal()] = WampObject.getSerializer(enc).serialize(response);
                             }
-                            remoteSocket.sendWampSerializedObject(msg[enc.ordinal()]);
+                            remoteSocket.sendObject(msg[enc.ordinal()]);
                         }
                     }
                 }
