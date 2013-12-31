@@ -1,14 +1,14 @@
 package org.wgs.core;
 
 import java.security.Principal;
-import org.wgs.entity.User;
-import org.wgs.wamp.WampConnectionState;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.persistence.EntityManager;
-import org.wgs.wamp.WampSocket;
+
+import org.wgs.entity.User;
 import org.wgs.entity.UserId;
 import org.wgs.util.Storage;
+import org.wgs.wamp.WampSocket;
 
 
 public class Client 

@@ -152,7 +152,7 @@ public class WampServices
     }
     
     
-    public static void processPublishMessage(WampApplication app, WampSocket clientSocket, ArrayNode request) throws Exception 
+    public static void processPublishMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
         Long publicationId = WampProtocol.newId();
         String topicName = clientSocket.normalizeURI(request.get(3).asText());
@@ -207,7 +207,7 @@ public class WampServices
             } catch(Exception ex) {
                 if(options != null && options.hasMetaEvents()) {
                     try { 
-                        ObjectNode metaevent = (new ObjectMapper()).createObjectNode();
+                        WampDict metaevent = new WampDict();
                         metaevent.put("error", ex.getMessage());
                         publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.DENIED, metaevent, clientSocket);
                         logger.log(Level.FINE, "Error in subscription to topic", ex);
@@ -248,7 +248,7 @@ public class WampServices
     }
 
     
-    public static void publishEvent(Long publicationId, Long publisherId, WampTopic topic, JsonNode event, WampPublishOptions options) 
+    public static void publishEvent(Long publicationId, Long publisherId, WampTopic topic, WampObject event, WampPublishOptions options) 
     {
         //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         try {
@@ -258,7 +258,7 @@ public class WampServices
         }
     }   
     
-    public static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, JsonNode metaevent, WampSocket toClient) 
+    public static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, WampObject metaevent, WampSocket toClient) 
     {
         //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),metaevent});
         try {

@@ -2,14 +2,11 @@ package org.wgs.entity;
 
 import java.io.Serializable;
 import java.security.Principal;
-import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
-import javax.persistence.Id;
-import javax.persistence.IdClass;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.Lob;
@@ -19,8 +16,8 @@ import javax.persistence.NamedQuery;
 import javax.persistence.OrderBy;
 import javax.persistence.Table;
 import javax.persistence.TemporalType;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
+
+import org.wgs.wamp.WampDict;
 
 
 @Entity
@@ -299,10 +296,9 @@ public class User implements Serializable, Principal
         return id.hashCode();
     }
 
-    public ObjectNode toJSON() 
+    public WampDict toWampObject() 
     {
-        ObjectMapper mapper = new ObjectMapper();        
-        ObjectNode retval = mapper.createObjectNode();
+        WampDict retval = new WampDict();
         retval.put("user", id.toString());
         retval.put("name", getName());
         retval.put("picture", getPicture());    

@@ -1,8 +1,6 @@
 package org.wgs.wamp;
 
 import java.util.List;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
 
 
 public class WampCallOptions 
@@ -10,10 +8,10 @@ public class WampCallOptions
     public enum PartitionModeEnum { all, any }
     
     private int timeout;
-    private ArrayNode partitionKeys;
+    private WampList partitionKeys;
     private PartitionModeEnum partitionMode;
     
-    public WampCallOptions(ObjectNode options) 
+    public WampCallOptions(WampDict options) 
     {
         this.timeout = 0;
         this.partitionMode = PartitionModeEnum.all;
@@ -24,7 +22,7 @@ public class WampCallOptions
             }
             
             if(options.has("PKEYS")) {
-                setPartitionKeys((ArrayNode)options.get("PKEYS"));
+                setPartitionKeys((WampList)options.get("PKEYS"));
             }
             
             if(options.has("PMODE")) {
@@ -51,14 +49,14 @@ public class WampCallOptions
     /**
      * @return the partitionKeys
      */
-    public ArrayNode getPartitionKeys() {
+    public WampList getPartitionKeys() {
         return partitionKeys;
     }
 
     /**
      * @param partitionKeys the partitionKeys to set
      */
-    public void setPartitionKeys(ArrayNode partitionKeys) {
+    public void setPartitionKeys(WampList partitionKeys) {
         this.partitionKeys = partitionKeys;
     }
 

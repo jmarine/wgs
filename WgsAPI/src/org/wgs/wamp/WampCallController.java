@@ -3,9 +3,6 @@ package org.wgs.wamp;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
 
 
 public class WampCallController implements Runnable 
@@ -14,22 +11,22 @@ public class WampCallController implements Runnable
     
     private WampApplication app;
     private WampSocket clientSocket;
-    private ArrayNode request;
+    private WampList request;
     private Future<?> future;
     private WampCall<?> cancellableCall;
-    private ArrayNode  arguments;
-    private ObjectNode argumentsKw;
+    private WampList  arguments;
+    private WampDict argumentsKw;
     private WampCallOptions callOptions;
     private Long callID;
-    private ArrayNode result = null;
-    private ObjectNode resultKw = null;
+    private WampList result = null;
+    private WampDict resultKw = null;
     
     
     private boolean cancelled;
     private boolean done;
     
 
-    public WampCallController(WampApplication app, WampSocket clientSocket, ArrayNode request) {
+    public WampCallController(WampApplication app, WampSocket clientSocket, WampList request) {
         this.app = app;
         this.clientSocket = clientSocket;
         this.request = request;
@@ -52,8 +49,8 @@ public class WampCallController implements Runnable
         int callResponseMsgType = (callMsgType == 2) ? 3 : 73;
         int callErrorMsgType = (callMsgType == 2) ? 4 : 74;
 
-        callID  = request.get(1).asLong();
-        if(callID == null || callID.equals("")) {
+        callID  = request.get(1).asId();
+        if(callID == null || callID == 0L) {
             WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "CallID not present", null);
             return;
         }        
@@ -65,19 +62,18 @@ public class WampCallController implements Runnable
                 throw new Exception("ProcURI not implemented");
             }
 
-            ObjectMapper mapper = new ObjectMapper();
-            arguments = mapper.createArrayNode();
-            argumentsKw = mapper.createObjectNode();
-            setResult(mapper.createArrayNode());
-            setResultKw(mapper.createObjectNode());
+            arguments = new WampList();
+            argumentsKw = new WampDict();
+            setResult(new WampList());
+            setResultKw(new WampDict());
             if(clientSocket.getWampVersion() >= WampApplication.WAMPv2 && request.size() > 2) {
-                callOptions = new WampCallOptions((ObjectNode) request.get(2));
-                if (request.get(4) instanceof ArrayNode) {
-                    arguments = (ArrayNode) request.get(4);
+                callOptions = new WampCallOptions((WampDict)request.get(2));
+                if (request.get(4) instanceof WampList) {
+                    arguments = (WampList) request.get(4);
                 } else {
                     arguments.add(request.get(4));
                 }
-                argumentsKw = (ObjectNode) request.get(5);
+                argumentsKw = (WampDict)request.get(5);
             } else {
                 for (int i = 3; i < request.size(); i++) {
                     arguments.add(request.get(i));
@@ -88,20 +84,20 @@ public class WampCallController implements Runnable
                 callOptions = new WampCallOptions(null);
             }
 
-            Object response = module.onCall(this, clientSocket, procedureURI, arguments, callOptions);
+            Object response = module.onCall(this, clientSocket, procedureURI, arguments, argumentsKw, callOptions);
             if(response != null && response instanceof WampCall) {
                 cancellableCall = (WampCall)response;
                 response = cancellableCall.call();
             }
             if(response != null) {
-                if (response instanceof ObjectNode) {
-                    setResultKw((ObjectNode) response);
+                if (response instanceof WampDict) {
+                    setResultKw((WampDict)response);
 
-                } else if (response instanceof ArrayNode) {
-                    setResult((ArrayNode) response);
+                } else if (response instanceof WampList) {
+                    setResult((WampList)response);
                     
                 } else {
-                    getResult().add(mapper.valueToTree(response));
+                    getResult().add(response);
                 }
             }
             if (!isCancelled()) {
@@ -150,22 +146,29 @@ public class WampCallController implements Runnable
     /**
      * @return the arguments
      */
-    public ArrayNode getArguments() {
+    public WampList getArguments() {
         return arguments;
     }
 
     /**
      * @param arguments the arguments to set
      */
-    public void setArguments(ArrayNode arguments) {
+    public void setArguments(WampList arguments) {
         this.arguments = arguments;
     }
 
     /**
      * @return the argumentsKw
      */
-    public ObjectNode getArgumentsKw() {
+    public WampDict getArgumentsKw() {
         return argumentsKw;
+    }
+    
+    /**
+     * @param arguments the arguments to set
+     */
+    public void setArgumentsKw(WampDict argumentsKw) {
+        this.argumentsKw = argumentsKw;
     }
 
 
@@ -187,28 +190,28 @@ public class WampCallController implements Runnable
     /**
      * @return the result
      */
-    public ArrayNode getResult() {
+    public WampList getResult() {
         return result;
     }
 
     /**
      * @param result the result to set
      */
-    public void setResult(ArrayNode result) {
+    public void setResult(WampList result) {
         this.result = result;
     }
 
     /**
      * @return the resultKw
      */
-    public ObjectNode getResultKw() {
+    public WampDict getResultKw() {
         return resultKw;
     }
 
     /**
      * @param resultKw the resultKw to set
      */
-    public void setResultKw(ObjectNode resultKw) {
+    public void setResultKw(WampDict resultKw) {
         this.resultKw = resultKw;
     }
     

@@ -25,8 +25,7 @@ public class WampProtocol
     public static void sendWelcomeMessage(WampApplication app, WampSocket clientSocket)
     {
         // Send WELCOME message to client:
-        ObjectMapper mapper = new ObjectMapper();
-        ArrayNode response = mapper.createArrayNode();
+        WampList response = new WampList();
         response.add(0);  // WELCOME message code
         response.add(clientSocket.getSessionId());
         switch(app.getWampVersion()) {
@@ -35,45 +34,35 @@ public class WampProtocol
                 response.add(app.getServerId());
                 break;
             case WampApplication.WAMPv2:
-                ObjectNode roles = mapper.createObjectNode();
-                ObjectNode broker = mapper.createObjectNode();
+                WampDict roles = new WampDict();
+                WampDict broker = new WampDict();
                 broker.put("exclude", 1);
                 broker.put("eligible", 1);
                 broker.put("exclude_me", 1);
                 broker.put("disclose_me", 1);
                 roles.put("broker", broker);
-                roles.put("dealer", mapper.createObjectNode());
+                roles.put("dealer", new WampDict());
 
-                ObjectNode helloDetails = mapper.createObjectNode();
+                WampDict helloDetails = new WampDict();
                 helloDetails.put("agent", "wgs");
                 helloDetails.put("roles", roles);
                 response.add(helloDetails);  
                 break;
         }
         
-        clientSocket.sendSafe(response.toString());        
+        clientSocket.sendWampMessage(response);
     }
     
     
-    public static void sendCallResult(WampSocket clientSocket, int callResponseMsgType, Long callID, ArrayNode args, ObjectNode argsKw)
+    public static void sendCallResult(WampSocket clientSocket, int callResponseMsgType, Long callID, WampList args, WampDict argsKw)
     {
-        StringBuilder response = new StringBuilder();
-        if(args == null) {
-            ObjectMapper mapper = new ObjectMapper();
-            args = mapper.createArrayNode();
-            args.add((String)null);
-        }
-
-        response.append("[");
-        response.append(callResponseMsgType);
-        response.append(",");
-        response.append(callID);
-        response.append(",");
-        response.append(args);
-        response.append(",");
-        response.append(argsKw);
-        response.append("]");
-        clientSocket.sendSafe(response.toString());
+        WampList response = new WampList();
+        response.add(callResponseMsgType);
+        response.add(callID);
+        response.add(args);
+        response.add(argsKw);
+        
+        clientSocket.sendWampMessage(response);
     }    
     
     
@@ -82,72 +71,55 @@ public class WampProtocol
         if(errorURI == null) errorURI = WampException.WAMP_GENERIC_ERROR_URI;
         if(errorDesc == null) errorDesc = "";
 
-        StringBuilder response = new StringBuilder();
-        response.append("[");
-        response.append(callErrorMsgType);
-        response.append(",");
-        response.append(callID);
-
-        response.append(",");
-        response.append(encodeJSON(errorURI));
-        response.append(",");
+        WampList response = new WampList();
+        response.add(callErrorMsgType);
+        response.add(callID);
+        response.add(errorURI);
         
         if(errorDetails == null) {
-            response.append(encodeJSON(errorDesc));
+            response.add(errorDesc);
         } else {
-            response.append(encodeJSON(errorDesc + ": " + errorDetails.toString()));
+            response.add(errorDesc + ": " + errorDetails.toString());
         }
 
-        response.append("]");
         
-        clientSocket.sendSafe(response.toString());
+        clientSocket.sendWampMessage(response);
     }    
     
     
     public static void sendSubscribed(WampSocket clientSocket, Long requestId, Long subscriptionId)
     {    
-        StringBuilder response = new StringBuilder();
-        response.append("[");
-        response.append(11);
-        response.append(",");
-        response.append(requestId);
-        response.append(",");
-        response.append(subscriptionId);
-        response.append("]");
+        WampList response = new WampList();
+        response.add(11);
+        response.add(requestId);
+        response.add(subscriptionId);
         
-        clientSocket.sendSafe(response.toString());
+        clientSocket.sendWampMessage(response);
     }
     
     
     public static void sendUnsubscribed(WampSocket clientSocket, Long requestId)
     {    
-        StringBuilder response = new StringBuilder();
-        response.append("[");
-        response.append(21);
-        response.append(",");
-        response.append(requestId);
-        response.append("]");
+        WampList response = new WampList();
+        response.add(21);
+        response.add(requestId);
         
-        clientSocket.sendSafe(response.toString());
+        clientSocket.sendWampMessage(response);
     }
     
     
     public static void sendPublished(WampSocket clientSocket, Long requestId, Long publicationId)
     {    
-        StringBuilder response = new StringBuilder();
-        response.append("[");
-        response.append(31);
-        response.append(",");
-        response.append(requestId);
-        response.append(",");
-        response.append(publicationId);
-        response.append("]");
+        WampList response = new WampList();
+        response.add(31);
+        response.add(requestId);
+        response.add(publicationId);
         
-        clientSocket.sendSafe(response.toString());
+        clientSocket.sendWampMessage(response);
     }    
     
     
-    public static void sendEvents(Long publicationId, WampTopic topic, Set<Long> eligibleParam, Set<Long> excluded, Long publisherId, JsonNode event) throws Exception 
+    public static void sendEvents(Long publicationId, WampTopic topic, Set<Long> eligibleParam, Set<Long> excluded, Long publisherId, WampObject event) throws Exception 
     {
         // EVENT data
         for(WampSubscription subscription : topic.getSubscriptions()) {
@@ -181,7 +153,7 @@ public class WampProtocol
     }
 
     
-    public static void sendMetaEvents(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, JsonNode metaEvent) throws Exception 
+    public static void sendMetaEvents(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, WampObject metaEvent) throws Exception 
     {
         // METAEVENT data (only in WAMP v2)
         Long toClient = (eligible != null && eligible.size() > 0) ? eligible.iterator().next() : null;
@@ -204,45 +176,5 @@ public class WampProtocol
         }
 
     }
-
-    
-    private static String encodeJSON(String orig) 
-    {
-        if(orig == null) return "null";
-        
-        StringBuilder buffer = new StringBuilder(orig.length());
-        buffer.append("\"");
-
-        for (int i = 0; i < orig.length(); i++) {
-            char c = orig.charAt(i);
-            switch (c) {
-                case '\b':
-                    buffer.append("\\b");
-                    break;
-                case '\f':
-                    buffer.append("\\f");
-                    break;
-                case '\n':
-                    buffer.append("<br />");
-                    break;
-                case '\r':
-                    // ignore
-                    break;
-                case '\t':
-                    buffer.append("\\t");
-                    break;
-                case '\"':
-                    buffer.append("\\\"");
-                    break;
-                case '\\':
-                    buffer.append("\\\\");
-                    break;
-                default:
-                    buffer.append(c);
-            }
-        }
-        buffer.append("\"");
-        return buffer.toString();
-    }    
     
 }

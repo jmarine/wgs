@@ -34,10 +34,11 @@ import com.sun.messaging.jms.management.server.DestinationOperations;
 import com.sun.messaging.jms.management.server.DestinationType;
 import com.sun.messaging.jms.management.server.MQObjectName;
 
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
+import org.wgs.wamp.WampEncoding;
+import org.wgs.wamp.WampObject;
 
 import org.wgs.wamp.WampProtocol;
+import org.wgs.wamp.WampSerializer;
 import org.wgs.wamp.WampServices;
 import org.wgs.wamp.WampSubscription;
 import org.wgs.wamp.WampTopic;
@@ -197,7 +198,7 @@ public class MessageBroker
     }
     
     
-    public static void publish(Long id, WampTopic wampTopic, JsonNode event, String metaTopic, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
+    public static void publish(Long id, WampTopic wampTopic, WampObject event, String metaTopic, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
     {
         broadcastClusterEventToLocalNodeClients(id, wampTopic,metaTopic,eligible,exclude,publisherId, event);  
         
@@ -211,7 +212,7 @@ public class MessageBroker
             TopicPublisher publisher = pubSession.createPublisher(topic);
 
             // send a message to the queue in the normal way
-            String eventPayLoad = (event != null)? event.toString() : null;
+            String eventPayLoad = (event != null)? (String)WampObject.getSerializer(WampEncoding.JSon).serialize(event) : null;
             TextMessage msg = pubSession.createTextMessage(eventPayLoad);
             msg.setStringProperty("topic", topicName);
             if(id != 0L)            msg.setLongProperty("id", id);
@@ -234,7 +235,7 @@ public class MessageBroker
     }
 
     
-    private static void broadcastClusterEventToLocalNodeClients(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, Set<Long> excluded, Long publisherId, JsonNode event) throws Exception 
+    private static void broadcastClusterEventToLocalNodeClients(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, Set<Long> excluded, Long publisherId, WampObject event) throws Exception 
     {
         if(metaTopic == null) {
             // EVENT data
@@ -284,22 +285,15 @@ public class MessageBroker
                 String eventData = ((TextMessage)receivedMessageFromBroker).getText();
                 //System.out.println ("Received message from topic " + topicName + ": " + eventData);
                 
-                JsonNode event = null;
-                if(eventData != null) {
-                    ObjectMapper mapper = new ObjectMapper();
-                    event = (JsonNode)mapper.readTree(eventData);
-                }
-                
+                WampObject event = (eventData!=null)? WampObject.getSerializer(WampEncoding.JSon).deserialize(eventData) : null;
                 Set<Long> eligible = parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible"));
                 Set<Long> exclude  = parseSessionIDs(receivedMessageFromBroker.getStringProperty("exclude"));
 
-                /*
-                for(WampSubscription subscription : WampServices.getSubscriptions(topicName)) {
+                for(WampSubscription subscription : WampServices.getTopic(topicName).getSubscriptions()) {
                     for(WampTopic topic : subscription.getTopics()) {
                         broadcastClusterEventToLocalNodeClients(subscription.getId(), topic, metaTopic, eligible, exclude, publisherId, event);
                     }
                 }
-                */
                 
             } catch (Exception ex) {
                 logger.log(Level.SEVERE, "Error receiving message from broker", ex);

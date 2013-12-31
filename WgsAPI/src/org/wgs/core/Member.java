@@ -1,7 +1,6 @@
 package org.wgs.core;
 
 import javax.persistence.CascadeType;
-import org.wgs.entity.User;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -13,8 +12,9 @@ import javax.persistence.JoinColumns;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
+
+import org.wgs.entity.User;
+import org.wgs.wamp.WampDict;
 
 
 @Entity(name="GroupMember")
@@ -176,20 +176,19 @@ public class Member implements java.io.Serializable
     }    
     
     
-    public ObjectNode toJSON() 
+    public WampDict toWampObject() 
     {
         boolean connected = (getClient() != null);
         
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode obj = mapper.createObjectNode();
+        WampDict obj = new WampDict();
         obj.put("sid",  (client != null)? client.getSessionId() : null);
         obj.put("user", ((user!=null)? user.getFQid() : ((client != null) ? "#anonymous-" + client.getSessionId() : "") ) );
         obj.put("name", ((user!=null)? user.getName() : ((client != null) ? "Anonymous" : "") ) );
         obj.put("picture", ((user!=null)? user.getPicture() : ((client != null) ? "images/anonymous.png": "") ) );
-        obj.put("type",userType);
-        obj.put("state",String.valueOf(state));
-        obj.put("role",((role!=null)? role.getName():""));
-        obj.put("team",team);
+        obj.put("type", userType);
+        obj.put("state", String.valueOf(state));
+        obj.put("role", ((role!=null)? role.getName():""));
+        obj.put("team", team);
         obj.put("slot", slot);
         obj.put("connected", connected);
         return obj;

@@ -1,6 +1,5 @@
 package org.wgs.core;
 
-import org.wgs.entity.User;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.AttributeOverride;
@@ -13,8 +12,6 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinColumns;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
@@ -23,9 +20,10 @@ import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.Table;
 import javax.persistence.Version;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
+
 import org.wgs.entity.UserId;
+import org.wgs.wamp.WampDict;
+
 
 @Entity(name="AppGroup")
 @Table(name="APP_GROUP")
@@ -432,10 +430,9 @@ public class Group implements java.io.Serializable
     
     
     
-    public ObjectNode toJSON()
+    public WampDict toWampObject()
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode obj = mapper.createObjectNode();
+        WampDict obj = new WampDict();
         obj.put("gid", getGid());
         obj.put("appId", getApplication().getAppId());
         obj.put("admin", (adminUserId != null) ? adminUserId.toString() : "" );

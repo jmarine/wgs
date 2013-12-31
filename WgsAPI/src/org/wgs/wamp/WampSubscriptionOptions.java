@@ -15,7 +15,7 @@ public class WampSubscriptionOptions
     private HashSet<String> metaEvents;
     
 
-    public WampSubscriptionOptions(JsonNode node) 
+    public WampSubscriptionOptions(WampDict node) 
     {
         this.matchType = MatchEnum.exact;
         this.eventsEnabled = true;
@@ -27,11 +27,11 @@ public class WampSubscriptionOptions
             }     
             
             if(node.has("METAEVENTS")) {
-                setMetaEvents(node.get("METAEVENTS"));
+                setMetaEvents((List)node.get("METAEVENTS").getObject());
             }
 
             if(node.has("EVENTS")) {
-                setEventsEnabled(node.get("EVENTS").asBoolean(true));
+                setEventsEnabled(node.get("EVENTS").asBoolean());
             }     
             
             /*
@@ -84,11 +84,11 @@ public class WampSubscriptionOptions
     /**
      * @param metaEvents the metaEvents to set
      */
-    public void setMetaEvents(List<String> metaEvents) {
+    public void setMetaEvents(List metaEvents) {
         this.metaEvents = new HashSet<String>();
         if(metaEvents != null) {
-            for(String metatopic : metaEvents) {
-                this.metaEvents.add(metatopic);
+            for(int i = 0; i < metaEvents.size(); i++) {
+                this.metaEvents.add((String)metaEvents.get(i));
             }
         }
     }
@@ -126,7 +126,7 @@ public class WampSubscriptionOptions
         return (this.eventsEnabled);
     }    
     
-    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, JsonNode event)
+    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, WampObject event)
     {
         return true;
     }

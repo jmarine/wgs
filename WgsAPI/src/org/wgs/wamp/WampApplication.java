@@ -26,10 +26,6 @@ import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-
 
 public class WampApplication 
     extends javax.websocket.server.ServerEndpointConfig.Configurator
@@ -140,49 +136,57 @@ public class WampApplication
 
 
         session.setMaxIdleTimeout(0L);  // forever
-        session.addMessageHandler(new MessageHandler.Whole<String>() {
+        
+        String subproto = (session.getNegotiatedSubprotocol());
+        
+        if(subproto != null && subproto.equalsIgnoreCase("wamp.2.msgpack")) {
+            session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
 
-            @Override
-            public void onMessage(String message) {
-                try {
-                    //logger.log(Level.FINE, "onMessage: {0}", new Object[]{message});
-                    ObjectMapper mapper = new ObjectMapper();
-                    ArrayNode request = (ArrayNode)mapper.readTree(message);                    
-                    WampApplication.this.onWampMessage(clientSocket, request);
-                } catch(Exception ex) { 
-                    logger.log(Level.SEVERE, "Error processing message: "+message, ex);
+                @Override
+                public void onMessage(byte[] message) {
+                    try {
+                        WampList request = (WampList)WampObject.getSerializer(WampEncoding.MsgPack).deserialize(message);
+                        WampApplication.this.onWampMessage(clientSocket, request);
+                    } catch(Exception ex) { 
+                        logger.log(Level.SEVERE, "Error processing message: "+message, ex);
+                    }
                 }
-            }
-            
-            
-        });
 
+            });
+            
+        } else {
+            
+            session.addMessageHandler(new MessageHandler.Whole<String>() {
+
+                @Override
+                public void onMessage(String message) {
+                    try {
+                        System.out.println("onWampMessage: " + message);
+                        WampList request = (WampList)WampObject.getSerializer(WampEncoding.JSon).deserialize(message);
+                        WampApplication.this.onWampMessage(clientSocket, request);
+                    } catch(Exception ex) { 
+                        logger.log(Level.SEVERE, "Error processing message: "+message, ex);
+                    }
+                }
+
+
+            });
+
+        }
         
         // Send WELCOME message to client:
         WampProtocol.sendWelcomeMessage(this, clientSocket);
        
     }   
 
-    public void onWampMessage(WampSocket clientSocket, ArrayNode request) throws Exception
+    public void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
     {
-
-        System.out.println("onWampMessage: " + request.toString());
-        //logger.log(Level.FINE, "onWampMessage.data = {0}", new Object[]{request});
-
         int requestType = request.get(0).asInt();
         //logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
-
 
         switch(requestType) {
             case 0:
                 clientSocket.setVersionSupport(WampApplication.WAMPv2);
-                break;
-            case 1:
-                if(wampVersion >= WAMPv2 && clientSocket.supportVersion(2)) {
-                    processHeartBeat(clientSocket, request);
-                } else {
-                    processPrefixMessage(clientSocket, request);
-                }
                 break;
             case 2:
             case 70:
@@ -193,16 +197,16 @@ public class WampApplication
                 break;
             case 5:
             case 10:
-                Long requestId1 = request.get(1).asLong();
-                JsonNode subOptionsNode = (request.size() > 2) ? request.get(2) : null;
+                Long requestId1 = request.get(1).asId();
+                WampDict subOptionsNode = (request.size() > 2) ? (WampDict)request.get(2) : null;
                 WampSubscriptionOptions subOptions = new WampSubscriptionOptions(subOptionsNode);
                 String subscriptionTopicName = request.get(3).asText();
                 WampServices.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
                 break;
             case 6:
             case 20:                
-                Long requestId2 = request.get(1).asLong();
-                Long subscriptionId2 = request.get(2).asLong();
+                Long requestId2 = request.get(1).asId();
+                Long subscriptionId2 = request.get(2).asId();
                 WampServices.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
                 break;
             case 7:
@@ -270,28 +274,28 @@ public class WampApplication
     }
 
     
-    private void processPrefixMessage(WampSocket clientSocket, ArrayNode request) throws Exception
+    private void processPrefixMessage(WampSocket clientSocket, WampList request) throws Exception
     {
         String prefix = request.get(1).asText();
         String url = request.get(2).asText();
 	clientSocket.registerPrefixURL(prefix, url);
     }
 
-    private void processHeartBeat(WampSocket clientSocket, ArrayNode request) throws Exception
+    private void processHeartBeat(WampSocket clientSocket, WampList request) throws Exception
     {
         int heartbeatSequenceNo = request.get(1).asInt();
         clientSocket.setLastHeartBeat(heartbeatSequenceNo);
     }
 
-    private void processCallCancelMessage(WampSocket clientSocket, ArrayNode request) throws Exception
+    private void processCallCancelMessage(WampSocket clientSocket, WampList request) throws Exception
     {
-        Long callID  = request.get(1).asLong();
-        String cancelMode = (request.size() >= 3 && request.get(2).has("cancelmode")) ? request.get(2).get("cancelmode").asText() : "killnowait";
+        Long callID  = request.get(1).asId();
+        String cancelMode = (request.size() >= 3 && ((WampDict)request.get(2)).has("cancelmode")) ? ((WampDict)request.get(2)).get("cancelmode").asText() : "killnowait";
         WampCallController call = clientSocket.getRpcController(callID);
         call.cancel(cancelMode);
     }
     
-    private void processCallMessage(final WampSocket clientSocket, final ArrayNode request) throws Exception
+    private void processCallMessage(final WampSocket clientSocket, final WampList request) throws Exception
     {
         WampCallController call = new WampCallController(this, clientSocket, request);
         

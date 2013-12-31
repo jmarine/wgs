@@ -3,23 +3,19 @@ package org.wgs.core;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import org.wgs.entity.User;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinColumns;
 import javax.persistence.ManyToOne;
-import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.persistence.TemporalType;
-import javax.persistence.Transient;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
+
+import org.wgs.entity.User;
+import org.wgs.wamp.WampDict;
 
 
 @Entity(name="Score")
@@ -129,11 +125,10 @@ public class Score implements java.io.Serializable
     }
     
     
-    public ObjectNode toJSON() 
+    public WampDict toWampObject() 
     {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS");        
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode obj = mapper.createObjectNode();
+        WampDict obj = new WampDict();
         obj.put("position", getPosition());
         obj.put("name", ((getUser()!=null)? getUser().getName() : "Anonymous") );
         obj.put("picture", ((getUser()!=null)? getUser().getPicture() : "images/anonymous.png") );

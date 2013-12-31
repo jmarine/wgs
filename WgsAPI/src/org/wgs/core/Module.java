@@ -26,9 +26,7 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.LockModeType;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
-import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 import org.wgs.util.Storage;
 import org.wgs.entity.User;
@@ -41,9 +39,12 @@ import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampCallController;
 import org.wgs.wamp.WampCallOptions;
 import org.wgs.wamp.WampConnectionState;
+import org.wgs.wamp.WampDict;
 import org.wgs.wamp.WampException;
+import org.wgs.wamp.WampList;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampModuleName;
+import org.wgs.wamp.WampObject;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampPublishOptions;
 import org.wgs.wamp.WampRPC;
@@ -102,12 +103,12 @@ public class Module extends WampModule
     }
 
     @Override
-    public Object onCall(WampCallController task, WampSocket socket, String method, ArrayNode args, WampCallOptions callOptions) throws Exception 
+    public Object onCall(WampCallController task, WampSocket socket, String method, WampList args, WampDict argsKw, WampCallOptions callOptions) throws Exception 
     {
         Object retval = null;
         if(method.equals("wgs.list_groups")) {
             String appId = args.get(0).asText();
-            JsonNode filterOptions = args.get(1);
+            WampDict filterOptions = (WampDict)args.get(1);
             GroupFilter options = new GroupFilter(this, filterOptions);
             options.setMetaEvents(java.util.Arrays.asList("http://wamp.ws/sub#joined", "http://wamp.ws/sub#left"));
             if(appId.indexOf("*") != -1) options.setMatchType(WampSubscriptionOptions.MatchEnum.wildcard);
@@ -115,7 +116,7 @@ public class Module extends WampModule
             WampServices.subscribeClientWithTopic(wampApp, socket, null, getFQtopicURI("app_event:"+appId), options);
             retval = listGroups(socket, appId, options);
         } else {
-            retval = super.onCall(task, socket, method, args, callOptions);
+            retval = super.onCall(task, socket, method, args, argsKw, callOptions);
         }
         return retval;
     }
@@ -160,7 +161,7 @@ public class Module extends WampModule
     
     
     @WampRPC(name="register")
-    public ObjectNode registerUser(WampSocket socket, ObjectNode data) throws Exception
+    public WampDict registerUser(WampSocket socket, WampDict data) throws Exception
     {
         boolean user_valid = false;
         User usr = null;
@@ -190,12 +191,12 @@ public class Module extends WampModule
         socket.setUserPrincipal(usr);
         socket.setState(WampConnectionState.AUTHENTICATED);
         
-        return usr.toJSON();
+        return usr.toWampObject();
     }
     
     
     @WampRPC(name="get_user_info")
-    public ObjectNode getUserInfo(WampSocket socket, ObjectNode data) throws Exception
+    public WampDict getUserInfo(WampSocket socket, WampDict data) throws Exception
     {
         boolean user_valid = false;
         Client client = clients.get(socket.getSessionId());
@@ -209,16 +210,15 @@ public class Module extends WampModule
             throw new WampException(WGS_MODULE_NAME + ".unknown_userinfo", "User info not registered");
         }
         
-        return usr.toJSON();
+        return usr.toWampObject();
     }
 
     
     @WampRPC(name="openid_connect_providers")
-    public ObjectNode openIdConnectProviders(WampSocket socket, ObjectNode data) throws Exception
+    public WampDict openIdConnectProviders(WampSocket socket, WampDict data) throws Exception
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode retval = mapper.createObjectNode();
-        ArrayNode providers = mapper.createArrayNode();
+        WampDict retval = new WampDict();
+        WampList providers = new WampList();
         String redirectUri = data.get("redirect_uri").asText();
         redirectUri = redirectUri + ((redirectUri.indexOf("?") == -1)?"?":"&") + "provider=%";
         
@@ -254,7 +254,7 @@ public class Module extends WampModule
                     String oicAuthEndpointUrl = oic.getProvider().getAuthEndpointUrl();
                     String uri = oicAuthEndpointUrl + "?response_type=code&access_type=offline&scope=" + URLEncoder.encode(oic.getProvider().getScopes(),"utf8") + "&client_id=" + URLEncoder.encode(clientId,"utf8") + "&approval_prompt=force&redirect_uri=" + URLEncoder.encode(oic.getRedirectUri(),"utf8");
 
-                    ObjectNode node = mapper.createObjectNode();
+                    WampDict node = new WampDict();
                     node.put("name", providerDomain);
                     node.put("authEndpoint", uri);
                     providers.add(node);
@@ -266,7 +266,7 @@ public class Module extends WampModule
             for(OpenIdConnectProvider provider : queryProviders.getResultList()) {
                 String domain = provider.getDomain();
                 if(!domains.contains(domain) && !"defaultProvider".equals(domain)) {
-                    ObjectNode node = mapper.createObjectNode();
+                    WampDict node = new WampDict();
                     node.put("name", domain);
                     node.put("registrationEndpoint", provider.getRegistrationEndpointUrl());
                     providers.add(node);
@@ -292,7 +292,7 @@ public class Module extends WampModule
             
     
     @WampRPC(name="openid_connect_login_url")
-    public String openIdConnectLoginUrl(WampSocket socket, ObjectNode data) throws Exception
+    public String openIdConnectLoginUrl(WampSocket socket, WampDict data) throws Exception
     {
         String retval = null;
         String providerDomain = null;
@@ -389,7 +389,7 @@ public class Module extends WampModule
     }
     
     @WampRPC(name="openid_connect_auth")
-    public ObjectNode openIdConnectAuth(WampSocket socket, ObjectNode data) throws Exception
+    public WampDict openIdConnectAuth(WampSocket socket, WampDict data) throws Exception
     {
         User usr = null;
         EntityManager manager = null;
@@ -508,20 +508,19 @@ public class Module extends WampModule
         }
 
         if(usr == null) throw new WampException(WGS_MODULE_NAME + ".oic_error", "OpenID Connect protocol error");
-        return usr.toJSON();
+        return usr.toWampObject();
     }    
     
     
     
     @WampRPC(name="list_apps")
-    public ObjectNode listApps() throws Exception
+    public WampDict listApps() throws Exception
     {
         // TODO: Filter by domain
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode retval = mapper.createObjectNode();
-        ArrayNode appArray = mapper.createArrayNode();
+        WampDict retval = new WampDict();
+        WampList appArray = new WampList();
         for(Application app : applications.values()) {
-            appArray.add(app.toJSON());
+            appArray.add(app.toWampObject());
         }
         retval.put("apps", appArray);
 
@@ -541,7 +540,7 @@ public class Module extends WampModule
     
 
     @WampRPC(name="new_app")
-    public ObjectNode newApp(WampSocket socket, ObjectNode data) throws Exception
+    public WampDict newApp(WampSocket socket, WampDict data) throws Exception
     {
         // TODO: check it doesn't exists
 
@@ -568,7 +567,7 @@ public class Module extends WampModule
         app.setObservableGroup(data.get("observable").asBoolean());
         app.setAIavailable(data.get("ai_available").asBoolean());
 
-        ArrayNode roles = (ArrayNode)data.get("roles");
+        WampList roles = (WampList)data.get("roles");
         for(int i = 0; i < roles.size(); i++) {
             String roleName = roles.get(i).asText();
             int roleNameLen = roleName.length();
@@ -593,18 +592,18 @@ public class Module extends WampModule
         registerApplication(app);
         valid = true;
 
-        ObjectNode event = broadcastAppInfo(socket, app, "app_created", true);
+        WampDict event = broadcastAppInfo(socket, app, "app_created", true);
         return event;
     }
         
     
     @WampRPC(name="delete_app")
-    public ObjectNode deleteApp(WampSocket socket, ObjectNode param) throws Exception
+    public WampDict deleteApp(WampSocket socket, WampDict param) throws Exception
     {
         // TODO: check user is administrator of app
         // TODO: delete groups
         
-        ObjectNode event = null;
+        WampDict event = null;
         String appId = param.get("app").asText();
 
         Application app = applications.get(appId);
@@ -642,10 +641,9 @@ public class Module extends WampModule
     }
     
     
-    private ObjectNode broadcastAppInfo(WampSocket socket, Application app, String cmd, boolean excludeMe) throws Exception
+    private WampDict broadcastAppInfo(WampSocket socket, Application app, String cmd, boolean excludeMe) throws Exception
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode event = app.toJSON();
+        WampDict event = app.toWampObject();
         event.put("cmd", cmd);
         socket.publishEvent(WampServices.getTopic(getFQtopicURI("apps_event")), event, excludeMe, false);
         return event;
@@ -653,7 +651,7 @@ public class Module extends WampModule
 
     
     @WampRPC(name="open_group")
-    public synchronized ObjectNode openGroup(WampSocket socket, String appId, String gid, ObjectNode options) throws Exception
+    public synchronized WampDict openGroup(WampSocket socket, String appId, String gid, WampDict options) throws Exception
     {
         Group   g = null;
         boolean valid   = false;
@@ -662,7 +660,7 @@ public class Module extends WampModule
         boolean autoMatchMode = false;
         boolean spectator = false;
         if( (options != null) && (options.has("spectator")) ) {
-            spectator = options.get("spectator").asBoolean(false);
+            spectator = options.has("spectator")? options.get("spectator").asBoolean() : false;
         }
 
         
@@ -737,10 +735,10 @@ public class Module extends WampModule
                         g.setAutoMatchEnabled(autoMatchMode);
                     } 
                     if(options.has("hidden")) {
-                        g.setHidden(options.get("hidden").asBoolean(false));
+                        g.setHidden(options.has("hidden")? options.get("hidden").asBoolean() : false);
                     }
                     if(options.has("observable")) {
-                        g.setObservableGroup(options.get("observable").asBoolean(g.getApplication().isObservableGroup()));
+                        g.setObservableGroup(options.has("observable")? options.get("observable").asBoolean() : g.getApplication().isObservableGroup());
                     }                    
                     if(!autoMatchMode && options.has("password")) {
                         String password = options.get("password").asText();
@@ -766,8 +764,7 @@ public class Module extends WampModule
         }
 
         // generate response:
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode response = (g!=null)? g.toJSON() : mapper.createObjectNode();
+        WampDict response = (g!=null)? g.toWampObject() : new WampDict();
         response.put("cmd", "user_joined");
 
         if(valid) {
@@ -778,7 +775,7 @@ public class Module extends WampModule
             }
             
             response.put("created", created);
-            response.put("app", app.toJSON());
+            response.put("app", app.toWampObject());
 
             String topicName = getFQtopicURI("group_event:" + g.getGid());
             WampTopic topic = WampServices.getTopic(topicName);
@@ -791,7 +788,7 @@ public class Module extends WampModule
             WampServices.subscribeClientWithTopic(wampApp, client.getSocket(), null, topicName, subscriptionOptions);
             
             client.addGroup(g);
-            ArrayNode conArray = mapper.createArrayNode();
+            WampList conArray = new WampList();
             for(WampSubscription subscription : topic.getSubscriptions()) {
                 for(Long sid : subscription.getSessionIds()) {
                     Client c = clients.get(sid);
@@ -800,7 +797,7 @@ public class Module extends WampModule
                     String name = ((u == null) ? "" : u.getName());
                     String picture = ((u == null) ? null : u.getPicture());
 
-                    ObjectNode con = mapper.createObjectNode();
+                    WampDict con = new WampDict();
                     con.put("user", user);
                     con.put("name", name);
                     con.put("picture", picture);
@@ -887,7 +884,7 @@ public class Module extends WampModule
                     joined = true;
                     connected = true;
 
-                    ObjectNode event = member.toJSON();
+                    WampDict event = member.toWampObject();
                     event.put("cmd", "user_joined");
                     //event.put("sid", client.getSessionId());
                     //event.put("user", member.getUser().getFQid());
@@ -915,7 +912,7 @@ public class Module extends WampModule
             Long sid = client.getSessionId();
             String user = ( (u == null) ? "" : u.getFQid() );
 
-            ObjectNode event = mapper.createObjectNode();
+            WampDict event = new WampDict();
             event.put("cmd", "user_joined");
             event.put("gid", g.getGid());
             event.put("user", user);
@@ -937,18 +934,16 @@ public class Module extends WampModule
     
 
     @WampRPC(name="update_group")
-    public ObjectNode updateGroup(WampSocket socket, ObjectNode node) throws Exception
+    public WampDict updateGroup(WampSocket socket, WampDict node) throws Exception
     {
         // TODO: change group properties (state, observable, etc)
-
         boolean valid = false;
         boolean broadcastAppInfo = false;
         boolean broadcastGroupInfo = false;
         String appId = node.get("app").asText();
         String gid = node.get("gid").asText();
 
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode response = mapper.createObjectNode();
+        WampDict response = new WampDict();
         response.put("cmd", "group_updated");
         response.put("sid", socket.getSessionId());
         
@@ -1003,7 +998,7 @@ public class Module extends WampModule
             }
 
             
-            response.putAll(g.toJSON());
+            response.putAll(g.toWampObject());
             if(node.has("state")) {            
                 if(g.getState() == GroupState.STARTED) {
                     for(int slot = 0; slot < g.getNumSlots(); slot++) {
@@ -1031,17 +1026,16 @@ public class Module extends WampModule
     
     
     @WampRPC(name="list_members")
-    public ArrayNode getMembers(String gid, int team) throws Exception 
+    public WampList getMembers(String gid, int team) throws Exception 
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ArrayNode membersArray = mapper.createArrayNode();
+        WampList membersArray = new WampList();
 
         Group g = groups.get(gid);
         if(g != null) {
             for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                 Member member = g.getMember(slot);
                 if( (member != null) && (team==0 || team==member.getTeam()) ) {
-                    ObjectNode obj = member.toJSON();
+                    WampDict obj = member.toWampObject();
                     membersArray.add(obj);
                 }
             }
@@ -1051,13 +1045,12 @@ public class Module extends WampModule
     
     
     @WampRPC(name="update_member")
-    public ObjectNode updateMember(WampSocket socket, ObjectNode data) throws Exception
+    public WampDict updateMember(WampSocket socket, WampDict data) throws Exception
     {
             boolean valid = false;
             String gid = data.get("gid").asText();
 
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode response = mapper.createObjectNode();
+            WampDict response = new WampDict();
             response.put("cmd", "group_updated");
             response.put("sid", socket.getSessionId());
 
@@ -1065,7 +1058,7 @@ public class Module extends WampModule
             if(g != null) {
                 logger.log(Level.FINE, "open_group: group found: " + gid);
                 
-                response.putAll(g.toJSON());
+                response.putAll(g.toWampObject());
                 if(data.has("slot")) {
                     
                     // UPDATE MEMBER SLOT
@@ -1074,15 +1067,15 @@ public class Module extends WampModule
                     int slot = data.get("slot").asInt();
                     if(slot < 0) {
                         // TODO: check client socket is allowed to remove slot when index < 0
-                        ArrayNode membersArray = mapper.createArrayNode(); 
+                        WampList membersArray = new WampList();
                         Storage.removeEntity(g.removeMember(-slot-1));
                         
                         slot = 0;
                         for(int numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                             Member member = g.getMember(slot);
                             if(member != null) {
-                                ObjectNode obj = member.toJSON();
-                                membersArray.add(member.toJSON());
+                                WampDict obj = new WampDict();
+                                membersArray.add(member.toWampObject());
                             }
                         }
                         response.put("members", membersArray);
@@ -1143,7 +1136,7 @@ public class Module extends WampModule
                         member.setTeam(team);
                         g.setMember(slot, member);
 
-                        response.putAll(member.toJSON());
+                        response.putAll(member.toWampObject());
                         valid = true;
                         
                     } 
@@ -1151,16 +1144,16 @@ public class Module extends WampModule
                 } else {
                     // UPDATE CLIENT STATE ("joined" <--> "ready")
                     Long sid = socket.getSessionId();
-                    ArrayNode membersArray = mapper.createArrayNode();
-                    JsonNode stateNode = data.get("state");
-                    String state = (stateNode!=null && !stateNode.isNull()) ? stateNode.asText() : null;
+                    WampList membersArray = new WampList();
+                    WampObject stateNode = data.get("state");
+                    String state = (stateNode!=null) ? stateNode.asText() : null;
                     if(state != null) {
                         for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                             Member member = g.getMember(slot);
                             if( (member != null) && (member.getClient() != null) && (member.getClient().getSessionId().equals(sid)) ) {
                                 member.setState(MemberState.valueOf(state));
                             }
-                            ObjectNode obj = member.toJSON();
+                            WampDict obj = member.toWampObject();
                             membersArray.add(obj);
                         }
                         response.put("members", membersArray);
@@ -1182,12 +1175,11 @@ public class Module extends WampModule
     
 
     @WampRPC(name="send_group_message")
-    public void sendGroupMessage(WampSocket socket, String gid, JsonNode data) throws Exception
+    public void sendGroupMessage(WampSocket socket, String gid, WampObject data) throws Exception
     {
         Group g = groups.get(gid);
         if(g != null) {
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode event = mapper.createObjectNode();
+            WampDict event = new WampDict();
             event.put("cmd", "group_message");
             event.put("message", data);
             socket.publishEvent(WampServices.getTopic(getFQtopicURI("group_event:"+gid)), event, false, true); // don't exclude Me
@@ -1195,7 +1187,7 @@ public class Module extends WampModule
     }
     
     @WampRPC(name="send_team_message")
-    public void sendTeamMessage(WampSocket socket, String gid, JsonNode data) throws Exception
+    public void sendTeamMessage(WampSocket socket, String gid, WampObject data) throws Exception
     {
         Group g = groups.get(gid);
         if(g != null) {
@@ -1214,8 +1206,7 @@ public class Module extends WampModule
             }        
 
             if(team != 0) {
-                ObjectMapper mapper = new ObjectMapper();
-                ObjectNode event = mapper.createObjectNode();
+                WampDict event = new WampDict();
                 event.put("cmd", "team_message");
                 event.put("message", data); 
                 
@@ -1240,12 +1231,11 @@ public class Module extends WampModule
     }
     
     @WampRPC(name="exit_group")
-    public ObjectNode exitGroup(WampSocket socket, String gid) throws Exception
+    public WampDict exitGroup(WampSocket socket, String gid) throws Exception
     {
             Client client = clients.get(socket.getSessionId());
             
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode response = mapper.createObjectNode();
+            WampDict response = new WampDict();
             response.put("cmd", "user_detached");
             response.put("gid", gid);
             response.put("valid", "false");
@@ -1260,7 +1250,7 @@ public class Module extends WampModule
                 response.put("sid", socket.getSessionId());
 
                 int num_members = 0;
-                ArrayNode membersArray = mapper.createArrayNode();
+                WampList membersArray = new WampList();
                 for(int slot = g.getNumSlots(); slot > 0; ) {
                     slot = slot-1;
                     Member member = g.getMember(slot);
@@ -1283,7 +1273,7 @@ public class Module extends WampModule
                                 g.setAutoMatchCompleted(false);
                             }                            
                             
-                            ObjectNode obj = member.toJSON();
+                            WampDict obj = member.toWampObject();
                             membersArray.add(obj);
                             
                             g.setVersion(Storage.saveEntity(g).getVersion());
@@ -1336,8 +1326,7 @@ public class Module extends WampModule
     
     private void broadcastAppEventInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode event = g.toJSON();
+        WampDict event = g.toWampObject();
         event.put("cmd", cmd);
         event.put("members", getMembers(g.getGid(),0));
         socket.publishEvent(WampServices.getTopic(getFQtopicURI("app_event:"+g.getApplication().getAppId())), event, excludeMe, false);
@@ -1345,27 +1334,25 @@ public class Module extends WampModule
     
     private void broadcastGroupEventInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode event = g.toJSON();
+        WampDict event = g.toWampObject();
         event.put("cmd", cmd);
         event.put("members", getMembers(g.getGid(),0));
         socket.publishEvent(WampServices.getTopic(getFQtopicURI("group_event:"+g.getGid())), event, excludeMe, false);
     }    
     
     
-    private ObjectNode listGroups(WampSocket socket, String appId, GroupFilter options) throws Exception
+    private WampDict listGroups(WampSocket socket, String appId, GroupFilter options) throws Exception
     {
         System.out.println("Listing groups for app: '" + appId + "'");
         Client client = clients.get(socket.getSessionId());
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode retval = mapper.createObjectNode();        
-        ArrayNode groupsArray = mapper.createArrayNode();
+        WampDict retval = new WampDict();
+        WampList groupsArray = new WampList();
         Application app = applications.get(appId);
         if(app != null) {
-            retval.put("app", app.toJSON());
+            retval.put("app", app.toWampObject());
             for(Group group : app.getGroupsByState(null)) {
                 if(!group.isHidden() && options.subscribeGroup(group, client)) {
-                    ObjectNode obj = group.toJSON();
+                    WampDict obj = group.toWampObject();
                     obj.put("members", getMembers(group.getGid(),0));                
                     groupsArray.add(obj);
                 }
@@ -1374,7 +1361,7 @@ public class Module extends WampModule
             retval.put("app", "*");
             for(Group group : groups.values()) {
                 if(!group.isHidden() && options.subscribeGroup(group, client)) {
-                    ObjectNode obj = group.toJSON();
+                    WampDict obj = group.toWampObject();
                     obj.put("members", getMembers(group.getGid(),0));                
                     groupsArray.add(obj);
                 }
@@ -1388,10 +1375,9 @@ public class Module extends WampModule
 
     
     @WampRPC(name = "get_leaderboard")
-    public ArrayNode getLeaderBoard(WampSocket socket, String appId, int leaderBoardId)
+    public WampList getLeaderBoard(WampSocket socket, String appId, int leaderBoardId)
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ArrayNode scoresNode = mapper.createArrayNode();
+        WampList scoresNode = new WampList();
         Application app = applications.get(appId);
         
         LeaderBoard leaderBoard = new LeaderBoard();
@@ -1404,7 +1390,7 @@ public class Module extends WampModule
         
         for(Score score : leaderBoard.getScores()) {
             if(score != null) {
-                scoresNode.add(score.toJSON());
+                scoresNode.add(score.toWampObject());
             }
         }
 

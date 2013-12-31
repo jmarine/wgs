@@ -1,7 +1,5 @@
 package org.wgs.wamp;
 
-import java.math.BigDecimal;
-import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -9,9 +7,7 @@ import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityManager;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
+
 import org.wgs.entity.User;
 import org.wgs.entity.UserId;
 import org.wgs.util.Base64;
@@ -29,7 +25,7 @@ public class WampCRA extends WampModule
     
 
     @WampRPC(name="request")
-    public String authRequest(WampSocket socket, String authKey, ObjectNode extra) throws Exception
+    public String authRequest(WampSocket socket, String authKey, WampDict extra) throws Exception
     {
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
             throw new WampException("wamp.cra.error.already_authenticated", "already authenticated");
@@ -37,20 +33,19 @@ public class WampCRA extends WampModule
         if(socket.getSessionData().containsKey("_clientPendingAuthInfo")) {
             throw new WampException("wamp.cra.error.authentication_already_requested", "authentication request already issues - authentication pending");
         }
-        
-        ObjectNode res = getAuthPermissions(authKey);
+
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS");
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode info = mapper.createObjectNode();
+        WampDict res = getAuthPermissions(authKey);
+        WampDict info = new WampDict();
         info.put("authid", UUID.randomUUID().toString());
         info.put("authkey", authKey);
         info.put("timestamp", sdf.format(new Date()));
         info.put("sessionid", socket.getSessionId());
-        info.put("permissions", (ObjectNode)res.get("permissions"));
+        info.put("permissions", res.get("permissions"));
         if(extra != null) info.put("extra", extra);
         if(res.has("authextra")) info.put("authextra", res.get("authextra"));
         
-        String infoser = info.toString();
+        String infoser = WampObject.getSerializer(WampEncoding.JSon).serialize(info).toString();
         String authSecret = this.getAuthSecret(authKey);
         String sig = "";
         if(authKey != null && authKey.length() > 0) {
@@ -68,7 +63,7 @@ public class WampCRA extends WampModule
     
     
     @WampRPC(name="authenticate")
-    public ObjectNode auth(WampSocket socket, String signature) throws Exception
+    public WampDict auth(WampSocket socket, String signature) throws Exception
     {
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
             throw new WampException("wamp.cra.error.already_authenticated", "already authenticated");
@@ -77,8 +72,8 @@ public class WampCRA extends WampModule
             throw new WampException("wamp.cra.error.authentication_failed", "no authentication previously requested");
         }
 
-        ObjectNode info = (ObjectNode)socket.getSessionData().remove("_clientPendingAuthInfo");;
-        ObjectNode perms = (ObjectNode)socket.getSessionData().remove("_clientPendingAuthPerms");            
+        WampDict info = (WampDict)socket.getSessionData().remove("_clientPendingAuthInfo");;
+        WampDict perms = (WampDict)socket.getSessionData().remove("_clientPendingAuthPerms");            
         String clientPendingAuthSig = (String)socket.getSessionData().remove("_clientPendingAuthSig");
         if(clientPendingAuthSig == null) clientPendingAuthSig = "";
         
@@ -105,13 +100,12 @@ public class WampCRA extends WampModule
     }
     
 
-    private ObjectNode getAuthPermissions(String authKey) 
+    private WampDict getAuthPermissions(String authKey) 
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode res = mapper.createObjectNode();
-        ObjectNode perms = mapper.createObjectNode();
-        ArrayNode pubsub = mapper.createArrayNode();
-        ArrayNode rpcs = mapper.createArrayNode();
+        WampDict res = new WampDict();
+        WampDict perms = new WampDict();
+        WampList pubsub = new WampList();
+        WampList rpcs = new WampList();
         perms.put("pubsub", pubsub);
         perms.put("rpcs", rpcs);
         res.put("permissions", perms);
@@ -136,7 +130,7 @@ public class WampCRA extends WampModule
     }
     
     
-    private String authSignature(String authChallenge, String authSecret, ObjectNode authExtra) throws Exception
+    private String authSignature(String authChallenge, String authSecret, WampDict authExtra) throws Exception
     {
         if(authSecret == null) authSecret = "";
         byte[] derivedSecret = deriveKey(authSecret, authExtra);
@@ -150,12 +144,12 @@ public class WampCRA extends WampModule
     }
     
 
-    private byte[] deriveKey(String secret, ObjectNode extra) throws Exception
+    private byte[] deriveKey(String secret, WampDict extra) throws Exception
     {
         if(extra != null && extra.has("salt")) {
             byte[] salt = extra.get("salt").asText().getBytes("UTF8");
-            int iterations = extra.get("iterations").asInt(10000);
-            int keylen = extra.get("keylen").asInt(32);
+            int iterations = extra.has("iterations")? extra.get("iterations").asInt() : 10000;
+            int keylen = extra.has("keylen")? extra.get("keylen").asInt() : 32;
 
             PBKDF2 pbkdf2 = new PBKDF2("HmacSHA256");
             //return pbkdf2.deriveKey(secret.getBytes("UTF8"), salt, iterations, keylen);

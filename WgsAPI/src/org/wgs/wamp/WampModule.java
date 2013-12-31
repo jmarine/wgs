@@ -6,11 +6,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.NullNode;
-import org.codehaus.jackson.node.ObjectNode;
 import org.wgs.util.MessageBroker;
 
 
@@ -53,9 +48,8 @@ public class WampModule
     public void onDisconnect(WampSocket clientSocket) throws Exception { }
 
     @SuppressWarnings("unchecked")
-    public Object onCall(WampCallController task, WampSocket clientSocket, String methodName, ArrayNode args, WampCallOptions options) throws Exception 
+    public Object onCall(WampCallController task, WampSocket clientSocket, String methodName, WampList args, WampDict argsKw, WampCallOptions options) throws Exception 
     {
-        ObjectMapper mapper = new ObjectMapper();
         Method method = rpcs.get(methodName);
         if(method != null) {
             int argCount = 0;
@@ -69,13 +63,14 @@ public class WampModule
                     params.add(task);                    
                 } else if(WampCallOptions.class.isAssignableFrom(paramType)) {
                     params.add(options);
-                } else if(ArrayNode.class.isAssignableFrom(paramType)) {
+                } else if(WampDict.class.isAssignableFrom(paramType)) {
+                    params.add(argsKw);  // TODO: only from argCount to args.size()
+                } else if(WampList.class.isAssignableFrom(paramType)) {
                     params.add(args);  // TODO: only from argCount to args.size()
                     argCount = args.size();
                 } else {
-                    JsonNode val = args.get(argCount++);
-                    if(val == null || val instanceof NullNode) params.add(null);
-                    else params.add(mapper.readValue(val, paramType));
+                    Object val = args.get(argCount++).getObject();
+                    params.add(val);
                 }
             }
             return method.invoke(this, params.toArray());
@@ -98,7 +93,7 @@ public class WampModule
             clientSocket.addSubscription(subscription);
             if(options != null && options.hasMetaEvents()) {
                 if(options.hasEventsEnabled()) {
-                    WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.JOINED, clientSocket.toJSON(), null);
+                    WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.JOINED, clientSocket.toWampObject(), null);
                 }
             }
         }
@@ -110,7 +105,7 @@ public class WampModule
         if(subscription.getSocket(clientSocket.getSessionId()) != null) {
             WampSubscriptionOptions options = subscription.getOptions();
             if(options!=null && options.hasMetaEvents() && options.hasEventsEnabled()) {
-                ObjectNode metaEvent = clientSocket.toJSON();
+                WampObject metaEvent = clientSocket.toWampObject();
                 WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.LEFT, metaEvent, null);
             }
 
@@ -126,17 +121,17 @@ public class WampModule
         }
     }
     
-    public void onPublish(Long publicationId, WampSocket clientSocket, WampTopic topic, ArrayNode request) throws Exception 
+    public void onPublish(Long publicationId, WampSocket clientSocket, WampTopic topic, WampList request) throws Exception 
     {
         WampPublishOptions options = new WampPublishOptions();
         Long requestId = null;
-        JsonNode event = null;
+        WampObject event = null;
         
         if(request.get(0).asInt() == 30) {
             // WAMP v2
-            requestId = request.get(1).asLong();
+            requestId = request.get(1).asId();
             event = request.get(4);
-            options.init(request.get(2));
+            options.init((WampDict)request.get(2));
             if(options.hasExcludeMe()) {
                 Set<Long> excludedSet = options.getExcluded();
                 if(excludedSet == null) excludedSet = new HashSet<Long>();
@@ -144,7 +139,7 @@ public class WampModule
             }
         } else {
             // WAMP v1
-            event = request.get(2);
+            event = (WampObject)request.get(2);
             if(request.size() == 4) {
                 // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
                 try {
@@ -156,22 +151,22 @@ public class WampModule
                     }
                 } catch(Exception ex) {
                     HashSet<Long> excludedSet = new HashSet<Long>();
-                    ArrayNode excludedArray = (ArrayNode)request.get(3);
+                    WampList excludedArray = (WampList)request.get(3);
                     for(int i = 0; i < excludedArray.size(); i++) {
-                        excludedSet.add(excludedArray.get(i).asLong());
+                        excludedSet.add(excludedArray.get(i).asId());
                     }
                     options.setExcluded(excludedSet);
                 }
             } else if(request.size() == 5) {
                 HashSet<Long> excludedSet = new HashSet<Long>();
                 HashSet<Long> eligibleSet = new HashSet<Long>();
-                ArrayNode excludedArray = (ArrayNode)request.get(3);
+                WampList excludedArray = (WampList)request.get(3);
                 for(int i = 0; i < excludedArray.size(); i++) {
-                    excludedSet.add(excludedArray.get(i).asLong());
+                    excludedSet.add(excludedArray.get(i).asId());
                 }
-                ArrayNode eligibleArray = (ArrayNode)request.get(4);
+                WampList eligibleArray = (WampList)request.get(4);
                 for(int i = 0; i < eligibleArray.size(); i++) {
-                    eligibleSet.add(eligibleArray.get(i).asLong());
+                    eligibleSet.add(eligibleArray.get(i).asId());
                 }
                 options.setExcluded(excludedSet);
                 options.setEligible(eligibleSet);

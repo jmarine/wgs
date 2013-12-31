@@ -23,8 +23,6 @@ public class WampSocket
 {
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
 
-    public  enum WampEncoding { JSon, MsgPack };
-    
     private WampApplication app;
     private boolean connected;
     private Session session;
@@ -61,15 +59,15 @@ public class WampSocket
             switch(subprotocol) {
                 case "wamp":
                     setVersionSupport(WampApplication.WAMPv1);
-                    setEncoding(WampSocket.WampEncoding.JSon);
+                    setEncoding(WampEncoding.JSon);
                     break;
                 case "wamp.2.json":
                     setVersionSupport(WampApplication.WAMPv2);
-                    setEncoding(WampSocket.WampEncoding.JSon);
+                    setEncoding(WampEncoding.JSon);
                     break;
                 case "wamp.2.msgpack":
                     setVersionSupport(WampApplication.WAMPv2);
-                    setEncoding(WampSocket.WampEncoding.MsgPack);
+                    setEncoding(WampEncoding.MsgPack);
                     break;
             }        
         }
@@ -183,6 +181,26 @@ public class WampSocket
         }
         return curie;
     }    
+    
+    
+    public void sendWampMessage(WampList args)
+    {
+        try {        
+            Object msg = WampObject.getSerializer(getEncoding()).serialize(args);
+            switch(getEncoding()) {
+                case JSon:
+                    if(isOpen()) session.getBasicRemote().sendText(msg.toString());
+                    break;
+                case MsgPack:
+                    if(isOpen()) session.getBasicRemote().sendObject(msg);
+                    break;
+            }
+        } catch(Exception e) {
+            logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
+            app.onWampClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
+        }
+
+    }
 
 
     public synchronized void sendSafe(String msg) {
@@ -242,7 +260,7 @@ public class WampSocket
     /**
      * Broadcasts the event to subscribed sockets.
      */
-    public void publishEvent(WampTopic topic, JsonNode event, boolean excludeMe, boolean identifyMe) {
+    public void publishEvent(WampTopic topic, WampObject event, boolean excludeMe, boolean identifyMe) {
         logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         Set<Long> excludedSet = new HashSet<Long>();
         if(excludeMe) excludedSet.add(this.getSessionId());
@@ -254,12 +272,11 @@ public class WampSocket
     }
 
 
-    public ObjectNode toJSON()
+    public WampObject toWampObject()
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode retval = mapper.createObjectNode();
+        WampDict retval = new WampDict();
         retval.put("sessionId", sessionId);
         return retval;
     }
-
+    
 }

@@ -17,19 +17,19 @@ public class WampPublishOptions
     private boolean   discloseMe;
         
     public WampPublishOptions() { }
-    public WampPublishOptions(JsonNode node) { 
+    public WampPublishOptions(WampDict node) { 
         init(node);
     }
     
-    public void init(JsonNode node) {
+    public void init(WampDict node) {
         
         if(node != null) {
             if(node.has("EXCLUDE_ME")) {
-                setExcludeMe(node.get("exclude_me").asInt() != 0);
+                setExcludeMe(node.get("exclude_me").asBoolean());
             }     
             
             if(node.has("IDENTIFY_ME")) {
-                setDiscloseMe(node.get("disclose_me").asInt() != 0);
+                setDiscloseMe(node.get("disclose_me").asBoolean());
             }                 
         }
     }

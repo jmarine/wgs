@@ -1,20 +1,15 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package org.wgs.core;
 
 import java.util.HashSet;
 import java.util.List;
-import org.codehaus.jackson.JsonNode;
+
 import org.wgs.entity.User;
+import org.wgs.wamp.WampDict;
+import org.wgs.wamp.WampObject;
 import org.wgs.wamp.WampSubscription;
 import org.wgs.wamp.WampSubscriptionOptions;
 
-/**
- *
- * @author jordi
- */
+
 public class GroupFilter extends WampSubscriptionOptions 
 {
     public enum Scope { mine, friends, all };
@@ -23,7 +18,7 @@ public class GroupFilter extends WampSubscriptionOptions
     private Scope  scope;
     private HashSet<String> subscriptions;
 
-    public GroupFilter(Module module, JsonNode node) 
+    public GroupFilter(Module module, WampDict node) 
     {
         super(node);
         this.subscriptions = new HashSet<String>();
@@ -78,15 +73,16 @@ public class GroupFilter extends WampSubscriptionOptions
     
     
     @Override
-    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, JsonNode event) 
+    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, WampObject event) 
     {
         if (scope == Scope.all) {
             return true;
         }
         
-        String gid = event.has("gid") ? event.get("gid").asText() : null;
+        WampDict dict = (WampDict)event;
+        String gid = (dict.has("gid")) ? dict.get("gid").asText() : null;
         if (gid != null) {
-            String cmd = event.has("cmd")? event.get("cmd").asText() : "";
+            String cmd = dict.has("cmd")? dict.get("cmd").asText() : "";
             boolean wasSubscribed = subscriptions.contains(gid);
             if(cmd.equals("group_deleted")) subscriptions.remove(gid);
             

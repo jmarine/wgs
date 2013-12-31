@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package org.wgs.core;
 
 import java.io.Serializable;
@@ -13,13 +9,10 @@ import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
 
-/**
- *
- * @author jordi
- */
+import org.wgs.wamp.WampDict;
+
+
 @Entity
 @Table(name="APP_ROLE")
 public class Role implements Serializable 
@@ -125,10 +118,9 @@ public class Role implements Serializable
     }    
 
     
-    public ObjectNode toJSON() 
+    public WampDict toWampObject() 
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode obj = mapper.createObjectNode();
+        WampDict obj = new WampDict();
         obj.put("name", name);
         obj.put("required", required);
         obj.put("multiple", multiple);

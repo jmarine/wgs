@@ -1,16 +1,9 @@
-
 package org.wgs.core;
 
-import org.wgs.entity.User;
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -22,11 +15,11 @@ import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
-import javax.persistence.OrderBy;
 import javax.persistence.Transient;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
+
+import org.wgs.entity.User;
+import org.wgs.wamp.WampDict;
+import org.wgs.wamp.WampList;
 
 
 
@@ -391,10 +384,9 @@ public class Application implements Serializable {
 
     
     
-    public ObjectNode toJSON()
+    public WampDict toWampObject()
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode obj = mapper.createObjectNode();
+        WampDict obj = new WampDict();
         try {
             obj.put("appId", getAppId());
             obj.put("name", getName());
@@ -406,25 +398,17 @@ public class Application implements Serializable {
         } catch(Exception ex) { }
         return obj;
     }
+
     
-    public ArrayNode getRolesNode() 
+    public WampList getRolesNode() 
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ArrayNode array = mapper.createArrayNode();
+        WampList array = new WampList();
         if(roles != null) {
             for(Role role : roles) {
-                array.add(role.toJSON());
+                array.add(role.toWampObject());
             }
         }
         return array;
-    }
-    
-    @Override
-    public String toString()
-    {
-        return toJSON().toString();        
-    }
-
-
+    }    
     
 }
