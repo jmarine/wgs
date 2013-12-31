@@ -1,6 +1,7 @@
 package org.wgs.wamp;
 
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.util.Map;
 import java.util.UUID;
@@ -187,14 +188,8 @@ public class WampSocket
     {
         try {        
             Object msg = WampObject.getSerializer(getEncoding()).serialize(args);
-            switch(getEncoding()) {
-                case JSon:
-                    if(isOpen()) session.getBasicRemote().sendText(msg.toString());
-                    break;
-                case MsgPack:
-                    if(isOpen()) session.getBasicRemote().sendObject(msg);
-                    break;
-            }
+            sendWampSerializedObject(msg);
+
         } catch(Exception e) {
             logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
             app.onWampClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
@@ -203,9 +198,26 @@ public class WampSocket
     }
 
 
-    public synchronized void sendSafe(String msg) {
+    public synchronized void sendWampSerializedObject(Object msg) {
         try {
-            if(isOpen()) session.getBasicRemote().sendText(msg);
+            if(isOpen()) {
+                session.getBasicRemote().sendObject(msg);
+
+                /*
+                switch(getEncoding()) {
+                    case JSon:
+                        session.getBasicRemote().sendText(msg.toString());
+                        break;
+                    case MsgPack:
+                        byte[] src = (byte[])msg;
+                        ByteBuffer buffer = ByteBuffer.allocate(src.length);
+                        buffer.put(src);
+                        session.getBasicRemote().sendBinary(buffer);
+                        break;
+                }
+                */
+
+            }
         } catch(Exception e) {
             logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
             app.onWampClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));

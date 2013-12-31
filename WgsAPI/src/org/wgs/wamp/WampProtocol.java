@@ -122,9 +122,20 @@ public class WampProtocol
     public static void sendEvents(Long publicationId, WampTopic topic, Set<Long> eligibleParam, Set<Long> excluded, Long publisherId, WampObject event) throws Exception 
     {
         // EVENT data
+        WampDict eventDetails = new WampDict();
+        if(publisherId != null) eventDetails.put("publisher", publisherId);            
+        
         for(WampSubscription subscription : topic.getSubscriptions()) {
-            String msg = null;
-           
+            Object[] msg = new Object[WampEncoding.values().length];
+            
+            WampList response = new WampList();
+            response.add(40);
+            response.add(subscription.getId());
+            response.add(publicationId);
+            response.add(eventDetails);
+            response.add(topic.getURI());
+            response.add(event);
+                                    
             Set<Long> eligible = (eligibleParam != null) ? new HashSet<Long>(eligibleParam) : null;
             if(eligible == null) eligible = subscription.getSessionIds();
             else eligible.retainAll(subscription.getSessionIds());
@@ -139,11 +150,11 @@ public class WampProtocol
                         WampSocket socket = subscription.getSocket(sid);
                         synchronized(socket) {
                             if(socket != null && socket.isOpen() && !excluded.contains(sid)) {
-                                if(msg == null) {
-                                    String eventDetails = (publisherId == null)? "{}" : "{ \"PUBLISHER\": \"" + publisherId + "\" }";
-                                    msg = "[40,"+subscription.getId()+"," + publicationId + "," + eventDetails + ",\"" + topic.getURI() + "\", " + event.toString() + "]";
+                                WampEncoding enc = socket.getEncoding();
+                                if(msg[enc.ordinal()] == null) {
+                                    msg[enc.ordinal()] = WampObject.getSerializer(enc).serialize(response);
                                 }
-                                socket.sendSafe(msg);
+                                socket.sendWampSerializedObject(msg[enc.ordinal()]);
                             }
                         }
                     }
@@ -159,17 +170,30 @@ public class WampProtocol
         Long toClient = (eligible != null && eligible.size() > 0) ? eligible.iterator().next() : null;
 
         for(WampSubscription subscription : topic.getSubscriptions()) {
-            String msg = "[41,\"" + topic.getURI() + "\", \"" + metaTopic + "\"";
-            if(metaEvent != null) msg += ", " + metaEvent.toString();
-            msg += "]";
-
+            
+            WampList response = new WampList();
+            response.add(41);
+            response.add(subscription.getId());
+            response.add(publicationId);
+            response.add(metaTopic);
+            response.add(metaEvent);
+            
             if(toClient != null) {
                 WampSocket remoteSocket = subscription.getSocket(toClient);
-                if(remoteSocket != null) remoteSocket.sendSafe(msg);
+                if(remoteSocket != null) {
+                    remoteSocket.sendWampMessage(response);
+                }
             } else {
                 if(subscription.getOptions() != null && subscription.getOptions().hasMetaEvent(metaTopic)) {
+                    Object[] msg = new Object[WampEncoding.values().length];
                     for(WampSocket remoteSocket : subscription.getSockets()) {
-                        if(remoteSocket.supportVersion(WampApplication.WAMPv2)) remoteSocket.sendSafe(msg);
+                        if(remoteSocket.supportVersion(WampApplication.WAMPv2)) {
+                            WampEncoding enc = remoteSocket.getEncoding();
+                            if(msg[enc.ordinal()] == null) {
+                                msg[enc.ordinal()] = WampObject.getSerializer(enc).serialize(response);
+                            }
+                            remoteSocket.sendWampSerializedObject(msg[enc.ordinal()]);
+                        }
                     }
                 }
             }
