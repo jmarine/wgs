@@ -66,8 +66,8 @@ public class WampModule
                 } else if(WampDict.class.isAssignableFrom(paramType)) {
                     Object nextParam = (argCount < args.size())? args.get(argCount) : null;
                     if(nextParam != null && paramType.isInstance(nextParam)) {
-                        Object val = args.get(argCount++);
-                        params.add(val);
+                        params.add(nextParam);
+                        argCount++;
                     } else {
                         params.add(argsKw);  
                     }
