@@ -233,7 +233,8 @@ WgsClient.prototype = {
       if(!authExtra) authExtra = {};
       var args = []
       args[0] = authKey;
-      this.call("wamp.cra.request", args, authExtra).then(callback,callback);      
+      args[1] = authExtra;
+      this.call("wamp.cra.request", args).then(callback,callback);      
   },
           
   auth: function(signature, callback) {

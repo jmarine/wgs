@@ -64,7 +64,13 @@ public class WampModule
                 } else if(WampCallOptions.class.isAssignableFrom(paramType)) {
                     params.add(options);
                 } else if(WampDict.class.isAssignableFrom(paramType)) {
-                    params.add(argsKw);  // TODO: only from argCount to args.size()
+                    Object nextParam = (argCount < args.size())? args.get(argCount) : null;
+                    if(nextParam != null && paramType.isInstance(nextParam)) {
+                        Object val = args.get(argCount++);
+                        params.add(val);
+                    } else {
+                        params.add(argsKw);  
+                    }
                 } else if(WampList.class.isAssignableFrom(paramType)) {
                     params.add(args);  // TODO: only from argCount to args.size()
                     argCount = args.size();
