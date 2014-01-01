@@ -46,4 +46,9 @@ public class WampDict extends WampObject
         return getHashMap().keySet();
     }
     
+    public int size()
+    {
+        return getHashMap().size();
+    }
+    
 }
