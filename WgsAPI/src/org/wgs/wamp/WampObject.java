@@ -1,9 +1,5 @@
 package org.wgs.wamp;
 
-import java.util.Iterator;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
-
 
 public class WampObject 
 {
