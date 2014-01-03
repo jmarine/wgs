@@ -133,9 +133,9 @@ public class WampModule
         Long requestId = null;
         WampObject event = null;
         
-        if(request.get(0).asInt() == 30) {
+        if(request.get(0).asLong() == 30) {
             // WAMP v2
-            requestId = request.get(1).asId();
+            requestId = request.get(1).asLong();
             event = request.get(4);
             options.init((WampDict)request.get(2));
             if(options.hasExcludeMe()) {
@@ -159,7 +159,7 @@ public class WampModule
                     HashSet<Long> excludedSet = new HashSet<Long>();
                     WampList excludedArray = (WampList)request.get(3);
                     for(int i = 0; i < excludedArray.size(); i++) {
-                        excludedSet.add(excludedArray.get(i).asId());
+                        excludedSet.add(excludedArray.get(i).asLong());
                     }
                     options.setExcluded(excludedSet);
                 }
@@ -168,11 +168,11 @@ public class WampModule
                 HashSet<Long> eligibleSet = new HashSet<Long>();
                 WampList excludedArray = (WampList)request.get(3);
                 for(int i = 0; i < excludedArray.size(); i++) {
-                    excludedSet.add(excludedArray.get(i).asId());
+                    excludedSet.add(excludedArray.get(i).asLong());
                 }
                 WampList eligibleArray = (WampList)request.get(4);
                 for(int i = 0; i < eligibleArray.size(); i++) {
-                    eligibleSet.add(eligibleArray.get(i).asId());
+                    eligibleSet.add(eligibleArray.get(i).asLong());
                 }
                 options.setExcluded(excludedSet);
                 options.setEligible(eligibleSet);

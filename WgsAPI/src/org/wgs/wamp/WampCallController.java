@@ -45,11 +45,11 @@ public class WampCallController implements Runnable
         String procedureURI = clientSocket.normalizeURI(request.get(3).asText());
         WampModule module = app.getWampModule(procedureURI, app.getDefaultWampModule());
 
-        int callMsgType = request.get(0).asInt();
+        int callMsgType = request.get(0).asLong().intValue();
         int callResponseMsgType = (callMsgType == 2) ? 3 : 73;
         int callErrorMsgType = (callMsgType == 2) ? 4 : 74;
 
-        callID  = request.get(1).asId();
+        callID  = request.get(1).asLong();
         if(callID == null || callID == 0L) {
             WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "CallID not present", null);
             return;

@@ -181,10 +181,10 @@ public class WampApplication
 
     public void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
     {
-        int requestType = request.get(0).asInt();
+        Long requestType = request.get(0).asLong();
         //logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
 
-        switch(requestType) {
+        switch(requestType.intValue()) {
             case 0:
                 clientSocket.setVersionSupport(WampApplication.WAMPv2);
                 break;
@@ -197,7 +197,7 @@ public class WampApplication
                 break;
             case 5:
             case 10:
-                Long requestId1 = request.get(1).asId();
+                Long requestId1 = request.get(1).asLong();
                 WampDict subOptionsNode = (request.size() > 2) ? (WampDict)request.get(2) : null;
                 WampSubscriptionOptions subOptions = new WampSubscriptionOptions(subOptionsNode);
                 String subscriptionTopicName = request.get(3).asText();
@@ -205,8 +205,8 @@ public class WampApplication
                 break;
             case 6:
             case 20:                
-                Long requestId2 = request.get(1).asId();
-                Long subscriptionId2 = request.get(2).asId();
+                Long requestId2 = request.get(1).asLong();
+                Long subscriptionId2 = request.get(2).asLong();
                 WampServices.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
                 break;
             case 7:
@@ -283,13 +283,13 @@ public class WampApplication
 
     private void processHeartBeat(WampSocket clientSocket, WampList request) throws Exception
     {
-        int heartbeatSequenceNo = request.get(1).asInt();
+        Long heartbeatSequenceNo = request.get(1).asLong();
         clientSocket.setLastHeartBeat(heartbeatSequenceNo);
     }
 
     private void processCallCancelMessage(WampSocket clientSocket, WampList request) throws Exception
     {
-        Long callID  = request.get(1).asId();
+        Long callID  = request.get(1).asLong();
         String cancelMode = (request.size() >= 3 && ((WampDict)request.get(2)).has("cancelmode")) ? ((WampDict)request.get(2)).get("cancelmode").asText() : "killnowait";
         WampCallController call = clientSocket.getRpcController(callID);
         call.cancel(cancelMode);

@@ -5,6 +5,8 @@ import java.util.Iterator;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.BooleanNode;
+import org.codehaus.jackson.node.DoubleNode;
 import org.codehaus.jackson.node.IntNode;
 import org.codehaus.jackson.node.LongNode;
 import org.codehaus.jackson.node.NullNode;
@@ -33,15 +35,17 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
         JsonNode retval = null;      
         if(obj != null) {
             switch(obj.getType()) {
-                case id:
-                    retval = new org.codehaus.jackson.node.LongNode(obj.asId());
-                    break;
-                case integer:
-                    retval = new org.codehaus.jackson.node.IntNode(obj.asInt());
-                    break;
                 case string:
-                case uri:
                     retval = new org.codehaus.jackson.node.TextNode(obj.asText());
+                    break;       
+                case bool:                    
+                    retval = new org.codehaus.jackson.node.IntNode(obj.asBoolean()? 1:0);
+                    break;                    
+                case integer:
+                    retval = new org.codehaus.jackson.node.LongNode(obj.asLong());
+                    break;
+                case real:
+                    retval = new org.codehaus.jackson.node.DoubleNode(obj.asDouble());
                     break;
                 case dict:
                     WampDict dict = (WampDict)obj;
@@ -70,12 +74,18 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
         WampObject retval = null;
         if(obj instanceof NullNode) {
             retval = new WampObject();
+        } else if(obj instanceof BooleanNode) {
+            retval = new WampObject();
+            retval.setObject(((BooleanNode)obj).asBoolean(), Type.bool);
         } else if(obj instanceof IntNode) {
             retval = new WampObject();
-            retval.setObject(((IntNode)obj).asInt(), Type.integer);
+            retval.setObject(((IntNode)obj).asLong(), Type.integer);
         } else if(obj instanceof LongNode) {
             retval = new WampObject();
-            retval.setObject(((LongNode)obj).asLong(), Type.id);
+            retval.setObject(((LongNode)obj).asLong(), Type.integer);
+        } else if(obj instanceof DoubleNode) {
+            retval = new WampObject();
+            retval.setObject(((DoubleNode)obj).asDouble(), Type.real);
         } else if(obj instanceof TextNode) {
             retval = new WampObject();
             retval.setObject(((TextNode)obj).asText(), Type.string);

@@ -148,8 +148,8 @@ public class WampCRA extends WampModule
     {
         if(extra != null && extra.has("salt")) {
             byte[] salt = extra.get("salt").asText().getBytes("UTF8");
-            int iterations = extra.has("iterations")? extra.get("iterations").asInt() : 10000;
-            int keylen = extra.has("keylen")? extra.get("keylen").asInt() : 32;
+            int iterations = extra.has("iterations")? extra.get("iterations").asLong().intValue() : 10000;
+            int keylen = extra.has("keylen")? extra.get("keylen").asLong().intValue() : 32;
 
             PBKDF2 pbkdf2 = new PBKDF2("HmacSHA256");
             //return pbkdf2.deriveKey(secret.getBytes("UTF8"), salt, iterations, keylen);

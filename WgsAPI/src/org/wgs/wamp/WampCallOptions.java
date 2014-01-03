@@ -18,7 +18,7 @@ public class WampCallOptions
         
         if(options != null) {
             if(options.has("TIMEOUT")) {
-                setTimeout(options.get("TIMEOUT").asInt());
+                setTimeout(options.get("TIMEOUT").asLong().intValue());
             }
             
             if(options.has("PKEYS")) {

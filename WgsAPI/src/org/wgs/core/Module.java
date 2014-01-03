@@ -556,12 +556,12 @@ public class Module extends WampModule
         app.setAdminUser(client.getUser());
         app.setName(data.get("name").asText());
         app.setDomain(data.get("domain").asText());
-        app.setVersion(data.get("version").asInt());
-        app.setMaxScores(data.get("max_scores").asInt());
+        app.setVersion(data.get("version").asLong().intValue());
+        app.setMaxScores(data.get("max_scores").asLong().intValue());
         app.setDescendingScoreOrder(data.get("desc_score_order").asBoolean());
-        app.setMaxMembers(data.get("max").asInt());
-        app.setMinMembers(data.get("min").asInt());
-        app.setDeltaMembers(data.get("delta").asInt());
+        app.setMaxMembers(data.get("max").asLong().intValue());
+        app.setMinMembers(data.get("min").asLong().intValue());
+        app.setDeltaMembers(data.get("delta").asLong().intValue());
         app.setAlliancesAllowed(data.get("alliances").asBoolean());
         app.setDynamicGroup(data.get("dynamic").asBoolean());
         app.setObservableGroup(data.get("observable").asBoolean());
@@ -841,7 +841,7 @@ public class Module extends WampModule
                 }
             }
 
-            int requiredSlot = (options != null && options.has("slot"))? options.get("slot").asInt() : -1;
+            int requiredSlot = (options != null && options.has("slot"))? options.get("slot").asLong().intValue() : -1;
             for(int index = (requiredSlot >= 0)? requiredSlot : 0;
                     ((index < Math.max(num_slots, g.getMinMembers())) || (requiredRoles.size() > 0))
                     && (requiredSlot < 0 || index==requiredSlot);
@@ -1064,7 +1064,7 @@ public class Module extends WampModule
                     // UPDATE MEMBER SLOT
                     String sid = data.get("sid").asText();
                     
-                    int slot = data.get("slot").asInt();
+                    int slot = data.get("slot").asLong().intValue();
                     if(slot < 0) {
                         // TODO: check client socket is allowed to remove slot when index < 0
                         WampList membersArray = new WampList();
@@ -1086,7 +1086,7 @@ public class Module extends WampModule
                         String userId = data.get("user").asText();
                         String role = data.get("role").asText();
                         String usertype = data.get("type").asText();
-                        int team = data.get("team").asInt();
+                        int team = data.get("team").asLong().intValue();
 
                         Client c = clients.get(sid);
                         if(c!=null) {

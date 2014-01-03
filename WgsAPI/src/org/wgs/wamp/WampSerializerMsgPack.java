@@ -6,6 +6,8 @@ import java.util.Iterator;
 import org.msgpack.MessagePack;
 import org.msgpack.packer.BufferPacker;
 import org.msgpack.type.ArrayValue;
+import org.msgpack.type.BooleanValue;
+import org.msgpack.type.FloatValue;
 import org.msgpack.type.IntegerValue;
 import org.msgpack.type.MapValue;
 import org.msgpack.type.NilValue;
@@ -26,17 +28,21 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
 
     private void write(BufferPacker packer, WampObject obj) throws Exception
     {
-        if(obj != null) {
+        if(obj == null) {
+            packer.writeNil();
+        } else {
             switch(obj.getType()) {
-                case id:
-                    packer.write((long)obj.asId());
-                    break;
-                case integer:
-                    packer.write((int)obj.asInt());
-                    break;
                 case string:
-                case uri:
                     packer.write((String)obj.asText());
+                    break;
+                case bool:
+                    packer.write((boolean)obj.asBoolean());
+                    break;                
+                case integer:
+                    packer.write((long)obj.asLong());
+                    break;
+                case real:
+                    packer.write((double)obj.asDouble());
                     break;
                 case dict:
                     WampDict dict = (WampDict)obj;
@@ -74,9 +80,15 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
         WampObject retval = null;
         if(obj instanceof NilValue) {
             retval = new WampObject();
+        } else if(obj instanceof BooleanValue) {
+            retval = new WampObject();
+            retval.setObject(((BooleanValue)obj).getBoolean(), Type.bool);
         } else if(obj instanceof IntegerValue) {
             retval = new WampObject();
             retval.setObject(((IntegerValue)obj).getInt(), Type.integer);
+        } else if(obj instanceof FloatValue) {
+            retval = new WampObject();
+            retval.setObject(((FloatValue)obj).getDouble(), Type.real);
         } else if(obj instanceof String) {
             retval = new WampObject();
             retval.setObject((String)obj, Type.string);
