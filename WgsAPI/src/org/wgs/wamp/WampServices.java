@@ -164,6 +164,7 @@ public class WampServices
     
     public static Collection<WampTopic> subscribeClientWithTopic(WampApplication app, WampSocket clientSocket, Long requestId, String topicUriOrPattern, WampSubscriptionOptions options)
     {
+        boolean error = false;
         Long subscriptionId = null;
         
         // FIXME: merge subscriptions options (events & metaevents),
@@ -200,18 +201,12 @@ public class WampServices
             try { 
                 module.onSubscribe(clientSocket, subscriptionId, topic, options);
             } catch(Exception ex) {
-                if(options != null && options.hasMetaEvents()) {
-                    try { 
-                        WampDict metaevent = new WampDict();
-                        metaevent.put("error", ex.getMessage());
-                        publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.DENIED, metaevent, clientSocket);
-                        logger.log(Level.FINE, "Error in subscription to topic", ex);
-                    } catch(Exception ex2) { }
-                }
+                error = true;
             }
         }
     
-        if(requestId != null) WampProtocol.sendSubscribed(clientSocket, requestId, subscriptionId);
+        if(!error) WampProtocol.sendSubscribed(clientSocket, requestId, subscriptionId);
+        else WampProtocol.sendSubscribeError(clientSocket, requestId, "wamp.error.not_authorized");
         
         return topics;
     }

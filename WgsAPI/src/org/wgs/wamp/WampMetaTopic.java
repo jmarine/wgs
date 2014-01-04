@@ -2,9 +2,7 @@ package org.wgs.wamp;
 
 
 public class WampMetaTopic {
-    public static final String OK       = "http://wamp.ws/sub#ok";
-    public static final String DENIED   = "http://wamp.ws/sub#denied";
-    public static final String REVOKED  = "http://wamp.ws/sub#revoked";
-    public static final String JOINED   = "http://wamp.ws/sub#joined";
-    public static final String LEFT     = "http://wamp.ws/sub#left";
+    public static final String SUBSCRIBER_ADDED   = "wamp.metatopic.subscriber.add";
+    public static final String SUBSCRIBER_REMOVED = "wamp.metatopic.subscriber.remove";
+    public static final String PUBLICATION_NOT_AUTHORIZED = "wamp.metatopic.publication.error.not_authorized";
 }

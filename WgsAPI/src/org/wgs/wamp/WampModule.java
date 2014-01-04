@@ -82,7 +82,7 @@ public class WampModule
             return method.invoke(this, params.toArray());
         }
 
-        throw new WampException(WampException.WAMP_GENERIC_ERROR_URI, "Method not implemented: " + methodName);
+        throw new WampException(WampException.ERROR_PREFIX+".method_unknown", "Method not implemented: " + methodName);
     }
     
     public void onSubscribe(WampSocket clientSocket, Long subscriptionId, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
@@ -99,7 +99,7 @@ public class WampModule
             clientSocket.addSubscription(subscription);
             if(options != null && options.hasMetaEvents()) {
                 if(options.hasEventsEnabled()) {
-                    WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.JOINED, clientSocket.toWampObject(), null);
+                    WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, clientSocket.toWampObject(), null);
                 }
             }
         }
@@ -112,7 +112,7 @@ public class WampModule
             WampSubscriptionOptions options = subscription.getOptions();
             if(options!=null && options.hasMetaEvents() && options.hasEventsEnabled()) {
                 WampObject metaEvent = clientSocket.toWampObject();
-                WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.LEFT, metaEvent, null);
+                WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
             }
 
             clientSocket.removeSubscription(subscription.getId());

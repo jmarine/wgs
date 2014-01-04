@@ -68,7 +68,7 @@ public class WampProtocol
     
     public static void sendCallError(WampSocket clientSocket, int callErrorMsgType, Long callID, String errorURI, String errorDesc, Object errorDetails)
     {
-        if(errorURI == null) errorURI = WampException.WAMP_GENERIC_ERROR_URI;
+        if(errorURI == null) errorURI = WampException.ERROR_PREFIX+".call_error";
         if(errorDesc == null) errorDesc = "";
 
         WampList response = new WampList();
@@ -96,6 +96,17 @@ public class WampProtocol
         
         clientSocket.sendWampMessage(response);
     }
+    
+    public static void sendSubscribeError(WampSocket clientSocket, Long requestId, String errorUri)
+    {    
+        WampList response = new WampList();
+        response.add(11);
+        response.add(requestId);
+        response.add(errorUri);
+        
+        clientSocket.sendWampMessage(response);
+    }
+    
     
     
     public static void sendUnsubscribed(WampSocket clientSocket, Long requestId)

@@ -3,7 +3,8 @@ package org.wgs.wamp;
 
 public class WampException extends Exception
 {
-    public static final String WAMP_GENERIC_ERROR_URI = "http://wamp.ws/err";
+    public static final String ERROR_PREFIX   = "wamp.error";
+    public static final String NOT_AUTHORIZED = "wamp.error.not_authorized";
     
     private String errorURI;
     private Object errorDetails;

@@ -42,6 +42,7 @@ import org.wgs.wamp.WampConnectionState;
 import org.wgs.wamp.WampDict;
 import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampList;
+import org.wgs.wamp.WampMetaTopic;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampModuleName;
 import org.wgs.wamp.WampObject;
@@ -110,7 +111,7 @@ public class Module extends WampModule
             String appId = args.get(0).asText();
             WampDict filterOptions = (WampDict)args.get(1);
             GroupFilter options = new GroupFilter(this, filterOptions);
-            options.setMetaEvents(java.util.Arrays.asList("http://wamp.ws/sub#joined", "http://wamp.ws/sub#left"));
+            options.setMetaEvents(java.util.Arrays.asList(WampMetaTopic.SUBSCRIBER_ADDED, WampMetaTopic.SUBSCRIBER_REMOVED));
             if(appId.indexOf("*") != -1) options.setMatchType(WampSubscriptionOptions.MatchEnum.wildcard);
              
             WampServices.subscribeClientWithTopic(wampApp, socket, null, getFQtopicURI("app_event:"+appId), options);

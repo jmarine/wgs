@@ -51,7 +51,7 @@ public class WampCallController implements Runnable
 
         callID  = request.get(1).asLong();
         if(callID == null || callID == 0L) {
-            WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "CallID not present", null);
+            WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.ERROR_PREFIX + ".requestid_unknown", "CallID not present", null);
             return;
         }        
         
@@ -116,7 +116,7 @@ public class WampCallController implements Runnable
                 logger.log(Level.FINE, "Error calling method " + procedureURI + ": " + wex.getErrorDesc());
             } else {
                 if (!isCancelled()) {
-                    WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.WAMP_GENERIC_ERROR_URI, "Error calling method " + procedureURI, ex.getMessage());
+                    WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.ERROR_PREFIX+".call_error", "Error calling method " + procedureURI, ex.getMessage());
                 }
                 logger.log(Level.SEVERE, "Error calling method " + procedureURI, ex);
             }
