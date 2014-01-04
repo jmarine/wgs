@@ -11,17 +11,24 @@ public class WampDict extends WampObject
         setObject(new HashMap<String,Object>(), Type.dict);
     }
     
-    
-    private HashMap<String,Object> getHashMap()
+
+    public boolean has(String key)
     {
-        return (HashMap<String,Object>)getObject();
+        return getHashMap().containsKey(key);
     }
+
     
+    public WampObject get(String key)
+    {
+        return (WampObject)getHashMap().get(key);
+    }
+
     
     public void put(String key, Object obj)
     {
         getHashMap().put(key, castToWampObject(obj));
     }
+
     
     public void putAll(WampDict obj)
     {
@@ -30,25 +37,27 @@ public class WampDict extends WampObject
         }
     }
     
-    
-    public WampObject get(String key)
+    public void remove(String key)
     {
-        return (WampObject)getHashMap().get(key);
+        getHashMap().remove(key);
     }
     
-    public boolean has(String key)
-    {
-        return getHashMap().containsKey(key);
-    }
-    
+
     public Set<String> keySet()
     {
         return getHashMap().keySet();
     }
+
     
     public int size()
     {
         return getHashMap().size();
+    }
+
+    
+    private HashMap<String,Object> getHashMap()
+    {
+        return (HashMap<String,Object>)getObject();
     }
     
 }

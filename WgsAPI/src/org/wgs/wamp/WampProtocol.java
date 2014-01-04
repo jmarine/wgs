@@ -126,14 +126,20 @@ public class WampProtocol
         if(publisherId != null) eventDetails.put("publisher", publisherId);            
         
         for(WampSubscription subscription : topic.getSubscriptions()) {
+            
             Object[] msg = new Object[WampEncoding.values().length];
+            
+            if(topic.getURI().equals(subscription.getTopicUriOrPattern())) {
+                eventDetails.remove("topic");
+            } else {
+                eventDetails.put("topic", topic.getURI());
+            }
             
             WampList response = new WampList();
             response.add(40);
             response.add(subscription.getId());
             response.add(publicationId);
             response.add(eventDetails);
-            response.add(topic.getURI());
             response.add(event);
                                     
             Set<Long> eligible = (eligibleParam != null) ? new HashSet<Long>(eligibleParam) : null;
