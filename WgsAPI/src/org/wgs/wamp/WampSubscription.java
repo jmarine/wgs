@@ -10,7 +10,7 @@ public class WampSubscription
 {
     private Long subscriptionId;
     
-    private String topicUrlOrPattern;
+    private String topicRegExp;
     
     private WampSubscriptionOptions options;
 
@@ -19,11 +19,11 @@ public class WampSubscription
     private Collection<WampTopic> topics = null;
     
     
-    public WampSubscription(Long subscriptionId, String topicUrlOrPattern, Collection<WampTopic> topics, WampSubscriptionOptions options) 
+    public WampSubscription(Long subscriptionId, String topicRegExp, Collection<WampTopic> topics, WampSubscriptionOptions options) 
     {
         this.subscriptionId = subscriptionId;
         if(options == null) options = new WampSubscriptionOptions(null);
-        this.topicUrlOrPattern = topicUrlOrPattern;
+        this.topicRegExp = topicRegExp;
         this.topics = topics;
     }
     
@@ -69,9 +69,9 @@ public class WampSubscription
         return sockets.keySet();
     }
     
-    public String getTopicUriOrPattern() 
+    public String getTopicRegExp() 
     {
-        return topicUrlOrPattern;
+        return topicRegExp;
     }
     
     public WampSubscriptionOptions getOptions()

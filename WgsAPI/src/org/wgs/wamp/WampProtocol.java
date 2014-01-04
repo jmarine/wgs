@@ -140,7 +140,7 @@ public class WampProtocol
             
             Object[] msg = new Object[WampEncoding.values().length];
             
-            if(topic.getURI().equals(subscription.getTopicUriOrPattern())) {
+            if(topic.getURI().equals(subscription.getTopicRegExp())) {
                 eventDetails.remove("topic");
             } else {
                 eventDetails.put("topic", topic.getURI());
