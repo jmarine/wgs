@@ -6,9 +6,6 @@
 
 package org.wgs.wamp;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Logger;
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;

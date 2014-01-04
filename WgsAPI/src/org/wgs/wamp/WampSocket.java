@@ -1,10 +1,7 @@
 package org.wgs.wamp;
 
-import java.math.BigDecimal;
-import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -14,10 +11,6 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
-
 
 
 public class WampSocket 

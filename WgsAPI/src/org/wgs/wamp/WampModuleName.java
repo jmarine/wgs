@@ -1,4 +1,3 @@
-
 package org.wgs.wamp;
 
 import java.lang.annotation.ElementType;

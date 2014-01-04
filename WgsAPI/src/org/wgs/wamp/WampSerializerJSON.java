@@ -1,6 +1,5 @@
 package org.wgs.wamp;
 
-import java.math.BigDecimal;
 import java.util.Iterator;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;

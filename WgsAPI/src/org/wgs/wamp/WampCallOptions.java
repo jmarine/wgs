@@ -1,7 +1,5 @@
 package org.wgs.wamp;
 
-import java.util.List;
-
 
 public class WampCallOptions 
 {

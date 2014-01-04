@@ -1,12 +1,6 @@
 package org.wgs.wamp;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.StringTokenizer;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ObjectNode;
 
 
 public class WampPublishOptions 
