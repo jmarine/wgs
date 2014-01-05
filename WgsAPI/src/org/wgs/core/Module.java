@@ -114,7 +114,7 @@ public class Module extends WampModule
             options.setMetaEvents(java.util.Arrays.asList(WampMetaTopic.SUBSCRIBER_ADDED, WampMetaTopic.SUBSCRIBER_REMOVED));
             if(appId.indexOf("*") != -1) options.setMatchType(WampSubscriptionOptions.MatchEnum.wildcard);
              
-            WampServices.subscribeClientWithTopic(wampApp, socket, null, getFQtopicURI("app_event:"+appId), options);
+            //WampServices.subscribeClientWithTopic(wampApp, socket, null, getFQtopicURI("app_event:"+appId), options);
             retval = listGroups(socket, appId, options);
         } else {
             retval = super.onCall(task, socket, method, args, argsKw, callOptions);
@@ -139,7 +139,7 @@ public class Module extends WampModule
         }
         clients.put(socket.getSessionId(), client);
         
-        WampServices.subscribeClientWithTopic(wampApp, socket, null, getFQtopicURI("apps_event"), null);  // exact match
+        //WampServices.subscribeClientWithTopic(wampApp, socket, null, getFQtopicURI("apps_event"), null);  // exact match
     }
     
     @Override
@@ -784,9 +784,9 @@ public class Module extends WampModule
                 WampTopicOptions topicOptions = new WampTopicOptions();
                 topic = WampServices.createTopic(wampApp, topicName, topicOptions);
             }
-            WampSubscriptionOptions subscriptionOptions = new WampSubscriptionOptions(null);
-            //subscriptionOptions.setPublisherIdRequested(true);
-            WampServices.subscribeClientWithTopic(wampApp, client.getSocket(), null, topicName, subscriptionOptions);
+            
+            //WampSubscriptionOptions subscriptionOptions = new WampSubscriptionOptions(null);
+            //WampServices.subscribeClientWithTopic(wampApp, client.getSocket(), null, topicName, subscriptionOptions);
             
             client.addGroup(g);
             WampList conArray = new WampList();

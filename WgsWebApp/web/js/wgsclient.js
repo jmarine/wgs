@@ -20,6 +20,7 @@ WgsClient.prototype = {
   groups: new Array(),
   calls: new Array(),
   subscriptionRequests: new Array(),
+  unsubscriptionRequests: new Array(),
   subscriptionsByTopicAndOptions: new Array(),
   topicHandlers: new Array(),
   patternHandlers: new Array(),
@@ -107,13 +108,11 @@ WgsClient.prototype = {
         var wildcards = false;
         if(!options) options = {};
         options.events = (event_cb != null);
-        options.metaevents = (metaevent_cb != null);
         if(options.match && options.match.toLowerCase() == "prefix") {
-            topic = topic + "*";
-            options.match = "wildcard";
+            topic = topic + "..";
         }
 
-        if(topic.indexOf("*") != -1) {
+        if(topic.indexOf("..") != -1) {
             wildcards = true;
             options.match = "wildcard";
             if(!this.patternHandlers[topic]) this.patternHandlers[topic] = [];
@@ -131,22 +130,26 @@ WgsClient.prototype = {
             this.metaeventHandlers[topic].push(metaevent_cb);
         }
         if(!options.clientSideOnly) {
+            var dfd = $.Deferred();            
             var arr = [];
             arr[0] = 10;  // SUBSCRIBE
             arr[1] = this._newid();
             arr[2] = options;
             arr[3] = topic;      
             var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
-            this.subscriptionRequests[arr[1]] = topicAndOptionsKey;
+            this.subscriptionRequests[arr[1]] = [topicAndOptionsKey, dfd];
             this.send(JSON.stringify(arr));
+            return dfd.promise();
         }
+        return null;
   },
   
-  _getTopicAndOptionsKey: function(topicPattern,options)
+  _getTopicAndOptionsKey: function(topicPattern, options)
   {
       if(!options) options = {};
-      if(!options.match) options.match = "exact";
-      return options.match.toLowerCase() + ":" + topicPattern;
+      if(!options.match) options.match = (topicPattern.indexOf("..") != -1)? "wildcard" : "exact";
+      else if(options.match=="prefix") topicPattern = topicPattern + "..";
+      return topicPattern;
   },
   
   getSubscriptionIdByTopicOptions: function(topicPattern, options)
@@ -163,12 +166,12 @@ WgsClient.prototype = {
         
         if(!options) options = {};
         if(options.match && options.match.toLowerCase() == "prefix") {
-            topic = topic + "*";
+            topic = topic + "..";
             options.match = "wildcard";
         }
         
         var callbacks = this.topicHandlers[topic];
-        if(topic.indexOf("*") != -1) {
+        if(topic.indexOf("..") != -1) {
             options.match = "wildcard";
             callbacks = this.patternHandlers[topic];
         }
@@ -182,7 +185,7 @@ WgsClient.prototype = {
         
         
         var _clearHandlers = function() {
-            var wildcards = (topic.indexOf("*") != -1);
+            var wildcards = (topic.indexOf("..") != -1);
             if(wildcards) {
                 if(event_cb && callbacks && callbacks.length<=1 && indexOfEventHandlerToClear!=-1) delete client.patternHandlers[topic];
                 else if(indexOfEventHandlerToClear != -1) client.patternHandlers.splice(indexOfEventHandlerToClear,1);
@@ -208,13 +211,17 @@ WgsClient.prototype = {
         
         if(!clientSideOnly) {
             // send unsubscribe message to server (when all eventHandlers or metaeventHandlers are cleared)
+            var dfd = $.Deferred();            
             var arr = [];
             arr[0] = 20;  // Unsubscribe message type
             arr[1] = this._newid();
             arr[2] = this.getSubscriptionIdByTopicOptions(topic,options);
+            var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
+            this.unsubscriptionRequests[arr[1]] = [topicAndOptionsKey, dfd];
             this.send(JSON.stringify(arr));
+            return dfd.promise();
         }   
-
+        return null;
   },
   
   publish: function(topic, event, options) {
@@ -467,10 +474,38 @@ WgsClient.prototype = {
               
           } else if(arr[0] == 11) {  // SUBSCRIBED
               var requestId = arr[1];
-              var subscriptionId = arr[2];
-              var topicAndOptionsKey = client.subscriptionRequests[requestId];
-              client.subscriptionsByTopicAndOptions[topicAndOptionsKey] = subscriptionId;
+              if(requestId && client.subscriptionRequests[requestId]) {
+                  var subscriptionId = arr[2];
+                  var topicAndOptionsKey = client.subscriptionRequests[requestId][0];
+                  var promise = client.subscriptionRequests[requestId][1];
+                  client.subscriptionsByTopicAndOptions[topicAndOptionsKey] = subscriptionId;
+                  promise.resolve(requestId,subscriptionId);
+                  delete client.subscriptionRequests[requestId];
+              }
               
+          } else if(arr[0] == 12) {  // SUBSCRIBE_ERROR
+              var requestId = arr[1];
+              var promise = client.subscriptionRequests[requestId][1];
+              promise.reject(requestId);
+              delete client.subscriptionRequests[requestId];
+
+          } else if(arr[0] == 21) {  // UNSUBSCRIBED
+              var requestId = arr[1];
+              if(requestId && client.unsubscriptionRequests[requestId]) {
+                  var subscriptionId = arr[2];
+                  var topicAndOptionsKey = client.unsubscriptionRequests[requestId][0];
+                  var promise = client.unsubscriptionRequests[requestId][1];
+                  promise.resolve(requestId,subscriptionId);
+                  delete client.unsubscriptionRequests[requestId];
+                  delete client.subscriptionsByTopicAndOptions[topicAndOptionsKey];              
+              }
+              
+          } else if(arr[0] == 22) {  // UNSUBSCRIBE_ERROR
+              var requestId = arr[1];
+              var promise = client.unsubscriptionRequests[requestId][1];
+              promise.reject(requestId);
+              delete client.unsubscriptionRequests[requestId];
+                
           } else if(arr[0] == 8 || arr[0] == 40) {  // EVENT
               var topicURI = arr[1];
               if(client.topicHandlers[topicURI]) {
@@ -596,7 +631,7 @@ WgsClient.prototype = {
       args[2] = options;
 
       this.call("wgs.open_group", args).then(function(result,resultKw) {
-          client.subscribe("wgs.group_event:" + resultKw.gid, client._update_group_users, null, { "clientSideOnly":true} );
+          client.subscribe("wgs.group_event:" + resultKw.gid, client._update_group_users, null, {} );
           client._update_group_users(resultKw);
           callback(result,resultKw);
       }, callback);
@@ -605,7 +640,7 @@ WgsClient.prototype = {
   exitGroup: function(gid, callback) {
       var client = this;
       this.call("wgs.exit_group", gid).then(callback, callback);
-      this.unsubscribe("wgs.group_event:" + gid, client._update_group_users, null, { "clientSideOnly":true});
+      this.unsubscribe("wgs.group_event:" + gid, client._update_group_users, null, {});
       delete this.groups[gid];
   },
           
@@ -693,7 +728,7 @@ WgsClient.prototype = {
   },
           
   topicMatchesWithPattern: function(topicURI,pattern) {
-      topicURI = topicURI.replace("*", ".*");
+      topicURI = topicURI.replace("..", ".*");
       var re = new RegExp(pattern);
       return topicURI.match(re);
   },

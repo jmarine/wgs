@@ -22,9 +22,9 @@ public class WampSubscription
     public WampSubscription(Long subscriptionId, String topicRegExp, Collection<WampTopic> topics, WampSubscriptionOptions options) 
     {
         this.subscriptionId = subscriptionId;
-        if(options == null) options = new WampSubscriptionOptions(null);
-        this.topicRegExp = topicRegExp;
-        this.topics = topics;
+        this.topicRegExp = topicRegExp;        
+        this.topics  = topics;
+        this.options = (options != null)? options : new WampSubscriptionOptions(null);
     }
     
     

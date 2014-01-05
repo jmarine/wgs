@@ -100,7 +100,7 @@ public class WampProtocol
     public static void sendSubscribeError(WampSocket clientSocket, Long requestId, String errorUri)
     {    
         WampList response = new WampList();
-        response.add(11);
+        response.add(12);
         response.add(requestId);
         response.add(errorUri);
         
@@ -118,6 +118,15 @@ public class WampProtocol
         clientSocket.sendWampMessage(response);
     }
     
+    public static void sendUnsubscribeError(WampSocket clientSocket, Long requestId, String errorUri)
+    {    
+        WampList response = new WampList();
+        response.add(22);
+        response.add(requestId);
+        response.add(errorUri);
+        
+        clientSocket.sendWampMessage(response);
+    }    
     
     public static void sendPublished(WampSocket clientSocket, Long requestId, Long publicationId)
     {    
@@ -140,7 +149,7 @@ public class WampProtocol
             
             Object[] msg = new Object[WampEncoding.values().length];
             
-            if(topic.getURI().equals(subscription.getTopicRegExp())) {
+            if(subscription.getOptions().getMatchType() == WampSubscriptionOptions.MatchEnum.exact) {
                 eventDetails.remove("topic");
             } else {
                 eventDetails.put("topic", topic.getURI());

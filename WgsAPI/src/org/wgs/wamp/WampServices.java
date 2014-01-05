@@ -100,7 +100,8 @@ public class WampServices
     
     private static String getTopicRegExp(WampSubscriptionOptions.MatchEnum matchType, String topicPattern)
     {
-        String regexp = (matchType==WampSubscriptionOptions.MatchEnum.prefix)? topicPattern.replace("..", ".*") : topicPattern.replace("..", "\\..+\\.");
+        String regexp = topicPattern.replace("..", "%").replace(".","\\.");
+        regexp = (matchType==WampSubscriptionOptions.MatchEnum.prefix)? regexp.replace("%", ".*") : regexp.replace("%", "\\..+\\.");
         return regexp;
     }
 
@@ -192,8 +193,6 @@ public class WampServices
             subscription = new WampSubscription(subscriptionId, regExp, topics, options);
             topicSubscriptionsById.put(subscriptionId, subscription);
             topicSubscriptionsByTopicURI.put(topicUriOrPattern, subscription);
-
-            subscription.addSocket(clientSocket);
         }        
         
         clientSocket.addSubscription(subscription);
@@ -202,7 +201,7 @@ public class WampServices
             if(subscriptionId == null) subscriptionId = topic.getSubscriptionId();
             
             try { 
-                module.onSubscribe(clientSocket, subscriptionId, topic, options);
+                module.onSubscribe(clientSocket, topic, subscription, options);
             } catch(Exception ex) {
                 error = true;
             }
@@ -219,24 +218,32 @@ public class WampServices
     {
         Collection<WampTopic> topics = null;
 
-        WampSubscription subscription = clientSocket.getSubscription(subscriptionId);
-        subscription.removeSocket(clientSocket.getSessionId());
+        if(requestId == null || subscriptionId == null)  {
+            WampProtocol.sendUnsubscribeError(clientSocket, requestId, "wamp.error.protocol_violation");            
+        } else {
+            WampSubscription subscription = clientSocket.getSubscription(subscriptionId);
+            if(subscription == null) {
+                WampProtocol.sendUnsubscribeError(clientSocket, requestId, "wamp.error.no_such_subscription");            
+            } else {
+                subscription.removeSocket(clientSocket.getSessionId());
 
-        topics = subscription.getTopics();
-        for(WampTopic topic : topics) {
-            if(subscriptionId == null) subscriptionId = topic.getSubscriptionId();            
-            if(subscription != null) {
-                try { 
-                    WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
-                    module.onUnsubscribe(clientSocket, subscriptionId, topic);
-                } catch(Exception ex) {
-                    logger.log(Level.FINE, "Error in unsubscription to topic", ex);
-                }          
+                topics = subscription.getTopics();
+                for(WampTopic topic : topics) {
+                    if(subscriptionId == null) subscriptionId = topic.getSubscriptionId();            
+                    if(subscription != null) {
+                        try { 
+                            WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+                            module.onUnsubscribe(clientSocket, subscriptionId, topic);
+                        } catch(Exception ex) {
+                            logger.log(Level.FINE, "Error in unsubscription to topic", ex);
+                        }          
+                    }
+                }
+
+                WampProtocol.sendUnsubscribed(clientSocket, requestId);
             }
         }
         
-        if(requestId != null) WampProtocol.sendUnsubscribed(clientSocket, requestId);
-                
         return topics;
     }
 

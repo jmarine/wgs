@@ -22,16 +22,16 @@ public class WampSubscriptionOptions
         this.metaEvents = new HashSet<String>();
         
         if(node != null) {
-            if(node.has("MATCH")) {
-                setMatchType(MatchEnum.valueOf(node.get("MATCH").asText()));
+            if(node.has("match")) {
+                setMatchType(MatchEnum.valueOf(node.get("match").asText()));
             }     
             
-            if(node.has("METAEVENTS")) {
-                setMetaEvents((List)node.get("METAEVENTS").getObject());
+            if(node.has("metaevents")) {
+                setMetaEvents((List)node.get("metaevents").getObject());
             }
 
-            if(node.has("EVENTS")) {
-                setEventsEnabled(node.get("EVENTS").asBoolean());
+            if(node.has("events")) {
+                setEventsEnabled(node.get("events").asBoolean());
             }     
             
             /*

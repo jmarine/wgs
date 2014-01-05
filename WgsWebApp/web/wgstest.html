@@ -288,8 +288,6 @@ function authentication(state, msg) {
     } else if(state == WgsState.ANONYMOUS || state == WgsState.AUTHENTICATED) {
         $("#toggle_connect").html("Disconnect");
         
-        list_apps();
-        
         if(state == WgsState.AUTHENTICATED) {
             $("#user").attr("disabled", "disabled");
             $("#password").attr("disabled", "disabled");
@@ -306,6 +304,8 @@ function authentication(state, msg) {
         } else {
             $("#user_picture").width(0).height(0);
         }
+        
+        list_apps();
 
     }
         
@@ -347,7 +347,7 @@ function list_apps() {
     $("#apps option").remove();
     wgsclient.listApps(false, function(result,resultKw) {
         if(resultKw && resultKw.valid) {
-            wgsclient.subscribe("wgs.apps_event", update_apps, null, { "clientSideOnly":true});
+            wgsclient.subscribe("wgs.apps_event", update_apps, null, {});
             update_apps(resultKw);
             $("#app_params").hide();
             $("#app_list").slideDown(500);
@@ -502,7 +502,7 @@ function list_groups(scope) {
     var appId = $("#apps").val();
     if(!scope) scope = $("input[name=group_scope]:checked").val();
     $("#groups option").remove();
-    wgsclient.subscribe("wgs.app_event:" + appId, update_groups, app_metaevent, { "clientSideOnly":true});
+
     wgsclient.listGroups(appId, { scope: scope }, function(result,resultKw) {
         if(resultKw && resultKw.valid) {
             currentApp = resultKw.app;
@@ -510,8 +510,7 @@ function list_groups(scope) {
             $("#app_list").hide();
             $("#group_list").slideDown(500);
             $("#group_list fieldset legend").html("Groups: " + resultKw.app.name);
-        } else {
-            wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, false);
+            wgsclient.subscribe("wgs.app_event:" + appId, update_groups, app_metaevent, {} );            
         }
     });
 }
@@ -607,7 +606,7 @@ function open_group(gid, options) {
        if(resultKw && resultKw.valid) {
             //wgsclient.setSubscriptionStatus("wgs.app_event:" + appId, "busy", null );
             currentApp = resultKw.app;
-            if(resultKw.gid != "") wgsclient.subscribe("wgs.group_event:" + resultKw.gid, update_group_callback, null, { "clientSideOnly":true} );
+            if(resultKw.gid != "") wgsclient.subscribe("wgs.group_event:" + resultKw.gid, update_group_callback, null, {} );
             show_group(resultKw); 
        } else if(result.errorURI == "wgs.incorrectpassword") {
             var password = prompt("Introduce the password to access the group:");

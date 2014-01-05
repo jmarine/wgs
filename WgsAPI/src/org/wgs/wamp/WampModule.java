@@ -85,10 +85,7 @@ public class WampModule
         throw new WampException(WampException.ERROR_PREFIX+".method_unknown", "Method not implemented: " + methodName);
     }
     
-    public void onSubscribe(WampSocket clientSocket, Long subscriptionId, WampTopic topic, WampSubscriptionOptions options) throws Exception { 
-        WampSubscription subscription = topic.getSubscription(subscriptionId);
-        if(subscription == null) subscription = new WampSubscription(subscriptionId, topic.getURI(), Arrays.asList(topic), options);
-
+    public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription, WampSubscriptionOptions options) throws Exception { 
         if(!subscription.addSocket(clientSocket)) {
             subscription.getOptions().updateOptions(options);
         } else {
