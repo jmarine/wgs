@@ -214,7 +214,7 @@ public class WampProtocol
                     Object[] msg = new Object[WampEncoding.values().length];
                     for(Long sid : subscription.getSessionIds()) {
                         WampSocket remoteSocket = subscription.getSocket(sid);
-                        if(eligible.contains(sid) && remoteSocket.supportVersion(WampApplication.WAMPv2)) {
+                        if(remoteSocket.supportVersion(WampApplication.WAMPv2)) {
                             WampEncoding enc = remoteSocket.getEncoding();
                             if(msg[enc.ordinal()] == null) {
                                 msg[enc.ordinal()] = WampObject.getSerializer(enc).serialize(response);
