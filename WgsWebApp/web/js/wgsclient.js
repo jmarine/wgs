@@ -21,9 +21,9 @@ WgsClient.prototype = {
   calls: new Array(),
   subscriptionRequests: new Array(),
   unsubscriptionRequests: new Array(),
+  subscriptionsById: new Array(),
   subscriptionsByTopicAndOptions: new Array(),
-  topicHandlers: new Array(),
-  patternHandlers: new Array(),
+  eventHandlers: new Array(),
   metaeventHandlers: new Array(),
   
   debug: function(str) {
@@ -105,43 +105,27 @@ WgsClient.prototype = {
   },
   
   subscribe: function(topic, event_cb, metaevent_cb, options) {
-        var wildcards = false;
         if(!options) options = {};
-        options.events = (event_cb != null);
+        if(event_cb==null && metaevent_cb!=null) options.metaonly = 1;
+        
         if(options.match && options.match.toLowerCase() == "prefix") {
             topic = topic + "..";
         }
 
         if(topic.indexOf("..") != -1) {
-            wildcards = true;
             options.match = "wildcard";
-            if(!this.patternHandlers[topic]) this.patternHandlers[topic] = [];
-        } else {            
-            if(!this.topicHandlers[topic]) this.topicHandlers[topic] = [];
         }
         
-        if(!this.metaeventHandlers[topic]) this.metaeventHandlers[topic] = [];
-        
-        if(event_cb) {
-            if(wildcards) this.patternHandlers[topic].push(event_cb);
-            else this.topicHandlers[topic].push(event_cb);
-        }
-        if(metaevent_cb) {
-            this.metaeventHandlers[topic].push(metaevent_cb);
-        }
-        if(!options.clientSideOnly) {
-            var dfd = $.Deferred();            
-            var arr = [];
-            arr[0] = 10;  // SUBSCRIBE
-            arr[1] = this._newid();
-            arr[2] = options;
-            arr[3] = topic;      
-            var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
-            this.subscriptionRequests[arr[1]] = [topicAndOptionsKey, dfd];
-            this.send(JSON.stringify(arr));
-            return dfd.promise();
-        }
-        return null;
+        var dfd = $.Deferred();            
+        var arr = [];
+        arr[0] = 10;  // SUBSCRIBE
+        arr[1] = this._newid();
+        arr[2] = options;
+        arr[3] = topic;      
+        var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
+        this.subscriptionRequests[arr[1]] = [dfd, topicAndOptionsKey, event_cb, metaevent_cb];
+        this.send(JSON.stringify(arr));
+        return dfd.promise();
   },
   
   _getTopicAndOptionsKey: function(topicPattern, options)
@@ -160,9 +144,6 @@ WgsClient.prototype = {
   
   unsubscribe: function(topic, event_cb, metaevent_cb, options) {
         var client = this;
-        var indexOfEventHandlerToClear = -1;
-        var indexOfMetaHandlerToClear = -1;
-        var clientSideOnly = options && options.clientSideOnly;
         
         if(!options) options = {};
         if(options.match && options.match.toLowerCase() == "prefix") {
@@ -170,58 +151,20 @@ WgsClient.prototype = {
             options.match = "wildcard";
         }
         
-        var callbacks = this.topicHandlers[topic];
         if(topic.indexOf("..") != -1) {
             options.match = "wildcard";
-            callbacks = this.patternHandlers[topic];
-        }
-        if(event_cb && callbacks) {
-            indexOfEventHandlerToClear = callbacks.indexOf(event_cb);
         }
 
-        if(metaevent_cb && this.metaeventHandlers[topic]) {
-            indexOfMetaHandlerToClear = this.metaeventHandlers[topic].indexOf(metaevent_cb);
-        }   
+        var dfd = $.Deferred();            
+        var arr = [];
+        arr[0] = 20;  // Unsubscribe message type
+        arr[1] = this._newid();
+        arr[2] = this.getSubscriptionIdByTopicOptions(topic,options);
+        var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
+        this.unsubscriptionRequests[arr[1]] = [dfd, topicAndOptionsKey, event_cb, metaevent_cb];
+        this.send(JSON.stringify(arr));
         
-        
-        var _clearHandlers = function() {
-            var wildcards = (topic.indexOf("..") != -1);
-            if(wildcards) {
-                if(event_cb && callbacks && callbacks.length<=1 && indexOfEventHandlerToClear!=-1) delete client.patternHandlers[topic];
-                else if(indexOfEventHandlerToClear != -1) client.patternHandlers.splice(indexOfEventHandlerToClear,1);
-            } else {
-                if(event_cb && callbacks && callbacks.length<=1 && indexOfEventHandlerToClear!=-1) delete client.topicHandlers[topic];
-                else if(indexOfEventHandlerToClear != -1) client.topicHandlers.splice(indexOfEventHandlerToClear,1);
-            }
-            
-            if(metaevent_cb && client.metaeventHandlers[topic] && client.metaeventHandlers[topic].length<=1 && indexOfMetaHandlerToClear != -1) delete client.metaeventHandlers[topic];
-            else if(indexOfMetaHandlerToClear != -1) client.metaeventHandlers.splice(indexOfMetaHandlerToClear,1);
-        }
-            
-        if(!this.metaeventHandlers[topic] || this.metaeventHandlers[topic].length == 0) {
-            _clearHandlers();
-        } else {
-            // defer metaevent callback deletion, until #left/#error metatopic is received for the subscribed sessionId
-            this.metaeventHandlers[topic].push(function(topic2, metatopic, metaevent) {
-               if(topic == topic2 && metaevent && metaevent.sessionId == client.sid) {
-                   _clearHandlers();
-               }
-            });
-        }        
-        
-        if(!clientSideOnly) {
-            // send unsubscribe message to server (when all eventHandlers or metaeventHandlers are cleared)
-            var dfd = $.Deferred();            
-            var arr = [];
-            arr[0] = 20;  // Unsubscribe message type
-            arr[1] = this._newid();
-            arr[2] = this.getSubscriptionIdByTopicOptions(topic,options);
-            var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
-            this.unsubscriptionRequests[arr[1]] = [topicAndOptionsKey, dfd];
-            this.send(JSON.stringify(arr));
-            return dfd.promise();
-        }   
-        return null;
+        return dfd.promise();
   },
   
   publish: function(topic, event, options) {
@@ -476,16 +419,25 @@ WgsClient.prototype = {
               var requestId = arr[1];
               if(requestId && client.subscriptionRequests[requestId]) {
                   var subscriptionId = arr[2];
-                  var topicAndOptionsKey = client.subscriptionRequests[requestId][0];
-                  var promise = client.subscriptionRequests[requestId][1];
+                  var promise = client.subscriptionRequests[requestId][0];
+                  var topicAndOptionsKey = client.subscriptionRequests[requestId][1];
+                  client.subscriptionsById[subscriptionId] = topicAndOptionsKey;
                   client.subscriptionsByTopicAndOptions[topicAndOptionsKey] = subscriptionId;
+                  if(client.subscriptionRequests[requestId][2]) {
+                    if(!client.eventHandlers[subscriptionId]) client.eventHandlers[subscriptionId] = [];
+                    client.eventHandlers[subscriptionId].push(client.subscriptionRequests[requestId][2]);
+                  }
+                  if(client.subscriptionRequests[requestId][3]) {                  
+                    if(!client.metaeventHandlers[subscriptionId]) client.metaeventHandlers[subscriptionId] = [];
+                    client.metaeventHandlers[subscriptionId].push(client.subscriptionRequests[requestId][3]);
+                  }
                   promise.resolve(requestId,subscriptionId);
                   delete client.subscriptionRequests[requestId];
               }
               
           } else if(arr[0] == 12) {  // SUBSCRIBE_ERROR
               var requestId = arr[1];
-              var promise = client.subscriptionRequests[requestId][1];
+              var promise = client.subscriptionRequests[requestId][0];
               promise.reject(requestId);
               delete client.subscriptionRequests[requestId];
 
@@ -493,47 +445,66 @@ WgsClient.prototype = {
               var requestId = arr[1];
               if(requestId && client.unsubscriptionRequests[requestId]) {
                   var subscriptionId = arr[2];
-                  var topicAndOptionsKey = client.unsubscriptionRequests[requestId][0];
-                  var promise = client.unsubscriptionRequests[requestId][1];
+                  var promise = client.unsubscriptionRequests[requestId][0];
+                  var topicAndOptionsKey = client.unsubscriptionRequests[requestId][1];
+                  
+                  var event_cb = client.unsubscriptionRequests[requestId][2];
+                  var metaevent_cb = client.unsubscriptionRequests[requestId][3];
+                  var callbacks = client.eventHandlers[subscriptionId];
+                  if(callbacks && callbacks.length>0) {
+                      var indexOfEventHandlerToClear = callbacks.indexOf(event_cb);
+                      if(event_cb && callbacks && callbacks.length<=1 && indexOfEventHandlerToClear!=-1) delete client.eventHandlers[subscriptionId];
+                      else if(indexOfEventHandlerToClear != -1) client.eventHandlers[subscriptionId].splice(indexOfEventHandlerToClear,1);
+                  }
+            
+                  callbacks = client.metaeventHandlers[subscriptionId];
+                  if(callbacks && callbacks.length>0) {
+                      var indexOfMetaHandlerToClear = callbacks.indexOf(event_cb);
+                      if(metaevent_cb && callbacks && callbacks.length<=1 && indexOfMetaHandlerToClear != -1) delete client.metaeventHandlers[subscriptionId];
+                      else if(indexOfMetaHandlerToClear != -1) client.metaeventHandlers[subscriptionId].splice(indexOfMetaHandlerToClear,1);
+                  }
+                  
                   promise.resolve(requestId,subscriptionId);
                   delete client.unsubscriptionRequests[requestId];
+                  delete client.subscriptionsById[subscriptionId];
                   delete client.subscriptionsByTopicAndOptions[topicAndOptionsKey];              
               }
               
           } else if(arr[0] == 22) {  // UNSUBSCRIBE_ERROR
               var requestId = arr[1];
-              var promise = client.unsubscriptionRequests[requestId][1];
+              var promise = client.unsubscriptionRequests[requestId][0];
               promise.reject(requestId);
               delete client.unsubscriptionRequests[requestId];
                 
           } else if(arr[0] == 8 || arr[0] == 40) {  // EVENT
-              var topicURI = arr[1];
-              if(client.topicHandlers[topicURI]) {
-                  client.topicHandlers[topicURI].forEach(function(callback) {
-                      callback.call(client, arr[2], topicURI);                
+              var subscriptionId = arr[1];
+              var publicationId = arr[2];
+              var details = arr[3];
+              var event = arr[4];
+              var topicURI = client.subscriptionsById[subscriptionId];
+              if(details && details.topic) topicURI = details.topic;
+              
+              if(client.eventHandlers[subscriptionId]) {
+                  client.eventHandlers[subscriptionId].forEach(function(callback) {
+                      callback.call(client, event, topicURI);                
                   });
               } else {
-
-                  for(var pattern in client.patternHandlers) {
-                      if(client.topicMatchesWithPattern(topicURI,pattern)) {
-                          client.patternHandlers[pattern].forEach(function(callback) {
-                             callback.call(client, arr[2], topicURI);                
-                          });
-                      }
-                  }
-                  // client.debug("topic not found: " + topic);
-              }
+                  // client.debug("subscription not found: " + topic);
+              } 
 
           } else if(arr[0] == 41) {  // META-EVENT  (not supported by WAMP v1)
-              var topicURI = arr[1];
-              if(client.metaeventHandlers[topicURI]) {
-                  client.metaeventHandlers[topicURI].forEach(function(callback) {
-                      var metatopic = arr[2];
-                      var metaevent = (arr.length > 2) ? arr[3] : null;
+              var subscriptionId = arr[1];
+              var publicationId = arr[2];
+              var metatopic = arr[3];
+              var metaevent = arr[4];
+              var topicURI = null;
+              
+              if(client.metaeventHandlers[subscriptionId]) {
+                  client.metaeventHandlers[subscriptionId].forEach(function(callback) {
                       callback.call(client, topicURI, metatopic, metaevent);
                   });
               } else {
-                  // client.debug("topic not found: " + topic);
+                  // client.debug("subscription not found: " + topic);
               }            
 
           } else {
@@ -677,13 +648,13 @@ WgsClient.prototype = {
       if(state) msg.state = state;
       if(data) msg.data  = data;
      
-      this.call("wgs.update_group", msg).then(function(response) { 
-          client._update_group_users(response);
-          callback(response);
+      this.call("wgs.update_group", msg).then(function(result,resultKw) { 
+          client._update_group_users(resultKw);
+          callback(resultKw);
       }, 
-      function(response) { 
-          client._update_group_users(response);
-          callback(response) 
+      function(result,resultKw) { 
+          client._update_group_users(resultKw);
+          callback(resultKw) 
       } );
   },
 
@@ -701,13 +672,13 @@ WgsClient.prototype = {
         msg.team = team;
         msg.type = usertype;
       }
-      this.call("wgs.update_member", msg).then(function(response) { 
-          client._update_group_users(response);
-          callback(response);
+      this.call("wgs.update_member", msg).then(function(result,resultKw) { 
+          client._update_group_users(resultKw);
+          callback(resultKw);
       }, 
-      function(response) { 
-          client._update_group_users(response);
-          callback(response) 
+      function(result,resultKw) { 
+          client._update_group_users(resultKw);
+          callback(resultKw) 
       } );
   },
   

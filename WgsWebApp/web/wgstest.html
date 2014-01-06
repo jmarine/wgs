@@ -606,7 +606,7 @@ function open_group(gid, options) {
        if(resultKw && resultKw.valid) {
             //wgsclient.setSubscriptionStatus("wgs.app_event:" + appId, "busy", null );
             currentApp = resultKw.app;
-            if(resultKw.gid != "") wgsclient.subscribe("wgs.group_event:" + resultKw.gid, update_group_callback, null, {} );
+            wgsclient.subscribe("wgs.group_event:" + resultKw.gid, update_group_callback, null, {} );
             show_group(resultKw); 
        } else if(result.errorURI == "wgs.incorrectpassword") {
             var password = prompt("Introduce the password to access the group:");

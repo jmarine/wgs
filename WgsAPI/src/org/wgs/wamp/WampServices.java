@@ -58,7 +58,8 @@ public class WampServices
                     subscription.getTopics().add(topic);
 
                     try { 
-                        for(WampSocket socket : subscription.getSockets()) {
+                        for(Long sid : subscription.getSessionIds()) {
+                            WampSocket socket = subscription.getSocket(sid);
                             subscribeClientWithTopic(app, socket, null, topic.getURI(), subscription.getOptions());
                         }
                     } catch(Exception ex) {
@@ -80,7 +81,8 @@ public class WampServices
             topics.remove(topicFQname);
             
             for(WampSubscription subscription : topic.getSubscriptions()) {
-                for(WampSocket client : subscription.getSockets()) {
+                for(Long sid : subscription.getSessionIds()) {
+                    WampSocket client = subscription.getSocket(sid);
                     try { 
                         unsubscribeClientFromTopic(app, client, null, subscription.getId());
                     } catch(Exception ex) {
@@ -173,7 +175,6 @@ public class WampServices
     public static Collection<WampTopic> subscribeClientWithTopic(WampApplication app, WampSocket clientSocket, Long requestId, String topicUriOrPattern, WampSubscriptionOptions options)
     {
         boolean error = false;
-        Long subscriptionId = null;
         
         // FIXME: merge subscriptions options (events & metaevents),
         // when the 1st eventhandler and 1st metahandler is subscribed
@@ -186,7 +187,7 @@ public class WampServices
         
         WampSubscription subscription = topicSubscriptionsByTopicURI.get(topicUriOrPattern);
         if(subscription == null) {
-            subscriptionId = WampProtocol.newId();  
+            Long subscriptionId = WampProtocol.newId();  
             Collection<WampTopic> topics = WampServices.getTopics(options.getMatchType(), topicUriOrPattern);            
             String regExp = getTopicRegExp(options.getMatchType(), topicUriOrPattern);
             
@@ -195,10 +196,8 @@ public class WampServices
             topicSubscriptionsByTopicURI.put(topicUriOrPattern, subscription);
         }        
         
-        clientSocket.addSubscription(subscription);
         for(WampTopic topic : subscription.getTopics()) {
             WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
-            if(subscriptionId == null) subscriptionId = topic.getSubscriptionId();
             
             try { 
                 module.onSubscribe(clientSocket, topic, subscription, options);
@@ -207,7 +206,7 @@ public class WampServices
             }
         }
     
-        if(!error) WampProtocol.sendSubscribed(clientSocket, requestId, subscriptionId);
+        if(!error) WampProtocol.sendSubscribed(clientSocket, requestId, subscription.getId());
         else WampProtocol.sendSubscribeError(clientSocket, requestId, "wamp.error.not_authorized");
         
         return subscription.getTopics();
@@ -225,11 +224,8 @@ public class WampServices
             if(subscription == null) {
                 WampProtocol.sendUnsubscribeError(clientSocket, requestId, "wamp.error.no_such_subscription");            
             } else {
-                subscription.removeSocket(clientSocket.getSessionId());
-
                 topics = subscription.getTopics();
                 for(WampTopic topic : topics) {
-                    if(subscriptionId == null) subscriptionId = topic.getSubscriptionId();            
                     if(subscription != null) {
                         try { 
                             WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());

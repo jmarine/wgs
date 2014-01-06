@@ -212,8 +212,9 @@ public class WampProtocol
             } else {
                 if(subscription.getOptions() != null && subscription.getOptions().hasMetaEvent(metaTopic)) {
                     Object[] msg = new Object[WampEncoding.values().length];
-                    for(WampSocket remoteSocket : subscription.getSockets()) {
-                        if(remoteSocket.supportVersion(WampApplication.WAMPv2)) {
+                    for(Long sid : subscription.getSessionIds()) {
+                        WampSocket remoteSocket = subscription.getSocket(sid);
+                        if(eligible.contains(sid) && remoteSocket.supportVersion(WampApplication.WAMPv2)) {
                             WampEncoding enc = remoteSocket.getEncoding();
                             if(msg[enc.ordinal()] == null) {
                                 msg[enc.ordinal()] = WampObject.getSerializer(enc).serialize(response);

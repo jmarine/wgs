@@ -3,7 +3,8 @@ package org.wgs.wamp;
 
 import java.util.Collection;
 import java.util.Set;
-import java.util.TreeMap;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class WampSubscription 
@@ -14,7 +15,7 @@ public class WampSubscription
     
     private WampSubscriptionOptions options;
 
-    private TreeMap<Long, WampSocket> sockets = new TreeMap<Long, WampSocket>();
+    private HashMap<Long, RefCount<WampSocket>> sockets = new HashMap<Long, RefCount<WampSocket>>();
     
     private Collection<WampTopic> topics = null;
     
@@ -39,25 +40,38 @@ public class WampSubscription
     }
 
     
-    public boolean addSocket(WampSocket socket)
+    public synchronized boolean addSocket(WampSocket socket)
     {
-        return (sockets.put(socket.getSessionId(), socket) == null);
+        RefCount<WampSocket> ref = sockets.get(socket.getSessionId());
+        if(ref == null) {
+            ref = new RefCount(socket, 1);
+            sockets.put(socket.getSessionId(), ref);
+            return true;
+        } else {
+            ref.refCount(+1);
+            return false;
+        }
     }
     
-    public WampSocket removeSocket(Long sessionId)
+    public synchronized WampSocket removeSocket(Long sessionId)
     {
-        return sockets.remove(sessionId);
+        RefCount<WampSocket> ref = sockets.get(sessionId);
+        if(ref == null) {
+            return null;
+        } else {
+            if(ref.refCount(-1) == 0) {
+                sockets.remove(sessionId);
+            }
+            return ref.getObject();
+        }
     }
     
     public WampSocket getSocket(Long sessionId)
     {
-        return sockets.get(sessionId);
+        return sockets.get(sessionId).getObject();
     }
     
-    public Collection<WampSocket> getSockets()
-    {
-        return sockets.values();
-    }
+
     
     public int getSocketsCount()
     {
@@ -77,6 +91,30 @@ public class WampSubscription
     public WampSubscriptionOptions getOptions()
     {
         return options;
+    }
+    
+}
+
+
+class RefCount<T>
+{
+    private T obj;
+    private AtomicInteger counter;
+    
+    RefCount(T obj, int initialRefCount)
+    {
+        this.obj = obj;
+        this.counter = new AtomicInteger(initialRefCount);
+    }
+    
+    public int refCount(int delta)
+    {
+        return counter.addAndGet(delta);
+    }
+    
+    public T getObject()
+    {
+        return obj;
     }
     
 }

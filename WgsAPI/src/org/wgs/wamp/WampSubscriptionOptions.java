@@ -30,8 +30,8 @@ public class WampSubscriptionOptions
                 setMetaEvents((List)node.get("metaevents").getObject());
             }
 
-            if(node.has("events")) {
-                setEventsEnabled(node.get("events").asBoolean());
+            if(node.has("metaonly")) {
+                setEventsEnabled(!node.get("metaonly").asBoolean().booleanValue());
             }     
             
             /*

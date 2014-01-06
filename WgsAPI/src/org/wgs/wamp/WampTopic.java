@@ -9,7 +9,6 @@ import javax.persistence.Transient;
 
 public class WampTopic 
 {
-    private Long   subscriptionId;
     private String uri;
     private WampTopicOptions options;
 
@@ -21,7 +20,6 @@ public class WampTopic
     public WampTopic( String uri, WampTopicOptions options) 
     {
         setURI(uri);
-        this.subscriptionId = WampProtocol.newId();
         if(options == null) options = new WampTopicOptions(); // default values
         this.options = options;
     }
@@ -82,11 +80,5 @@ public class WampTopic
         return subscriptions.size();
     }    
 
-    /**
-     * @return the requestId
-     */
-    public Long getSubscriptionId() {
-        return subscriptionId;
-    }
 
 }
