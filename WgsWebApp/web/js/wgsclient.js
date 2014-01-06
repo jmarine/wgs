@@ -466,8 +466,8 @@ WgsClient.prototype = {
                   
                   promise.resolve(requestId,subscriptionId);
                   delete client.unsubscriptionRequests[requestId];
-                  delete client.subscriptionsById[subscriptionId];
-                  delete client.subscriptionsByTopicAndOptions[topicAndOptionsKey];              
+                  //delete client.subscriptionsById[subscriptionId];
+                  //delete client.subscriptionsByTopicAndOptions[topicAndOptionsKey];              
               }
               
           } else if(arr[0] == 22) {  // UNSUBSCRIBE_ERROR
