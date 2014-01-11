@@ -155,12 +155,11 @@ public class WampServices
     
     public static void processPublishMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
-        Long publicationId = WampProtocol.newId();
         String topicName = clientSocket.normalizeURI(request.get(3).asText());
         WampTopic topic = WampServices.getTopic(topicName);
         try {
             WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
-            module.onPublish(publicationId, clientSocket, topic, request);
+            module.onPublish(clientSocket, topic, request);
         } catch(Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
         }  

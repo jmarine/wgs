@@ -1,11 +1,4 @@
-/**
- * WebSocket Message Application Protocol implementation
- *
- * @author Jordi Marine Fort 
- */
-
 package org.wgs.wamp;
-
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,9 +36,10 @@ public class WampApplication
     private String  path;
     private boolean started;
     private Map<String,WampModule> modules;
-    private ConcurrentHashMap<String,WampSocket> sockets;
     private WampModule defaultModule;
     private ExecutorService executorService;
+    private ConcurrentHashMap<String,WampSocket> sockets;    
+    private ConcurrentHashMap<Long,String> registeredProceduresUriById;
     
     
     public WampApplication(int version, Class endpointClass, String path)
@@ -61,6 +55,7 @@ public class WampApplication
         
         this.sockets = new ConcurrentHashMap<String,WampSocket>();
         this.modules = new HashMap<String,WampModule>();
+        this.registeredProceduresUriById = new ConcurrentHashMap<Long,String>();
         
         this.registerWampModule(WampCRA.class);
         
@@ -185,34 +180,48 @@ public class WampApplication
         //logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
 
         switch(requestType.intValue()) {
-            case 0:
-                clientSocket.setVersionSupport(WampApplication.WAMPv2);
+            case 0:     // HELLO
+                clientSocket.setVersionSupport(WampApplication.WAMPv2);                
+                clientSocket.setHelloDetails((WampDict)request.get(2));
                 break;
-            case 2:
-            case 70:
-                processCallMessage(clientSocket, request);
-                break;
-            case 71:
-                processCallCancelMessage(clientSocket, request);
-                break;
-            case 5:
-            case 10:
+            case 10:    // SUBSCRIBE
                 Long requestId1 = request.get(1).asLong();
                 WampDict subOptionsNode = (request.size() > 2) ? (WampDict)request.get(2) : null;
                 WampSubscriptionOptions subOptions = new WampSubscriptionOptions(subOptionsNode);
                 String subscriptionTopicName = request.get(3).asText();
                 WampServices.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
                 break;
-            case 6:
-            case 20:                
+
+            case 20:    // UNSUBSCRIBE
                 Long requestId2 = request.get(1).asLong();
                 Long subscriptionId2 = request.get(2).asLong();
                 WampServices.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
                 break;
-            case 7:
-            case 30:                
+
+            case 30:    // PUBLISH
                 WampServices.processPublishMessage(this, clientSocket, request);
                 break;                
+            case 50:    // REGISTER
+                processRegisterMessage(this, clientSocket, request);
+                break;
+            case 60:    // UNREGISTER
+                processUnregisterMessage(this, clientSocket, request);
+                break;                
+            case 70:
+                processCallMessage(clientSocket, request);
+                break;
+            case 71:
+                processCallCancelMessage(clientSocket, request);
+                break;
+            case 82:
+                processInvocationProgress(clientSocket, request);
+                break;
+            case 83:
+                processInvocationResult(clientSocket, request);
+                break;
+            case 84:
+                processInvocationError(clientSocket, request);
+                break;
             default:
                 logger.log(Level.SEVERE, "Request type not implemented: {0}", new Object[]{requestType});
         }
@@ -287,15 +296,47 @@ public class WampApplication
         clientSocket.setLastHeartBeat(heartbeatSequenceNo);
     }
 
+    
+    public void processRegisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
+    {
+        Long registrationId = WampProtocol.newId();
+        Long requestId = request.get(1).asLong();
+        String procedureURI = clientSocket.normalizeURI(request.get(3).asText());
+        
+        try {
+            WampModule module = app.getWampModule(procedureURI, app.getDefaultWampModule());
+            module.onRegister(registrationId, clientSocket, procedureURI, request);
+            registeredProceduresUriById.put(registrationId, procedureURI);
+        } catch(Exception ex) {
+            logger.log(Level.FINE, "Error in publishing to topic", ex);
+        }  
+    }    
+
+    public void processUnregisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
+    {
+        Long requestId = request.get(1).asLong();
+        Long registrationId = request.get(2).asLong();
+        
+        try {
+            String procedureURI = registeredProceduresUriById.get(registrationId);
+            WampModule module = app.getWampModule(procedureURI, app.getDefaultWampModule());
+            module.onUnregister(clientSocket, requestId, registrationId);
+            registeredProceduresUriById.remove(procedureURI);
+        } catch(Exception ex) {
+            logger.log(Level.FINE, "Error in publishing to topic", ex);
+        }  
+        
+    }
+    
     private void processCallCancelMessage(WampSocket clientSocket, WampList request) throws Exception
     {
         Long callID  = request.get(1).asLong();
-        String cancelMode = (request.size() >= 3 && ((WampDict)request.get(2)).has("cancelmode")) ? ((WampDict)request.get(2)).get("cancelmode").asText() : "killnowait";
+        WampDict cancelOptions = (WampDict)request.get(2);
         WampCallController call = clientSocket.getRpcController(callID);
-        call.cancel(cancelMode);
+        call.cancel(cancelOptions);
     }
     
-    private void processCallMessage(final WampSocket clientSocket, final WampList request) throws Exception
+    private void processCallMessage(WampSocket clientSocket, WampList request) throws Exception
     {
         WampCallController call = new WampCallController(this, clientSocket, request);
         
@@ -307,6 +348,40 @@ public class WampApplication
             call.setFuture(future);
         }
         
+    }
+    
+    private void processInvocationResult(WampSocket providerSocket, WampList request) throws Exception
+    {
+        Long invocationId = request.get(1).asLong();
+        WampCallController task = providerSocket.getRpcController(invocationId);
+        task.setResult((WampList)request.get(2));
+        task.setResultKw((WampDict)request.get(3));
+        task.sendCallResults();
+        providerSocket.removeRpcController(invocationId);
+    }
+    
+    private void processInvocationProgress(WampSocket providerSocket, WampList request) throws Exception
+    {
+        Long invocationId = request.get(1).asLong();
+        WampCallController task = providerSocket.getRpcController(invocationId);
+        WampList progress = (WampList)request.get(2);
+        WampDict progressKw = (WampDict)request.get(3);
+        if(task.getClientSocket().supportProgressiveCalls()) {
+            WampProtocol.sendCallProgress(task.getClientSocket(), task.getCallID(), progress, progressKw);
+        } else {
+            task.getResult().add(progress);
+            task.getResultKw().putAll(progressKw);
+        }
+    }    
+    
+    private void processInvocationError(WampSocket providerSocket, WampList request) throws Exception
+    {
+        Long invocationId = request.get(1).asLong();
+        String errorURI = request.get(2).asText();
+        WampObject exception = request.get(3);
+        WampCallController task = providerSocket.getRpcController(invocationId);
+        WampProtocol.sendCallError(task.getClientSocket(), task.getCallID(), errorURI, null, exception);
+        providerSocket.removeRpcController(invocationId);
     }
     
     

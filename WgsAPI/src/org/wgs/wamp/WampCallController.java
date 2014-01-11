@@ -13,23 +13,28 @@ public class WampCallController implements Runnable
     private WampSocket clientSocket;
     private WampList request;
     private Future<?> future;
-    private WampCall<?> cancellableCall;
+    private WampAsyncCall cancellableCall;
     private WampList  arguments;
     private WampDict argumentsKw;
     private WampCallOptions callOptions;
     private Long callID;
     private WampList result = null;
     private WampDict resultKw = null;
-    
-    
     private boolean cancelled;
     private boolean done;
     
 
-    public WampCallController(WampApplication app, WampSocket clientSocket, WampList request) {
+    public WampCallController(WampApplication app, WampSocket clientSocket, WampList request) 
+    {
         this.app = app;
         this.clientSocket = clientSocket;
         this.request = request;
+    }
+    
+    
+    public WampSocket getClientSocket()
+    {
+        return clientSocket;
     }
     
     public void setFuture(Future<?> future) {
@@ -41,17 +46,14 @@ public class WampCallController implements Runnable
     }    
 
     @Override
-    public void run() {
+    public void run() 
+    {
         String procedureURI = clientSocket.normalizeURI(request.get(3).asText());
         WampModule module = app.getWampModule(procedureURI, app.getDefaultWampModule());
 
-        int callMsgType = request.get(0).asLong().intValue();
-        int callResponseMsgType = (callMsgType == 2) ? 3 : 73;
-        int callErrorMsgType = (callMsgType == 2) ? 4 : 74;
-
         callID  = request.get(1).asLong();
         if(callID == null || callID == 0L) {
-            WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.ERROR_PREFIX + ".requestid_unknown", "CallID not present", null);
+            WampProtocol.sendCallError(clientSocket, callID, WampException.ERROR_PREFIX + ".requestid_unknown", "CallID not present", null);
             return;
         }        
         
@@ -85,24 +87,22 @@ public class WampCallController implements Runnable
             }
 
             Object response = module.onCall(this, clientSocket, procedureURI, arguments, argumentsKw, callOptions);
-            if(response != null && response instanceof WampCall) {
-                cancellableCall = (WampCall)response;
-                response = cancellableCall.call();
-            }
-            if(response != null) {
-                if (response instanceof WampDict) {
-                    setResultKw((WampDict)response);
+            if(response != null && response instanceof WampAsyncCall) {
+                cancellableCall = (WampAsyncCall)response;
+                cancellableCall.call();
+            } else {
+                if(response != null) {
+                    if (response instanceof WampDict) {
+                        setResultKw((WampDict)response);
 
-                } else if (response instanceof WampList) {
-                    setResult((WampList)response);
-                    
-                } else {
-                    getResult().add(response);
+                    } else if (response instanceof WampList) {
+                        setResult((WampList)response);
+
+                    } else {
+                        getResult().add(response);
+                    }
                 }
-            }
-            if (!isCancelled()) {
-                WampProtocol.sendCallResult(clientSocket, callResponseMsgType, callID, getResult(), getResultKw());
-                done = true;
+                sendCallResults();
             }
         } catch (Throwable ex) {
             if (ex instanceof java.lang.reflect.InvocationTargetException) {
@@ -111,34 +111,44 @@ public class WampCallController implements Runnable
             if (ex instanceof WampException) {
                 WampException wex = (WampException) ex;
                 if (!isCancelled()) {
-                    WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
+                    WampProtocol.sendCallError(clientSocket, callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
                 }
                 logger.log(Level.FINE, "Error calling method " + procedureURI + ": " + wex.getErrorDesc());
             } else {
                 if (!isCancelled()) {
-                    WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampException.ERROR_PREFIX+".call_error", "Error calling method " + procedureURI, ex.getMessage());
+                    WampProtocol.sendCallError(clientSocket, callID, WampException.ERROR_PREFIX+".call_error", "Error calling method " + procedureURI, ex.getMessage());
                 }
                 logger.log(Level.SEVERE, "Error calling method " + procedureURI, ex);
-            }
-        } finally {
-            clientSocket.removeRpcController(callID);
-            if (isCancelled()) {
-                WampProtocol.sendCallError(clientSocket, callErrorMsgType, callID, WampApplication.WAMP_ERROR_URI + ".CanceledByCaller", "RPC cancelled by caller: " + callID, null);
             }
         }
     }
     
-    public void cancel(String cancelMode) {
+    
+    public void sendCallResults()
+    {
+        if (isCancelled()) {
+            WampProtocol.sendCallError(clientSocket, callID, WampApplication.WAMP_ERROR_URI + ".CanceledByCaller", "RPC cancelled by caller: " + callID, null);
+        } else {
+            WampProtocol.sendCallResult(clientSocket, callID, getResult(), getResultKw());
+            done = true;
+        }
+        
+        clientSocket.removeRpcController(callID);           
+    }
+    
+    
+    public void cancel(WampDict cancelOptions) {
         if(!done) {
             cancelled = true;
 
             if (future != null) {
+                String cancelMode = cancelOptions.has("mode")? cancelOptions.get("mode").asText() : null;
                 boolean mayInterruptIfRunning = (cancelMode != null) && !cancelMode.equalsIgnoreCase("skip");
                 future.cancel(mayInterruptIfRunning);
             }
 
             if(cancellableCall != null) {
-                cancellableCall.cancel(cancelMode);
+                cancellableCall.cancel(cancelOptions);
             }
         }
     }
@@ -165,7 +175,7 @@ public class WampCallController implements Runnable
     }
     
     /**
-     * @param arguments the arguments to set
+     * @param argumentsKw the arguments to set
      */
     public void setArgumentsKw(WampDict argumentsKw) {
         this.argumentsKw = argumentsKw;

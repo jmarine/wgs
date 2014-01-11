@@ -12,18 +12,22 @@ import org.wgs.util.MessageBroker;
 public class WampModule 
 {
     private WampApplication app;
-    private HashMap<String,Method> rpcs;
-    
-    public WampModule(WampApplication app) {
+    private HashMap<String,WampMethod> rpcsByName;
+    private HashMap<Long,WampRemoteMethod> rpcsById;
+
+
+    public WampModule(WampApplication app) 
+    {
         String moduleName = app.normalizeModuleName(getModuleName());
         this.app = app;
-        rpcs = new HashMap<String,Method>();
+        rpcsById = new HashMap<Long,WampRemoteMethod>();
+        rpcsByName = new HashMap<String,WampMethod>();
         for(Method method : this.getClass().getMethods()) {
             WampRPC rpc = method.getAnnotation(WampRPC.class);
             if(rpc != null) {
                 String name = rpc.name();
                 if(name.length() == 0) name = method.getName();
-                rpcs.put(moduleName + name, method);
+                rpcsByName.put(moduleName + name, new WampLocalMethod(this,method));
             }
         }
         
@@ -50,36 +54,9 @@ public class WampModule
     @SuppressWarnings("unchecked")
     public Object onCall(WampCallController task, WampSocket clientSocket, String methodName, WampList args, WampDict argsKw, WampCallOptions options) throws Exception 
     {
-        Method method = rpcs.get(methodName);
+        WampMethod method = rpcsByName.get(methodName);
         if(method != null) {
-            int argCount = 0;
-            ArrayList params = new ArrayList();
-            for(Class paramType : method.getParameterTypes()) {
-                if(paramType.isInstance(clientSocket)) {  // WampSocket parameter info
-                    params.add(clientSocket);
-                } else if(paramType.isInstance(app)) {    // WampApplication parameter info
-                    params.add(app);
-                } else if(WampCallController.class.isAssignableFrom(paramType)) {
-                    params.add(task);                    
-                } else if(WampCallOptions.class.isAssignableFrom(paramType)) {
-                    params.add(options);
-                } else if(WampList.class.isAssignableFrom(paramType)) {
-                    params.add(args.subList(argCount, args.size()));    // Only a list with the rest of the received arguments
-                    argCount = args.size();                    
-                } else if(WampDict.class.isAssignableFrom(paramType)) {
-                    Object nextParam = (argCount < args.size())? args.get(argCount) : null;
-                    if(nextParam != null && paramType.isInstance(nextParam)) {
-                        params.add(nextParam);
-                        argCount++;
-                    } else {
-                        params.add(argsKw);  
-                    }
-                } else {
-                    Object val = args.get(argCount++).getObject();
-                    params.add(val);
-                }
-            }
-            return method.invoke(this, params.toArray());
+            return method.invoke(task,clientSocket,args,argsKw,options);
         }
 
         throw new WampException(WampException.ERROR_PREFIX+".method_unknown", "Method not implemented: " + methodName);
@@ -124,8 +101,35 @@ public class WampModule
         }
     }
     
-    public void onPublish(Long publicationId, WampSocket clientSocket, WampTopic topic, WampList request) throws Exception 
+    public void onRegister(Long registrationId, WampSocket clientSocket, String procedureURI, WampList request) throws Exception
     {
+        Long requestId = request.get(1).asLong();
+        WampDict options = (WampDict)request.get(2);
+        if(procedureURI == null || rpcsByName.equals(procedureURI)) {
+            if(requestId != null) WampProtocol.sendRegisterError(clientSocket, requestId, "wamp.error.procedure_already_exists");
+            throw new WampException("wamp.error.procedure_already_exists", "procedure alread exists");
+        } else {
+            WampRemoteMethod method = new WampRemoteMethod(registrationId, procedureURI, clientSocket);
+            rpcsById.put(registrationId, method);  
+            rpcsByName.put(procedureURI, method);
+            if(requestId != null) WampProtocol.sendRegisteredMessage(clientSocket, requestId, registrationId);
+        }
+    }
+    
+    public void onUnregister(WampSocket clientSocket, Long requestId, Long registrationId) throws Exception
+    {
+        WampRemoteMethod method = rpcsById.remove(registrationId);
+        if(method == null) {
+            throw new WampException("wamp.error.registration_not_found","registrationId doesn't exists");
+        } else {
+            rpcsByName.remove(method.getProcedureURI());
+            if(requestId != null) WampProtocol.sendRegisteredMessage(clientSocket, requestId, registrationId);
+        }        
+    }    
+    
+    public void onPublish(WampSocket clientSocket, WampTopic topic, WampList request) throws Exception 
+    {
+        Long publicationId = WampProtocol.newId();
         WampPublishOptions options = new WampPublishOptions();
         Long requestId = null;
         WampObject event = null;

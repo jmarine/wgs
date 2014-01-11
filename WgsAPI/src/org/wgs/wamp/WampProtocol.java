@@ -3,11 +3,6 @@ package org.wgs.wamp;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
-import org.codehaus.jackson.node.TextNode;
 
 
 public class WampProtocol 
@@ -53,11 +48,10 @@ public class WampProtocol
         clientSocket.sendWampMessage(response);
     }
     
-    
-    public static void sendCallResult(WampSocket clientSocket, int callResponseMsgType, Long callID, WampList args, WampDict argsKw)
+    public static void sendCallProgress(WampSocket clientSocket, Long callID, WampList args, WampDict argsKw)
     {
         WampList response = new WampList();
-        response.add(callResponseMsgType);
+        response.add(72);
         response.add(callID);
         response.add(args);
         response.add(argsKw);
@@ -65,14 +59,24 @@ public class WampProtocol
         clientSocket.sendWampMessage(response);
     }    
     
+    public static void sendCallResult(WampSocket clientSocket, Long callID, WampList args, WampDict argsKw)
+    {
+        WampList response = new WampList();
+        response.add(73);
+        response.add(callID);
+        response.add(args);
+        response.add(argsKw);
+        
+        clientSocket.sendWampMessage(response);
+    }    
     
-    public static void sendCallError(WampSocket clientSocket, int callErrorMsgType, Long callID, String errorURI, String errorDesc, Object errorDetails)
+    public static void sendCallError(WampSocket clientSocket, Long callID, String errorURI, String errorDesc, Object errorDetails)
     {
         if(errorURI == null) errorURI = WampException.ERROR_PREFIX+".call_error";
         if(errorDesc == null) errorDesc = "";
 
         WampList response = new WampList();
-        response.add(callErrorMsgType);
+        response.add(74);
         response.add(callID);
         response.add(errorURI);
         
@@ -85,7 +89,7 @@ public class WampProtocol
         
         clientSocket.sendWampMessage(response);
     }    
-    
+
     
     public static void sendSubscribed(WampSocket clientSocket, Long requestId, Long subscriptionId)
     {    
@@ -227,5 +231,28 @@ public class WampProtocol
         }
 
     }
+
+    
+    public static void sendRegisteredMessage(WampSocket clientSocket, Long requestId, Long registrationId)
+    {    
+        WampList response = new WampList();
+        response.add(51);
+        response.add(requestId);
+        response.add(registrationId);
+        
+        clientSocket.sendWampMessage(response);
+    }      
+    
+    
+    public static void sendRegisterError(WampSocket clientSocket, Long requestId, String errorUri)
+    {    
+        WampList response = new WampList();
+        response.add(52);
+        response.add(requestId);
+        response.add(errorUri);
+        
+        clientSocket.sendWampMessage(response);
+    }
+        
     
 }

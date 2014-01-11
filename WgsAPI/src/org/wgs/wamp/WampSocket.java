@@ -30,6 +30,7 @@ public class WampSocket
     private long lastHeartBeat;
     private int versionSupport;
     private WampEncoding wampEncoding;
+    private WampDict helloDetails;
     
 
     public WampSocket(WampApplication app, Session session) 
@@ -109,7 +110,26 @@ public class WampSocket
         return state;
     }
     
-
+    
+    public void setHelloDetails(WampDict helloDetails)
+    {
+        this.helloDetails = helloDetails;
+    }
+    
+    public boolean supportProgressiveCalls()
+    {
+        boolean retval = true;
+        if(helloDetails != null) {
+            if(helloDetails.has("roles")) {
+                WampDict callerDetails = (WampDict)helloDetails.get("roles");
+                if(callerDetails.has("progressive")) {
+                    retval = callerDetails.get("progressive").asBoolean();
+                }
+            }
+        }
+        return retval;
+    }
+    
     /**
      * @param state the state to set
      */
