@@ -76,7 +76,6 @@ WgsClient.prototype = {
       arr[2].roles.subscriber = {};
       arr[2].roles.caller = {};
       arr[2].roles.callee = {};
-      
       this.send(JSON.stringify(arr));
   },
           
