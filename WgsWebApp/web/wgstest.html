@@ -1069,7 +1069,7 @@ function toggle_connect(create_user) {
         wgsclient = getWgsClient();
         if(create_user) {
             var email = prompt("Enter e-mail:");
-            if(email) wgsclient.register(user, pass, email, authentication);
+            if(email) wgsclient.registerUser(user, pass, email, authentication);
         } else if(user.length > 0) {
             wgsclient.login(user, pass, authentication);
         } else {
@@ -1120,6 +1120,31 @@ function openid_connect_menu(self) {
 
     });
 }
+
+
+function test_rpc_func(args,argsKw)
+{
+    return [3,2,1];
+}
+
+function test_register_rcp()
+{
+    wgsclient.registerRPC({}, "my_func", test_rpc_func).then(function() { alert("registered"); } );
+}
+
+function test_unregister_rcp()
+{
+    wgsclient.unregisterRPC({}, "my_func", test_rpc_func).then(function() { alert("unregistered"); } );
+}
+
+function test_call_rcp()
+{
+    wgsclient.call("my_func", [1,2,3], {}).then(
+            function(result,resultKw) { alert("Result: " + result)} ,
+            function(error) { alert("Error: " + error.errorURI)} 
+    );
+}
+
 
 </script>
 
@@ -1298,7 +1323,11 @@ function openid_connect_menu(self) {
   <div id="dev_section" class="section">
     <fieldset>
       <legend>Messages</legend>
-      <div id="messages"></div>
+      <div id="messages">
+          <button onclick="test_register_rcp();">Register RPC</button>
+          <button onclick="test_unregister_rcp();">Unregister RPC</button>          
+          <button onclick="test_call_rcp();">Call RPC</button>
+      </div>
     </fieldset>
   </div>
 </div>

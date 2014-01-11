@@ -19,6 +19,11 @@ WgsClient.prototype = {
   state: WgsClient.DISCONNECTED,
   groups: new Array(),
   calls: new Array(),
+  rpcHandlers: new Array(),
+  rpcRegistrationsById: new Array(),
+  rpcRegistrationsByURI: new Array(),
+  rpcRegistrationRequests: new Array(),
+  rpcUnregistrationRequests: new Array(),
   subscriptionRequests: new Array(),
   unsubscriptionRequests: new Array(),
   subscriptionsById: new Array(),
@@ -70,6 +75,7 @@ WgsClient.prototype = {
       arr[2].roles.publisher = {};
       arr[2].roles.subscriber = {};
       arr[2].roles.caller = {};
+      arr[2].roles.callee = {};
       
       this.send(JSON.stringify(arr));
   },
@@ -176,8 +182,29 @@ WgsClient.prototype = {
       this.send(JSON.stringify(arr));
   }, 
 
-
-
+  registerRPC: function(options, procedureURI, callback) {
+        var dfd = $.Deferred();            
+        var arr = [];
+        arr[0] = 50;  // REGISTER
+        arr[1] = this._newid();
+        arr[2] = options;
+        arr[3] = procedureURI;      
+        this.rpcRegistrationRequests[arr[1]] = [dfd, procedureURI, callback];
+        this.send(JSON.stringify(arr));
+        return dfd.promise();      
+  },
+  
+  unregisterRPC: function(options, procedureURI, callback) {
+        var registrationId = this.rpcRegistrationsByURI[procedureURI];
+        var dfd = $.Deferred();            
+        var arr = [];
+        arr[0] = 60;  // UNREGISTER
+        arr[1] = this._newid();
+        arr[2] = registrationId;
+        this.rpcUnregistrationRequests[arr[1]] = [dfd, procedureURI, callback];
+        this.send(JSON.stringify(arr));
+        return dfd.promise();      
+  },
   
   authreq: function(authKey, authExtra, callback) {
       if(!authExtra) authExtra = {};
@@ -243,7 +270,7 @@ WgsClient.prototype = {
   },
   
   
-  register: function(user, password, email, onstatechange) {
+  registerUser: function(user, password, email, onstatechange) {
       var client = this;
       client._connect(function(state, msg) {
         onstatechange(state, msg);
@@ -506,6 +533,72 @@ WgsClient.prototype = {
               } else {
                   // client.debug("subscription not found: " + topic);
               }            
+              
+          } else if(arr[0] == 51) {  // REGISTERED
+              var requestId = arr[1];
+              var registrationId = arr[2];
+              if(requestId && client.rpcRegistrationRequests[requestId]) {
+                  var promise = client.rpcRegistrationRequests[requestId][0];
+                  var procedureURI = client.rpcRegistrationRequests[requestId][1];
+                  var callback = client.rpcRegistrationRequests[requestId][2];
+                  client.rpcRegistrationsById[registrationId] = procedureURI;
+                  client.rpcRegistrationsByURI[procedureURI] = registrationId;
+                  client.rpcHandlers[registrationId] = callback;
+                  promise.resolve(requestId, registrationId);
+              }
+
+          } else if(arr[0] == 61) {  // UNREGISTERED                
+              var requestId = arr[1];
+              if(requestId && client.rpcUnregistrationRequests[requestId]) {
+                  var registrationId = arr[2];
+                  var promise = client.rpcUnregistrationRequests[requestId][0];
+                  var procedureURI = client.rpcUnregistrationRequests[requestId][1];
+                  promise.resolve(requestId,registrationId);
+                  delete client.rpcHandlers[registrationId];
+                  delete client.rpcUnregistrationRequests[requestId];                  
+                  //delete client.rpcRegistrationsById[registrationId];
+                  //delete client.rpcRegistrationsByURI[procedureURI];              
+              }
+              
+          } else if(arr[0] == 80) {  // INVOCATION
+              var requestId = arr[1];
+              try {
+                var registrationId = arr[2];
+                var details = arr[3];
+                var arguments = arr[4];
+                var argumentsKw = arr[5];
+                if(requestId && client.rpcHandlers[registrationId]) {
+                  var procedureURI = client.rpcRegistrationsById[registrationId];
+                  if(details && details.procedure) procedureURI = details.procedure;
+                  var callback = client.rpcHandlers[registrationId];
+                  
+                  var resultKw = {};
+                  var result = callback(procedureURI, arguments, argumentsKw, details);
+                  if(isFinite(result)) {
+                      result = [result];
+                  } else if(typeof(result) == "string") {
+                      result = [result];
+                  } else if(!(result instanceof Array)) {
+                      resultKw = result;
+                      result = [];
+                  }
+                  
+                  var arr = [];
+                  arr[0] = 83;  // 
+                  arr[1] = requestId;
+                  arr[2] = result;
+                  arr[3] = resultKw;
+                  client.send(JSON.stringify(arr)); 
+                }
+                
+              } catch(e) {
+                var arr = [];
+                arr[0] = 84;  // INVOCATION_ERROR
+                arr[1] = requestId;
+                arr[2] = "wamp.error.invalid_argument";
+                arr[3] = e;
+                client.send(JSON.stringify(arr)); 
+              }
 
           } else {
               client.debug("Server message not recognized: " + message.type);
