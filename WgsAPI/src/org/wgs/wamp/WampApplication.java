@@ -45,9 +45,9 @@ public class WampApplication
     private ConcurrentHashMap<String,WampSocket> sockets;    
     
     private TreeMap<String,WampMethod> rpcsByName;
-    private ConcurrentHashMap<String,WampRemoteMethod> calleePatterns;
-    private ConcurrentHashMap<Long,WampRemoteMethod>   calleeRegistrationById;
-    private ConcurrentHashMap<String,WampRemoteMethod> calleeRegistrationByUri;
+    private ConcurrentHashMap<String,WampCalleeRegistration> calleePatterns;
+    private ConcurrentHashMap<Long,WampCalleeRegistration>   calleeRegistrationById;
+    private ConcurrentHashMap<String,WampCalleeRegistration> calleeRegistrationByUri;
     
     
     
@@ -66,9 +66,9 @@ public class WampApplication
         this.sockets = new ConcurrentHashMap<String,WampSocket>();
         this.modules = new HashMap<String,WampModule>();
         this.rpcsByName = new TreeMap<String,WampMethod>();
-        this.calleeRegistrationById = new ConcurrentHashMap<Long,WampRemoteMethod>();
-        this.calleeRegistrationByUri = new ConcurrentHashMap<String,WampRemoteMethod>();
-        this.calleePatterns = new ConcurrentHashMap<String,WampRemoteMethod>();
+        this.calleeRegistrationById = new ConcurrentHashMap<Long,WampCalleeRegistration>();
+        this.calleeRegistrationByUri = new ConcurrentHashMap<String,WampCalleeRegistration>();
+        this.calleePatterns = new ConcurrentHashMap<String,WampCalleeRegistration>();
         
         this.registerWampModule(WampCRA.class);
         
@@ -310,24 +310,26 @@ public class WampApplication
     {
         ArrayList<WampMethod> retval = new ArrayList<WampMethod>();
 
-        WampMethod method = rpcsByName.get(name);
-        if(method != null) retval.add(method);
+        WampMethod localMethod = rpcsByName.get(name);
+        if(localMethod != null) retval.add(localMethod);
         
         String partition = null;
         if(options != null && options.getRunOn() == WampCallOptions.RunOnEnum.partition) partition = options.getPartition();
 
-        for(WampRemoteMethod registration : calleePatterns.values()) {
-            if(WampServices.isUriMatchingWithRegExp(name, registration.getRegExp())
-                    && registration.hasPartition(partition)) {
-                retval.add(registration);
-                break;
+        for(WampCalleeRegistration registration : calleePatterns.values()) {
+            if(WampServices.isUriMatchingWithRegExp(name, registration.getRegExp())) {
+                for(WampRemoteMethod remoteMethod : registration.getRemoteMethods()) {
+                    if(remoteMethod.hasPartition(partition)) {
+                        retval.add(remoteMethod);
+                    }
+                }
             }
         }
         
         return retval;
     }
     
-    public WampRemoteMethod getRegistration(Long registrationId)
+    public WampCalleeRegistration getRegistration(Long registrationId)
     {
         return calleeRegistrationById.get(registrationId);
     }
@@ -368,14 +370,15 @@ public class WampApplication
 
 
             
-        WampRemoteMethod registration = calleeRegistrationByUri.get(methodUriOrPattern);
+        WampCalleeRegistration registration = calleeRegistrationByUri.get(methodUriOrPattern);
         if(registration == null) {
             Long registrationId = WampProtocol.newId();  
-            registration = new WampRemoteMethod(registrationId, matchType, methodUriOrPattern, options);
+            registration = new WampCalleeRegistration(registrationId, matchType, methodUriOrPattern);
             calleeRegistrationById.put(registrationId, registration);
             calleeRegistrationByUri.put(methodUriOrPattern, registration);
             if(matchType != MatchEnum.exact) calleePatterns.put(methodUriOrPattern, registration);
         }               
+        
         
         try {
             WampModule module = app.getDefaultWampModule();
@@ -396,7 +399,7 @@ public class WampApplication
         Long registrationId = request.get(2).asLong();
         
         try {
-            WampRemoteMethod registration = calleeRegistrationById.get(registrationId);
+            WampCalleeRegistration registration = calleeRegistrationById.get(registrationId);
             WampModule module = app.getDefaultWampModule();
             module.onUnregister(clientSocket, requestId, registrationId);
             //calleeRegistrationById.remove(registration.getProcedureURI());

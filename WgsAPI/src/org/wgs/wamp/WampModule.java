@@ -101,20 +101,22 @@ public class WampModule
         }
     }
     
-    public void onRegister(Long registrationId, WampSocket clientSocket, WampRemoteMethod method, MatchEnum matchType, String methodUriOrPattern, WampList request) throws Exception
+    public void onRegister(Long registrationId, WampSocket clientSocket, WampCalleeRegistration registration, MatchEnum matchType, String methodUriOrPattern, WampList request) throws Exception
     {
         Long requestId = request.get(1).asLong();
         WampDict options = (WampDict)request.get(2);
-        method.addRemotePeer(registrationId, clientSocket);
+        
+        WampRemoteMethod remoteMethod = new WampRemoteMethod(registration.getId(), clientSocket, matchType, options);
+        registration.addRemoteMethod(clientSocket.getSessionId(), remoteMethod);
     }
     
     public void onUnregister(WampSocket clientSocket, Long requestId, Long registrationId) throws Exception
     {
-        WampRemoteMethod registration = app.getRegistration(registrationId);
+        WampCalleeRegistration registration = app.getRegistration(registrationId);
         if(registration == null) {
             throw new WampException("wamp.error.registration_not_found","registrationId doesn't exists");
         } else {
-            registration.removeRemotePeer(registrationId);
+            registration.removeRemoteMethod(clientSocket.getSessionId());
             //rpcsByName.remove(method.getProcedureURI());
             if(requestId != null) WampProtocol.sendRegisteredMessage(clientSocket, requestId, registrationId);
         }

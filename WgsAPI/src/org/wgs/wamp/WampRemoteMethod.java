@@ -1,6 +1,5 @@
 package org.wgs.wamp;
 
-import java.util.Collection;
 import java.util.HashMap;
 
 
@@ -8,34 +7,22 @@ public class WampRemoteMethod extends WampMethod
 {
     private Long registrationId;
     
+    private WampSocket remotePeer;
+    
     private MatchEnum matchType;
     
-    private String methodRegExp;
-    
     private WampDict options;
-    
-    private HashMap<Long,WampSocket> remotePeers = new HashMap<Long,WampSocket>();
-    
+
     private HashMap<Long,WampSocket> pendingInvocations = new HashMap<Long,WampSocket>();
     
     
-    public WampRemoteMethod(Long registrationId, MatchEnum matchType, String methodUriOrPattern, WampDict options)
+    public WampRemoteMethod(Long registrationId, WampSocket remotePeer, MatchEnum matchType, WampDict options)
     {
-        super(methodUriOrPattern);
+        super(null);
         this.registrationId = registrationId;
+        this.remotePeer = remotePeer;
         this.matchType = matchType;
-        this.methodRegExp = WampServices.getPatternRegExp(matchType, methodUriOrPattern);
         this.options = options;
-    }
-    
-    public Long getId()
-    {
-        return this.registrationId;
-    }    
-    
-    public String getRegExp()
-    {
-        return methodRegExp;
     }
     
     public boolean hasPartition(String partition)
@@ -50,45 +37,16 @@ public class WampRemoteMethod extends WampMethod
     }
     
     
-    
-    public void addRemotePeer(Long registrationId, WampSocket remotePeer)
-    {
-        
-        remotePeers.put(registrationId, remotePeer);
-    }
-    
-    public void removeRemotePeer(Long registrationId)
-    {
-        remotePeers.remove(registrationId);
-    }
-    
-    public WampSocket getRemotePeer(Long registrationId)
-    {
-        return remotePeers.get(registrationId);
-    }
-    
-    
-    public Collection<Long> selectRemotePeers(WampCallOptions callOptions)
-    {
-        return remotePeers.keySet();
-    }
-    
     @Override
     public Object invoke(final WampCallController task, WampSocket clientSocket, final WampList args, final WampDict argsKw, final WampCallOptions callOptions) throws Exception
     {
-        final Collection<Long> registrationIds = selectRemotePeers(callOptions);
-        final HashMap<Long,Long> invocationIdByRegistrationId = new HashMap<Long,Long>();
-        for(Long registrationId : registrationIds) {
-            invocationIdByRegistrationId.put(registrationId, WampProtocol.newId());
-        }
+        final Long invocationId = WampProtocol.newId();
 
         return new WampAsyncCall() {
             
             @Override
             public void call() throws Exception {
-                for(Long registrationId : registrationIds) {
-                    WampSocket remotePeer = getRemotePeer(registrationId);
-                    Long invocationId = invocationIdByRegistrationId.get(registrationId);
+
                     remotePeer.addRpcController(invocationId, task);
 
                     WampDict invocationOptions = new WampDict();
@@ -102,19 +60,16 @@ public class WampRemoteMethod extends WampMethod
                     msg.add(args);
                     msg.add(argsKw);                
                     remotePeer.sendWampMessage(msg); 
-                }
+
             }
 
             @Override
             public void cancel(WampDict cancelOptions) {
-                for(Long registrationId : registrationIds) {
-                    WampSocket remotePeer = getRemotePeer(registrationId);
                     WampList msg = new WampList();
                     msg.add(81);
-                    msg.add(invocationIdByRegistrationId.get(registrationId));
+                    msg.add(invocationId);
                     msg.add(cancelOptions);
                     remotePeer.sendWampMessage(msg);
-                }
             }            
         };
 
