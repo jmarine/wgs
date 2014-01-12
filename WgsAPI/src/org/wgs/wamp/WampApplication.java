@@ -31,8 +31,6 @@ public class WampApplication
     public  static final int WAMPv1 = 1;
     public  static final int WAMPv2 = 2;   
 
-    public  static final String WAMP_ERROR_URI = "http://wamp.ws/err";
-
     private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
 
     private int     wampVersion;
