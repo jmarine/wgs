@@ -153,7 +153,7 @@ public class WampProtocol
             
             Object[] msg = new Object[WampEncoding.values().length];
             
-            if(subscription.getOptions().getMatchType() == WampSubscriptionOptions.MatchEnum.exact) {
+            if(subscription.getOptions().getMatchType() == MatchEnum.exact) {
                 eventDetails.remove("topic");
             } else {
                 eventDetails.put("topic", topic.getURI());

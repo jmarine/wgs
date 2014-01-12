@@ -1,9 +1,20 @@
 package org.wgs.wamp;
 
 
-public interface WampMethod 
+public abstract class WampMethod 
 {
-    Object invoke(WampCallController task, WampSocket clientSocket, WampList args, WampDict argsKw, WampCallOptions options)
+    private String uri;
+    
+    public WampMethod(String uri) {
+        this.uri = uri;
+    }
+    
+    public String getProcedureURI()
+    {
+        return uri;
+    }
+    
+    public abstract Object invoke(WampCallController task, WampSocket clientSocket, WampList args, WampDict argsKw, WampCallOptions options)
         throws Exception;
     
 }

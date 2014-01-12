@@ -100,16 +100,16 @@ public class WampServices
     }
     
     
-    private static String getTopicRegExp(WampSubscriptionOptions.MatchEnum matchType, String topicPattern)
+    public static String getPatternRegExp(MatchEnum matchType, String pattern)
     {
-        String regexp = topicPattern.replace("..", "%").replace(".","\\.");
-        regexp = (matchType==WampSubscriptionOptions.MatchEnum.prefix)? regexp.replace("%", ".*") : regexp.replace("%", "\\..+\\.");
+        String regexp = pattern.replace("..", "%").replace(".","\\.");
+        regexp = (matchType==MatchEnum.prefix)? regexp.replace("%", ".*") : regexp.replace("%", "\\..+\\.");
         return regexp;
     }
 
-    private static boolean isUriMatchingWithRegExp(String topicFQname, String regExp) 
+    public static boolean isUriMatchingWithRegExp(String uri, String regExp) 
     {
-        return (topicFQname.matches(regExp));
+        return (uri.matches(regExp));
     }
 
     
@@ -120,7 +120,7 @@ public class WampServices
     }  
     
     
-    public static Collection<WampTopic> getTopics(WampSubscriptionOptions.MatchEnum matchType, String topicUriOrPattern)
+    public static Collection<WampTopic> getTopics(MatchEnum matchType, String topicUriOrPattern)
     {
         WampSubscription subscription = topicSubscriptionsByTopicURI.get(topicUriOrPattern);
         
@@ -130,13 +130,13 @@ public class WampServices
             
         } else {
         
-            if(matchType != WampSubscriptionOptions.MatchEnum.exact) {  // prefix or wildcards
+            if(matchType != MatchEnum.exact) {  // prefix or wildcards
                 ArrayList<WampTopic> retval = new ArrayList<WampTopic>();
                 int wildcardPos = topicUriOrPattern.indexOf("..");
                 String topicUriBegin = topicUriOrPattern.substring(0, wildcardPos);
                 String topicUriEnd = topicUriBegin + "~";
                 NavigableMap<String,WampTopic> navMap = topics.subMap(topicUriBegin, true, topicUriEnd, false);
-                String regExp = getTopicRegExp(matchType, topicUriOrPattern);
+                String regExp = getPatternRegExp(matchType, topicUriOrPattern);
                 for(WampTopic topic : navMap.values()) {
                     if(isUriMatchingWithRegExp(topic.getURI(), regExp)) {
                         retval.add(topic);
@@ -177,7 +177,7 @@ public class WampServices
         
         topicUriOrPattern = clientSocket.normalizeURI(topicUriOrPattern);
         if(options == null) options = new WampSubscriptionOptions(null);
-        if(options.getMatchType() == WampSubscriptionOptions.MatchEnum.prefix && !topicUriOrPattern.endsWith("..")) {
+        if(options.getMatchType() == MatchEnum.prefix && !topicUriOrPattern.endsWith("..")) {
             topicUriOrPattern = topicUriOrPattern + "..";
         }
         
@@ -185,9 +185,7 @@ public class WampServices
         if(subscription == null) {
             Long subscriptionId = WampProtocol.newId();  
             Collection<WampTopic> matchingTopics = WampServices.getTopics(options.getMatchType(), topicUriOrPattern);            
-            String regExp = getTopicRegExp(options.getMatchType(), topicUriOrPattern);
-            
-            subscription = new WampSubscription(subscriptionId, regExp, matchingTopics, options);
+            subscription = new WampSubscription(subscriptionId, options.getMatchType(), topicUriOrPattern, matchingTopics, options);
             topicSubscriptionsById.put(subscriptionId, subscription);
             topicSubscriptionsByTopicURI.put(topicUriOrPattern, subscription);
         }        

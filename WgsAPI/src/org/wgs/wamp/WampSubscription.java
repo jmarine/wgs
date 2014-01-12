@@ -4,7 +4,7 @@ package org.wgs.wamp;
 import java.util.Collection;
 import java.util.Set;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import org.wgs.util.RefCount;
 
 
 public class WampSubscription 
@@ -20,10 +20,10 @@ public class WampSubscription
     private Collection<WampTopic> topics = null;
     
     
-    public WampSubscription(Long subscriptionId, String topicRegExp, Collection<WampTopic> topics, WampSubscriptionOptions options) 
+    public WampSubscription(Long subscriptionId, MatchEnum matchType, String topicUriOrPattern, Collection<WampTopic> topics, WampSubscriptionOptions options) 
     {
         this.subscriptionId = subscriptionId;
-        this.topicRegExp = topicRegExp;        
+        this.topicRegExp = WampServices.getPatternRegExp(matchType, topicUriOrPattern);        
         this.topics  = topics;
         this.options = (options != null)? options : new WampSubscriptionOptions(null);
     }
@@ -91,30 +91,6 @@ public class WampSubscription
     public WampSubscriptionOptions getOptions()
     {
         return options;
-    }
-    
-}
-
-
-class RefCount<T>
-{
-    private T obj;
-    private AtomicInteger counter;
-    
-    RefCount(T obj, int initialRefCount)
-    {
-        this.obj = obj;
-        this.counter = new AtomicInteger(initialRefCount);
-    }
-    
-    public int refCount(int delta)
-    {
-        return counter.addAndGet(delta);
-    }
-    
-    public T getObject()
-    {
-        return obj;
     }
     
 }

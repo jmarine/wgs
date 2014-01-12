@@ -3,6 +3,7 @@ package org.wgs.wamp;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -12,22 +13,21 @@ import org.wgs.util.MessageBroker;
 public class WampModule 
 {
     private WampApplication app;
-    private HashMap<String,WampMethod> rpcsByName;
-    private HashMap<Long,WampRemoteMethod> rpcsById;
+
 
 
     public WampModule(WampApplication app) 
     {
         String moduleName = app.normalizeModuleName(getModuleName());
         this.app = app;
-        rpcsById = new HashMap<Long,WampRemoteMethod>();
-        rpcsByName = new HashMap<String,WampMethod>();
+
         for(Method method : this.getClass().getMethods()) {
             WampRPC rpc = method.getAnnotation(WampRPC.class);
             if(rpc != null) {
                 String name = rpc.name();
                 if(name.length() == 0) name = method.getName();
-                rpcsByName.put(moduleName + name, new WampLocalMethod(this,method));
+                name = moduleName + name;
+                app.createRPC(name, new WampLocalMethod(name,this,method));
             }
         }
         
@@ -54,9 +54,9 @@ public class WampModule
     @SuppressWarnings("unchecked")
     public Object onCall(WampCallController task, WampSocket clientSocket, String methodName, WampList args, WampDict argsKw, WampCallOptions options) throws Exception 
     {
-        WampMethod method = rpcsByName.get(methodName);
-        if(method != null) {
-            return method.invoke(task,clientSocket,args,argsKw,options);
+        Collection<WampMethod> methods = app.getRPCs(methodName, options);
+        if(methods != null && methods.size() > 0) {
+            return methods.iterator().next().invoke(task,clientSocket,args,argsKw,options);
         }
 
         throw new WampException(WampException.ERROR_PREFIX+".method_unknown", "Method not implemented: " + methodName);
@@ -101,30 +101,23 @@ public class WampModule
         }
     }
     
-    public void onRegister(Long registrationId, WampSocket clientSocket, String procedureURI, WampList request) throws Exception
+    public void onRegister(Long registrationId, WampSocket clientSocket, WampRemoteMethod method, MatchEnum matchType, String methodUriOrPattern, WampList request) throws Exception
     {
         Long requestId = request.get(1).asLong();
         WampDict options = (WampDict)request.get(2);
-        if(procedureURI == null || rpcsByName.equals(procedureURI)) {
-            if(requestId != null) WampProtocol.sendRegisterError(clientSocket, requestId, "wamp.error.procedure_already_exists");
-            throw new WampException("wamp.error.procedure_already_exists", "procedure alread exists");
-        } else {
-            WampRemoteMethod method = new WampRemoteMethod(registrationId, procedureURI, clientSocket);
-            rpcsById.put(registrationId, method);  
-            rpcsByName.put(procedureURI, method);
-            if(requestId != null) WampProtocol.sendRegisteredMessage(clientSocket, requestId, registrationId);
-        }
+        method.addRemotePeer(registrationId, clientSocket);
     }
     
     public void onUnregister(WampSocket clientSocket, Long requestId, Long registrationId) throws Exception
     {
-        WampRemoteMethod method = rpcsById.remove(registrationId);
-        if(method == null) {
+        WampRemoteMethod registration = app.getRegistration(registrationId);
+        if(registration == null) {
             throw new WampException("wamp.error.registration_not_found","registrationId doesn't exists");
         } else {
-            rpcsByName.remove(method.getProcedureURI());
+            registration.removeRemotePeer(registrationId);
+            //rpcsByName.remove(method.getProcedureURI());
             if(requestId != null) WampProtocol.sendRegisteredMessage(clientSocket, requestId, registrationId);
-        }        
+        }
     }    
     
     public void onPublish(WampSocket clientSocket, WampTopic topic, WampList request) throws Exception 

@@ -1122,24 +1122,24 @@ function openid_connect_menu(self) {
 }
 
 
-function test_rpc_func(args,argsKw)
+function test_rpc_func(args,argsKw,opts)
 {
     return [3,2,1];
 }
 
 function test_register_rcp()
 {
-    wgsclient.registerRPC({}, "my_func", test_rpc_func).then(function() { alert("registered"); } );
+    wgsclient.registerRPC({"match": "prefix"}, "mymodule", test_rpc_func).then(function() { alert("registered"); } );
 }
 
 function test_unregister_rcp()
 {
-    wgsclient.unregisterRPC({}, "my_func", test_rpc_func).then(function() { alert("unregistered"); } );
+    wgsclient.unregisterRPC({"match": "prefix"}, "mymodule", test_rpc_func).then(function() { alert("unregistered"); } );
 }
 
 function test_call_rcp()
 {
-    wgsclient.call("my_func", [1,2,3], {}).then(
+    wgsclient.call("mymodule.myfunc", [1,2,3], {}).then(
             function(result,resultKw) { alert("Result: " + result)} ,
             function(error) { alert("Error: " + error.errorURI)} 
     );

@@ -4,15 +4,16 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 
-public class WampLocalMethod implements WampMethod
+public class WampLocalMethod extends WampMethod
 {
     private Method method;
     private WampModule module;
     private WampApplication app;
     
     
-    public WampLocalMethod(WampModule module, Method method)
+    public WampLocalMethod(String uri, WampModule module, Method method)
     {
+        super(uri);
         this.method = method;
         this.module = module;
         this.app = module.getWampApplication();

@@ -3,29 +3,36 @@ package org.wgs.wamp;
 
 public class WampCallOptions 
 {
-    public enum PartitionModeEnum { all, any }
+    public enum RunOnEnum   { all, any, partition }
+    public enum RunModeEnum { gather, progressive }
     
     private int timeout;
-    private WampList partitionKeys;
-    private PartitionModeEnum partitionMode;
+    private String rkey;
+    private RunOnEnum runOn;
+    private RunModeEnum runMode;
     
     public WampCallOptions(WampDict options) 
     {
         this.timeout = 0;
-        this.partitionMode = PartitionModeEnum.all;
+        this.runOn = RunOnEnum.all;
         
         if(options != null) {
-            if(options.has("TIMEOUT")) {
-                setTimeout(options.get("TIMEOUT").asLong().intValue());
+            
+            if(options.has("timeout")) {
+                setTimeout(options.get("timeout").asLong().intValue());
             }
             
-            if(options.has("PKEYS")) {
-                setPartitionKeys((WampList)options.get("PKEYS"));
-            }
-            
-            if(options.has("PMODE")) {
-                setPartitionMode(PartitionModeEnum.valueOf(options.get("PMODE").asText()));
+            if(options.has("runon")) {
+                setRunOn(RunOnEnum.valueOf(options.get("runon").asText()));
+                if(runOn == RunOnEnum.partition) {
+                    setPartition(options.get("rkey").asText());
+                }
             }                 
+            
+            if(options.has("runmode")) {
+                setRunMode(RunModeEnum.valueOf(options.get("runmode").asText()));
+            }
+            
         }
     }
 
@@ -45,31 +52,46 @@ public class WampCallOptions
     }
 
     /**
-     * @return the partitionKeys
+     * @return the rkey
      */
-    public WampList getPartitionKeys() {
-        return partitionKeys;
+    public String getPartition() {
+        return rkey;
     }
 
     /**
-     * @param partitionKeys the partitionKeys to set
+     * @param rkey the rkey to set
      */
-    public void setPartitionKeys(WampList partitionKeys) {
-        this.partitionKeys = partitionKeys;
+    public void setPartition(String rkey) {
+        this.rkey = rkey;
     }
 
     /**
-     * @return the partitionMode
+     * @return the runon call option
      */
-    public PartitionModeEnum getPartitionMode() {
-        return partitionMode;
+    public RunOnEnum getRunOn() {
+        return runOn;
     }
 
     /**
-     * @param partitionMode the partitionMode to set
+     * @param runon the runon to set
      */
-    public void setPartitionMode(PartitionModeEnum partitionMode) {
-        this.partitionMode = partitionMode;
+    public void setRunOn(RunOnEnum runon) {
+        this.runOn = runon;
     }
+    
+    /**
+     * @return the runMode call option
+     */
+    public RunModeEnum getRunMode() {
+        return runMode;
+    }
+
+    /**
+     * @param runMode the runMode to set
+     */
+    public void setRunMode(RunModeEnum runMode) {
+        this.runMode = runMode;
+    }
+        
     
 }

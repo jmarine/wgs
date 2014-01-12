@@ -567,12 +567,10 @@ WgsClient.prototype = {
                 var arguments = arr[4];
                 var argumentsKw = arr[5];
                 if(requestId && client.rpcHandlers[registrationId]) {
-                  var procedureURI = client.rpcRegistrationsById[registrationId];
-                  if(details && details.procedure) procedureURI = details.procedure;
                   var callback = client.rpcHandlers[registrationId];
                   
                   var resultKw = {};
-                  var result = callback(procedureURI, arguments, argumentsKw, details);
+                  var result = callback(arguments, argumentsKw, details);
                   if(isFinite(result)) {
                       result = [result];
                   } else if(typeof(result) == "string") {

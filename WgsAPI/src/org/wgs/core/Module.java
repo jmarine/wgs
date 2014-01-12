@@ -35,6 +35,7 @@ import org.wgs.entity.OpenIdConnectClient;
 import org.wgs.entity.OpenIdConnectClientPK;
 import org.wgs.entity.OpenIdConnectProvider;
 import org.wgs.util.Base64;
+import org.wgs.wamp.MatchEnum;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampCallController;
 import org.wgs.wamp.WampCallOptions;
@@ -112,7 +113,7 @@ public class Module extends WampModule
             WampDict filterOptions = (WampDict)args.get(1);
             GroupFilter options = new GroupFilter(this, filterOptions);
             options.setMetaEvents(java.util.Arrays.asList(WampMetaTopic.SUBSCRIBER_ADDED, WampMetaTopic.SUBSCRIBER_REMOVED));
-            if(appId.indexOf("*") != -1) options.setMatchType(WampSubscriptionOptions.MatchEnum.wildcard);
+            if(appId.indexOf("*") != -1) options.setMatchType(MatchEnum.wildcard);
              
             //WampServices.subscribeClientWithTopic(wampApp, socket, null, getFQtopicURI("app_event:"+appId), options);
             retval = listGroups(socket, appId, options);

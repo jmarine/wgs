@@ -8,8 +8,6 @@ import org.codehaus.jackson.JsonNode;
 public class WampSubscriptionOptions 
 {
 
-    public  enum MatchEnum { exact, prefix, wildcard };
-
     private MatchEnum    matchType;
     private boolean      eventsEnabled;
     private HashSet<String> metaEvents;

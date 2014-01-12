@@ -1,9 +1,13 @@
 package org.wgs.wamp;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -39,7 +43,13 @@ public class WampApplication
     private WampModule defaultModule;
     private ExecutorService executorService;
     private ConcurrentHashMap<String,WampSocket> sockets;    
-    private ConcurrentHashMap<Long,String> registeredProceduresUriById;
+    
+    private TreeMap<String,WampMethod> rpcsByName;
+    private ConcurrentHashMap<String,WampRemoteMethod> calleePatterns;
+    private ConcurrentHashMap<Long,WampRemoteMethod>   calleeRegistrationById;
+    private ConcurrentHashMap<String,WampRemoteMethod> calleeRegistrationByUri;
+    
+    
     
     
     public WampApplication(int version, Class endpointClass, String path)
@@ -55,7 +65,10 @@ public class WampApplication
         
         this.sockets = new ConcurrentHashMap<String,WampSocket>();
         this.modules = new HashMap<String,WampModule>();
-        this.registeredProceduresUriById = new ConcurrentHashMap<Long,String>();
+        this.rpcsByName = new TreeMap<String,WampMethod>();
+        this.calleeRegistrationById = new ConcurrentHashMap<Long,WampRemoteMethod>();
+        this.calleeRegistrationByUri = new ConcurrentHashMap<String,WampRemoteMethod>();
+        this.calleePatterns = new ConcurrentHashMap<String,WampRemoteMethod>();
         
         this.registerWampModule(WampCRA.class);
         
@@ -248,7 +261,7 @@ public class WampApplication
 
             // First remove subscriptions to topic patterns:
             for(WampSubscription subscription : clientSocket.getSubscriptions()) {
-                if(subscription.getOptions().getMatchType() != WampSubscriptionOptions.MatchEnum.exact) {  // prefix or wildcards
+                if(subscription.getOptions().getMatchType() != MatchEnum.exact) {  // prefix or wildcards
                     WampServices.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
                 }
             }
@@ -283,6 +296,42 @@ public class WampApplication
     }
 
     
+    public void createRPC(String name, WampMethod rpc)
+    {
+        this.rpcsByName.put(name,rpc);
+    }
+    
+    public void removeRPC(String name)
+    {
+        this.rpcsByName.remove(name);
+    }
+    
+    public Collection<WampMethod> getRPCs(String name, WampCallOptions options)
+    {
+        ArrayList<WampMethod> retval = new ArrayList<WampMethod>();
+
+        WampMethod method = rpcsByName.get(name);
+        if(method != null) retval.add(method);
+        
+        String partition = null;
+        if(options != null && options.getRunOn() == WampCallOptions.RunOnEnum.partition) partition = options.getPartition();
+
+        for(WampRemoteMethod registration : calleePatterns.values()) {
+            if(WampServices.isUriMatchingWithRegExp(name, registration.getRegExp())
+                    && registration.hasPartition(partition)) {
+                retval.add(registration);
+                break;
+            }
+        }
+        
+        return retval;
+    }
+    
+    public WampRemoteMethod getRegistration(Long registrationId)
+    {
+        return calleeRegistrationById.get(registrationId);
+    }
+    
     private void processPrefixMessage(WampSocket clientSocket, WampList request) throws Exception
     {
         String prefix = request.get(1).asText();
@@ -299,17 +348,46 @@ public class WampApplication
     
     public void processRegisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
-        Long registrationId = WampProtocol.newId();
         Long requestId = request.get(1).asLong();
-        String procedureURI = clientSocket.normalizeURI(request.get(3).asText());
+        WampDict options = (WampDict)request.get(2);
+        String methodUriOrPattern = clientSocket.normalizeURI(request.get(3).asText());
+        MatchEnum matchType = MatchEnum.exact;
+        if(options != null && options.has("match")) {
+            matchType = MatchEnum.valueOf(options.get("match").asText().toLowerCase());
+            
+        }
+        
+        if(rpcsByName.get(methodUriOrPattern) != null) {  // Don't override system functions
+            if(requestId != null) WampProtocol.sendRegisterError(clientSocket, requestId, "wamp.error.procedure_already_exists");
+            throw new WampException("wamp.error.procedure_already_exists", "procedure alread exists");
+        }
+        
+        if(matchType == MatchEnum.prefix && !methodUriOrPattern.endsWith("..")) {
+            methodUriOrPattern = methodUriOrPattern + "..";
+        }
+
+
+            
+        WampRemoteMethod registration = calleeRegistrationByUri.get(methodUriOrPattern);
+        if(registration == null) {
+            Long registrationId = WampProtocol.newId();  
+            registration = new WampRemoteMethod(registrationId, matchType, methodUriOrPattern, options);
+            calleeRegistrationById.put(registrationId, registration);
+            calleeRegistrationByUri.put(methodUriOrPattern, registration);
+            if(matchType != MatchEnum.exact) calleePatterns.put(methodUriOrPattern, registration);
+        }               
         
         try {
-            WampModule module = app.getWampModule(procedureURI, app.getDefaultWampModule());
-            module.onRegister(registrationId, clientSocket, procedureURI, request);
-            registeredProceduresUriById.put(registrationId, procedureURI);
+            WampModule module = app.getDefaultWampModule();
+            module.onRegister(registration.getId(), clientSocket, registration, matchType, methodUriOrPattern, request);
+
+            if(requestId != null) WampProtocol.sendRegisteredMessage(clientSocket, requestId, registration.getId());
+            
         } catch(Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
-        }  
+            WampProtocol.sendRegisterError(clientSocket, requestId, "wamp.error.not_authorized");
+        }
+        
     }    
 
     public void processUnregisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
@@ -318,10 +396,12 @@ public class WampApplication
         Long registrationId = request.get(2).asLong();
         
         try {
-            String procedureURI = registeredProceduresUriById.get(registrationId);
-            WampModule module = app.getWampModule(procedureURI, app.getDefaultWampModule());
+            WampRemoteMethod registration = calleeRegistrationById.get(registrationId);
+            WampModule module = app.getDefaultWampModule();
             module.onUnregister(clientSocket, requestId, registrationId);
-            registeredProceduresUriById.remove(procedureURI);
+            //calleeRegistrationById.remove(registration.getProcedureURI());
+            //calleeRegistrationPatterns.remove(registration.getProcedureURI());
+
         } catch(Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
         }  

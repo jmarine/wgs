@@ -8,7 +8,8 @@ import java.util.logging.Logger;
 public class WampCallController implements Runnable 
 {
     private static final Logger logger = Logger.getLogger(WampCallController.class.getName());
-    
+
+    private String procedureURI;
     private WampApplication app;
     private WampSocket clientSocket;
     private WampList request;
@@ -29,6 +30,7 @@ public class WampCallController implements Runnable
         this.app = app;
         this.clientSocket = clientSocket;
         this.request = request;
+        this.procedureURI = clientSocket.normalizeURI(request.get(3).asText());
     }
     
     
@@ -44,11 +46,15 @@ public class WampCallController implements Runnable
     public boolean isCancelled() {
         return !done && cancelled;
     }    
+    
+    public String getProcedureURI()
+    {
+        return procedureURI;
+    }
 
     @Override
     public void run() 
     {
-        String procedureURI = clientSocket.normalizeURI(request.get(3).asText());
         WampModule module = app.getWampModule(procedureURI, app.getDefaultWampModule());
 
         callID  = request.get(1).asLong();
