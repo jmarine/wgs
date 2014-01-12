@@ -495,7 +495,7 @@ function hide_group_list() {
     var appId = $("#apps").val();
     $("#group_list").hide();
     $("#app_list").slideDown(500);
-    wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, false);
+    wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, {});
 }
 
 function list_groups(scope) {
@@ -601,7 +601,7 @@ function reserve_group_slot(gid,slot) {
 function open_group(gid, options) {
     var appId = $("#apps").val();
     
-    wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, false);
+    wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, {});
     wgsclient.openGroup(appId, gid, options, function(result,resultKw) {
        if(resultKw && resultKw.valid) {
             //wgsclient.setSubscriptionStatus("wgs.app_event:" + appId, "busy", null );
@@ -925,7 +925,7 @@ function exit_group(toOfflineMode) {
     var gid = $("#group_gid").val();
     if(gid.length > 0) {
         wgsclient.exitGroup(gid, function(response) {
-            wgsclient.unsubscribe("wgs.group_event:" + gid, update_group_callback, null, true);
+            wgsclient.unsubscribe("wgs.group_event:" + gid, update_group_callback, null, {});
             //wgsclient.setSubscriptionStatus("wgs.app_event:" + $("#apps").val(), null, null );        
             
             if(!toOfflineMode) {
@@ -1129,12 +1129,12 @@ function test_rpc_func(args,argsKw,opts)
 
 function test_register_rcp()
 {
-    wgsclient.registerRPC({"match": "prefix"}, "mymodule", test_rpc_func).then(function() { alert("registered"); } );
+    wgsclient.registerRPC({"match": "exact"}, "mymodule.myfunc", test_rpc_func).then(function() { alert("registered"); } );
 }
 
 function test_unregister_rcp()
 {
-    wgsclient.unregisterRPC({"match": "prefix"}, "mymodule", test_rpc_func).then(function() { alert("unregistered"); } );
+    wgsclient.unregisterRPC({"match": "exact"}, "mymodule.myfunc", test_rpc_func).then(function() { alert("unregistered"); } );
 }
 
 function test_call_rcp()
@@ -1146,6 +1146,46 @@ function test_call_rcp()
             function(error) { msg_append_text("Error: " + error.errorURI)},
             function(progress,progressKw) { msg_append_text("Progress: " + JSON.stringify(progress)) }
         );
+}
+
+
+function on_mytopic_events(event,topicURI)
+{
+    msg_append_text("TopicURI: " + JSON.stringify(topicURI));
+    msg_append_text("Event: " + JSON.stringify(event));
+    msg_append_text("");
+}
+
+function on_mytopic_metaevents(topicURI, metatopic, metaevent)
+{
+    msg_append_text("Topic URI: " + JSON.stringify(topicURI));
+    msg_append_text("Metatopic: " + JSON.stringify(metatopic));
+    msg_append_text("Metaevent: " + JSON.stringify(metaevent));
+    msg_append_text("");
+}
+
+
+function test_subscribe()
+{
+    wgsclient.subscribe("myapp.topic1", on_mytopic_events, on_mytopic_metaevents, {"match": "exact"})
+        .then(
+            function(response) { alert("Subscribed: " + response); },
+            function(response) { alert("Error: " + response); }
+        );
+}
+
+function test_unsubscribe()
+{
+    wgsclient.unsubscribe("myapp.topic1", on_mytopic_events, on_mytopic_metaevents, {"match": "exact"})
+        .then(
+            function(response) { alert("Unsubscribed: " + response); },
+            function(response) { alert("Error: " + response); }
+        );
+}
+
+function test_publish()
+{
+    wgsclient.publish("myapp.topic1", { "item1" : 1 }, {});
 }
 
 function msg_append_text(text)
@@ -1338,7 +1378,11 @@ function msg_append_text(text)
     <button onclick="test_register_rcp();">Register RPC</button>
     <button onclick="test_unregister_rcp();">Unregister RPC</button>          
     <button onclick="test_call_rcp();">Call RPC</button>
-    <br>      
+    <br>  
+    <button onclick="test_subscribe();">Subscribe</button>
+    <button onclick="test_unsubscribe();">Unsubscribe</button>          
+    <button onclick="test_publish();">Publish</button>
+    <br>          
   </div>
 </div>
 </body>

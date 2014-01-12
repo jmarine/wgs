@@ -113,14 +113,14 @@ WgsClient.prototype = {
         if(!options) options = {};
         if(event_cb==null && metaevent_cb!=null) options.metaonly = 1;
         
+        if(!options.match && topic.indexOf("..") != -1) {
+            options.match = "wildcard";
+        }
+        
         if(options.match && options.match.toLowerCase() == "prefix") {
             topic = topic + "..";
         }
 
-        if(topic.indexOf("..") != -1) {
-            options.match = "wildcard";
-        }
-        
         var dfd = $.Deferred();            
         var arr = [];
         arr[0] = 10;  // SUBSCRIBE
@@ -151,15 +151,15 @@ WgsClient.prototype = {
         var client = this;
         
         if(!options) options = {};
-        if(options.match && options.match.toLowerCase() == "prefix") {
-            topic = topic + "..";
+        
+        if(!options.match && topic.indexOf("..") != -1) {
             options.match = "wildcard";
         }
         
-        if(topic.indexOf("..") != -1) {
-            options.match = "wildcard";
+        if(options.match && options.match.toLowerCase() == "prefix") {
+            topic = topic + "..";
         }
-
+        
         var dfd = $.Deferred();            
         var arr = [];
         arr[0] = 20;  // Unsubscribe message type
@@ -175,9 +175,10 @@ WgsClient.prototype = {
   publish: function(topic, event, options) {
       var arr = [];
       arr[0] = 30;  // PUBLISH
-      arr[1] = topic;
-      arr[2] = event;
-      arr[3] = (options) ? options : {};
+      arr[1] = this._newid();
+      arr[2] = (options) ? options : {};      
+      arr[3] = topic;
+      arr[4] = event;
       this.send(JSON.stringify(arr));
   }, 
 

@@ -3,6 +3,7 @@ package org.wgs.wamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -21,7 +22,7 @@ public class WampServices
     
     private static TreeMap<Long,WampSubscription>   topicSubscriptionsById = new TreeMap<Long,WampSubscription>();
     private static TreeMap<String,WampSubscription> topicSubscriptionsByTopicURI = new TreeMap<String,WampSubscription>();
-    
+    private static TreeMap<String,WampSubscription> topicPatterns = new TreeMap<String,WampSubscription>();
     
     public static void registerApplication(String name, WampApplication wampApp)
     {
@@ -52,15 +53,21 @@ public class WampServices
         if(topic == null) {
             topic = new WampTopic(topicFQname, options);
             topics.put(topicFQname, topic);
-            
-            for(WampSubscription subscription : topicSubscriptionsByTopicURI.values()) {
+
+            for(WampSubscription subscription : topicPatterns.values()) {
                 if(isUriMatchingWithRegExp(topicFQname, subscription.getTopicRegExp())) {
                     subscription.getTopics().add(topic);
 
                     try { 
                         for(Long sid : subscription.getSessionIds()) {
                             WampSocket socket = subscription.getSocket(sid);
-                            subscribeClientWithTopic(app, socket, null, topic.getURI(), subscription.getOptions());
+                            WampSubscriptionOptions exactTopicOpt = new WampSubscriptionOptions(null);
+                            exactTopicOpt.setMatchType(MatchEnum.exact);
+                            exactTopicOpt.setEventsEnabled(subscription.getOptions().hasEventsEnabled());
+                            exactTopicOpt.setMetaEvents(subscription.getOptions().getMetaEvents());
+                            
+                            WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+                            module.onSubscribe(socket, topic, subscription, exactTopicOpt);
                         }
                     } catch(Exception ex) {
                         logger.log(Level.FINE, "Error in subscription to topic", ex);
@@ -120,7 +127,7 @@ public class WampServices
     }  
     
     
-    public static Collection<WampTopic> getTopics(MatchEnum matchType, String topicUriOrPattern)
+    public static Collection<WampTopic> getTopics(WampApplication app, MatchEnum matchType, String topicUriOrPattern)
     {
         WampSubscription subscription = topicSubscriptionsByTopicURI.get(topicUriOrPattern);
         
@@ -146,7 +153,8 @@ public class WampServices
             } else {                
                 ArrayList<WampTopic> retval = new ArrayList<WampTopic>();
                 WampTopic topic = getTopic(topicUriOrPattern);
-                if(topic != null) retval.add(topic);
+                if(topic == null) topic = createTopic(app, topicUriOrPattern, null);
+                retval.add(topic);
                 return retval;
             }
         }
@@ -157,6 +165,8 @@ public class WampServices
     {
         String topicName = clientSocket.normalizeURI(request.get(3).asText());
         WampTopic topic = WampServices.getTopic(topicName);
+        if(topic == null) topic = createTopic(app, topicName, null);
+        
         try {
             WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
             module.onPublish(clientSocket, topic, request);
@@ -184,12 +194,14 @@ public class WampServices
         WampSubscription subscription = topicSubscriptionsByTopicURI.get(topicUriOrPattern);
         if(subscription == null) {
             Long subscriptionId = WampProtocol.newId();  
-            Collection<WampTopic> matchingTopics = WampServices.getTopics(options.getMatchType(), topicUriOrPattern);            
+            Collection<WampTopic> matchingTopics = WampServices.getTopics(app, options.getMatchType(), topicUriOrPattern);            
             subscription = new WampSubscription(subscriptionId, options.getMatchType(), topicUriOrPattern, matchingTopics, options);
             topicSubscriptionsById.put(subscriptionId, subscription);
             topicSubscriptionsByTopicURI.put(topicUriOrPattern, subscription);
+            if(options.getMatchType() != MatchEnum.exact) topicPatterns.put(topicUriOrPattern, subscription);
         }        
         
+        subscription.addSocket(clientSocket);
         for(WampTopic topic : subscription.getTopics()) {
             WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
             

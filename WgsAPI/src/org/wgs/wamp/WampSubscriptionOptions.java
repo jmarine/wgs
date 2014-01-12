@@ -90,6 +90,13 @@ public class WampSubscriptionOptions
             }
         }
     }
+    
+    /**
+     * @param metaEvents the metaEvents to set
+     */
+    public void setMetaEvents(HashSet<String> metaEvents) {
+        this.metaEvents = metaEvents;
+    }    
 
     /**
      * @param arrayNode the JSON array node with the text elements to set

@@ -163,21 +163,16 @@ public class WampModule
     }
     
     public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription, WampSubscriptionOptions options) throws Exception { 
-        if(!subscription.addSocket(clientSocket)) {
-            subscription.getOptions().updateOptions(options);
-        } else {
-            long sinceN = 0L;       // options.getSinceN();
-            long sinceTime = 0L;    // options.getSinceTime();
-            MessageBroker.subscribeMessageListener(topic, sinceTime, sinceN);
-            topic.addSubscription(subscription);
-            clientSocket.addSubscription(subscription);
-            if(options != null && options.hasMetaEvents()) {
-                if(options.hasEventsEnabled()) {
-                    WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, clientSocket.toWampObject(), null);
-                }
+        long sinceN = 0L;       // options.getSinceN();
+        long sinceTime = 0L;    // options.getSinceTime();
+        MessageBroker.subscribeMessageListener(topic, sinceTime, sinceN);
+        topic.addSubscription(subscription);
+        clientSocket.addSubscription(subscription);
+        if(options != null && options.hasMetaEvents()) {
+            if(options.hasEventsEnabled()) {
+                WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, clientSocket.toWampObject(), null);
             }
         }
-
     }
 
     public void onUnsubscribe(WampSocket clientSocket, Long subscriptionId, WampTopic topic) throws Exception { 
