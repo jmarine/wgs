@@ -3,7 +3,7 @@ package org.wgs.wamp;
 
 public class WampCallOptions 
 {
-    public enum RunOnEnum   { all, any, partition }
+    public enum RunOnEnum   { any, all, partition }
     public enum RunModeEnum { gather, progressive }
     
     private int timeout;
@@ -23,14 +23,14 @@ public class WampCallOptions
             }
             
             if(options.has("runon")) {
-                setRunOn(RunOnEnum.valueOf(options.get("runon").asText()));
+                setRunOn(RunOnEnum.valueOf(options.get("runon").asText().toLowerCase()));
                 if(runOn == RunOnEnum.partition) {
                     setPartition(options.get("rkey").asText());
                 }
             }                 
             
             if(options.has("runmode")) {
-                setRunMode(RunModeEnum.valueOf(options.get("runmode").asText()));
+                setRunMode(RunModeEnum.valueOf(options.get("runmode").asText().toLowerCase()));
             }
             
         }

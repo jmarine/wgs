@@ -1139,7 +1139,7 @@ function test_unregister_rcp()
 
 function test_call_rcp()
 {
-    wgsclient.call("mymodule.myfunc", [1,2,3], {}).then(
+    wgsclient.call("mymodule.myfunc", [1,2,3], {}, {"runon": "any"}).then(
             function(result,resultKw) { alert("Result: " + result)} ,
             function(error) { alert("Error: " + error.errorURI)} 
     );

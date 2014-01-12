@@ -1,5 +1,6 @@
 package org.wgs.wamp;
 
+import java.util.Collection;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -92,6 +93,7 @@ public class WampCallController implements Runnable
                 callOptions = new WampCallOptions(null);
             }
 
+            // TRY LOCAL CALL:
             Object response = module.onCall(this, clientSocket, procedureURI, arguments, argumentsKw, callOptions);
             if(response != null && response instanceof WampAsyncCall) {
                 cancellableCall = (WampAsyncCall)response;
@@ -111,6 +113,7 @@ public class WampCallController implements Runnable
                 sendCallResults();
             }
         } catch (Throwable ex) {
+            
             if (ex instanceof java.lang.reflect.InvocationTargetException) {
                 ex = ex.getCause();
             }

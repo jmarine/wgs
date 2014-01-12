@@ -52,12 +52,47 @@ public class WampModule
     public void onDisconnect(WampSocket clientSocket) throws Exception { }
 
     @SuppressWarnings("unchecked")
-    public Object onCall(WampCallController task, WampSocket clientSocket, String methodName, WampList args, WampDict argsKw, WampCallOptions options) throws Exception 
+    public Object onCall(final WampCallController task, final WampSocket clientSocket, String methodName, final WampList args, final WampDict argsKw, final WampCallOptions options) throws Exception 
     {
-        Collection<WampMethod> methods = app.getRPCs(methodName, options);
-        if(methods != null && methods.size() > 0) {
-            return methods.iterator().next().invoke(task,clientSocket,args,argsKw,options);
+        WampMethod method = app.getLocalRPCs(methodName, options);
+        if(method != null) {
+            return method.invoke(task,clientSocket,args,argsKw,options);
+        } else {
+            final ArrayList<WampMethod> remoteMethods = app.getRemoteRPCs(methodName, options);
+            final ArrayList<WampAsyncCall> remoteInvocations = new ArrayList<WampAsyncCall>();
+            
+            if(!remoteMethods.isEmpty()) {
+                switch(options.getRunOn()) {
+                    case any:
+                        int index = (int)(Math.random() * remoteMethods.size());
+                        method = remoteMethods.get(index);
+                        return method.invoke(task,clientSocket,args,argsKw,options);
+
+                    default:
+                        return new WampAsyncCall() {
+
+                            @Override
+                            public void call() throws Exception {
+                                for(WampMethod method : remoteMethods) {
+                                    WampAsyncCall remoteInvocation = (WampAsyncCall)method.invoke(task,clientSocket,args,argsKw,options);
+                                    remoteInvocations.add(remoteInvocation);
+                                    remoteInvocation.call();
+                                }
+                            }
+
+                            @Override
+                            public void cancel(WampDict cancelOptions) {
+                                for(WampAsyncCall invocation : remoteInvocations) {
+                                    invocation.cancel(cancelOptions);
+                                }
+                            }
+                            
+                        };
+                }
+            }
         }
+        
+        
 
         throw new WampException(WampException.ERROR_PREFIX+".method_unknown", "Method not implemented: " + methodName);
     }

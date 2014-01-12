@@ -1,12 +1,10 @@
 package org.wgs.wamp;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -304,7 +302,13 @@ public class WampApplication
         this.rpcsByName.remove(name);
     }
     
-    public Collection<WampMethod> getRPCs(String name, WampCallOptions options)
+    public WampMethod getLocalRPCs(String name, WampCallOptions options)
+    {
+
+        return rpcsByName.get(name);
+    }
+    
+    public ArrayList<WampMethod> getRemoteRPCs(String name, WampCallOptions options)
     {
         ArrayList<WampMethod> retval = new ArrayList<WampMethod>();
 
@@ -325,7 +329,7 @@ public class WampApplication
         }
         
         return retval;
-    }
+    }    
     
     public WampCalleeRegistration getRegistration(Long registrationId)
     {
