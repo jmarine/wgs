@@ -315,6 +315,15 @@ public class WampApplication
         String partition = null;
         if(options != null && options.getRunOn() == WampCallOptions.RunOnEnum.partition) partition = options.getPartition();
 
+        WampCalleeRegistration reg = calleeRegistrationByUri.get(name);
+        if(reg != null) {
+            for(WampRemoteMethod remoteMethod : reg.getRemoteMethods()) {
+                if(remoteMethod.hasPartition(partition)) {
+                    retval.add(remoteMethod);
+                }
+            }
+        }
+        
         for(WampCalleeRegistration registration : calleePatterns.values()) {
             if(WampServices.isUriMatchingWithRegExp(name, registration.getRegExp())) {
                 for(WampRemoteMethod remoteMethod : registration.getRemoteMethods()) {
