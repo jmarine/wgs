@@ -24,7 +24,8 @@ public class WampSocket
     private Map     sessionData;
     private Map<String,String> prefixes;
     private Map<Long,WampSubscription> subscriptions;
-    private Map<Long,WampCallController> rpcControllers;
+    private Map<Long,Promise> rpcPromises;
+    private Map<Long,WampCallController> rpcController;
     private WampConnectionState state;
     private Principal principal;
     private long lastHeartBeat;
@@ -47,7 +48,8 @@ public class WampSocket
         sessionData = new ConcurrentHashMap();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
-        rpcControllers = new HashMap<Long,WampCallController>();
+        rpcPromises = new HashMap<Long,Promise>();
+        rpcController = new HashMap<Long,WampCallController>();
         
         String subprotocol = session.getNegotiatedSubprotocol();
         if(subprotocol != null) {
@@ -121,9 +123,12 @@ public class WampSocket
         boolean retval = true;
         if(helloDetails != null) {
             if(helloDetails.has("roles")) {
-                WampDict callerDetails = (WampDict)helloDetails.get("roles");
-                if(callerDetails.has("progressive")) {
-                    retval = callerDetails.get("progressive").asBoolean();
+                WampDict rolesDetails = (WampDict)helloDetails.get("roles");
+                if(rolesDetails.has("callee")) {
+                    WampDict callerDetails = (WampDict)rolesDetails.get("caller");
+                    if(callerDetails.has("progressive")) {
+                        retval = callerDetails.get("progressive").asBoolean();
+                    }
                 }
             }
         }
@@ -171,19 +176,36 @@ public class WampSocket
     }
 
     
-    public void addRpcController(Long callID, WampCallController rpcController)
+    public void addRpcPromise(Long callID, Promise rpcPromise)
     {
-        rpcControllers.put(callID, rpcController);
+        rpcPromises.put(callID, rpcPromise);
+    }
+    
+    public Promise getRpcPromise(Long callID)
+    {
+        return rpcPromises.get(callID);
+    }    
+    
+    public Promise removeRpcPromise(Long callID) 
+    {
+        return rpcPromises.remove(callID);
+    }
+    
+    
+    public void addRpcController(Long callID, WampCallController controller)
+    {
+        rpcController.put(callID, controller);
     }
     
     public WampCallController getRpcController(Long callID)
     {
-        return rpcControllers.get(callID);
+        return rpcController.get(callID);
     }    
     
-    public WampCallController removeRpcController(Long callID) {
-        return rpcControllers.remove(callID);
-    }
+    public WampCallController removeRpcController(Long callID) 
+    {
+        return rpcController.remove(callID);
+    }    
     
     
     public String normalizeURI(String curie) {

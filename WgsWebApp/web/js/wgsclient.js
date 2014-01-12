@@ -74,7 +74,7 @@ WgsClient.prototype = {
       arr[2].roles = {};
       arr[2].roles.publisher = {};
       arr[2].roles.subscriber = {};
-      arr[2].roles.caller = {};
+      arr[2].roles.caller = { "progressive" : 1 };
       arr[2].roles.callee = {};
       this.send(JSON.stringify(arr));
   },
@@ -413,6 +413,19 @@ WgsClient.prototype = {
               client.sid = arr[1];
               client.state = WgsState.WELCOMED;
               onstatechange(WgsState.WELCOMED);
+          } else if (arr[0] == 72) {  // CALLPROGRESS
+              var call = arr[1];
+              if(client.calls[call]) {       
+                  var progress = (arr && arr.length >= 3)? arr[2] : [];
+                  var progressKw = (arr && arr.length >= 4)? arr[3] : {};
+                  if(!progress) progress = [];
+                  if(!progressKw) progressKw = {};
+                  progress.valid = true;
+                  progressKw.valid = true;
+                  client.calls[call].notify(progress,progressKw);
+              } else {
+                  client.debug("call not found: " + call);
+              }              
           } else if (arr[0] == 3 || arr[0] == 73) {  // CALLRESULT
               var call = arr[1];
               if(client.calls[call]) {       

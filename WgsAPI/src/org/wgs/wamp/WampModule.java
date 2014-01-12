@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.wgs.util.MessageBroker;
 
 
@@ -58,7 +59,7 @@ public class WampModule
         if(method != null) {
             return method.invoke(task,clientSocket,args,argsKw,options);
         } else {
-            final ArrayList<WampMethod> remoteMethods = app.getRemoteRPCs(methodName, options);
+            final ArrayList<WampRemoteMethod> remoteMethods = app.getRemoteRPCs(methodName, options);
             final ArrayList<WampAsyncCall> remoteInvocations = new ArrayList<WampAsyncCall>();
             
             if(!remoteMethods.isEmpty()) {
@@ -69,15 +70,78 @@ public class WampModule
                         return method.invoke(task,clientSocket,args,argsKw,options);
 
                     default:
-                        return new WampAsyncCall() {
+                        
+                        final AtomicInteger barrier = new AtomicInteger(remoteMethods.size());
+
+                        final Promise completePromise = new Promise()
+                        {
+                            @Override
+                            public void resolve(Object... results) {
+                                WampList result = new WampList();
+                                WampDict resultKw = new WampDict();
+                                if(!clientSocket.supportProgressiveCalls() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive) {
+                                    result = task.getResult();
+                                    resultKw = task.getResultKw();
+                                }
+                                WampProtocol.sendCallResult(clientSocket, task.getCallID(), result, resultKw);
+                            }
 
                             @Override
-                            public void call() throws Exception {
-                                for(WampMethod method : remoteMethods) {
+                            public void progress(Object... progressParams) {
+                                WampList progress = (WampList)progressParams[0];
+                                WampDict progressKw = (WampDict)progressParams[1];
+                                if(clientSocket.supportProgressiveCalls() && options.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
+                                    WampProtocol.sendCallProgress(clientSocket, task.getCallID(), progress, progressKw);
+                                } else {
+                                    task.getResult().add(progress);
+                                    task.getResultKw().putAll(progressKw);
+                                }
+                            }
+
+                            @Override
+                            public void reject(Object... errors) {
+                                WampProtocol.sendCallError(clientSocket, task.getCallID(), (String)errors[0], null, errors[1]);
+                            }                            
+                        };
+                                
+                        return new WampAsyncCall(completePromise) {
+
+                            @Override
+                            public Void call() throws Exception {
+                                for(final WampRemoteMethod method : remoteMethods) {
                                     WampAsyncCall remoteInvocation = (WampAsyncCall)method.invoke(task,clientSocket,args,argsKw,options);
+                                    remoteInvocation.setPromise(new Promise() {
+                                        @Override
+                                        public void resolve(Object... results) {
+                                            WampList progress = (WampList)results[0];
+                                            WampDict progressKw = (WampDict)results[1];
+                                            if(clientSocket.supportProgressiveCalls() && options.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
+                                                WampProtocol.sendCallProgress(clientSocket, task.getCallID(), progress, progressKw);
+                                            } else {
+                                                task.getResult().add(progress);
+                                                task.getResultKw().putAll(progressKw);
+                                            }
+                                            
+                                            if(barrier.decrementAndGet() <= 0) {
+                                                completePromise.resolve(null, null);
+                                            }
+                                        }
+
+                                        @Override
+                                        public void progress(Object... progressParams) {
+                                            completePromise.progress(progressParams);
+                                        }
+
+                                        @Override
+                                        public void reject(Object... errors) {
+                                            WampProtocol.sendCallError(clientSocket, task.getCallID(), (String)errors[0], null, errors[1]);
+                                        }
+                                    });
+
                                     remoteInvocations.add(remoteInvocation);
                                     remoteInvocation.call();
                                 }
+                                return null;
                             }
 
                             @Override
@@ -86,7 +150,8 @@ public class WampModule
                                     invocation.cancel(cancelOptions);
                                 }
                             }
-                            
+
+
                         };
                 }
             }

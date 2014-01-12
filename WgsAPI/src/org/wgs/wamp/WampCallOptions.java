@@ -4,16 +4,18 @@ package org.wgs.wamp;
 public class WampCallOptions 
 {
     public enum RunOnEnum   { any, all, partition }
-    public enum RunModeEnum { gather, progressive }
+    public enum RunModeEnum { progressive, gather }
     
     private int timeout;
     private String rkey;
     private RunOnEnum runOn;
     private RunModeEnum runMode;
+    private boolean discloseMe;
     
     public WampCallOptions(WampDict options) 
     {
         this.timeout = 0;
+        this.discloseMe = false;
         this.runOn = RunOnEnum.all;
         
         if(options != null) {
@@ -32,6 +34,10 @@ public class WampCallOptions
             if(options.has("runmode")) {
                 setRunMode(RunModeEnum.valueOf(options.get("runmode").asText().toLowerCase()));
             }
+            
+            if(options.has("disclose_me")) {
+                setDiscloseMe(options.get("disclose_me").asLong() != 0L);
+            }            
             
         }
     }
@@ -91,6 +97,16 @@ public class WampCallOptions
      */
     public void setRunMode(RunModeEnum runMode) {
         this.runMode = runMode;
+    }
+    
+    public void setDiscloseMe(boolean discloseMe)
+    {
+        this.discloseMe = discloseMe;
+    }
+    
+    public boolean hasDiscloseMe()
+    {
+        return discloseMe;
     }
         
     

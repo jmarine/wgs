@@ -15,7 +15,7 @@ public class WampCallController implements Runnable
     private WampSocket clientSocket;
     private WampList request;
     private Future<?> future;
-    private WampAsyncCall cancellableCall;
+    private WampAsyncCall asyncCall;
     private WampList  arguments;
     private WampDict argumentsKw;
     private WampCallOptions callOptions;
@@ -52,6 +52,11 @@ public class WampCallController implements Runnable
     {
         return procedureURI;
     }
+    
+    public WampAsyncCall getAsyncCall()
+    {
+        return asyncCall;
+    }
 
     @Override
     public void run() 
@@ -63,8 +68,6 @@ public class WampCallController implements Runnable
             WampProtocol.sendCallError(clientSocket, callID, WampException.ERROR_PREFIX + ".requestid_unknown", "CallID not present", null);
             return;
         }        
-        
-        clientSocket.addRpcController(callID, this);
         
         try {
             if (module == null) {
@@ -96,8 +99,41 @@ public class WampCallController implements Runnable
             // TRY LOCAL CALL:
             Object response = module.onCall(this, clientSocket, procedureURI, arguments, argumentsKw, callOptions);
             if(response != null && response instanceof WampAsyncCall) {
-                cancellableCall = (WampAsyncCall)response;
-                cancellableCall.call();
+                asyncCall = (WampAsyncCall)response;
+                if(!asyncCall.hasPromise()) asyncCall.setPromise(new Promise() {
+                    @Override
+                    public void resolve(Object... results) {
+                        WampList result = (WampList)results[0];
+                        WampDict resultKw = (WampDict)results[1];
+                        if(getClientSocket().supportProgressiveCalls() && callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
+                            setResult(result);
+                            setResultKw(resultKw);
+                            sendCallResults();                            
+                        } else {
+                            getResult().add(result);
+                            getResultKw().putAll(resultKw);
+                            sendCallResults();     
+                        }
+                    }
+
+                    @Override
+                    public void progress(Object... progressParams) {
+                        WampList progress = (WampList)progressParams[0];
+                        WampDict progressKw = (WampDict)progressParams[1];
+                        if(getClientSocket().supportProgressiveCalls() && callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
+                            WampProtocol.sendCallProgress(getClientSocket(), getCallID(), progress, progressKw);
+                        } else {
+                            getResult().add(progress);
+                            getResultKw().putAll(progressKw);
+                        }
+                    }
+
+                    @Override
+                    public void reject(Object... errors) {
+                        WampProtocol.sendCallError(clientSocket, callID, (String)errors[0], null, errors[1]);
+                    }
+                });
+                asyncCall.call();
             } else {
                 if(response != null) {
                     if (response instanceof WampDict) {
@@ -142,7 +178,7 @@ public class WampCallController implements Runnable
             done = true;
         }
         
-        clientSocket.removeRpcController(callID);           
+        clientSocket.removeRpcPromise(callID);           
     }
     
     
@@ -156,8 +192,8 @@ public class WampCallController implements Runnable
                 future.cancel(mayInterruptIfRunning);
             }
 
-            if(cancellableCall != null) {
-                cancellableCall.cancel(cancelOptions);
+            if(asyncCall != null) {
+                asyncCall.cancel(cancelOptions);
             }
         }
     }

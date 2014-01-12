@@ -36,41 +36,49 @@ public class WampRemoteMethod extends WampMethod
         
     }
     
+    public WampSocket getRemotePeer()
+    {
+        return remotePeer;
+    }
+    
     
     @Override
-    public Object invoke(final WampCallController task, WampSocket clientSocket, final WampList args, final WampDict argsKw, final WampCallOptions callOptions) throws Exception
+    public Object invoke(final WampCallController task, final WampSocket clientSocket, final WampList args, final WampDict argsKw, final WampCallOptions callOptions) throws Exception
     {
         final Long invocationId = WampProtocol.newId();
 
-        return new WampAsyncCall() {
+        return new WampAsyncCall(null) {
             
             @Override
-            public void call() throws Exception {
+            public Void call() throws Exception {
+                remotePeer.addRpcController(invocationId, task);
+                remotePeer.addRpcPromise(invocationId, getPromise());
 
-                    remotePeer.addRpcController(invocationId, task);
+                WampDict invocationOptions = new WampDict();
+                if(matchType != MatchEnum.exact) invocationOptions.put("procedure", task.getProcedureURI());
+                if(callOptions.hasDiscloseMe())  invocationOptions.put("caller", clientSocket.getSessionId());
 
-                    WampDict invocationOptions = new WampDict();
-                    if(matchType != MatchEnum.exact) invocationOptions.put("procedure", task.getProcedureURI());
+                WampList msg = new WampList();
+                msg.add(80);
+                msg.add(invocationId);
+                msg.add(registrationId);
+                msg.add(invocationOptions);
+                msg.add(args);
+                msg.add(argsKw);                
+                remotePeer.sendWampMessage(msg); 
                     
-                    WampList msg = new WampList();
-                    msg.add(80);
-                    msg.add(invocationId);
-                    msg.add(registrationId);
-                    msg.add(invocationOptions);
-                    msg.add(args);
-                    msg.add(argsKw);                
-                    remotePeer.sendWampMessage(msg); 
-
+                return null;
             }
 
             @Override
             public void cancel(WampDict cancelOptions) {
-                    WampList msg = new WampList();
-                    msg.add(81);
-                    msg.add(invocationId);
-                    msg.add(cancelOptions);
-                    remotePeer.sendWampMessage(msg);
-            }            
+                WampList msg = new WampList();
+                msg.add(81);
+                msg.add(invocationId);
+                msg.add(cancelOptions);
+                remotePeer.sendWampMessage(msg);
+            }           
+            
         };
 
 

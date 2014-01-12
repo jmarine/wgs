@@ -308,13 +308,10 @@ public class WampApplication
         return rpcsByName.get(name);
     }
     
-    public ArrayList<WampMethod> getRemoteRPCs(String name, WampCallOptions options)
+    public ArrayList<WampRemoteMethod> getRemoteRPCs(String name, WampCallOptions options)
     {
-        ArrayList<WampMethod> retval = new ArrayList<WampMethod>();
+        ArrayList<WampRemoteMethod> retval = new ArrayList<WampRemoteMethod>();
 
-        WampMethod localMethod = rpcsByName.get(name);
-        if(localMethod != null) retval.add(localMethod);
-        
         String partition = null;
         if(options != null && options.getRunOn() == WampCallOptions.RunOnEnum.partition) partition = options.getPartition();
 
@@ -435,38 +432,34 @@ public class WampApplication
         
     }
     
-    private void processInvocationResult(WampSocket providerSocket, WampList request) throws Exception
-    {
-        Long invocationId = request.get(1).asLong();
-        WampCallController task = providerSocket.getRpcController(invocationId);
-        task.setResult((WampList)request.get(2));
-        task.setResultKw((WampDict)request.get(3));
-        task.sendCallResults();
-        providerSocket.removeRpcController(invocationId);
-    }
     
     private void processInvocationProgress(WampSocket providerSocket, WampList request) throws Exception
     {
         Long invocationId = request.get(1).asLong();
-        WampCallController task = providerSocket.getRpcController(invocationId);
+        Promise promise = providerSocket.getRpcPromise(invocationId);
         WampList progress = (WampList)request.get(2);
         WampDict progressKw = (WampDict)request.get(3);
-        if(task.getClientSocket().supportProgressiveCalls()) {
-            WampProtocol.sendCallProgress(task.getClientSocket(), task.getCallID(), progress, progressKw);
-        } else {
-            task.getResult().add(progress);
-            task.getResultKw().putAll(progressKw);
-        }
+        promise.progress(progress, progressKw);
     }    
+    
+    private void processInvocationResult(WampSocket providerSocket, WampList request) throws Exception
+    {
+        Long invocationId = request.get(1).asLong();
+        Promise promise = providerSocket.getRpcPromise(invocationId);
+        WampList result = (WampList)request.get(2);
+        WampDict resultKw = (WampDict)request.get(3);
+        promise.resolve(result,resultKw);
+        providerSocket.removeRpcPromise(invocationId);
+    }
     
     private void processInvocationError(WampSocket providerSocket, WampList request) throws Exception
     {
         Long invocationId = request.get(1).asLong();
         String errorURI = request.get(2).asText();
         WampObject exception = request.get(3);
-        WampCallController task = providerSocket.getRpcController(invocationId);
-        WampProtocol.sendCallError(task.getClientSocket(), task.getCallID(), errorURI, null, exception);
-        providerSocket.removeRpcController(invocationId);
+        Promise promise = providerSocket.getRpcPromise(invocationId);
+        promise.reject(errorURI, exception);
+        providerSocket.removeRpcPromise(invocationId);
     }
     
     

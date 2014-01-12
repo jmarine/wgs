@@ -1139,10 +1139,18 @@ function test_unregister_rcp()
 
 function test_call_rcp()
 {
-    wgsclient.call("mymodule.myfunc", [1,2,3], {}, {"runon": "any"}).then(
-            function(result,resultKw) { alert("Result: " + result)} ,
-            function(error) { alert("Error: " + error.errorURI)} 
-    );
+    $("#messages").empty();
+    wgsclient.call("mymodule.myfunc", [1,2,3], {}, {"runon": "all", "runmode": "progressive", "disclose_me": 1})
+        .then(
+            function(result,resultKw) { msg_append_text("Result: " + JSON.stringify(result))} ,
+            function(error) { msg_append_text("Error: " + error.errorURI)},
+            function(progress,progressKw) { msg_append_text("Progress: " + JSON.stringify(progress)) }
+        );
+}
+
+function msg_append_text(text)
+{
+    $("#messages").append(text + "<br>");
 }
 
 </script>
@@ -1323,11 +1331,14 @@ function test_call_rcp()
     <fieldset>
       <legend>Messages</legend>
       <div id="messages">
-          <button onclick="test_register_rcp();">Register RPC</button>
-          <button onclick="test_unregister_rcp();">Unregister RPC</button>          
-          <button onclick="test_call_rcp();">Call RPC</button>
+
       </div>
     </fieldset>
+      
+    <button onclick="test_register_rcp();">Register RPC</button>
+    <button onclick="test_unregister_rcp();">Unregister RPC</button>          
+    <button onclick="test_call_rcp();">Call RPC</button>
+    <br>      
   </div>
 </div>
 </body>

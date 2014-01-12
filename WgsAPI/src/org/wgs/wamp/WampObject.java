@@ -26,7 +26,10 @@ public class WampObject
     
     public Boolean asBoolean()
     {
-        return (Boolean)v;
+        if(v == null) return Boolean.FALSE;
+        else if(v instanceof Boolean) return (Boolean)v;
+        else if(v instanceof Long) return ((Long)v).longValue() != 0L;
+        else return Boolean.TRUE;
     }
     
     public Type getType()
