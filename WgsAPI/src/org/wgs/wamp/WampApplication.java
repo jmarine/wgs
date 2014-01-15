@@ -189,10 +189,16 @@ public class WampApplication
         //logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
 
         switch(requestType.intValue()) {
-            case 0:     // HELLO
+            case 1:     // HELLO
                 clientSocket.setVersionSupport(WampApplication.WAMPv2);                
                 clientSocket.setHelloDetails((WampDict)request.get(2));
                 break;
+            case 2:     // GOODBYE
+                clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "goodbye received"));
+                break;
+            case 3:     // HEARTBEAT
+                processHeartbeatMessage(clientSocket, request);
+                break;                
             case 10:    // SUBSCRIBE
                 Long requestId1 = request.get(1).asLong();
                 WampDict subOptionsNode = (request.size() > 2) ? (WampDict)request.get(2) : null;
@@ -200,13 +206,11 @@ public class WampApplication
                 String subscriptionTopicName = request.get(3).asText();
                 WampServices.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
                 break;
-
             case 20:    // UNSUBSCRIBE
                 Long requestId2 = request.get(1).asLong();
                 Long subscriptionId2 = request.get(2).asLong();
                 WampServices.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
                 break;
-
             case 30:    // PUBLISH
                 WampServices.processPublishMessage(this, clientSocket, request);
                 break;                
@@ -216,19 +220,19 @@ public class WampApplication
             case 60:    // UNREGISTER
                 processUnregisterMessage(this, clientSocket, request);
                 break;                
-            case 70:
+            case 70:    // CALL
                 processCallMessage(clientSocket, request);
                 break;
-            case 71:
+            case 71:    // CANCEL_CALL
                 processCallCancelMessage(clientSocket, request);
                 break;
-            case 82:
+            case 82:    // INVOCATION
                 processInvocationProgress(clientSocket, request);
                 break;
-            case 83:
+            case 83:    // INVOCATION_RESULT
                 processInvocationResult(clientSocket, request);
                 break;
-            case 84:
+            case 84:    // INVOCATION_ERROR
                 processInvocationError(clientSocket, request);
                 break;
             default:
@@ -342,6 +346,13 @@ public class WampApplication
         return calleeRegistrationById.get(registrationId);
     }
     
+    private void processHeartbeatMessage(WampSocket clientSocket, WampList request) throws Exception
+    {
+        Long incomingHeartbeatSeq = request.get(1).asLong();
+        Long outgoingHeartbeatSeq = request.get(1).asLong();
+        clientSocket.setIncomingHeartbeat(outgoingHeartbeatSeq);        
+    }
+    
     private void processPrefixMessage(WampSocket clientSocket, WampList request) throws Exception
     {
         String prefix = request.get(1).asText();
@@ -352,7 +363,7 @@ public class WampApplication
     private void processHeartBeat(WampSocket clientSocket, WampList request) throws Exception
     {
         Long heartbeatSequenceNo = request.get(1).asLong();
-        clientSocket.setLastHeartBeat(heartbeatSequenceNo);
+        clientSocket.setIncomingHeartbeat(heartbeatSequenceNo);
     }
 
     

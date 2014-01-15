@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
 
@@ -28,7 +29,8 @@ public class WampSocket
     private Map<Long,WampCallController> rpcController;
     private WampConnectionState state;
     private Principal principal;
-    private long lastHeartBeat;
+    private long incomingHeartbeatSeq;
+    private AtomicLong outgoingHeartbeatSeq;
     private int versionSupport;
     private WampEncoding wampEncoding;
     private WampDict helloDetails;
@@ -36,7 +38,8 @@ public class WampSocket
 
     public WampSocket(WampApplication app, Session session) 
     {
-        this.lastHeartBeat = 0L;
+        this.incomingHeartbeatSeq = 0L;
+        this.outgoingHeartbeatSeq = new AtomicLong(0L);
         this.versionSupport = 1;
         this.app = app;
         this.connected = true;
@@ -295,14 +298,26 @@ public class WampSocket
         this.wampEncoding = wampEncoding;
     }
     
-    
-    public long getLastHeartBeat() {
-        return this.lastHeartBeat;
-    }
 
-    public void setLastHeartBeat(long heartbeatSequenceNo) {
-        this.lastHeartBeat = heartbeatSequenceNo;
-    }    
+    public long getIncomingHeartbeat()
+    {
+        return this.incomingHeartbeatSeq;
+    }
+    
+    public void setIncomingHeartbeat(long heartbeatSequenceNo) 
+    {
+        this.incomingHeartbeatSeq = heartbeatSequenceNo;
+    }   
+    
+    public long getNextOutgoingHeartbeatSeq()
+    {
+        return outgoingHeartbeatSeq.incrementAndGet();
+    }
+    
+    public void sendHeartbeatMessage(String discard)
+    {
+        WampProtocol.sendHeartbeatMessage(this, discard);
+    }
     
     /**
      * Broadcasts the event to subscribed sockets.

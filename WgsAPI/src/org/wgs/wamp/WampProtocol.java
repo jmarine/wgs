@@ -21,7 +21,7 @@ public class WampProtocol
     {
         // Send WELCOME message to client:
         WampList response = new WampList();
-        response.add(0);  // WELCOME message code
+        response.add(1);  // WELCOME message code
         response.add(clientSocket.getSessionId());
         switch(app.getWampVersion()) {
             case WampApplication.WAMPv1:
@@ -44,6 +44,17 @@ public class WampProtocol
                 response.add(helloDetails);  
                 break;
         }
+        
+        clientSocket.sendWampMessage(response);
+    }
+    
+    public static void sendHeartbeatMessage(WampSocket clientSocket, String discard)
+    {
+        WampList response = new WampList();
+        response.add(3);
+        response.add(clientSocket.getIncomingHeartbeat());
+        response.add(clientSocket.getNextOutgoingHeartbeatSeq());
+        response.add(discard);
         
         clientSocket.sendWampMessage(response);
     }

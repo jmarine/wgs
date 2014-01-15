@@ -19,6 +19,9 @@ WgsClient.prototype = {
   state: WgsClient.DISCONNECTED,
   groups: new Array(),
   calls: new Array(),
+  heartbeatIntervalHandler: null,
+  incomingHeartbeatSeq: 0,
+  outgoingHeartbeatSeq: 0,
   rpcHandlers: new Array(),
   rpcRegistrationsById: new Array(),
   rpcRegistrationsByURI: new Array(),
@@ -67,7 +70,7 @@ WgsClient.prototype = {
   hello: function() {
       this.serverSID = this._newid();
       var arr = [];
-      arr[0] = 0;  // HELLO
+      arr[0] = 1;  // HELLO
       arr[1] = this.serverSID;
       arr[2] = {};  // HelloDetails
       arr[2].agent = "wgsclient/2.0.0";
@@ -79,11 +82,32 @@ WgsClient.prototype = {
       this.send(JSON.stringify(arr));
   },
           
-  goodbye: function() {
+  goodbye: function(details) {
+      if(!details) details = {};
       var arr = [];
       arr[0] = 2;   // Goodbye
-      arr[1] = {};  // GoodbyeDetails
+      arr[1] = details;
       this.send(JSON.stringify(arr));
+  },
+  
+  heartbeat: function(timeout, discard) {
+      var client = this;
+
+      var sendHeartbeat = function() {
+          var arr = [];
+          arr[0] = 3;   // Goodbye
+          arr[1] = client.incomingHeartbeatSeq;
+          arr[2] = ++client.outgoingHeartbeatSeq;
+          arr[3] = discard;
+          client.send(JSON.stringify(arr));
+      }
+      
+      if(client.heartbeatIntervalHandler != null) {
+          clearInterval(client.heartbeatIntervalHandler);
+          client.heartbeatIntervalHandler = null;
+      }
+      
+      if(timeout != 0) client.heartbeatIntervalHandler = setInterval(sendHeartbeat, timeout);
   },
  
   call: function(cmd, args, argumentsKw, wampOptions) {
@@ -410,10 +434,16 @@ WgsClient.prototype = {
           client.debug("ws.onmessage: " + e.data);
           var arr = JSON.parse(e.data);
 
-          if (arr[0] == 0) {  // HELLO (WAMPv2)
+          if (arr[0] == 1) {  // HELLO
               client.sid = arr[1];
               client.state = WgsState.WELCOMED;
               onstatechange(WgsState.WELCOMED);
+          } else if (arr[0] == 2) {  // GOODBYE 
+              onstatechange(WgsState.DISCONNECTED);    
+              client.close();
+          } else if (arr[0] == 3) {  // HEARTBEAT
+              client.incomingHeartbeatSeq = arr[2];
+              // TODO: request unreceived EVENTs ?
           } else if (arr[0] == 72) {  // CALLPROGRESS
               var call = arr[1];
               if(client.calls[call]) {       

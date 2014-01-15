@@ -285,6 +285,8 @@ function authentication(state, msg) {
         $("#register").attr("disabled", "disabled");
         $("#oic_connect").attr("disabled", "disabled");
         
+        wgsclient.heartbeat(5000, "*****DISCARDED HEARTBEAT PAYLOAD*******");
+        
     } else if(state == WgsState.ANONYMOUS || state == WgsState.AUTHENTICATED) {
         $("#toggle_connect").html("Disconnect");
         
