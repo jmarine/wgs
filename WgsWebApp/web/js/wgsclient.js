@@ -47,6 +47,10 @@ WgsClient.prototype = {
   },
 
   close: function() {
+    if(this.heartbeatIntervalHandler != null) {
+        clearInterval(this.heartbeatIntervalHandler);
+        this.heartbeatIntervalHandler = null;
+    }
     if(this.ws /* && this.ws.state == this.ws.OPEN */) {
         this.ws.close();
         this.ws = null;

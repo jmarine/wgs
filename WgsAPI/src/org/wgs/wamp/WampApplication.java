@@ -224,9 +224,14 @@ public class WampApplication
                 processCallMessage(clientSocket, request);
                 break;
             case 71:    // CANCEL_CALL
-                processCallCancelMessage(clientSocket, request);
+                processCancelCallMessage(clientSocket, request);
                 break;
-            case 82:    // INVOCATION
+            case 80:    // INVOCATION
+                // TODO                
+            case 81:    // CANCEL_INVOCATION
+                // TODO
+                break;
+            case 82:    // INVOCATION_PROGRESS
                 processInvocationProgress(clientSocket, request);
                 break;
             case 83:    // INVOCATION_RESULT
@@ -430,7 +435,7 @@ public class WampApplication
         
     }
     
-    private void processCallCancelMessage(WampSocket clientSocket, WampList request) throws Exception
+    private void processCancelCallMessage(WampSocket clientSocket, WampList request) throws Exception
     {
         Long callID  = request.get(1).asLong();
         WampDict cancelOptions = (WampDict)request.get(2);
