@@ -202,7 +202,7 @@ public class MessageBroker
     
     public static void publish(Long id, WampTopic wampTopic, WampList payload, WampDict payloadKw, String metaTopic, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
     {
-        //broadcastClusterEventToLocalNodeClients(id, wampTopic,metaTopic,eligible,exclude,publisherId, payload, payloadKw);  
+        broadcastClusterEventToLocalNodeClients(id, wampTopic,metaTopic,eligible,exclude,publisherId, payload, payloadKw);  
         
         if(brokerEnabled) {
             String topicName = wampTopic.getURI();
@@ -282,7 +282,7 @@ public class MessageBroker
             try {
                 //System.out.println ("Received message from broker.");
                 String excludeBroker = receivedMessageFromBroker.getStringProperty("excludeBroker");
-                //if(excludeBroker != null && excludeBroker.equals(brokerId)) return;
+                if(excludeBroker != null && excludeBroker.equals(brokerId)) return;
                 
                 String topicName = receivedMessageFromBroker.getStringProperty("topic");
                 String metaTopic = receivedMessageFromBroker.getStringProperty("metaTopic");
