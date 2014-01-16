@@ -52,7 +52,9 @@ public class WampObject
     public WampObject castToWampObject(Object obj) 
     {
         WampObject retval = null;
-        if(obj instanceof Integer) {
+        if(obj == null) {
+            retval = null;
+        } else if(obj instanceof Integer) {
             retval = new WampObject(); 
             retval.setObject(((Integer)obj).longValue(), WampObject.Type.integer);
         } else if(obj instanceof Long) {

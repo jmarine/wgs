@@ -72,7 +72,7 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
     public WampObject castToWampObject(Object obj) {
         WampObject retval = null;
         if(obj instanceof NullNode) {
-            retval = new WampObject();
+            retval = null;
         } else if(obj instanceof BooleanNode) {
             retval = new WampObject();
             retval.setObject(((BooleanNode)obj).asBoolean(), Type.bool);

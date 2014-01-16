@@ -27,6 +27,7 @@ WgsClient.prototype = {
   rpcRegistrationsByURI: new Array(),
   rpcRegistrationRequests: new Array(),
   rpcUnregistrationRequests: new Array(),
+  publicationRequests: new Array(),
   subscriptionRequests: new Array(),
   unsubscriptionRequests: new Array(),
   subscriptionsById: new Array(),
@@ -194,20 +195,24 @@ WgsClient.prototype = {
         arr[1] = this._newid();
         arr[2] = this.getSubscriptionIdByTopicOptions(topic,options);
         var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
-        this.unsubscriptionRequests[arr[1]] = [dfd, topicAndOptionsKey, event_cb, metaevent_cb];
+        this.unsubscriptionRequests[arr[1]] = [dfd, arr[2], topicAndOptionsKey, event_cb, metaevent_cb];
         this.send(JSON.stringify(arr));
         
         return dfd.promise();
   },
   
-  publish: function(topic, event, options) {
+  publish: function(topic, payload, payloadKw, options) {
+      var dfd = $.Deferred();
       var arr = [];
       arr[0] = 30;  // PUBLISH
       arr[1] = this._newid();
       arr[2] = (options) ? options : {};      
       arr[3] = topic;
-      arr[4] = event;
+      arr[4] = payload;
+      arr[5] = payloadKw;
       this.send(JSON.stringify(arr));
+      this.publicationRequests[arr[1]] = dfd;
+      return dfd.promise();
   }, 
 
   registerRPC: function(options, procedureURI, callback) {
@@ -518,12 +523,12 @@ WgsClient.prototype = {
           } else if(arr[0] == 21) {  // UNSUBSCRIBED
               var requestId = arr[1];
               if(requestId && client.unsubscriptionRequests[requestId]) {
-                  var subscriptionId = arr[2];
                   var promise = client.unsubscriptionRequests[requestId][0];
-                  var topicAndOptionsKey = client.unsubscriptionRequests[requestId][1];
+                  var subscriptionId = client.unsubscriptionRequests[requestId][1];
+                  var topicAndOptionsKey = client.unsubscriptionRequests[requestId][2];
                   
-                  var event_cb = client.unsubscriptionRequests[requestId][2];
-                  var metaevent_cb = client.unsubscriptionRequests[requestId][3];
+                  var event_cb = client.unsubscriptionRequests[requestId][3];
+                  var metaevent_cb = client.unsubscriptionRequests[requestId][4];
                   var callbacks = client.eventHandlers[subscriptionId];
                   if(callbacks && callbacks.length>0) {
                       var indexOfEventHandlerToClear = callbacks.indexOf(event_cb);
@@ -533,7 +538,7 @@ WgsClient.prototype = {
             
                   callbacks = client.metaeventHandlers[subscriptionId];
                   if(callbacks && callbacks.length>0) {
-                      var indexOfMetaHandlerToClear = callbacks.indexOf(event_cb);
+                      var indexOfMetaHandlerToClear = callbacks.indexOf(metaevent_cb);
                       if(metaevent_cb && callbacks && callbacks.length<=1 && indexOfMetaHandlerToClear != -1) delete client.metaeventHandlers[subscriptionId];
                       else if(indexOfMetaHandlerToClear != -1) client.metaeventHandlers[subscriptionId].splice(indexOfMetaHandlerToClear,1);
                   }
@@ -549,18 +554,33 @@ WgsClient.prototype = {
               var promise = client.unsubscriptionRequests[requestId][0];
               promise.reject(requestId);
               delete client.unsubscriptionRequests[requestId];
-                
+              
+          } else if(arr[0] == 31) {  // PUBLISHED
+              var requestId = arr[1];
+              var publicationId = arr[2];
+              var promise = client.publicationRequests[requestId];
+              promise.resolve(requestId, publicationId);
+              delete client.publicationRequests[requestId];
+              
+          } else if(arr[0] == 32) {  // PUBLISH_ERROR
+              var requestId = arr[1];
+              var errorURI  = arr[2];
+              var promise = client.publicationRequests[requestId];
+              promise.reject(requestId, errorURI);
+              delete client.publicationRequests[requestId];              
+              
           } else if(arr[0] == 8 || arr[0] == 40) {  // EVENT
               var subscriptionId = arr[1];
               var publicationId = arr[2];
               var details = arr[3];
-              var event = arr[4];
+              var payload   = (arr.length>4)? arr[4] : null;
+              var payloadKw = (arr.length>5)? arr[5] : null;
               var topicURI = client.subscriptionsById[subscriptionId];
               if(details && details.topic) topicURI = details.topic;
               
               if(client.eventHandlers[subscriptionId]) {
                   client.eventHandlers[subscriptionId].forEach(function(callback) {
-                      callback.call(client, event, topicURI);                
+                      callback.call(client, payload, payloadKw, topicURI);                
                   });
               } else {
                   // client.debug("subscription not found: " + topic);
@@ -646,7 +666,7 @@ WgsClient.prototype = {
               }
 
           } else {
-              client.debug("Server message not recognized: " + message.type);
+              client.debug("Server message not recognized: " + e.data);
           }
 
         };
@@ -696,37 +716,37 @@ WgsClient.prototype = {
       this.call("wgs.delete_app", msg).then(callback, callback);
   },  
   
-  _update_group_users: function(msg, topicURI) {
+  _update_group_users: function(payload, payloadKw, topicURI) {
       var client = this;
-      if(msg.connections) {
-          client.groups[msg.gid] = new Object();
-          client.groups[msg.gid].min = msg.min;
-          client.groups[msg.gid].max = msg.max;
-          client.groups[msg.gid].delta = msg.delta;
-          client.groups[msg.gid].members = msg.members;
-          client.groups[msg.gid].connections = new Array();
-          msg.connections.forEach(function(con) { 
-              client.groups[msg.gid].connections[con.sid] = con;
+      if(payloadKw.connections) {
+          client.groups[payloadKw.gid] = new Object();
+          client.groups[payloadKw.gid].min = payloadKw.min;
+          client.groups[payloadKw.gid].max = payloadKw.max;
+          client.groups[payloadKw.gid].delta = payloadKw.delta;
+          client.groups[payloadKw.gid].members = payloadKw.members;
+          client.groups[payloadKw.gid].connections = new Array();
+          payloadKw.connections.forEach(function(con) { 
+              client.groups[payloadKw.gid].connections[con.sid] = con;
           });
-      } else if(msg.cmd == "user_joined" || msg.cmd == "group_updated") {
-          var gid = msg.gid;
+      } else if(payloadKw.cmd == "user_joined" || payloadKw.cmd == "group_updated") {
+          var gid = payloadKw.gid;
           
-          if(isFinite(msg.slot)) msg.members = [ msg ];
-          else if(msg.members) client.groups[gid].members = new Array();
+          if(isFinite(payloadKw.slot)) payloadKw.members = [ payloadKw ];
+          else if(payloadKw.members) client.groups[gid].members = new Array();
 
-          if(msg.cmd == "user_joined") client.groups[gid].connections[msg.sid] = msg;
+          if(payloadKw.cmd == "user_joined") client.groups[gid].connections[payloadKw.sid] = payloadKw;
           
-          if(msg.members) {
-              msg.members.forEach(function(item) {
+          if(payloadKw.members) {
+              payloadKw.members.forEach(function(item) {
                   if(item.sid.length > 0) client.groups[gid].connections[item.sid] = item;
                   if(isFinite(item.slot)) client.groups[gid].members[item.slot] = item;
               });
           }
-      } else if(msg.cmd == "user_detached") {
-          delete client.groups[msg.gid].connections[msg.sid];
-          if(msg.members) {
-              msg.members.forEach(function(item) {
-                  if(isFinite(item.slot)) client.groups[msg.gid].members[item.slot] = item;
+      } else if(payloadKw.cmd == "user_detached") {
+          delete client.groups[payloadKw.gid].connections[payloadKw.sid];
+          if(payloadKw.members) {
+              payloadKw.members.forEach(function(item) {
+                  if(isFinite(item.slot)) client.groups[payloadKw.gid].members[item.slot] = item;
               });
           }
       }
@@ -741,7 +761,7 @@ WgsClient.prototype = {
 
       this.call("wgs.open_group", args).then(function(result,resultKw) {
           client.subscribe("wgs.group_event:" + resultKw.gid, client._update_group_users, null, {} );
-          client._update_group_users(resultKw);
+          client._update_group_users(result, resultKw);
           callback(result,resultKw);
       }, callback);
   },
@@ -787,11 +807,11 @@ WgsClient.prototype = {
       if(data) msg.data  = data;
      
       this.call("wgs.update_group", msg).then(function(result,resultKw) { 
-          client._update_group_users(resultKw);
+          client._update_group_users(result, resultKw);
           callback(resultKw);
       }, 
       function(result,resultKw) { 
-          client._update_group_users(resultKw);
+          client._update_group_users(result, resultKw);
           callback(resultKw) 
       } );
   },
@@ -811,11 +831,11 @@ WgsClient.prototype = {
         msg.type = usertype;
       }
       this.call("wgs.update_member", msg).then(function(result,resultKw) { 
-          client._update_group_users(resultKw);
+          client._update_group_users(result, resultKw);
           callback(resultKw);
       }, 
       function(result,resultKw) { 
-          client._update_group_users(resultKw);
+          client._update_group_users(result, resultKw);
           callback(resultKw) 
       } );
   },

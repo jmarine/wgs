@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.wgs.entity.User;
 import org.wgs.wamp.WampDict;
+import org.wgs.wamp.WampList;
 import org.wgs.wamp.WampObject;
 import org.wgs.wamp.WampSubscription;
 import org.wgs.wamp.WampSubscriptionOptions;
@@ -73,13 +74,13 @@ public class GroupFilter extends WampSubscriptionOptions
     
     
     @Override
-    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, WampObject event) 
+    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, WampList payload, WampDict payloadKw) 
     {
         if (scope == Scope.all) {
             return true;
         }
         
-        WampDict dict = (WampDict)event;
+        WampDict dict = payloadKw;
         String gid = (dict.has("gid")) ? dict.get("gid").asText() : null;
         if (gid != null) {
             String cmd = dict.has("cmd")? dict.get("cmd").asText() : "";

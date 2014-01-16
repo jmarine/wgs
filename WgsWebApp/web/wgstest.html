@@ -319,28 +319,28 @@ function getAppDescription(app) {
 }
 
 
-function update_apps(response) {
-    if(response.apps) { 
+function update_apps(payload, payloadKw) {
+    if(payloadKw.apps) { 
         // listApps:
         $('#btn_automatch_group').attr("disabled", "true");
         $('#btn_select_app').attr("disabled", "true");
         $('#btn_delete_app').attr("disabled", "true");
         
         $("#apps option").remove();            
-        response.apps.forEach(function(item) {
+        payloadKw.apps.forEach(function(item) {
             $("#apps").append($('<option>').attr('value',item.appId).text(getAppDescription(item)));
         });
         
-    } else if(response.cmd == "app_created" || response.cmd == "app_updated") {
+    } else if(payloadKw.cmd == "app_created" || payloadKw.cmd == "app_updated") {
         
-        if($("#apps option[value='"+response.appId+"']").size() <= 0) {  // insert app
-            $("#apps").append($("<option>").attr("value", response.appId));
+        if($("#apps option[value='"+payloadKw.appId+"']").size() <= 0) {  // insert app
+            $("#apps").append($("<option>").attr("value", payloadKw.appId));
         }
-        $("#apps option[value='"+response.appId+"']").text(getAppDescription(response));
+        $("#apps option[value='"+payloadKw.appId+"']").text(getAppDescription(payloadKw));
         
-    } else if(response.cmd == "app_deleted") {
+    } else if(payloadKw.cmd == "app_deleted") {
         
-        $("#apps option[value='"+response.appId+"']").remove();
+        $("#apps option[value='"+payloadKw.appId+"']").remove();
     }
 }
 
@@ -350,7 +350,7 @@ function list_apps() {
     wgsclient.listApps(false, function(result,resultKw) {
         if(resultKw && resultKw.valid) {
             wgsclient.subscribe("wgs.apps_event", update_apps, null, {});
-            update_apps(resultKw);
+            update_apps(result,resultKw);
             $("#app_params").hide();
             $("#app_list").slideDown(500);
         }
@@ -435,15 +435,15 @@ function getGroupListItem(group) {
    return opt;
 }
 
-function update_groups(response) {
+function update_groups(payload, payloadKw) {
     $('#btn_play_group').attr("disabled", "true");
     $('#btn_view_group').attr("disabled", "true");
         
-    if(response.groups) {
+    if(payloadKw.groups) {
         //$("#groups option").remove();
         $("#groupsTable>table>tbody>tr").remove();
         
-        response.groups.forEach(function(item) {
+        payloadKw.groups.forEach(function(item) {
             /*
             var opt = $('<option>')
             opt.attr('value',item.gid).text(getGroupDescription(item));
@@ -454,16 +454,16 @@ function update_groups(response) {
             $("#groupsTable>table").append(opt);
         });
         
-    } else if(response.cmd == "group_deleted") {
+    } else if(payloadKw.cmd == "group_deleted") {
         
         //$("#groups option[value='"+response.gid+"']").remove();
-        $("#groupsTable>table>tbody>tr[gid='"+response.gid+"']").remove();
+        $("#groupsTable>table>tbody>tr[gid='"+payloadKw.gid+"']").remove();
         
     } else {  // "group_created" || "group_updated" || user_joined || user_exit || user_updated
         
-        if(response.hidden) {
+        if(payloadKw.hidden) {
             //$("#groups option[value='"+response.gid+"']").remove();
-            $("#groupsTable>table>tbody>tr[gid='"+response.gid+"']").remove();
+            $("#groupsTable>table>tbody>tr[gid='"+payloadKw.gid+"']").remove();
         } else {
             // if($("#groups option[value='"+response.gid+"']").size() <= 0) {  // insert group
             //   $("#groups").append($("<option>").attr("value", response.gid));
@@ -471,10 +471,10 @@ function update_groups(response) {
             //$("#groups option[value='"+response.gid+"']").text(getGroupDescription(response));
             //$("#groups option[value='"+response.gid+"']").attr("observable", response.observable);
             
-            if($("#groupsTable>table>tbody>tr[gid='"+response.gid+"']").size() <= 0) {
-                $("#groupsTable>table").append(getGroupListItem(response));
+            if($("#groupsTable>table>tbody>tr[gid='"+payloadKw.gid+"']").size() <= 0) {
+                $("#groupsTable>table").append(getGroupListItem(payloadKw));
             } else {
-                $("#groupsTable>table>tbody>tr[gid='"+response.gid+"']").replaceWith(getGroupListItem(response));
+                $("#groupsTable>table>tbody>tr[gid='"+payloadKw.gid+"']").replaceWith(getGroupListItem(payloadKw));
             }
         }
         
@@ -508,11 +508,11 @@ function list_groups(scope) {
     wgsclient.listGroups(appId, { scope: scope }, function(result,resultKw) {
         if(resultKw && resultKw.valid) {
             currentApp = resultKw.app;
-            update_groups(resultKw);
+            update_groups(result,resultKw);
             $("#app_list").hide();
             $("#group_list").slideDown(500);
             $("#group_list fieldset legend").html("Groups: " + resultKw.app.name);
-            wgsclient.subscribe("wgs.app_event:" + appId, update_groups, app_metaevent, {} );            
+            wgsclient.subscribe("wgs.app_event:" + appId, update_groups, app_metaevent, {"metatopics": ["wamp.metatopic.subscriber.add", "wamp.metatopic.subscriber.remove"]} );            
         }
     });
 }
@@ -845,10 +845,10 @@ function remove_last_member(memberId) {
     });
 }
 
-function update_group_callback(response) {
-        if(response.valid) {  // TODO: check it is currentGroup gid
+function update_group_callback(payload, payloadKw) {
+        if(payloadKw.valid) {  // TODO: check it is currentGroup gid
             
-            var num_members = wgsclient.getGroupMembers(response.gid).length;
+            var num_members = wgsclient.getGroupMembers(payloadKw.gid).length;
 
             var old_members = $("#group_params table[id='members'] tbody tr");
             if(num_members < old_members.size()) {
@@ -865,26 +865,26 @@ function update_group_callback(response) {
 
             for(var index = 0; index < num_members; index += 1) {
                 var memberId = index;
-                var member = wgsclient.getGroupMember(response.gid, memberId);
+                var member = wgsclient.getGroupMember(payloadKw.gid, memberId);
                 var currentUserSelected = (wgsclient.sid == member.sid);
                 var roleFixed = (member.role != "") && (member.sid != "") && (wgsclient.sid != member.sid);
-                var added = wgsclient.user == $("#group_admin").val() && index >= wgsclient.getGroupMinMembers(response.gid);
+                var added = wgsclient.user == $("#group_admin").val() && index >= wgsclient.getGroupMinMembers(payloadKw.gid);
                 populate_group_member_fields(added, memberId, member, currentUserSelected, roleFixed, currentApp.ai);
             }
 
-            if(response.cmd == "group_updated") {
-                if(response.observable) $("#grp_observable").attr('checked','yes');
+            if(payloadKw.cmd == "group_updated") {
+                if(payloadKw.observable) $("#grp_observable").attr('checked','yes');
                 else $("#grp_observable").removeAttr("checked");
-                if(response.hidden) $("#grp_hidden").attr('checked','yes');
+                if(payloadKw.hidden) $("#grp_hidden").attr('checked','yes');
                 else $("#grp_hidden").removeAttr("checked");
-                if(response.dynamic) $("#grp_dynamic").attr('checked','yes');
+                if(payloadKw.dynamic) $("#grp_dynamic").attr('checked','yes');
                 else $("#grp_dynamic").removeAttr("checked");
-                if(response.alliances) $("#grp_alliances").attr('checked','yes');
+                if(payloadKw.alliances) $("#grp_alliances").attr('checked','yes');
                 else $("#grp_alliances").removeAttr("checked");
-                if(response.automatch) $("#grp_automatch").attr('checked','yes');
+                if(payloadKw.automatch) $("#grp_automatch").attr('checked','yes');
                 else $("#grp_automatch").removeAttr("checked");
             
-                if(response.state == "STARTED") {
+                if(payloadKw.state == "STARTED") {
                     for(var index = 0; index < num_members; index += 1) {
                         $("#member"+index+" option[selected!='selected']").remove();
                         $("#role"+index+" option[selected!='selected']").remove();
@@ -900,7 +900,7 @@ function update_group_callback(response) {
 
 
         } else {
-            alert("Error joining user:" + response.errorDesc);
+            alert("Error joining user:" + payloadKw.errorDesc);
         }    
 }
 
@@ -1151,10 +1151,11 @@ function test_call_rcp()
 }
 
 
-function on_mytopic_events(event,topicURI)
+function on_mytopic_events(payload,payloadKw,topicURI)
 {
     msg_append_text("TopicURI: " + JSON.stringify(topicURI));
-    msg_append_text("Event: " + JSON.stringify(event));
+    msg_append_text("Payload: " + JSON.stringify(payload));
+    msg_append_text("PayloadKw: " + JSON.stringify(payloadKw));
     msg_append_text("");
 }
 
@@ -1169,7 +1170,7 @@ function on_mytopic_metaevents(topicURI, metatopic, metaevent)
 
 function test_subscribe()
 {
-    wgsclient.subscribe("myapp.topic1", on_mytopic_events, on_mytopic_metaevents, {"match": "exact"})
+    wgsclient.subscribe("myapp.topic1", on_mytopic_events, on_mytopic_metaevents, {"match": "exact", "metatopics": ["wamp.metatopic.subscriber.current", "wamp.metatopic.subscriber.add", "wamp.metatopic.subscriber.remove"] })
         .then(
             function(response) { alert("Subscribed: " + response); },
             function(response) { alert("Error: " + response); }
@@ -1187,7 +1188,7 @@ function test_unsubscribe()
 
 function test_publish()
 {
-    wgsclient.publish("myapp.topic1", { "item1" : 1 }, {});
+    wgsclient.publish("myapp.topic1", [1,"data2"], { "item1" : 1 }, {});
 }
 
 function msg_append_text(text)

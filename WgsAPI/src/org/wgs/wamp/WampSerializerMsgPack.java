@@ -79,7 +79,7 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
     public WampObject castToWampObject(Object obj) {
         WampObject retval = null;
         if(obj instanceof NilValue) {
-            retval = new WampObject();
+            retval = null;
         } else if(obj instanceof BooleanValue) {
             retval = new WampObject();
             retval.setObject(((BooleanValue)obj).getBoolean(), Type.bool);

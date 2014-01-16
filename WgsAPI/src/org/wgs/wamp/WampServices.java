@@ -64,7 +64,7 @@ public class WampServices
                             WampSubscriptionOptions exactTopicOpt = new WampSubscriptionOptions(null);
                             exactTopicOpt.setMatchType(MatchEnum.exact);
                             exactTopicOpt.setEventsEnabled(subscription.getOptions().hasEventsEnabled());
-                            exactTopicOpt.setMetaEvents(subscription.getOptions().getMetaEvents());
+                            exactTopicOpt.setMetaTopics(subscription.getOptions().getMetaTopics());
                             
                             WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
                             module.onSubscribe(socket, topic, subscription, exactTopicOpt);
@@ -202,18 +202,21 @@ public class WampServices
         }        
         
         subscription.addSocket(clientSocket);
-        for(WampTopic topic : subscription.getTopics()) {
-            WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
-            
-            try { 
-                module.onSubscribe(clientSocket, topic, subscription, options);
-            } catch(Exception ex) {
-                error = true;
+        
+        synchronized(clientSocket) {
+            for(WampTopic topic : subscription.getTopics()) {
+                WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+
+                try { 
+                    module.onSubscribe(clientSocket, topic, subscription, options);
+                } catch(Exception ex) {
+                    error = true;
+                }
             }
+
+            if(!error) WampProtocol.sendSubscribed(clientSocket, requestId, subscription.getId());
+            else WampProtocol.sendSubscribeError(clientSocket, requestId, "wamp.error.not_authorized");
         }
-    
-        if(!error) WampProtocol.sendSubscribed(clientSocket, requestId, subscription.getId());
-        else WampProtocol.sendSubscribeError(clientSocket, requestId, "wamp.error.not_authorized");
         
         return subscription.getTopics();
     }
@@ -248,11 +251,11 @@ public class WampServices
     }
 
     
-    public static void publishEvent(Long publicationId, Long publisherId, WampTopic topic, WampObject event, WampPublishOptions options) 
+    public static void publishEvent(Long publicationId, Long publisherId, WampTopic topic, WampList payload, WampDict payloadKw, WampPublishOptions options) 
     {
         //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
         try {
-            MessageBroker.publish(publicationId, topic, event, null, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? publisherId : null));
+            MessageBroker.publish(publicationId, topic, payload, payloadKw, null, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? publisherId : null));
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "Error in publishing event to topic", ex);
         }
@@ -264,7 +267,9 @@ public class WampServices
         try {
             HashSet<Long> eligible = new HashSet<Long>();
             if(toClient != null) eligible.add(toClient.getSessionId());
-            MessageBroker.publish(publicationId, topic, metaevent, metatopic, eligible, null, null);
+            WampList payload = new WampList();
+            payload.add(metaevent);
+            MessageBroker.publish(publicationId, topic, payload, null, metatopic, eligible, null, null);
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "Error in publishing metaevent to topic", ex);
         }        

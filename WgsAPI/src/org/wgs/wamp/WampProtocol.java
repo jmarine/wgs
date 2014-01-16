@@ -154,7 +154,7 @@ public class WampProtocol
     }    
     
     
-    public static void sendEvents(Long publicationId, WampTopic topic, Set<Long> eligibleParam, Set<Long> excluded, Long publisherId, WampObject event) throws Exception 
+    public static void sendEvents(Long publicationId, WampTopic topic, Set<Long> eligibleParam, Set<Long> excluded, Long publisherId, WampList payload, WampDict payloadKw) throws Exception 
     {
         // EVENT data
         WampDict eventDetails = new WampDict();
@@ -175,7 +175,8 @@ public class WampProtocol
             response.add(subscription.getId());
             response.add(publicationId);
             response.add(eventDetails);
-            response.add(event);
+            response.add(payload);
+            response.add(payloadKw);
                                     
             Set<Long> eligible = (eligibleParam != null) ? new HashSet<Long>(eligibleParam) : null;
             if(eligible == null) eligible = subscription.getSessionIds();
@@ -187,7 +188,7 @@ public class WampProtocol
             for (Long sid : eligible) {
                 if((excluded==null) || (!excluded.contains(sid))) {
                     WampSubscriptionOptions subOptions = subscription.getOptions();
-                    if(subOptions != null && subOptions.hasEventsEnabled() && subOptions.isEligibleForEvent(sid, subscription, event)) {
+                    if(subOptions != null && subOptions.hasEventsEnabled() && subOptions.isEligibleForEvent(sid, subscription, payload, payloadKw)) {
                         WampSocket socket = subscription.getSocket(sid);
                         synchronized(socket) {
                             if(socket != null && socket.isOpen() && !excluded.contains(sid)) {
@@ -225,9 +226,9 @@ public class WampProtocol
                     remoteSocket.sendWampMessage(response);
                 }
             } else {
-                if(subscription.getOptions() != null && subscription.getOptions().hasMetaEvent(metaTopic)) {
+                if(subscription.getOptions() != null && subscription.getOptions().hasMetaTopic(metaTopic)) {
                     Object[] msg = new Object[WampEncoding.values().length];
-                    for(Long sid : subscription.getSessionIds()) {
+                    for(Long sid : subscription.getSessionIds()) {  // FIXME: concurrent modification exceptions
                         WampSocket remoteSocket = subscription.getSocket(sid);
                         if(remoteSocket.supportVersion(WampApplication.WAMPv2)) {
                             WampEncoding enc = remoteSocket.getEncoding();

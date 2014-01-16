@@ -46,7 +46,8 @@ public class WampLocalMethod extends WampMethod
                     params.add(argsKw);  
                 }
             } else {
-                Object val = args.get(argCount++).getObject();
+                WampObject wampData = args.get(argCount++);
+                Object val = (wampData != null) ? wampData.getObject() : null;
                 params.add(val);
             }
         }

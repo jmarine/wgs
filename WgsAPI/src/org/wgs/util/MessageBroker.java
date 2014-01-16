@@ -33,8 +33,10 @@ import com.sun.messaging.jmq.jmsservice.BrokerEventListener;
 import com.sun.messaging.jms.management.server.DestinationOperations;
 import com.sun.messaging.jms.management.server.DestinationType;
 import com.sun.messaging.jms.management.server.MQObjectName;
+import org.wgs.wamp.WampDict;
 
 import org.wgs.wamp.WampEncoding;
+import org.wgs.wamp.WampList;
 import org.wgs.wamp.WampObject;
 
 import org.wgs.wamp.WampProtocol;
@@ -198,9 +200,9 @@ public class MessageBroker
     }
     
     
-    public static void publish(Long id, WampTopic wampTopic, WampObject event, String metaTopic, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
+    public static void publish(Long id, WampTopic wampTopic, WampList payload, WampDict payloadKw, String metaTopic, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
     {
-        broadcastClusterEventToLocalNodeClients(id, wampTopic,metaTopic,eligible,exclude,publisherId, event);  
+        //broadcastClusterEventToLocalNodeClients(id, wampTopic,metaTopic,eligible,exclude,publisherId, payload, payloadKw);  
         
         if(brokerEnabled) {
             String topicName = wampTopic.getURI();
@@ -212,6 +214,9 @@ public class MessageBroker
             TopicPublisher publisher = pubSession.createPublisher(topic);
 
             // send a message to the queue in the normal way
+            WampList event = new WampList();
+            event.add(payload);
+            event.add(payloadKw);
             String eventPayLoad = (event != null)? (String)WampObject.getSerializer(WampEncoding.JSon).serialize(event) : null;
             TextMessage msg = pubSession.createTextMessage(eventPayLoad);
             msg.setStringProperty("topic", topicName);
@@ -235,14 +240,15 @@ public class MessageBroker
     }
 
     
-    private static void broadcastClusterEventToLocalNodeClients(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, Set<Long> excluded, Long publisherId, WampObject event) throws Exception 
+    private static void broadcastClusterEventToLocalNodeClients(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, Set<Long> excluded, Long publisherId, WampList payload, WampDict payloadKw) throws Exception 
     {
         if(metaTopic == null) {
             // EVENT data
-            WampProtocol.sendEvents(publicationId, topic, eligible, excluded, publisherId, event);
+            WampProtocol.sendEvents(publicationId, topic, eligible, excluded, publisherId, (WampList)payload, payloadKw);
         } else {
             // METAEVENT data (WAMP v2)
-            WampProtocol.sendMetaEvents(publicationId, topic, metaTopic, eligible, event);
+            WampObject metaevent = payload.get(0);
+            WampProtocol.sendMetaEvents(publicationId, topic, metaTopic, eligible, metaevent);
         }
     }       
     
@@ -276,7 +282,8 @@ public class MessageBroker
             try {
                 //System.out.println ("Received message from broker.");
                 String excludeBroker = receivedMessageFromBroker.getStringProperty("excludeBroker");
-                if(excludeBroker != null && excludeBroker.equals(brokerId)) return;
+                //if(excludeBroker != null && excludeBroker.equals(brokerId)) return;
+                
                 String topicName = receivedMessageFromBroker.getStringProperty("topic");
                 String metaTopic = receivedMessageFromBroker.getStringProperty("metaTopic");
                 Long publisherId = receivedMessageFromBroker.getLongProperty("publisherId");
@@ -285,13 +292,15 @@ public class MessageBroker
                 String eventData = ((TextMessage)receivedMessageFromBroker).getText();
                 //System.out.println ("Received message from topic " + topicName + ": " + eventData);
                 
-                WampObject event = (eventData!=null)? WampObject.getSerializer(WampEncoding.JSon).deserialize(eventData) : null;
+                WampList event = (eventData!=null)? (WampList)WampObject.getSerializer(WampEncoding.JSon).deserialize(eventData) : null;
+                WampList payload = (WampList)event.get(0);  // EVENT.payload|list or METAEVENT.MetaEvent|any
+                WampDict payloadKw = (WampDict)event.get(1);
                 Set<Long> eligible = parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible"));
                 Set<Long> exclude  = parseSessionIDs(receivedMessageFromBroker.getStringProperty("exclude"));
 
                 for(WampSubscription subscription : WampServices.getTopic(topicName).getSubscriptions()) {
                     for(WampTopic topic : subscription.getTopics()) {
-                        broadcastClusterEventToLocalNodeClients(subscription.getId(), topic, metaTopic, eligible, exclude, publisherId, event);
+                        broadcastClusterEventToLocalNodeClients(subscription.getId(), topic, metaTopic, eligible, exclude, publisherId, payload, payloadKw);
                     }
                 }
                 

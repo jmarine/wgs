@@ -168,9 +168,11 @@ public class WampModule
         MessageBroker.subscribeMessageListener(topic, sinceTime, sinceN);
         topic.addSubscription(subscription);
         clientSocket.addSubscription(subscription);
-        if(options != null && options.hasMetaEvents()) {
+        if(options != null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_ADDED)) {
             if(options.hasEventsEnabled()) {
-                WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, clientSocket.toWampObject(), null);
+                WampObject metaEvent = new WampObject();
+                metaEvent.setObject(clientSocket.getSessionId(), WampObject.Type.integer);
+                WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
             }
         }
     }
@@ -179,8 +181,9 @@ public class WampModule
         WampSubscription subscription = topic.getSubscription(subscriptionId);
         if(subscription.getSocket(clientSocket.getSessionId()) != null) {
             WampSubscriptionOptions options = subscription.getOptions();
-            if(options!=null && options.hasMetaEvents() && options.hasEventsEnabled()) {
-                WampObject metaEvent = clientSocket.toWampObject();
+            if(options!=null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_REMOVED)) {
+                WampObject metaEvent = new WampObject();
+                metaEvent.setObject(clientSocket.getSessionId(), WampObject.Type.integer);
                 WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
             }
 
@@ -220,57 +223,19 @@ public class WampModule
     public void onPublish(WampSocket clientSocket, WampTopic topic, WampList request) throws Exception 
     {
         Long publicationId = WampProtocol.newId();
+        Long requestId = request.get(1).asLong();
+        WampList payload   = (request.size() >= 5)? (WampList)request.get(4) : null;
+        WampDict payloadKw = (request.size() >= 6)? (WampDict)request.get(5) : null;;
         WampPublishOptions options = new WampPublishOptions();
-        Long requestId = null;
-        WampObject event = null;
-        
-        if(request.get(0).asLong() == 30) {
-            // WAMP v2
-            requestId = request.get(1).asLong();
-            event = request.get(4);
-            options.init((WampDict)request.get(2));
-            if(options.hasExcludeMe()) {
-                Set<Long> excludedSet = options.getExcluded();
-                if(excludedSet == null) excludedSet = new HashSet<Long>();
-                excludedSet.add(clientSocket.getSessionId());
-            }
-        } else {
-            // WAMP v1
-            event = (WampObject)request.get(2);
-            if(request.size() == 4) {
-                // Argument 4 could be a BOOLEAN(excludeMe) or JSONArray(excludedIds)
-                try {
-                    boolean excludeMe = request.get(3).asBoolean();
-                    options.setExcludeMe(excludeMe);                    
-                    if(excludeMe) {
-                        HashSet<Long> excludedSet = new HashSet<Long>();
-                        excludedSet.add(clientSocket.getSessionId());
-                    }
-                } catch(Exception ex) {
-                    HashSet<Long> excludedSet = new HashSet<Long>();
-                    WampList excludedArray = (WampList)request.get(3);
-                    for(int i = 0; i < excludedArray.size(); i++) {
-                        excludedSet.add(excludedArray.get(i).asLong());
-                    }
-                    options.setExcluded(excludedSet);
-                }
-            } else if(request.size() == 5) {
-                HashSet<Long> excludedSet = new HashSet<Long>();
-                HashSet<Long> eligibleSet = new HashSet<Long>();
-                WampList excludedArray = (WampList)request.get(3);
-                for(int i = 0; i < excludedArray.size(); i++) {
-                    excludedSet.add(excludedArray.get(i).asLong());
-                }
-                WampList eligibleArray = (WampList)request.get(4);
-                for(int i = 0; i < eligibleArray.size(); i++) {
-                    eligibleSet.add(eligibleArray.get(i).asLong());
-                }
-                options.setExcluded(excludedSet);
-                options.setEligible(eligibleSet);
-            }
+        options.init((WampDict)request.get(2));
+        if(options.hasExcludeMe()) {
+            Set<Long> excludedSet = options.getExcluded();
+            if(excludedSet == null) excludedSet = new HashSet<Long>();
+            excludedSet.add(clientSocket.getSessionId());
         }
+
         
-        WampServices.publishEvent(publicationId, clientSocket.getSessionId(), topic, event, options);
+        WampServices.publishEvent(publicationId, clientSocket.getSessionId(), topic, payload, payloadKw, options);
         
         if(requestId != null) WampProtocol.sendPublished(clientSocket, requestId, publicationId);
     }

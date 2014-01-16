@@ -10,51 +10,28 @@ public class WampSubscriptionOptions
 
     private MatchEnum    matchType;
     private boolean      eventsEnabled;
-    private HashSet<String> metaEvents;
+    private HashSet<String> metaTopics;
     
 
     public WampSubscriptionOptions(WampDict node) 
     {
         this.matchType = MatchEnum.exact;
         this.eventsEnabled = true;
-        this.metaEvents = new HashSet<String>();
+        this.metaTopics = new HashSet<String>();
         
         if(node != null) {
             if(node.has("match")) {
                 setMatchType(MatchEnum.valueOf(node.get("match").asText()));
             }     
             
-            if(node.has("metaevents")) {
-                setMetaEvents((List)node.get("metaevents").getObject());
+            if(node.has("metatopics")) {
+                setMetaTopics((WampList)node.get("metatopics"));
             }
 
             if(node.has("metaonly")) {
                 setEventsEnabled(!node.get("metaonly").asBoolean().booleanValue());
             }     
-            
-            /*
-            if(node.has("eventId")) {
-                setEventIdRequested(node.get("eventId").asBoolean(false));
-            }
-            
-            if(node.has("identifyEventPublisher")) {
-                setPublisherIdRequested(node.get("identifyEventPublisher").asBoolean(false));
-            }
-            
-            if(node.has("last")) {
-                setNumberEventsToSendOnSubscription(node.get("last").asInt(0));
-            }
-            
-            if(node.has("sinceTime")) {
-                setSinceTimeEventsToSendOnSubscription(node.get("sinceTime").asLong(0));
-            }            
-            
-            if(node.has("STATUS")) {
-                setStatus(node.get("STATUS"));
-            }            
 
-            */
-              
         }
     }
     
@@ -73,52 +50,43 @@ public class WampSubscriptionOptions
     }
 
     /**
-     * @return the metaEvents
+     * @return the metaTopics
      */
-    public HashSet<String> getMetaEvents() {
-        return metaEvents;
+    public HashSet<String> getMetaTopics() {
+        return metaTopics;
     }
 
-    /**
-     * @param metaEvents the metaEvents to set
-     */
-    public void setMetaEvents(List metaEvents) {
-        this.metaEvents = new HashSet<String>();
-        if(metaEvents != null) {
-            for(int i = 0; i < metaEvents.size(); i++) {
-                this.metaEvents.add((String)metaEvents.get(i));
-            }
-        }
-    }
     
     /**
-     * @param metaEvents the metaEvents to set
+     * @param metaTopics the metaTopics to set
      */
-    public void setMetaEvents(HashSet<String> metaEvents) {
-        this.metaEvents = metaEvents;
-    }    
-
+    public void setMetaTopics(HashSet<String> metaTopics) {
+        this.metaTopics = metaTopics;
+    }        
+    
     /**
-     * @param arrayNode the JSON array node with the text elements to set
+     * @param metaTopics the metaTopics to set
      */
-    public void setMetaEvents(JsonNode arrayNode) {
-        this.metaEvents = new HashSet<String>();
-        if(arrayNode != null) {
-            for(int i = 0; i < arrayNode.size(); i++) {
-                this.metaEvents.add(arrayNode.get(i).asText());
+    public void setMetaTopics(WampList metaTopics) {
+        this.metaTopics = new HashSet<String>();
+        if(metaTopics != null) {
+            for(int i = 0; i < metaTopics.size(); i++) {
+                this.metaTopics.add(metaTopics.get(i).asText());
             }
         }
     }    
 
-    public boolean hasMetaEvents()
+
+
+    public boolean hasMetaTopics()
     {
-        return (metaEvents.size() > 0);
+        return (metaTopics.size() > 0);
     }
         
     
-    public boolean hasMetaEvent(String metatopic)
+    public boolean hasMetaTopic(String metatopic)
     {
-        return (metaEvents.contains(metatopic));
+        return (metaTopics.contains(metatopic));
     }
     
     
@@ -131,7 +99,7 @@ public class WampSubscriptionOptions
         return (this.eventsEnabled);
     }    
     
-    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, WampObject event)
+    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, WampList payload, WampDict payloadKw)
     {
         return true;
     }
@@ -139,54 +107,8 @@ public class WampSubscriptionOptions
     public void updateOptions(WampSubscriptionOptions opts)
     {
         this.eventsEnabled = this.eventsEnabled || opts.eventsEnabled;
-        this.metaEvents.addAll(opts.metaEvents);
+        this.metaTopics.addAll(opts.metaTopics);
     }
-    
-/*
-    public boolean isPublisherIdRequested() {
-        return publisherIdRequested;
-    }
-
-    public void setPublisherIdRequested(boolean publisherIdRevealed) {
-        this.publisherIdRequested = publisherIdRevealed;
-    }
-    
-
-    public int getNumberEventsToSendOnSubscription() {
-        return numberEventsToSendOnSubscription;
-    }
-
-    public void setNumberEventsToSendOnSubscription(int numberEventsToSendOnSubscription) {
-        this.numberEventsToSendOnSubscription = numberEventsToSendOnSubscription;
-    }
-
-
-    public boolean isEventIdRequested() {
-        return eventIdRequested;
-    }
-
-    public void setEventIdRequested(boolean eventIdRequested) {
-        this.eventIdRequested = eventIdRequested;
-    }
-
-    public long getSinceTimeEventsToSendOnSubscription() {
-        return sinceTimeEventsToSendOnSubscription;
-    }
-
-    public void setSinceTimeEventsToSendOnSubscription(long sinceTimeEventsToSendOnSubscription) {
-        this.sinceTimeEventsToSendOnSubscription = sinceTimeEventsToSendOnSubscription;
-    }
-
-    
-    public JsonNode getStatus() {
-        return status;
-    }
-
-    public void setStatus(JsonNode status) {
-        this.status = status;
-    }
-
-    */
     
 }
 
