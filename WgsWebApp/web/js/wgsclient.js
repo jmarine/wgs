@@ -138,16 +138,16 @@ WgsClient.prototype = {
       this.send(JSON.stringify(arr));      
   },
   
-  subscribe: function(topic, event_cb, metaevent_cb, options) {
+  subscribe: function(topicURI, event_cb, metaevent_cb, options) {
         if(!options) options = {};
         if(event_cb==null && metaevent_cb!=null) options.metaonly = 1;
         
-        if(!options.match && topic.indexOf("..") != -1) {
+        if(!options.match && topicURI.indexOf("..") != -1) {
             options.match = "wildcard";
         }
         
         if(options.match && options.match.toLowerCase() == "prefix") {
-            topic = topic + "..";
+            topicURI = topicURI + "..";
         }
 
         var dfd = $.Deferred();            
@@ -155,9 +155,9 @@ WgsClient.prototype = {
         arr[0] = 10;  // SUBSCRIBE
         arr[1] = this._newid();
         arr[2] = options;
-        arr[3] = topic;      
-        var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
-        this.subscriptionRequests[arr[1]] = [dfd, topicAndOptionsKey, event_cb, metaevent_cb];
+        arr[3] = topicURI;      
+        var topicAndOptionsKey = this._getTopicAndOptionsKey(topicURI,options);
+        this.subscriptionRequests[arr[1]] = [dfd, topicURI, event_cb, metaevent_cb, options];
         this.send(JSON.stringify(arr));
         return dfd.promise();
   },
@@ -499,8 +499,10 @@ WgsClient.prototype = {
               if(requestId && client.subscriptionRequests[requestId]) {
                   var subscriptionId = arr[2];
                   var promise = client.subscriptionRequests[requestId][0];
-                  var topicAndOptionsKey = client.subscriptionRequests[requestId][1];
-                  client.subscriptionsById[subscriptionId] = topicAndOptionsKey;
+                  var topicURI = client.subscriptionRequests[requestId][1];
+                  var options = client.subscriptionRequests[requestId][4];
+                  var topicAndOptionsKey = client._getTopicAndOptionsKey(topicURI,options);
+                  client.subscriptionsById[subscriptionId] = topicURI;
                   client.subscriptionsByTopicAndOptions[topicAndOptionsKey] = subscriptionId;
                   if(client.subscriptionRequests[requestId][2]) {
                     if(!client.eventHandlers[subscriptionId]) client.eventHandlers[subscriptionId] = [];

@@ -1170,7 +1170,7 @@ function on_mytopic_metaevents(topicURI, metatopic, metaevent)
 
 function test_subscribe()
 {
-    wgsclient.subscribe("myapp.topic1", on_mytopic_events, on_mytopic_metaevents, {"match": "exact", "metatopics": ["wamp.metatopic.subscriber.current", "wamp.metatopic.subscriber.add", "wamp.metatopic.subscriber.remove"] })
+    wgsclient.subscribe("myapp", on_mytopic_events, on_mytopic_metaevents, {"match": "prefix", "metatopics": ["wamp.metatopic.subscriber.current", "wamp.metatopic.subscriber.add", "wamp.metatopic.subscriber.remove"] })
         .then(
             function(response) { alert("Subscribed: " + response); },
             function(response) { alert("Error: " + response); }
@@ -1179,7 +1179,7 @@ function test_subscribe()
 
 function test_unsubscribe()
 {
-    wgsclient.unsubscribe("myapp.topic1", on_mytopic_events, on_mytopic_metaevents, {"match": "exact"})
+    wgsclient.unsubscribe("myapp", on_mytopic_events, on_mytopic_metaevents, {"match": "prefix"})
         .then(
             function(response) { alert("Unsubscribed: " + response); },
             function(response) { alert("Error: " + response); }
