@@ -183,8 +183,6 @@ public class WampServices
     
     public static Collection<WampTopic> subscribeClientWithTopic(WampApplication app, WampSocket clientSocket, Long requestId, String topicUriOrPattern, WampSubscriptionOptions options)
     {
-        boolean error = false;
-        
         topicUriOrPattern = clientSocket.normalizeURI(topicUriOrPattern);
         if(options == null) options = new WampSubscriptionOptions(null);
         if(options.getMatchType() == MatchEnum.prefix && !topicUriOrPattern.endsWith("..")) {
@@ -202,7 +200,7 @@ public class WampServices
         }        
         
         subscription.addSocket(clientSocket);
-        
+        WampProtocol.sendSubscribed(clientSocket, requestId, subscription.getId());
 
         for(WampTopic topic : subscription.getTopics()) {
             WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
@@ -210,13 +208,11 @@ public class WampServices
             try { 
                 module.onSubscribe(clientSocket, topic, subscription, options);
             } catch(Exception ex) {
-                error = true;
+                System.err.println("Error: " + ex.getClass().getName() + ": " + ex.getMessage());
+                ex.printStackTrace();
             }
         }
 
-        if(!error) WampProtocol.sendSubscribed(clientSocket, requestId, subscription.getId());
-        else WampProtocol.sendSubscribeError(clientSocket, requestId, "wamp.error.not_authorized");
-        
         return subscription.getTopics();
     }
     
@@ -242,6 +238,8 @@ public class WampServices
                     }          
                 }
 
+                clientSocket.removeSubscription(subscriptionId);
+                
                 WampProtocol.sendUnsubscribed(clientSocket, requestId);
             }
         }

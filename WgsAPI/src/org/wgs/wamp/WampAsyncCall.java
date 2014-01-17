@@ -5,25 +5,25 @@ import java.util.concurrent.Callable;
 
 public abstract class WampAsyncCall implements Callable<Void>
 {
-    private WampRpcCallback callback;
+    private WampAsyncCallback callback;
 
-    public WampAsyncCall(WampRpcCallback callback)
+    public WampAsyncCall(WampAsyncCallback callback)
     {
         this.callback = callback;
     }
     
-    public WampRpcCallback setRpcCallback(WampRpcCallback callback)
+    public WampAsyncCallback setAsyncCallback(WampAsyncCallback callback)
     {
         this.callback = callback;
         return this.callback;
     }
         
-    public WampRpcCallback getRpcCallback()
+    public WampAsyncCallback getAsyncCallback()
     {
         return callback;
     }
     
-    public boolean hasCallback()
+    public boolean hasAsyncCallback()
     {
         return callback != null;
     }    

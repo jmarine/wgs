@@ -52,7 +52,7 @@ public class WampRemoteMethod extends WampMethod
             @Override
             public Void call() throws Exception {
                 remotePeer.addRpcController(invocationId, task);
-                remotePeer.addRpcCallback(invocationId, getRpcCallback());
+                remotePeer.addAsyncCallback(invocationId, getAsyncCallback());
 
                 WampDict invocationOptions = new WampDict();
                 if(matchType != MatchEnum.exact) invocationOptions.put("procedure", task.getProcedureURI());

@@ -73,7 +73,7 @@ public class WampModule
                         
                         final AtomicInteger barrier = new AtomicInteger(remoteMethods.size());
 
-                        final WampRpcCallback completeCallback = new WampRpcCallback()
+                        final WampAsyncCallback completeCallback = new WampAsyncCallback()
                         {
                             @Override
                             public void resolve(Object... results) {
@@ -110,7 +110,7 @@ public class WampModule
                             public Void call() throws Exception {
                                 for(final WampRemoteMethod method : remoteMethods) {
                                     WampAsyncCall remoteInvocation = (WampAsyncCall)method.invoke(task,clientSocket,args,argsKw,options);
-                                    remoteInvocation.setRpcCallback(new WampRpcCallback() {
+                                    remoteInvocation.setAsyncCallback(new WampAsyncCallback() {
                                         @Override
                                         public void resolve(Object... results) {
                                             WampList progress = (WampList)results[0];
@@ -224,20 +224,23 @@ public class WampModule
     {
         Long publicationId = WampProtocol.newId();
         Long requestId = request.get(1).asLong();
-        WampList payload   = (request.size() >= 5)? (WampList)request.get(4) : null;
-        WampDict payloadKw = (request.size() >= 6)? (WampDict)request.get(5) : null;;
-        WampPublishOptions options = new WampPublishOptions();
-        options.init((WampDict)request.get(2));
-        if(options.hasExcludeMe()) {
-            Set<Long> excludedSet = options.getExcluded();
-            if(excludedSet == null) excludedSet = new HashSet<Long>();
-            excludedSet.add(clientSocket.getSessionId());
+        if(requestId != null) {
+            WampList payload   = (request.size() >= 5)? (WampList)request.get(4) : null;
+            WampDict payloadKw = (request.size() >= 6)? (WampDict)request.get(5) : null;;
+            WampPublishOptions options = new WampPublishOptions();
+            options.init((WampDict)request.get(2));
+            if(options.hasExcludeMe()) {
+                Set<Long> excludedSet = options.getExcluded();
+                if(excludedSet == null) excludedSet = new HashSet<Long>();
+                excludedSet.add(clientSocket.getSessionId());
+            }
+
+            WampProtocol.sendPublished(clientSocket, requestId, publicationId);
+        
+            WampServices.publishEvent(publicationId, clientSocket.getSessionId(), topic, payload, payloadKw, options);
+            
         }
 
-        
-        WampServices.publishEvent(publicationId, clientSocket.getSessionId(), topic, payload, payloadKw, options);
-        
-        if(requestId != null) WampProtocol.sendPublished(clientSocket, requestId, publicationId);
     }
 
     
