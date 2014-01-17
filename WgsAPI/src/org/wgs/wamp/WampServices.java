@@ -203,20 +203,19 @@ public class WampServices
         
         subscription.addSocket(clientSocket);
         
-        synchronized(clientSocket) {
-            for(WampTopic topic : subscription.getTopics()) {
-                WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
 
-                try { 
-                    module.onSubscribe(clientSocket, topic, subscription, options);
-                } catch(Exception ex) {
-                    error = true;
-                }
+        for(WampTopic topic : subscription.getTopics()) {
+            WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+
+            try { 
+                module.onSubscribe(clientSocket, topic, subscription, options);
+            } catch(Exception ex) {
+                error = true;
             }
-
-            if(!error) WampProtocol.sendSubscribed(clientSocket, requestId, subscription.getId());
-            else WampProtocol.sendSubscribeError(clientSocket, requestId, "wamp.error.not_authorized");
         }
+
+        if(!error) WampProtocol.sendSubscribed(clientSocket, requestId, subscription.getId());
+        else WampProtocol.sendSubscribeError(clientSocket, requestId, "wamp.error.not_authorized");
         
         return subscription.getTopics();
     }

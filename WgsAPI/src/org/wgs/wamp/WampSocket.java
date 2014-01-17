@@ -25,7 +25,7 @@ public class WampSocket
     private Map     sessionData;
     private Map<String,String> prefixes;
     private Map<Long,WampSubscription> subscriptions;
-    private Map<Long,Promise> rpcPromises;
+    private Map<Long,WampRpcCallback> rpcCallbacks;
     private Map<Long,WampCallController> rpcController;
     private WampConnectionState state;
     private Principal principal;
@@ -51,7 +51,7 @@ public class WampSocket
         sessionData = new ConcurrentHashMap();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
-        rpcPromises = new HashMap<Long,Promise>();
+        rpcCallbacks = new HashMap<Long,WampRpcCallback>();
         rpcController = new HashMap<Long,WampCallController>();
         
         String subprotocol = session.getNegotiatedSubprotocol();
@@ -179,19 +179,19 @@ public class WampSocket
     }
 
     
-    public void addRpcPromise(Long callID, Promise rpcPromise)
+    public void addRpcCallback(Long callID, WampRpcCallback rpcCallback)
     {
-        rpcPromises.put(callID, rpcPromise);
+        rpcCallbacks.put(callID, rpcCallback);
     }
     
-    public Promise getRpcPromise(Long callID)
+    public WampRpcCallback getRpcCallback(Long callID)
     {
-        return rpcPromises.get(callID);
+        return rpcCallbacks.get(callID);
     }    
     
-    public Promise removeRpcPromise(Long callID) 
+    public WampRpcCallback removeRpcCallback(Long callID) 
     {
-        return rpcPromises.remove(callID);
+        return rpcCallbacks.remove(callID);
     }
     
     

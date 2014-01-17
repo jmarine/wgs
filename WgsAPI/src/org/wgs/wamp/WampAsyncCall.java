@@ -5,27 +5,27 @@ import java.util.concurrent.Callable;
 
 public abstract class WampAsyncCall implements Callable<Void>
 {
-    private Promise promise;
+    private WampRpcCallback callback;
 
-    public WampAsyncCall(Promise promise)
+    public WampAsyncCall(WampRpcCallback callback)
     {
-        this.promise = promise;
+        this.callback = callback;
     }
     
-    public WampAsyncCall setPromise(Promise promise)
+    public WampRpcCallback setRpcCallback(WampRpcCallback callback)
     {
-        this.promise = promise;
-        return this;
+        this.callback = callback;
+        return this.callback;
+    }
+        
+    public WampRpcCallback getRpcCallback()
+    {
+        return callback;
     }
     
-    public Promise getPromise()
+    public boolean hasCallback()
     {
-        return promise;
-    }
-    
-    public boolean hasPromise()
-    {
-        return promise != null;
+        return callback != null;
     }    
     
 

@@ -1,7 +1,7 @@
 package org.wgs.wamp;
 
 
-public interface Promise 
+public interface WampRpcCallback 
 {
     void resolve(Object ... results);
     

@@ -461,20 +461,20 @@ public class WampApplication
     private void processInvocationProgress(WampSocket providerSocket, WampList request) throws Exception
     {
         Long invocationId = request.get(1).asLong();
-        Promise promise = providerSocket.getRpcPromise(invocationId);
+        WampRpcCallback callback = providerSocket.getRpcCallback(invocationId);
         WampList progress = (WampList)request.get(2);
         WampDict progressKw = (WampDict)request.get(3);
-        promise.progress(progress, progressKw);
+        callback.progress(progress, progressKw);
     }    
     
     private void processInvocationResult(WampSocket providerSocket, WampList request) throws Exception
     {
         Long invocationId = request.get(1).asLong();
-        Promise promise = providerSocket.getRpcPromise(invocationId);
+        WampRpcCallback callback = providerSocket.getRpcCallback(invocationId);
         WampList result = (WampList)request.get(2);
         WampDict resultKw = (WampDict)request.get(3);
-        promise.resolve(result,resultKw);
-        providerSocket.removeRpcPromise(invocationId);
+        callback.resolve(result,resultKw);
+        providerSocket.removeRpcCallback(invocationId);
     }
     
     private void processInvocationError(WampSocket providerSocket, WampList request) throws Exception
@@ -482,9 +482,9 @@ public class WampApplication
         Long invocationId = request.get(1).asLong();
         String errorURI = request.get(2).asText();
         WampObject exception = request.get(3);
-        Promise promise = providerSocket.getRpcPromise(invocationId);
-        promise.reject(errorURI, exception);
-        providerSocket.removeRpcPromise(invocationId);
+        WampRpcCallback callback = providerSocket.getRpcCallback(invocationId);
+        callback.reject(errorURI, exception);
+        providerSocket.removeRpcCallback(invocationId);
     }
     
     

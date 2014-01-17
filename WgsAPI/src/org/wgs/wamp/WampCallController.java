@@ -100,7 +100,7 @@ public class WampCallController implements Runnable
             Object response = module.onCall(this, clientSocket, procedureURI, arguments, argumentsKw, callOptions);
             if(response != null && response instanceof WampAsyncCall) {
                 asyncCall = (WampAsyncCall)response;
-                if(!asyncCall.hasPromise()) asyncCall.setPromise(new Promise() {
+                if(!asyncCall.hasCallback()) asyncCall.setRpcCallback(new WampRpcCallback() {
                     @Override
                     public void resolve(Object... results) {
                         WampList result = (WampList)results[0];
@@ -178,7 +178,7 @@ public class WampCallController implements Runnable
             done = true;
         }
         
-        clientSocket.removeRpcPromise(callID);           
+        clientSocket.removeRpcCallback(callID);           
     }
     
     

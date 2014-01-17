@@ -73,7 +73,7 @@ public class WampModule
                         
                         final AtomicInteger barrier = new AtomicInteger(remoteMethods.size());
 
-                        final Promise completePromise = new Promise()
+                        final WampRpcCallback completeCallback = new WampRpcCallback()
                         {
                             @Override
                             public void resolve(Object... results) {
@@ -104,13 +104,13 @@ public class WampModule
                             }                            
                         };
                                 
-                        return new WampAsyncCall(completePromise) {
+                        return new WampAsyncCall(completeCallback) {
 
                             @Override
                             public Void call() throws Exception {
                                 for(final WampRemoteMethod method : remoteMethods) {
                                     WampAsyncCall remoteInvocation = (WampAsyncCall)method.invoke(task,clientSocket,args,argsKw,options);
-                                    remoteInvocation.setPromise(new Promise() {
+                                    remoteInvocation.setRpcCallback(new WampRpcCallback() {
                                         @Override
                                         public void resolve(Object... results) {
                                             WampList progress = (WampList)results[0];
@@ -123,13 +123,13 @@ public class WampModule
                                             }
                                             
                                             if(barrier.decrementAndGet() <= 0) {
-                                                completePromise.resolve(null, null);
+                                                completeCallback.resolve(null, null);
                                             }
                                         }
 
                                         @Override
                                         public void progress(Object... progressParams) {
-                                            completePromise.progress(progressParams);
+                                            completeCallback.progress(progressParams);
                                         }
 
                                         @Override
