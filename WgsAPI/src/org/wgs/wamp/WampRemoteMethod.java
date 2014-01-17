@@ -58,25 +58,14 @@ public class WampRemoteMethod extends WampMethod
                 if(matchType != MatchEnum.exact) invocationOptions.put("procedure", task.getProcedureURI());
                 if(callOptions.hasDiscloseMe())  invocationOptions.put("caller", clientSocket.getSessionId());
 
-                WampList msg = new WampList();
-                msg.add(80);
-                msg.add(invocationId);
-                msg.add(registrationId);
-                msg.add(invocationOptions);
-                msg.add(args);
-                msg.add(argsKw);                
-                remotePeer.sendWampMessage(msg); 
+                WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
                     
                 return null;
             }
 
             @Override
             public void cancel(WampDict cancelOptions) {
-                WampList msg = new WampList();
-                msg.add(81);
-                msg.add(invocationId);
-                msg.add(cancelOptions);
-                remotePeer.sendWampMessage(msg);
+                WampProtocol.sendCancelInvocation(remotePeer, invocationId, cancelOptions);
             }           
             
         };

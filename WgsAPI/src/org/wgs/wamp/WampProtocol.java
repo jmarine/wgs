@@ -3,10 +3,13 @@ package org.wgs.wamp;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 public class WampProtocol 
 {
+    private static final Logger logger = Logger.getLogger(WampProtocol.class.toString());    
     private static Random randomizer = new Random();
     
     
@@ -16,6 +19,20 @@ public class WampProtocol
             return (((long)(randomizer.nextInt(67108864)) << 27) + randomizer.nextInt(134217728));  // 53 bits
         }
     }
+    
+
+    private static void sendWampMessage(WampSocket socket, WampList args)
+    {
+        try {        
+            Object msg = WampObject.getSerializer(socket.getEncoding()).serialize(args);
+            socket.sendObject(msg);
+
+        } catch(Exception ex) {
+            logger.log(Level.FINE, "Serialization error '" + ex.getClass().getName() + "': " + ex.getMessage(), ex);
+        }
+
+    }    
+    
     
     public static void sendWelcomeMessage(WampApplication app, WampSocket clientSocket)
     {
@@ -45,7 +62,7 @@ public class WampProtocol
                 break;
         }
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }
     
     public static void sendHeartbeatMessage(WampSocket clientSocket, String discard)
@@ -56,7 +73,7 @@ public class WampProtocol
         response.add(clientSocket.getNextOutgoingHeartbeatSeq());
         response.add(discard);
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }
     
     public static void sendCallProgress(WampSocket clientSocket, Long callID, WampList args, WampDict argsKw)
@@ -67,7 +84,7 @@ public class WampProtocol
         response.add(args);
         response.add(argsKw);
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }    
     
     public static void sendCallResult(WampSocket clientSocket, Long callID, WampList args, WampDict argsKw)
@@ -78,7 +95,7 @@ public class WampProtocol
         response.add(args);
         response.add(argsKw);
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }    
     
     public static void sendCallError(WampSocket clientSocket, Long callID, String errorURI, String errorDesc, Object errorDetails)
@@ -98,7 +115,7 @@ public class WampProtocol
         }
 
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }    
 
     
@@ -109,8 +126,9 @@ public class WampProtocol
         response.add(requestId);
         response.add(subscriptionId);
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }
+    
     
     public static void sendSubscribeError(WampSocket clientSocket, Long requestId, String errorUri)
     {    
@@ -119,9 +137,8 @@ public class WampProtocol
         response.add(requestId);
         response.add(errorUri);
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }
-    
     
     
     public static void sendUnsubscribed(WampSocket clientSocket, Long requestId)
@@ -130,8 +147,9 @@ public class WampProtocol
         response.add(21);
         response.add(requestId);
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }
+    
     
     public static void sendUnsubscribeError(WampSocket clientSocket, Long requestId, String errorUri)
     {    
@@ -140,8 +158,9 @@ public class WampProtocol
         response.add(requestId);
         response.add(errorUri);
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }    
+    
     
     public static void sendPublished(WampSocket clientSocket, Long requestId, Long publicationId)
     {    
@@ -150,7 +169,7 @@ public class WampProtocol
         response.add(requestId);
         response.add(publicationId);
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }    
     
     
@@ -223,7 +242,7 @@ public class WampProtocol
             if(toClient != null) {
                 WampSocket remoteSocket = subscription.getSocket(toClient);
                 if(remoteSocket != null) {
-                    remoteSocket.sendWampMessage(response);
+                    sendWampMessage(remoteSocket, response);
                 }
             } else {
                 if(subscription.getOptions() != null && subscription.getOptions().hasMetaTopic(metaTopic)) {
@@ -252,7 +271,7 @@ public class WampProtocol
         response.add(requestId);
         response.add(registrationId);
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }      
     
     
@@ -263,8 +282,32 @@ public class WampProtocol
         response.add(requestId);
         response.add(errorUri);
         
-        clientSocket.sendWampMessage(response);
+        sendWampMessage(clientSocket, response);
     }
         
+
+    public static void sendInvocationMessage(WampSocket remotePeer, Long invocationId, Long registrationId, WampDict invocationOptions, WampList args, WampDict argsKw) 
+    {
+        WampList msg = new WampList();
+        msg.add(80);
+        msg.add(invocationId);
+        msg.add(registrationId);
+        msg.add(invocationOptions);
+        msg.add(args);
+        msg.add(argsKw); 
+        
+        sendWampMessage(remotePeer, msg);        
+    }
+    
+    
+    public static void sendCancelInvocation(WampSocket remotePeer, Long invocationId, WampDict cancelOptions) 
+    {
+        WampList msg = new WampList();
+        msg.add(81);
+        msg.add(invocationId);
+        msg.add(cancelOptions);
+        
+        sendWampMessage(remotePeer, msg);        
+    }
     
 }

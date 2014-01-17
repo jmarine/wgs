@@ -207,9 +207,13 @@ public class WampApplication
                 WampServices.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
                 break;
             case 20:    // UNSUBSCRIBE
-                Long requestId2 = request.get(1).asLong();
-                Long subscriptionId2 = request.get(2).asLong();
-                WampServices.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
+                Long requestId2 = (request.size() > 1) ? request.get(1).asLong() : null;
+                Long subscriptionId2 = (request.size() > 2) ? request.get(2).asLong() : null;
+                if(requestId2 == null || subscriptionId2 == null)  {
+                    WampProtocol.sendUnsubscribeError(clientSocket, requestId2, "wamp.error.protocol_violation");            
+                } else {
+                    WampServices.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
+                }
                 break;
             case 30:    // PUBLISH
                 WampServices.processPublishMessage(this, clientSocket, request);

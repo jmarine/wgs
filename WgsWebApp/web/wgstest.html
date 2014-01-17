@@ -913,8 +913,8 @@ function update_group(state, data) {
     var dynamic = $("#grp_dynamic").is(':checked');
     var alliances = $("#grp_alliances").is(':checked');
 
-    wgsclient.updateGroup(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, function(response) {
-        if(response.valid) update_group_callback(response);
+    wgsclient.updateGroup(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, function(result,resultKw) {
+        if(resultKw.valid) update_group_callback(result,resultKw);
     });
 }
 
@@ -1141,30 +1141,30 @@ function test_unregister_rcp()
 
 function test_call_rcp()
 {
-    $("#messages").empty();
+    clear_messages();
     wgsclient.call("mymodule.myfunc", [1,2,3], {}, {"runon": "all", "runmode": "progressive", "disclose_me": 1})
         .then(
-            function(result,resultKw) { msg_append_text("Result: " + JSON.stringify(result))} ,
-            function(error) { msg_append_text("Error: " + error.errorURI)},
-            function(progress,progressKw) { msg_append_text("Progress: " + JSON.stringify(progress)) }
+            function(result,resultKw) { append_message("Result: " + JSON.stringify(result))} ,
+            function(error) { append_message("Error: " + error.errorURI)},
+            function(progress,progressKw) { append_message("Progress: " + JSON.stringify(progress)) }
         );
 }
 
 
 function on_mytopic_events(payload,payloadKw,topicURI)
 {
-    msg_append_text("TopicURI: " + JSON.stringify(topicURI));
-    msg_append_text("Payload: " + JSON.stringify(payload));
-    msg_append_text("PayloadKw: " + JSON.stringify(payloadKw));
-    msg_append_text("");
+    append_message("TopicURI: " + JSON.stringify(topicURI));
+    append_message("Payload: " + JSON.stringify(payload));
+    append_message("PayloadKw: " + JSON.stringify(payloadKw));
+    append_message("");
 }
 
 function on_mytopic_metaevents(topicURI, metatopic, metaevent)
 {
-    msg_append_text("Topic URI: " + JSON.stringify(topicURI));
-    msg_append_text("Metatopic: " + JSON.stringify(metatopic));
-    msg_append_text("Metaevent: " + JSON.stringify(metaevent));
-    msg_append_text("");
+    append_message("Topic URI: " + JSON.stringify(topicURI));
+    append_message("Metatopic: " + JSON.stringify(metatopic));
+    append_message("Metaevent: " + JSON.stringify(metaevent));
+    append_message("");
 }
 
 
@@ -1191,7 +1191,12 @@ function test_publish()
     wgsclient.publish("myapp.topic1", [1,"data2"], { "item1" : 1 }, {});
 }
 
-function msg_append_text(text)
+function clear_messages()
+{
+    $("#messages").empty();
+}
+
+function append_message(text)
 {
     $("#messages").append(text + "<br>");
 }
@@ -1385,6 +1390,8 @@ function msg_append_text(text)
     <button onclick="test_subscribe();">Subscribe</button>
     <button onclick="test_unsubscribe();">Unsubscribe</button>          
     <button onclick="test_publish();">Publish</button>
+    <br>          
+    <button onclick="test_publish();">Clear</button>
     <br>          
   </div>
 </div>

@@ -680,10 +680,12 @@ WgsClient.prototype = {
       var msg = Object();
       if(filterByDomain) msg.domain = document.domain.toString();
 
-      this.call("wgs.list_apps", [], msg).then(function(result,resultKw) {
+      this.call("wgs.list_apps", [], msg).then(
+        function(result,resultKw) {
           callback(result,resultKw);
-        }, function(response) {
-          callback(response);
+        }, 
+        function(result,resultKw) {
+          callback(result,resultKw);
         });
   },
   
@@ -810,11 +812,11 @@ WgsClient.prototype = {
      
       this.call("wgs.update_group", msg).then(function(result,resultKw) { 
           client._update_group_users(result, resultKw);
-          callback(resultKw);
+          callback(result, resultKw);
       }, 
       function(result,resultKw) { 
           client._update_group_users(result, resultKw);
-          callback(resultKw) 
+          callback(result, resultKw) 
       } );
   },
 
@@ -832,14 +834,15 @@ WgsClient.prototype = {
         msg.team = team;
         msg.type = usertype;
       }
-      this.call("wgs.update_member", msg).then(function(result,resultKw) { 
-          client._update_group_users(result, resultKw);
-          callback(resultKw);
-      }, 
-      function(result,resultKw) { 
-          client._update_group_users(result, resultKw);
-          callback(resultKw) 
-      } );
+      this.call("wgs.update_member", msg).then(
+        function(result,resultKw) { 
+            client._update_group_users(result, resultKw);
+            callback(result, resultKw);
+        }, 
+        function(result, resultKw) { 
+            client._update_group_users(result, resultKw);
+            callback(result, resultKw) 
+        } );
   },
   
   sendGroupMessage: function(gid, data, callback) {

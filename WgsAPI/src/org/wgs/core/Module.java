@@ -145,20 +145,11 @@ public class Module extends WampModule
             socket.setState(WampConnectionState.AUTHENTICATED);
         }
         clients.put(socket.getSessionId(), client);
-        
-        //WampServices.subscribeClientWithTopic(wampApp, socket, null, getFQtopicURI("apps_event"), null);  // exact match
     }
     
     @Override
     public void onDisconnect(WampSocket socket) throws Exception {
         Client client = clients.get(socket.getSessionId());
-        
-        /*
-        for(WampSubscription subscription : socket.getSubscriptions(getFQtopicURI("apps_event")) {
-            WampServices.unsubscribeClientFromTopic(wampApp, socket, null, subscription.getId);  // exact match
-        }
-        */
-        
         socket.setState(WampConnectionState.OFFLINE);
         for(String gid : client.getGroups().keySet()) {
             exitGroup(socket, gid);
@@ -1298,34 +1289,37 @@ public class Module extends WampModule
                 client.removeGroup(g);
                 
                 String topicName = getFQtopicURI("group_event:" + g.getGid());
-                /*
-                for(WampTopic topic : WampServices.unsubscribeClientFromTopic(wampApp, socket, topicName)) {  // exact match
-                    boolean deleted = false;
-                    if(topic.getSubscriptionCount() == 0 && g.getState() != GroupState.STARTED) {
 
-                        switch(g.getState()) {
-                            case OPEN:
-                                Storage.removeEntity(g);
-                                break;
-                            case FINISHED:
-                                // move group to historic table?
-                                break;
+                WampTopic topic = WampServices.getTopic(topicName);
+                for(WampSubscription subscription : topic.getSubscriptions()) {
+                    if(subscription.removeSocket(socket.getSessionId()) != null) {
+                        boolean deleted = false;
+                        if(subscription.getSocketsCount() == 0 && g.getState() != GroupState.STARTED) {
+
+                            switch(g.getState()) {
+                                case OPEN:
+                                    Storage.removeEntity(g);
+                                    break;
+                                case FINISHED:
+                                    // move group to historic table?
+                                    break;
+                            }
+
+                            logger.log(Level.INFO, "closing group {0}: {1}", new Object[]{ g.getGid(), g.getDescription()});
+
+                            groups.remove(g.getGid());
+                            applications.get(appId).removeGroup(g);
+
+                            //updateAppInfo(socket, applications.get(appId), "app_updated", false);
+
+                            WampServices.removeTopic(wampApp, topicName);
+                            deleted = true;
                         }
-                        
-                        logger.log(Level.INFO, "closing group {0}: {1}", new Object[]{ g.getGid(), g.getDescription()});
 
-                        groups.remove(g.getGid());
-                        applications.get(appId).removeGroup(g);
-
-                        //updateAppInfo(socket, applications.get(appId), "app_updated", false);
-
-                        WampServices.removeTopic(wampApp, topicName);
-                        deleted = true;
+                        broadcastAppEventInfo(socket, g, deleted? "group_deleted" : "group_updated", false);
                     }
-                    
-                    broadcastAppEventInfo(socket, g, deleted? "group_deleted" : "group_updated", false);
                 }
-                */
+                
             }
 
             return response;

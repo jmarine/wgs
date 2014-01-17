@@ -220,28 +220,23 @@ public class WampServices
     public static Collection<WampTopic> unsubscribeClientFromTopic(WampApplication app, WampSocket clientSocket, Long requestId, Long subscriptionId)
     {
         Collection<WampTopic> matchingTopics = null;
-
-        if(requestId == null || subscriptionId == null)  {
-            WampProtocol.sendUnsubscribeError(clientSocket, requestId, "wamp.error.protocol_violation");            
+        WampSubscription subscription = clientSocket.getSubscription(subscriptionId);
+        if(subscription == null) {
+            if(requestId != null) WampProtocol.sendUnsubscribeError(clientSocket, requestId, "wamp.error.no_such_subscription");            
         } else {
-            WampSubscription subscription = clientSocket.getSubscription(subscriptionId);
-            if(subscription == null) {
-                WampProtocol.sendUnsubscribeError(clientSocket, requestId, "wamp.error.no_such_subscription");            
-            } else {
-                matchingTopics = subscription.getTopics();
-                for(WampTopic topic : matchingTopics) {
-                    try { 
-                        WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
-                        module.onUnsubscribe(clientSocket, subscriptionId, topic);
-                    } catch(Exception ex) {
-                        logger.log(Level.FINE, "Error in unsubscription to topic", ex);
-                    }          
-                }
-
-                clientSocket.removeSubscription(subscriptionId);
-                
-                WampProtocol.sendUnsubscribed(clientSocket, requestId);
+            matchingTopics = subscription.getTopics();
+            for(WampTopic topic : matchingTopics) {
+                try { 
+                    WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+                    module.onUnsubscribe(clientSocket, subscriptionId, topic);
+                } catch(Exception ex) {
+                    logger.log(Level.FINE, "Error in unsubscription to topic", ex);
+                }          
             }
+
+            clientSocket.removeSubscription(subscriptionId);
+
+            if(requestId != null) WampProtocol.sendUnsubscribed(clientSocket, requestId);
         }
         
         return matchingTopics;

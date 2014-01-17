@@ -222,21 +222,7 @@ public class WampSocket
     }    
     
     
-    public void sendWampMessage(WampList args)
-    {
-        try {        
-            Object msg = WampObject.getSerializer(getEncoding()).serialize(args);
-            sendObject(msg);
-
-        } catch(Exception e) {
-            logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
-            app.onWampClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
-        }
-
-    }
-
-
-    public synchronized void sendObject(Object msg) {
+    synchronized void sendObject(Object msg) {
         try {
             if(isOpen()) {
                 session.getBasicRemote().sendObject(msg);
