@@ -21,22 +21,22 @@ public class WampCallOptions
         if(options != null) {
             
             if(options.has("timeout")) {
-                setTimeout(options.get("timeout").asLong().intValue());
+                setTimeout(options.getLong("timeout").intValue());
             }
             
             if(options.has("runon")) {
-                setRunOn(RunOnEnum.valueOf(options.get("runon").asText().toLowerCase()));
+                setRunOn(RunOnEnum.valueOf(options.getText("runon").toLowerCase()));
                 if(runOn == RunOnEnum.partition) {
-                    setPartition(options.get("rkey").asText());
+                    setPartition(options.getText("rkey"));
                 }
             }                 
             
             if(options.has("runmode")) {
-                setRunMode(RunModeEnum.valueOf(options.get("runmode").asText().toLowerCase()));
+                setRunMode(RunModeEnum.valueOf(options.getText("runmode").toLowerCase()));
             }
             
             if(options.has("disclose_me")) {
-                setDiscloseMe(options.get("disclose_me").asLong() != 0L);
+                setDiscloseMe(options.getLong("disclose_me") != 0L);
             }            
             
         }

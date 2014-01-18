@@ -85,7 +85,7 @@ public class WampCRA extends WampModule
                 throw new WampException("wamp.cra.error.authentication_failed", "signature for authentication request is invalid");
             }
 
-            String authKey = info.get("authkey").asText();
+            String authKey = info.getText("authkey");
 
             UserId userId = new UserId(User.LOCAL_USER_DOMAIN, authKey);
             User usr = Storage.findEntity(User.class, userId);
@@ -147,9 +147,9 @@ public class WampCRA extends WampModule
     private byte[] deriveKey(String secret, WampDict extra) throws Exception
     {
         if(extra != null && extra.has("salt")) {
-            byte[] salt = extra.get("salt").asText().getBytes("UTF8");
-            int iterations = extra.has("iterations")? extra.get("iterations").asLong().intValue() : 10000;
-            int keylen = extra.has("keylen")? extra.get("keylen").asLong().intValue() : 32;
+            byte[] salt = extra.getText("salt").getBytes("UTF8");
+            int iterations = extra.has("iterations")? extra.getLong("iterations").intValue() : 10000;
+            int keylen = extra.has("keylen")? extra.getLong("keylen").intValue() : 32;
 
             PBKDF2 pbkdf2 = new PBKDF2("HmacSHA256");
             //return pbkdf2.deriveKey(secret.getBytes("UTF8"), salt, iterations, keylen);

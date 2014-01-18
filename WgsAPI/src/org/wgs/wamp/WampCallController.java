@@ -31,7 +31,7 @@ public class WampCallController implements Runnable
         this.app = app;
         this.clientSocket = clientSocket;
         this.request = request;
-        this.procedureURI = clientSocket.normalizeURI(request.get(3).asText());
+        this.procedureURI = clientSocket.normalizeURI(request.getText(3));
     }
     
     
@@ -63,7 +63,7 @@ public class WampCallController implements Runnable
     {
         WampModule module = app.getWampModule(procedureURI, app.getDefaultWampModule());
 
-        callID  = request.get(1).asLong();
+        callID  = request.getLong(1);
         if(callID == null || callID == 0L) {
             WampProtocol.sendCallError(clientSocket, callID, WampException.ERROR_PREFIX + ".requestid_unknown", "CallID not present", null);
             return;
@@ -187,7 +187,7 @@ public class WampCallController implements Runnable
             cancelled = true;
 
             if (future != null) {
-                String cancelMode = cancelOptions.has("mode")? cancelOptions.get("mode").asText() : null;
+                String cancelMode = cancelOptions.has("mode")? cancelOptions.getText("mode") : null;
                 boolean mayInterruptIfRunning = (cancelMode != null) && !cancelMode.equalsIgnoreCase("skip");
                 future.cancel(mayInterruptIfRunning);
             }

@@ -26,44 +26,34 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
         return bytes;
     }
 
-    private void write(BufferPacker packer, WampObject obj) throws Exception
+    private void write(BufferPacker packer, Object obj) throws Exception
     {
         if(obj == null) {
             packer.writeNil();
-        } else {
-            switch(obj.getType()) {
-                case string:
-                    packer.write((String)obj.asText());
-                    break;
-                case bool:
-                    packer.write((boolean)obj.asBoolean());
-                    break;                
-                case integer:
-                    packer.write((long)obj.asLong());
-                    break;
-                case real:
-                    packer.write((double)obj.asDouble());
-                    break;
-                case dict:
-                    WampDict dict = (WampDict)obj;
-                    packer.writeMapBegin(dict.size());
-                    for(String key : dict.keySet()) {
-                        packer.write(key);
-                        write(packer, dict.get(key));
-                    }
-                    packer.writeMapEnd();
-                    break;
-                case list:
-                    WampList arr = (WampList)obj;
-                    packer.writeArrayBegin(arr.size());
-                    for(int i = 0; i < arr.size(); i++) {
-                        write(packer, arr.get(i));
-                    }
-                    packer.writeArrayEnd();
-                    break;                
+        } else if(obj instanceof String) {
+            packer.write((String)obj);
+        } else if(obj instanceof Boolean) {
+            packer.write((boolean)obj);
+        } else if(obj instanceof Long) {
+            packer.write((long)obj);
+        } else if(obj instanceof Double) {
+            packer.write((double)obj);
+        } else if(obj instanceof WampDict) {                    
+            WampDict dict = (WampDict)obj;
+            packer.writeMapBegin(dict.size());
+            for(String key : dict.keySet()) {
+                packer.write(key);
+                write(packer, dict.get(key));
             }
+            packer.writeMapEnd();
+        } else if(obj instanceof WampList) {
+            WampList arr = (WampList)obj;
+            packer.writeArrayBegin(arr.size());
+            for(int i = 0; i < arr.size(); i++) {
+                write(packer, arr.get(i));
+            }
+            packer.writeArrayEnd();
         }
-        
     }    
     
     @Override
@@ -73,25 +63,21 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
         Unpacker unpacker = msgpack.createUnpacker(new ByteArrayInputStream(bytes));
         unpacker.resetReadByteCount();
         Value val = unpacker.readValue();
-        return castToWampObject(val);
+        return (WampObject)castToWampObject(val);
     }
     
-    public WampObject castToWampObject(Object obj) {
-        WampObject retval = null;
+    public Object castToWampObject(Object obj) {
+        Object retval = null;
         if(obj instanceof NilValue) {
             retval = null;
         } else if(obj instanceof BooleanValue) {
-            retval = new WampObject();
-            retval.setObject(((BooleanValue)obj).getBoolean(), Type.bool);
+            retval = new Boolean(((BooleanValue)obj).getBoolean());
         } else if(obj instanceof IntegerValue) {
-            retval = new WampObject();
-            retval.setObject(((IntegerValue)obj).getInt(), Type.integer);
+            retval = new Long(((IntegerValue)obj).getLong());
         } else if(obj instanceof FloatValue) {
-            retval = new WampObject();
-            retval.setObject(((FloatValue)obj).getDouble(), Type.real);
+            retval = new Double(((FloatValue)obj).getDouble());
         } else if(obj instanceof String) {
-            retval = new WampObject();
-            retval.setObject((String)obj, Type.string);
+            retval = (String)obj;
         } else if(obj instanceof ArrayValue) {
             retval = createWampList((ArrayValue)obj);
         } else if(obj instanceof MapValue) {

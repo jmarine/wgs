@@ -28,7 +28,7 @@ public class WampRemoteMethod extends WampMethod
     public boolean hasPartition(String partition)
     {
         if(options != null && options.has("partition")) {
-            String regExp = options.get("paritition").asText();
+            String regExp = options.getText("paritition");
             return partition == null || WampServices.isUriMatchingWithRegExp(partition, regExp);
         } else {
             return true;

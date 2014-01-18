@@ -109,7 +109,7 @@ public class Module extends WampModule
     {
         Object retval = null;
         if(method.equals("wgs.list_groups")) {
-            String appId = args.get(0).asText();
+            String appId = args.getText(0);
 
             WampList metaTopics = new WampList();
             metaTopics.add(WampMetaTopic.SUBSCRIBER_ADDED);
@@ -167,7 +167,7 @@ public class Module extends WampModule
         
         Client client = clients.get(socket.getSessionId());
 
-        String user = data.get("user").asText();
+        String user = data.getText("user");
         UserId userId = new UserId(User.LOCAL_USER_DOMAIN, user);
         
         EntityManager manager = Storage.getEntityManager();
@@ -181,8 +181,8 @@ public class Module extends WampModule
         usr.setId(userId);
         if(user.length() == 0) usr.setName("");
         else usr.setName(Character.toUpperCase(user.charAt(0)) + user.substring(1));
-        usr.setPassword(data.get("password").asText());
-        usr.setEmail(data.get("email").asText());
+        usr.setPassword(data.getText("password"));
+        usr.setEmail(data.getText("email"));
         usr.setAdministrator(false);
         usr.setLastLoginTime(Calendar.getInstance());
         usr = Storage.saveEntity(usr);
@@ -218,7 +218,7 @@ public class Module extends WampModule
     {
         WampDict retval = new WampDict();
         WampList providers = new WampList();
-        String redirectUri = data.get("redirect_uri").asText();
+        String redirectUri = data.getText("redirect_uri");
         redirectUri = redirectUri + ((redirectUri.indexOf("?") == -1)?"?":"&") + "provider=%";
         
         Calendar now = Calendar.getInstance();        
@@ -295,8 +295,8 @@ public class Module extends WampModule
     {
         String retval = null;
         String providerDomain = null;
-        String principal = data.get("principal").asText();
-        String state = data.has("state")? data.get("state").asText() : null;
+        String principal = data.getText("principal");
+        String state = data.has("state")? data.getText("state") : null;
         
         if(principal == null || principal.length() == 0) {
             providerDomain = "defaultProvider";            
@@ -312,7 +312,7 @@ public class Module extends WampModule
         }
         
         
-        String redirectUri = data.get("redirect_uri").asText();
+        String redirectUri = data.getText("redirect_uri");
         redirectUri = redirectUri + ((redirectUri.indexOf("?") == -1)?"?":"&") + "provider=" + URLEncoder.encode(providerDomain,"utf8");
         
         
@@ -395,9 +395,9 @@ public class Module extends WampModule
         Client client = clients.get(socket.getSessionId());
 
         try {
-            String code = data.get("code").asText();
-            String providerDomain = data.get("provider").asText();
-            String redirectUri = data.get("redirect_uri").asText();
+            String code = data.getText("code");
+            String providerDomain = data.getText("provider");
+            String redirectUri = data.getText("redirect_uri");
             
             manager = Storage.getEntityManager();
             OpenIdConnectClientPK oicId = new OpenIdConnectClientPK(providerDomain, redirectUri);
@@ -480,7 +480,7 @@ public class Module extends WampModule
                 }
                 
                 if(usr!= null && data.has("notification_channel")) {
-                    String notificationChannel = data.get("notification_channel").asText();
+                    String notificationChannel = data.getText("notification_channel");
                     if(!notificationChannel.equals(usr.getNotificationChannel())) {
                         usr.setNotificationChannel(notificationChannel);
                     }
@@ -553,22 +553,22 @@ public class Module extends WampModule
         Application app = new Application();
         app.setAppId(UUID.randomUUID().toString());
         app.setAdminUser(client.getUser());
-        app.setName(data.get("name").asText());
-        app.setDomain(data.get("domain").asText());
-        app.setVersion(data.get("version").asLong().intValue());
-        app.setMaxScores(data.get("max_scores").asLong().intValue());
-        app.setDescendingScoreOrder(data.get("desc_score_order").asBoolean());
-        app.setMaxMembers(data.get("max").asLong().intValue());
-        app.setMinMembers(data.get("min").asLong().intValue());
-        app.setDeltaMembers(data.get("delta").asLong().intValue());
-        app.setAlliancesAllowed(data.get("alliances").asBoolean());
-        app.setDynamicGroup(data.get("dynamic").asBoolean());
-        app.setObservableGroup(data.get("observable").asBoolean());
-        app.setAIavailable(data.get("ai_available").asBoolean());
+        app.setName(data.getText("name"));
+        app.setDomain(data.getText("domain"));
+        app.setVersion(data.getLong("version").intValue());
+        app.setMaxScores(data.getLong("max_scores").intValue());
+        app.setDescendingScoreOrder(data.getBoolean("desc_score_order"));
+        app.setMaxMembers(data.getLong("max").intValue());
+        app.setMinMembers(data.getLong("min").intValue());
+        app.setDeltaMembers(data.getLong("delta").intValue());
+        app.setAlliancesAllowed(data.getBoolean("alliances"));
+        app.setDynamicGroup(data.getBoolean("dynamic"));
+        app.setObservableGroup(data.getBoolean("observable"));
+        app.setAIavailable(data.getBoolean("ai_available"));
 
         WampList roles = (WampList)data.get("roles");
         for(int i = 0; i < roles.size(); i++) {
-            String roleName = roles.get(i).asText();
+            String roleName = roles.getText(i);
             int roleNameLen = roleName.length();
 
             boolean optional = (roleNameLen > 0) && (roleName.charAt(roleNameLen-1) == '*' || roleName.charAt(roleNameLen-1) == '?');
@@ -603,7 +603,7 @@ public class Module extends WampModule
         // TODO: delete groups
         
         WampDict event = null;
-        String appId = param.get("app").asText();
+        String appId = param.getText("app");
 
         Application app = applications.get(appId);
         if(app != null) {
@@ -659,7 +659,7 @@ public class Module extends WampModule
         boolean autoMatchMode = false;
         boolean spectator = false;
         if( (options != null) && (options.has("spectator")) ) {
-            spectator = options.has("spectator")? options.get("spectator").asBoolean() : false;
+            spectator = options.has("spectator")? options.getBoolean("spectator") : false;
         }
 
         
@@ -706,7 +706,7 @@ public class Module extends WampModule
         if(g != null) {
             String pwd = g.getPassword();
             if( (pwd != null) && (pwd.length()>0) ) {
-                String pwd2 = (options!=null && options.has("password"))? options.get("password").asText() : "";
+                String pwd2 = (options!=null && options.has("password"))? options.getText("password") : "";
                 if(!pwd.equals(pwd2)) throw new WampException(WGS_MODULE_NAME + ".incorrectpassword", "Incorrect password");
             }
             
@@ -730,21 +730,21 @@ public class Module extends WampModule
                 g.setAutoMatchCompleted(false);
                 if(options != null) {
                     if(options.has("automatch")) {
-                        autoMatchMode = options.get("automatch").asBoolean();
+                        autoMatchMode = options.getBoolean("automatch");
                         g.setAutoMatchEnabled(autoMatchMode);
                     } 
                     if(options.has("hidden")) {
-                        g.setHidden(options.has("hidden")? options.get("hidden").asBoolean() : false);
+                        g.setHidden(options.has("hidden")? options.getBoolean("hidden") : false);
                     }
                     if(options.has("observable")) {
-                        g.setObservableGroup(options.has("observable")? options.get("observable").asBoolean() : g.getApplication().isObservableGroup());
+                        g.setObservableGroup(options.has("observable")? options.getBoolean("observable") : g.getApplication().isObservableGroup());
                     }                    
                     if(!autoMatchMode && options.has("password")) {
-                        String password = options.get("password").asText();
+                        String password = options.getText("password");
                         g.setPassword( (password!=null && password.length()>0)? password : null);
                     }
                     if(options.has("description")) {
-                        g.setDescription(options.get("description").asText());
+                        g.setDescription(options.getText("description"));
                     }
                 }
                 
@@ -840,7 +840,7 @@ public class Module extends WampModule
                 }
             }
 
-            int requiredSlot = (options != null && options.has("slot"))? options.get("slot").asLong().intValue() : -1;
+            int requiredSlot = (options != null && options.has("slot"))? options.getLong("slot").intValue() : -1;
             for(int index = (requiredSlot >= 0)? requiredSlot : 0;
                     ((index < Math.max(num_slots, g.getMinMembers())) || (requiredRoles.size() > 0))
                     && (requiredSlot < 0 || index==requiredSlot);
@@ -871,7 +871,7 @@ public class Module extends WampModule
                     member.setUser(client.getUser());
                     if(options != null && options.has("role")) {
                         Role oldRole = member.getRole();
-                        String roleName = options.get("role").asText();
+                        String roleName = options.getText("role");
                         role = g.getApplication().getRoleByName(roleName);
                         if(role != null && (oldRole == null || !roleName.equals(oldRole.getName())) ) {
                             requiredRoles.remove(roleName);
@@ -939,8 +939,8 @@ public class Module extends WampModule
         boolean valid = false;
         boolean broadcastAppInfo = false;
         boolean broadcastGroupInfo = false;
-        String appId = node.get("app").asText();
-        String gid = node.get("gid").asText();
+        String appId = node.getText("app");
+        String gid = node.getText("gid");
 
         WampDict response = new WampDict();
         response.put("cmd", "group_updated");
@@ -952,45 +952,45 @@ public class Module extends WampModule
             logger.log(Level.FINE, "open_group: group found: " + gid);
             
             if(node.has("automatch")) {
-                boolean autoMatchMode = node.get("automatch").asBoolean();
+                boolean autoMatchMode = node.getBoolean("automatch");
                 g.setAutoMatchEnabled(autoMatchMode);
                 broadcastGroupInfo = true;
             } 
 
             if(node.has("dynamic")) {
-                boolean dynamic = node.get("dynamic").asBoolean();
+                boolean dynamic = node.getBoolean("dynamic");
                 g.setDynamicGroup(dynamic);
                 broadcastGroupInfo = true;
             }
             
             if(node.has("alliances")) {
-                boolean alliances = node.get("alliances").asBoolean();
+                boolean alliances = node.getBoolean("alliances");
                 g.setAlliancesAllowed(alliances);
                 broadcastGroupInfo = true;
             }            
 
             if(node.has("hidden")) {
-                boolean hidden = node.get("hidden").asBoolean();
+                boolean hidden = node.getBoolean("hidden");
                 g.setHidden(hidden);
                 broadcastAppInfo = true;
                 broadcastGroupInfo = true;
             }            
             
             if(node.has("observable")) {
-                boolean observable = node.get("observable").asBoolean();
+                boolean observable = node.getBoolean("observable");
                 g.setObservableGroup(observable);
                 broadcastAppInfo = true;
                 broadcastGroupInfo = true;
             }                                 
             
             if(node.has("data")) {
-                String data = node.get("data").asText();
+                String data = node.getText("data");
                 g.setData(data);
                 broadcastGroupInfo = true;
             }
             
             if(node.has("state")) {
-                String state = node.get("state").asText();
+                String state = node.getText("state");
                 g.setState(GroupState.valueOf(state));
                 broadcastAppInfo = true;
                 broadcastGroupInfo = true;                
@@ -1047,7 +1047,7 @@ public class Module extends WampModule
     public WampDict updateMember(WampSocket socket, WampDict data) throws Exception
     {
             boolean valid = false;
-            String gid = data.get("gid").asText();
+            String gid = data.getText("gid");
 
             WampDict response = new WampDict();
             response.put("cmd", "group_updated");
@@ -1061,9 +1061,7 @@ public class Module extends WampModule
                 if(data.has("slot")) {
                     
                     // UPDATE MEMBER SLOT
-                    String sid = data.get("sid").asText();
-                    
-                    int slot = data.get("slot").asLong().intValue();
+                    int slot = data.getLong("slot").intValue();
                     if(slot < 0) {
                         // TODO: check client socket is allowed to remove slot when index < 0
                         WampList membersArray = new WampList();
@@ -1082,12 +1080,12 @@ public class Module extends WampModule
                         valid = true;
                     }
                     else {
-                        String userId = data.get("user").asText();
-                        String role = data.get("role").asText();
-                        String usertype = data.get("type").asText();
-                        int team = data.get("team").asLong().intValue();
+                        String userId = data.getText("user");
+                        String role = data.getText("role");
+                        String usertype = data.getText("type");
+                        int team = data.getLong("team").intValue();
 
-                        Client c = clients.get(sid);
+                        Client c = clients.get(data.getLong("sid"));
                         if(c!=null) {
                             // when it's not a reservation of a member slot
                             User u = c.getUser();
@@ -1144,8 +1142,7 @@ public class Module extends WampModule
                     // UPDATE CLIENT STATE ("joined" <--> "ready")
                     Long sid = socket.getSessionId();
                     WampList membersArray = new WampList();
-                    WampObject stateNode = data.get("state");
-                    String state = (stateNode!=null) ? stateNode.asText() : null;
+                    String state = data.getText("state");
                     if(state != null) {
                         for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                             Member member = g.getMember(slot);

@@ -19,11 +19,11 @@ public class WampPublishOptions
         
         if(node != null) {
             if(node.has("EXCLUDE_ME")) {
-                setExcludeMe(node.get("exclude_me").asBoolean());
+                setExcludeMe(node.getBoolean("exclude_me"));
             }     
             
             if(node.has("IDENTIFY_ME")) {
-                setDiscloseMe(node.get("disclose_me").asBoolean());
+                setDiscloseMe(node.getBoolean("disclose_me"));
             }                 
         }
     }

@@ -6,58 +6,79 @@ import java.util.Set;
 
 public class WampDict extends WampObject
 {
+    HashMap<String,Object> hashmap;
+            
     public WampDict()
     {
-        setObject(new HashMap<String,Object>(), Type.dict);
+        hashmap = new HashMap<String,Object>();
     }
     
 
     public boolean has(String key)
     {
-        return getHashMap().containsKey(key);
+        return hashmap.containsKey(key);
     }
 
     
-    public WampObject get(String key)
+    public Object get(String key)
     {
-        return (WampObject)getHashMap().get(key);
+        return hashmap.get(key);
     }
 
+    
+    public Long getLong(String key)
+    {
+        return (Long)get(key);
+    }
+    
+    public Double getDouble(String key)
+    {
+        return (Double)get(key);
+    }    
+
+    public String getText(String key)
+    {
+        return (String)get(key);
+    }        
+    
+    public Boolean getBoolean(String key)
+    {
+        Object v = get(key);
+        if(v == null) return Boolean.FALSE;
+        else if(v instanceof Boolean) return (Boolean)v;
+        else if(v instanceof Long) return ((Long)v).longValue() != 0L;
+        else return Boolean.TRUE;
+    }      
+    
     
     public void put(String key, Object obj)
     {
-        getHashMap().put(key, castToWampObject(obj));
+        hashmap.put(key, castToWampObject(obj));
     }
 
     
     public void putAll(WampDict obj)
     {
         for(String key : obj.keySet()) {
-            getHashMap().put(key, obj.get(key));
+            hashmap.put(key, obj.get(key));
         }
     }
     
     public void remove(String key)
     {
-        getHashMap().remove(key);
+        hashmap.remove(key);
     }
     
 
     public Set<String> keySet()
     {
-        return getHashMap().keySet();
+        return hashmap.keySet();
     }
 
     
     public int size()
     {
-        return getHashMap().size();
-    }
-
-    
-    private HashMap<String,Object> getHashMap()
-    {
-        return (HashMap<String,Object>)getObject();
+        return hashmap.size();
     }
     
 }

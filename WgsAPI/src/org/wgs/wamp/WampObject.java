@@ -3,79 +3,18 @@ package org.wgs.wamp;
 
 public class WampObject 
 {
-    public enum Type { string, bool, integer, real, dict, list };
-    
-    protected Type t;
-    protected Object v;
-
-    
-    public Long asLong()
-    {
-        return (Long)v;
-    }
-    
-    public Double asDouble()
-    {
-        return (Double)v;
-    }    
-
-    public String asText()
-    {
-        return (String)v;
-    }        
-    
-    public Boolean asBoolean()
-    {
-        if(v == null) return Boolean.FALSE;
-        else if(v instanceof Boolean) return (Boolean)v;
-        else if(v instanceof Long) return ((Long)v).longValue() != 0L;
-        else return Boolean.TRUE;
-    }
-    
-    public Type getType()
-    {
-        return t;
-    }
-    
-    public Object getObject()
-    {
-        return v;
-    }
-    
-    public void setObject(Object obj, Type t)
-    {
-        this.v = obj;
-        this.t = t;
-    }
-    
-
-    public WampObject castToWampObject(Object obj) 
+    public Object castToWampObject(Object obj) 
     {
         WampObject retval = null;
         if(obj == null) {
-            retval = null;
+            return null;
         } else if(obj instanceof Integer) {
-            retval = new WampObject(); 
-            retval.setObject(((Integer)obj).longValue(), WampObject.Type.integer);
-        } else if(obj instanceof Long) {
-            retval = new WampObject();
-            retval.setObject(obj, WampObject.Type.integer);
-        } else if(obj instanceof Double) {
-            retval = new WampObject(); 
-            retval.setObject(obj, WampObject.Type.real);
+            return new Long(((Integer)obj).longValue());
         } else if(obj instanceof Float) {
-            retval = new WampObject();
-            retval.setObject(((Float)obj).doubleValue(), WampObject.Type.real);
-        } else if(obj instanceof String) {
-            retval = new WampObject(); 
-            retval.setObject(obj, WampObject.Type.string);
-        } else if(obj instanceof Boolean) {
-            retval = new WampObject();
-            retval.setObject(obj, WampObject.Type.bool);
+            return new Double(((Float)obj).doubleValue());
         } else {
-            retval = (WampObject)obj;
+            return obj;
         }
-        return retval;
     }    
     
 

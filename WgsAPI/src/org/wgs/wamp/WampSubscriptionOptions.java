@@ -21,7 +21,7 @@ public class WampSubscriptionOptions
         
         if(node != null) {
             if(node.has("match")) {
-                setMatchType(MatchEnum.valueOf(node.get("match").asText()));
+                setMatchType(MatchEnum.valueOf(node.getText("match")));
             }     
             
             if(node.has("metatopics")) {
@@ -29,7 +29,7 @@ public class WampSubscriptionOptions
             }
 
             if(node.has("metaonly")) {
-                setEventsEnabled(!node.get("metaonly").asBoolean().booleanValue());
+                setEventsEnabled(!node.getBoolean("metaonly").booleanValue());
             }     
 
         }
@@ -71,7 +71,7 @@ public class WampSubscriptionOptions
         this.metaTopics = new HashSet<String>();
         if(metaTopics != null) {
             for(int i = 0; i < metaTopics.size(); i++) {
-                this.metaTopics.add(metaTopics.get(i).asText());
+                this.metaTopics.add(metaTopics.getText(i));
             }
         }
     }    

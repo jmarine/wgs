@@ -40,7 +40,6 @@ import org.wgs.wamp.WampList;
 import org.wgs.wamp.WampObject;
 
 import org.wgs.wamp.WampProtocol;
-import org.wgs.wamp.WampSerializer;
 import org.wgs.wamp.WampServices;
 import org.wgs.wamp.WampSubscription;
 import org.wgs.wamp.WampTopic;
@@ -247,7 +246,7 @@ public class MessageBroker
             WampProtocol.sendEvents(publicationId, topic, eligible, excluded, publisherId, (WampList)payload, payloadKw);
         } else {
             // METAEVENT data (WAMP v2)
-            WampObject metaevent = payload.get(0);
+            Object metaevent = payload.get(0);
             WampProtocol.sendMetaEvents(publicationId, topic, metaTopic, eligible, metaevent);
         }
     }       

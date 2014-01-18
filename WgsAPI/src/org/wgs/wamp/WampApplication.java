@@ -185,7 +185,7 @@ public class WampApplication
 
     public void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
     {
-        Long requestType = request.get(0).asLong();
+        Long requestType = request.getLong(0);
         //logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
 
         switch(requestType.intValue()) {
@@ -200,15 +200,15 @@ public class WampApplication
                 processHeartbeatMessage(clientSocket, request);
                 break;                
             case 10:    // SUBSCRIBE
-                Long requestId1 = request.get(1).asLong();
+                Long requestId1 = request.getLong(1);
                 WampDict subOptionsNode = (request.size() > 2) ? (WampDict)request.get(2) : null;
                 WampSubscriptionOptions subOptions = new WampSubscriptionOptions(subOptionsNode);
-                String subscriptionTopicName = request.get(3).asText();
+                String subscriptionTopicName = request.getText(3);
                 WampServices.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
                 break;
             case 20:    // UNSUBSCRIBE
-                Long requestId2 = (request.size() > 1) ? request.get(1).asLong() : null;
-                Long subscriptionId2 = (request.size() > 2) ? request.get(2).asLong() : null;
+                Long requestId2 = (request.size() > 1) ? request.getLong(1) : null;
+                Long subscriptionId2 = (request.size() > 2) ? request.getLong(2) : null;
                 if(requestId2 == null || subscriptionId2 == null)  {
                     WampProtocol.sendUnsubscribeError(clientSocket, requestId2, "wamp.error.protocol_violation");            
                 } else {
@@ -357,33 +357,33 @@ public class WampApplication
     
     private void processHeartbeatMessage(WampSocket clientSocket, WampList request) throws Exception
     {
-        Long incomingHeartbeatSeq = request.get(1).asLong();
-        Long outgoingHeartbeatSeq = request.get(1).asLong();
+        Long incomingHeartbeatSeq = request.getLong(1);
+        Long outgoingHeartbeatSeq = request.getLong(2);
         clientSocket.setIncomingHeartbeat(outgoingHeartbeatSeq);        
     }
     
     private void processPrefixMessage(WampSocket clientSocket, WampList request) throws Exception
     {
-        String prefix = request.get(1).asText();
-        String url = request.get(2).asText();
+        String prefix = request.getText(1);
+        String url = request.getText(2);
 	clientSocket.registerPrefixURL(prefix, url);
     }
 
     private void processHeartBeat(WampSocket clientSocket, WampList request) throws Exception
     {
-        Long heartbeatSequenceNo = request.get(1).asLong();
+        Long heartbeatSequenceNo = request.getLong(1);
         clientSocket.setIncomingHeartbeat(heartbeatSequenceNo);
     }
 
     
     public void processRegisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
-        Long requestId = request.get(1).asLong();
+        Long requestId = request.getLong(1);
         WampDict options = (WampDict)request.get(2);
-        String methodUriOrPattern = clientSocket.normalizeURI(request.get(3).asText());
+        String methodUriOrPattern = clientSocket.normalizeURI(request.getText(3));
         MatchEnum matchType = MatchEnum.exact;
         if(options != null && options.has("match")) {
-            matchType = MatchEnum.valueOf(options.get("match").asText().toLowerCase());
+            matchType = MatchEnum.valueOf(options.getText("match").toLowerCase());
             
         }
         
@@ -423,8 +423,8 @@ public class WampApplication
 
     public void processUnregisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
-        Long requestId = request.get(1).asLong();
-        Long registrationId = request.get(2).asLong();
+        Long requestId = request.getLong(1);
+        Long registrationId = request.getLong(2);
         
         try {
             WampCalleeRegistration registration = calleeRegistrationById.get(registrationId);
@@ -441,7 +441,7 @@ public class WampApplication
     
     private void processCancelCallMessage(WampSocket clientSocket, WampList request) throws Exception
     {
-        Long callID  = request.get(1).asLong();
+        Long callID  = request.getLong(1);
         WampDict cancelOptions = (WampDict)request.get(2);
         WampCallController call = clientSocket.getRpcController(callID);
         call.cancel(cancelOptions);
@@ -464,7 +464,7 @@ public class WampApplication
     
     private void processInvocationProgress(WampSocket providerSocket, WampList request) throws Exception
     {
-        Long invocationId = request.get(1).asLong();
+        Long invocationId = request.getLong(1);
         WampAsyncCallback callback = providerSocket.getAsyncCallback(invocationId);
         WampList progress = (WampList)request.get(2);
         WampDict progressKw = (WampDict)request.get(3);
@@ -473,7 +473,7 @@ public class WampApplication
     
     private void processInvocationResult(WampSocket providerSocket, WampList request) throws Exception
     {
-        Long invocationId = request.get(1).asLong();
+        Long invocationId = request.getLong(1);
         WampAsyncCallback callback = providerSocket.getAsyncCallback(invocationId);
         WampList result = (WampList)request.get(2);
         WampDict resultKw = (WampDict)request.get(3);
@@ -483,9 +483,9 @@ public class WampApplication
     
     private void processInvocationError(WampSocket providerSocket, WampList request) throws Exception
     {
-        Long invocationId = request.get(1).asLong();
-        String errorURI = request.get(2).asText();
-        WampObject exception = request.get(3);
+        Long invocationId = request.getLong(1);
+        String errorURI = request.getText(2);
+        Object exception = request.get(3);
         WampAsyncCallback callback = providerSocket.getAsyncCallback(invocationId);
         callback.reject(errorURI, exception);
         providerSocket.removeAsyncCallback(invocationId);

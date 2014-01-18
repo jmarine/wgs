@@ -26,7 +26,7 @@ public class GroupFilter extends WampSubscriptionOptions
         this.module = module;
         this.scope = Scope.all;
         if (node != null) {
-            scope = Scope.valueOf(node.get("scope").asText());
+            scope = Scope.valueOf(node.getText("scope"));
         }
     }
 
@@ -81,9 +81,9 @@ public class GroupFilter extends WampSubscriptionOptions
         }
         
         WampDict dict = payloadKw;
-        String gid = (dict.has("gid")) ? dict.get("gid").asText() : null;
+        String gid = (dict.has("gid")) ? dict.getText("gid") : null;
         if (gid != null) {
-            String cmd = dict.has("cmd")? dict.get("cmd").asText() : "";
+            String cmd = dict.has("cmd")? dict.getText("cmd") : "";
             boolean wasSubscribed = subscriptions.contains(gid);
             if(cmd.equals("group_deleted")) subscriptions.remove(gid);
             

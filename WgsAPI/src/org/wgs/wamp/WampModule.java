@@ -170,8 +170,7 @@ public class WampModule
         clientSocket.addSubscription(subscription);
         if(options != null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_ADDED)) {
             if(options.hasEventsEnabled()) {
-                WampObject metaEvent = new WampObject();
-                metaEvent.setObject(clientSocket.getSessionId(), WampObject.Type.integer);
+                Long metaEvent = clientSocket.getSessionId();
                 WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
             }
         }
@@ -182,8 +181,7 @@ public class WampModule
         if(subscription.getSocket(clientSocket.getSessionId()) != null) {
             WampSubscriptionOptions options = subscription.getOptions();
             if(options!=null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_REMOVED)) {
-                WampObject metaEvent = new WampObject();
-                metaEvent.setObject(clientSocket.getSessionId(), WampObject.Type.integer);
+                Long metaEvent = clientSocket.getSessionId();
                 WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
             }
 
@@ -201,7 +199,7 @@ public class WampModule
     
     public void onRegister(Long registrationId, WampSocket clientSocket, WampCalleeRegistration registration, MatchEnum matchType, String methodUriOrPattern, WampList request) throws Exception
     {
-        Long requestId = request.get(1).asLong();
+        Long requestId = request.getLong(1);
         WampDict options = (WampDict)request.get(2);
         
         WampRemoteMethod remoteMethod = new WampRemoteMethod(registration.getId(), clientSocket, matchType, options);
@@ -223,7 +221,7 @@ public class WampModule
     public void onPublish(WampSocket clientSocket, WampTopic topic, WampList request) throws Exception 
     {
         Long publicationId = WampProtocol.newId();
-        Long requestId = request.get(1).asLong();
+        Long requestId = request.getLong(1);
         if(requestId != null) {
             WampList payload   = (request.size() >= 5)? (WampList)request.get(4) : null;
             WampDict payloadKw = (request.size() >= 6)? (WampDict)request.get(5) : null;;

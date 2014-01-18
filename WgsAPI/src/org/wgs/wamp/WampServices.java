@@ -163,7 +163,7 @@ public class WampServices
     
     public static void processPublishMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
-        String topicName = clientSocket.normalizeURI(request.get(3).asText());
+        String topicName = clientSocket.normalizeURI(request.getText(3));
         WampTopic topic = WampServices.getTopic(topicName);
         if(topic == null) topic = createTopic(app, topicName, null);
         
@@ -253,7 +253,7 @@ public class WampServices
         }
     }   
     
-    public static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, WampObject metaevent, WampSocket toClient) 
+    public static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, Object metaevent, WampSocket toClient) 
     {
         //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),metaevent});
         try {

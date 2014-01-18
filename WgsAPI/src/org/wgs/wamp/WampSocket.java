@@ -130,7 +130,7 @@ public class WampSocket
                 if(rolesDetails.has("callee")) {
                     WampDict callerDetails = (WampDict)rolesDetails.get("caller");
                     if(callerDetails.has("progressive")) {
-                        retval = callerDetails.get("progressive").asBoolean();
+                        retval = callerDetails.getBoolean("progressive");
                     }
                 }
             }

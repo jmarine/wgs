@@ -29,6 +29,7 @@ public class WampProtocol
 
         } catch(Exception ex) {
             logger.log(Level.FINE, "Serialization error '" + ex.getClass().getName() + "': " + ex.getMessage(), ex);
+            ex.printStackTrace();
         }
 
     }    
@@ -225,7 +226,7 @@ public class WampProtocol
     }
 
     
-    public static void sendMetaEvents(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, WampObject metaEvent) throws Exception 
+    public static void sendMetaEvents(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, Object metaEvent) throws Exception 
     {
         // METAEVENT data (only in WAMP v2)
         Long toClient = (eligible != null && eligible.size() > 0) ? eligible.iterator().next() : null;
