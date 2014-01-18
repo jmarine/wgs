@@ -50,7 +50,7 @@ public class MessageBroker
     private static final Logger logger = Logger.getLogger(MessageBroker.class.getName());
     
     private static boolean          brokerTested = false;
-    private static boolean          brokerEnabled = false;
+    private static boolean          brokerAvailable = false;
     private static BrokerInstance   brokerInstance = null;
     private static String           brokerId = "wgs-" + UUID.randomUUID().toString();
     
@@ -111,20 +111,20 @@ public class MessageBroker
     }
     
     
-    public synchronized static boolean isBrokerEnabled()
+    public synchronized static boolean isJmsBrokerAvailable()
     {
         if(!brokerTested) {
             try {
                 TopicConnection con = getTopicConnectionFromPool();
                 releaseTopicConnectionToPool(con);
-                brokerEnabled = true;
+                brokerAvailable = true;
             } catch(Exception ex) {
-                brokerEnabled = false;
+                brokerAvailable = false;
             } finally {
                 brokerTested = true;
             }
         }
-        return brokerEnabled;
+        return brokerAvailable;
     }
     
     
@@ -176,7 +176,7 @@ public class MessageBroker
     public static void subscribeMessageListener(WampTopic wampTopic, long sinceTime, long sinceN) throws Exception 
     {
         synchronized(wampTopic) {
-            if(isBrokerEnabled() && !topicSubscriptions.containsKey(wampTopic)) {
+            if(isJmsBrokerAvailable() && !topicSubscriptions.containsKey(wampTopic)) {
                 String topicName = wampTopic.getURI();
                 TopicConnection connection = getTopicConnectionFromPool();
 
@@ -208,7 +208,7 @@ public class MessageBroker
     
     public static void unsubscribeMessageListener(WampTopic topic) throws Exception 
     {
-        if(isBrokerEnabled()) {
+        if(isJmsBrokerAvailable()) {
             TopicSubscriber subscriber = topicSubscriptions.remove(topic);
             subscriber.close();
         }
@@ -219,7 +219,7 @@ public class MessageBroker
     {
         broadcastClusterEventToLocalNodeClients(id, wampTopic,metaTopic,eligible,exclude,publisherId, payload, payloadKw);  
         
-        if(isBrokerEnabled()) {
+        if(isJmsBrokerAvailable()) {
             String topicName = wampTopic.getURI();
             TopicConnection connection = getTopicConnectionFromPool();
 
