@@ -89,7 +89,7 @@ public class MessageBroker
             tcf.setProperty(ConnectionConfiguration.imqAddressList, serverConfig.getProperty("imq.tcf.imqAddressList", "mq://localhost/direct"));
         
             InitialContext jndi = new InitialContext();
-            jndi.bind("jms/TopicConnectionFactory", tcf);
+            jndi.bind("jms/CentralTopicConnectionFactory", tcf);
         }
     }
     
@@ -132,7 +132,7 @@ public class MessageBroker
     {
         if(reusableTopicConnection == null) {
             InitialContext jndi = new InitialContext();
-            TopicConnectionFactory tcf = (TopicConnectionFactory)jndi.lookup("jms/TopicConnectionFactory");
+            TopicConnectionFactory tcf = (TopicConnectionFactory)jndi.lookup("jms/CentralTopicConnectionFactory");
             reusableTopicConnection = tcf.createTopicConnection();
         }
         return reusableTopicConnection;
