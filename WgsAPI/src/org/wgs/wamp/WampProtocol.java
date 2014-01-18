@@ -73,7 +73,6 @@ public class WampProtocol
         response.add(clientSocket.getIncomingHeartbeat());
         response.add(clientSocket.getNextOutgoingHeartbeatSeq());
         response.add(discard);
-        
         sendWampMessage(clientSocket, response);
     }
     
@@ -84,7 +83,6 @@ public class WampProtocol
         response.add(callID);
         response.add(args);
         response.add(argsKw);
-        
         sendWampMessage(clientSocket, response);
     }    
     
@@ -95,7 +93,6 @@ public class WampProtocol
         response.add(callID);
         response.add(args);
         response.add(argsKw);
-        
         sendWampMessage(clientSocket, response);
     }    
     
@@ -109,12 +106,8 @@ public class WampProtocol
         response.add(callID);
         response.add(errorURI);
         
-        if(errorDetails == null) {
-            response.add(errorDesc);
-        } else {
-            response.add(errorDesc + ": " + errorDetails.toString());
-        }
-
+        if(errorDetails == null) response.add(errorDesc);
+        else response.add(errorDesc + ": " + errorDetails.toString());
         
         sendWampMessage(clientSocket, response);
     }    
@@ -126,7 +119,6 @@ public class WampProtocol
         response.add(11);
         response.add(requestId);
         response.add(subscriptionId);
-        
         sendWampMessage(clientSocket, response);
     }
     
@@ -137,7 +129,6 @@ public class WampProtocol
         response.add(12);
         response.add(requestId);
         response.add(errorUri);
-        
         sendWampMessage(clientSocket, response);
     }
     
@@ -147,7 +138,6 @@ public class WampProtocol
         WampList response = new WampList();
         response.add(21);
         response.add(requestId);
-        
         sendWampMessage(clientSocket, response);
     }
     
@@ -158,7 +148,6 @@ public class WampProtocol
         response.add(22);
         response.add(requestId);
         response.add(errorUri);
-        
         sendWampMessage(clientSocket, response);
     }    
     
@@ -169,7 +158,6 @@ public class WampProtocol
         response.add(31);
         response.add(requestId);
         response.add(publicationId);
-        
         sendWampMessage(clientSocket, response);
     }    
     
@@ -271,7 +259,6 @@ public class WampProtocol
         response.add(51);
         response.add(requestId);
         response.add(registrationId);
-        
         sendWampMessage(clientSocket, response);
     }      
     
@@ -282,7 +269,6 @@ public class WampProtocol
         response.add(52);
         response.add(requestId);
         response.add(errorUri);
-        
         sendWampMessage(clientSocket, response);
     }
         
@@ -296,7 +282,6 @@ public class WampProtocol
         msg.add(invocationOptions);
         msg.add(args);
         msg.add(argsKw); 
-        
         sendWampMessage(remotePeer, msg);        
     }
     
@@ -307,7 +292,6 @@ public class WampProtocol
         msg.add(81);
         msg.add(invocationId);
         msg.add(cancelOptions);
-        
         sendWampMessage(remotePeer, msg);        
     }
     

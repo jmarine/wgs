@@ -1220,7 +1220,7 @@ public class Module extends WampModule
                     WampPublishOptions options = new WampPublishOptions();
                     options.setEligible(eligibleSet);
                     options.setDiscloseMe(true);
-                    WampServices.publishEvent(WampProtocol.newId(), socket.getSessionId(), WampServices.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, options);
+                    socket.publishEvent(WampServices.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, false, true);
                 }
             }
         }

@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
+import org.wgs.util.MessageBroker;
 
 
 public class WampSocket 
@@ -308,7 +309,8 @@ public class WampSocket
     /**
      * Broadcasts the event to subscribed sockets.
      */
-    public void publishEvent(WampTopic topic, WampList payload, WampDict payloadKw, boolean excludeMe, boolean identifyMe) {
+    public void publishEvent(WampTopic topic, WampList payload, WampDict payloadKw, boolean excludeMe, boolean identifyMe) throws Exception
+    {
         logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1},{2}", new Object[]{topic.getURI(),payload,payloadKw});
         Set<Long> excludedSet = new HashSet<Long>();
         if(excludeMe) excludedSet.add(this.getSessionId());
@@ -316,7 +318,8 @@ public class WampSocket
         options.setExcludeMe(excludeMe);
         options.setExcluded(excludedSet);
         options.setDiscloseMe(identifyMe);
-        WampServices.publishEvent(WampProtocol.newId(), this.getSessionId(), topic, payload, payloadKw, options);
+
+        MessageBroker.publish(WampProtocol.newId(), topic, payload, payloadKw, null, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? this.getSessionId() : null));
     }
 
 

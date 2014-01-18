@@ -171,7 +171,7 @@ public class WampModule
         if(options != null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_ADDED)) {
             if(options.hasEventsEnabled()) {
                 Long metaEvent = clientSocket.getSessionId();
-                WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
+                MessageBroker.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
             }
         }
     }
@@ -182,7 +182,7 @@ public class WampModule
             WampSubscriptionOptions options = subscription.getOptions();
             if(options!=null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_REMOVED)) {
                 Long metaEvent = clientSocket.getSessionId();
-                WampServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
+                MessageBroker.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
             }
 
             clientSocket.removeSubscription(subscription.getId());
@@ -235,7 +235,7 @@ public class WampModule
 
             WampProtocol.sendPublished(clientSocket, requestId, publicationId);
         
-            WampServices.publishEvent(publicationId, clientSocket.getSessionId(), topic, payload, payloadKw, options);
+            MessageBroker.publish(publicationId, topic, payload, payloadKw, null, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? clientSocket.getSessionId() : null));
             
         }
 

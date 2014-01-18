@@ -241,30 +241,5 @@ public class WampServices
         
         return matchingTopics;
     }
-
-    
-    public static void publishEvent(Long publicationId, Long publisherId, WampTopic topic, WampList payload, WampDict payloadKw, WampPublishOptions options) 
-    {
-        //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),event});
-        try {
-            MessageBroker.publish(publicationId, topic, payload, payloadKw, null, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? publisherId : null));
-        } catch(Exception ex) {
-            logger.log(Level.SEVERE, "Error in publishing event to topic", ex);
-        }
-    }   
-    
-    public static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, Object metaevent, WampSocket toClient) 
-    {
-        //logger.log(Level.FINE, "Broadcasting to {0}: {1}", new Object[]{topic.getURI(),metaevent});
-        try {
-            HashSet<Long> eligible = new HashSet<Long>();
-            if(toClient != null) eligible.add(toClient.getSessionId());
-            WampList payload = new WampList();
-            payload.add(metaevent);
-            MessageBroker.publish(publicationId, topic, payload, null, metatopic, eligible, null, null);
-        } catch(Exception ex) {
-            logger.log(Level.SEVERE, "Error in publishing metaevent to topic", ex);
-        }        
-    }    
     
 }
