@@ -18,7 +18,7 @@ public class WampObject
     }    
     
 
-    public static WampSerializer getSerializer(WampEncoding encoding)
+    public static WampSerializer getSerializer(WampEncoding encoding) throws WampException
     {
         switch(encoding) {
             case JSon:
@@ -26,7 +26,7 @@ public class WampObject
             case MsgPack:
                 return new WampSerializerMsgPack();
             default:
-                return null;
+                throw new WampException("wamp.error.unsupported_encoding", null);
         }
     }
     
