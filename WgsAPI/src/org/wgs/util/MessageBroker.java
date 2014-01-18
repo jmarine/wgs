@@ -257,10 +257,15 @@ public class MessageBroker
     
     public static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, Object metaevent, Long toClient) throws Exception
     {
-        HashSet<Long> eligible = new HashSet<Long>();
-        if(toClient != null) eligible.add(toClient);
         WampList payload = new WampList();
         payload.add(metaevent);
+        
+        HashSet<Long> eligible = null;
+        if(toClient != null) {
+            eligible = new HashSet<Long>();            
+            eligible.add(toClient);
+        }
+        
         publish(publicationId, topic, payload, null, metatopic, eligible, null, null);
     } 
     
