@@ -26,7 +26,7 @@ public class WampObject
             case MsgPack:
                 return new WampSerializerMsgPack();
             default:
-                throw new WampException("wamp.error.unsupported_encoding", null);
+                throw new WampException(null, "wamp.error.unsupported_encoding", null, null);
         }
     }
     

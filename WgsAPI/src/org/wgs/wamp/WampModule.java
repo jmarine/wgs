@@ -77,21 +77,27 @@ public class WampModule
                         {
                             @Override
                             public void resolve(Object... results) {
+                                Long id = (Long)results[0];
+                                WampDict details = (WampDict)results[1];
                                 WampList result = new WampList();
                                 WampDict resultKw = new WampDict();
                                 if(!clientSocket.supportProgressiveCalls() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive) {
                                     result = task.getResult();
                                     resultKw = task.getResultKw();
                                 }
-                                WampProtocol.sendCallResult(clientSocket, task.getCallID(), result, resultKw);
+                                WampProtocol.sendResult(clientSocket, task.getCallID(), details, result, resultKw);
                             }
 
                             @Override
                             public void progress(Object... progressParams) {
-                                WampList progress = (WampList)progressParams[0];
-                                WampDict progressKw = (WampDict)progressParams[1];
+                                Long id = (Long)progressParams[0];
+                                WampDict details = (WampDict)progressParams[1];
+                                WampList progress = (WampList)progressParams[2];
+                                WampDict progressKw = (WampDict)progressParams[3];
                                 if(clientSocket.supportProgressiveCalls() && options.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
-                                    WampProtocol.sendCallProgress(clientSocket, task.getCallID(), progress, progressKw);
+                                    if(details == null) details = new WampDict();
+                                    details.put("progress", true);
+                                    WampProtocol.sendResult(clientSocket, task.getCallID(), details, progress, progressKw);
                                 } else {
                                     task.getResult().add(progress);
                                     task.getResultKw().putAll(progressKw);
@@ -100,7 +106,12 @@ public class WampModule
 
                             @Override
                             public void reject(Object... errors) {
-                                WampProtocol.sendCallError(clientSocket, task.getCallID(), (String)errors[0], null, errors[1]);
+                                Long invocationId = (Long)errors[0];
+                                WampDict details = (WampDict)errors[1];
+                                String   errorURI = (String)errors[2];
+                                WampList args = (errors.length > 3) ? (WampList)errors[3] : null;
+                                WampDict argsKw = (errors.length > 4) ? (WampDict)errors[4] : null;
+                                WampProtocol.sendError(clientSocket, task.getCallID(), details, errorURI, args, argsKw);
                             }                            
                         };
                                 
@@ -113,17 +124,21 @@ public class WampModule
                                     remoteInvocation.setAsyncCallback(new WampAsyncCallback() {
                                         @Override
                                         public void resolve(Object... results) {
-                                            WampList progress = (WampList)results[0];
-                                            WampDict progressKw = (WampDict)results[1];
+                                            Long id = (Long)results[0];
+                                            WampDict details = (WampDict)results[1];
+                                            WampList progress = (WampList)results[2];
+                                            WampDict progressKw = (WampDict)results[3];
                                             if(clientSocket.supportProgressiveCalls() && options.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
-                                                WampProtocol.sendCallProgress(clientSocket, task.getCallID(), progress, progressKw);
+                                                if(details == null) details = new WampDict();
+                                                details.put("progress", true);                                                
+                                                WampProtocol.sendResult(clientSocket, task.getCallID(), details, progress, progressKw);
                                             } else {
                                                 task.getResult().add(progress);
                                                 task.getResultKw().putAll(progressKw);
                                             }
                                             
                                             if(barrier.decrementAndGet() <= 0) {
-                                                completeCallback.resolve(null, null);
+                                                completeCallback.resolve(id, null, null, null);
                                             }
                                         }
 
@@ -134,7 +149,12 @@ public class WampModule
 
                                         @Override
                                         public void reject(Object... errors) {
-                                            WampProtocol.sendCallError(clientSocket, task.getCallID(), (String)errors[0], null, errors[1]);
+                                            Long invocationId = (Long)errors[0];
+                                            WampDict details = (WampDict)errors[1];
+                                            String   errorURI = (String)errors[2];
+                                            WampList args = (errors.length > 3) ? (WampList)errors[3] : null;
+                                            WampDict argsKw = (errors.length > 4) ? (WampDict)errors[4] : null;
+                                            WampProtocol.sendError(clientSocket, task.getCallID(), details, errorURI, args, argsKw);
                                         }
                                     });
 
@@ -158,8 +178,8 @@ public class WampModule
         }
         
         
-
-        throw new WampException(WampException.ERROR_PREFIX+".method_unknown", "Method not implemented: " + methodName);
+        System.out.println("Method not implemented: " + methodName);
+        throw new WampException(null, WampException.ERROR_PREFIX+".method_unknown", null, null);
     }
     
     public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription, WampSubscriptionOptions options) throws Exception { 
@@ -170,7 +190,8 @@ public class WampModule
         clientSocket.addSubscription(subscription);
         if(options != null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_ADDED)) {
             if(options.hasEventsEnabled()) {
-                Long metaEvent = clientSocket.getSessionId();
+                WampDict metaEvent = new WampDict();
+                metaEvent.put("session", clientSocket.getSessionId());
                 MessageBroker.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
             }
         }
@@ -181,7 +202,8 @@ public class WampModule
         if(subscription.getSocket(clientSocket.getSessionId()) != null) {
             WampSubscriptionOptions options = subscription.getOptions();
             if(options!=null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_REMOVED)) {
-                Long metaEvent = clientSocket.getSessionId();
+                WampDict metaEvent = new WampDict();
+                metaEvent.put("session", clientSocket.getSessionId());                
                 MessageBroker.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
             }
 
@@ -210,11 +232,10 @@ public class WampModule
     {
         WampCalleeRegistration registration = app.getRegistration(registrationId);
         if(registration == null) {
-            throw new WampException("wamp.error.registration_not_found","registrationId doesn't exists");
+            throw new WampException(null, "wamp.error.registration_not_found", null, null);
         } else {
             registration.removeRemoteMethod(clientSocket.getSessionId());
             //rpcsByName.remove(method.getProcedureURI());
-            if(requestId != null) WampProtocol.sendRegisteredMessage(clientSocket, requestId, registrationId);
         }
     }    
     

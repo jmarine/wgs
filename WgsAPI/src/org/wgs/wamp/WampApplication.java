@@ -199,50 +199,51 @@ public class WampApplication
             case 3:     // HEARTBEAT
                 processHeartbeatMessage(clientSocket, request);
                 break;                
-            case 10:    // SUBSCRIBE
+            case 4:    // ERROR
+                // FIXME: the current implementation only expects invocation errors
+                processInvocationError(clientSocket, request);
+                break;
+            case 32:    // SUBSCRIBE
                 Long requestId1 = request.getLong(1);
                 WampDict subOptionsNode = (request.size() > 2) ? (WampDict)request.get(2) : null;
                 WampSubscriptionOptions subOptions = new WampSubscriptionOptions(subOptionsNode);
                 String subscriptionTopicName = request.getText(3);
                 WampServices.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
                 break;
-            case 20:    // UNSUBSCRIBE
+            case 34:    // UNSUBSCRIBE
                 Long requestId2 = (request.size() > 1) ? request.getLong(1) : null;
                 Long subscriptionId2 = (request.size() > 2) ? request.getLong(2) : null;
                 if(requestId2 == null || subscriptionId2 == null)  {
-                    WampProtocol.sendUnsubscribeError(clientSocket, requestId2, "wamp.error.protocol_violation");            
+                    WampProtocol.sendError(clientSocket, requestId2, null, "wamp.error.protocol_violation", null, null);
                 } else {
                     WampServices.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
                 }
                 break;
-            case 30:    // PUBLISH
+            case 16:    // PUBLISH
                 WampServices.processPublishMessage(this, clientSocket, request);
                 break;                
-            case 50:    // REGISTER
+            case 64:    // REGISTER
                 processRegisterMessage(this, clientSocket, request);
                 break;
-            case 60:    // UNREGISTER
+            case 66:    // UNREGISTER
                 processUnregisterMessage(this, clientSocket, request);
                 break;                
-            case 70:    // CALL
+            case 48:    // CALL
                 processCallMessage(clientSocket, request);
                 break;
-            case 71:    // CANCEL_CALL
+            case 49:    // CANCEL CALL
                 processCancelCallMessage(clientSocket, request);
                 break;
-            case 80:    // INVOCATION
-                // TODO                
-            case 81:    // CANCEL_INVOCATION
-                // TODO
+            case 68:    // INVOCATION
+                // TODO: this server implementation only implements the "dealear" role
+                // (it doesn't receive invocatoin messages)
                 break;
-            case 82:    // INVOCATION_PROGRESS
-                processInvocationProgress(clientSocket, request);
+            case 69:    // INTERRUPT
+                // TODO: this server implementation only implements the "dealear" role
+                // (it doesn't receive interrupt messages)
                 break;
-            case 83:    // INVOCATION_RESULT
+            case 70:    // YIELD (INVOCATION RESULT)
                 processInvocationResult(clientSocket, request);
-                break;
-            case 84:    // INVOCATION_ERROR
-                processInvocationError(clientSocket, request);
                 break;
             default:
                 logger.log(Level.SEVERE, "Request type not implemented: {0}", new Object[]{requestType});
@@ -388,8 +389,8 @@ public class WampApplication
         }
         
         if(rpcsByName.get(methodUriOrPattern) != null) {  // Don't override system functions
-            if(requestId != null) WampProtocol.sendRegisterError(clientSocket, requestId, "wamp.error.procedure_already_exists");
-            throw new WampException("wamp.error.procedure_already_exists", "procedure alread exists");
+            if(requestId != null) WampProtocol.sendError(clientSocket, requestId, null, "wamp.error.procedure_already_exists", null, null);
+            throw new WampException(null, "wamp.error.procedure_already_exists", null, null);
         }
         
         if(matchType == MatchEnum.prefix && !methodUriOrPattern.endsWith("..")) {
@@ -416,7 +417,7 @@ public class WampApplication
             
         } catch(Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
-            WampProtocol.sendRegisterError(clientSocket, requestId, "wamp.error.not_authorized");
+            WampProtocol.sendError(clientSocket, requestId, null, "wamp.error.not_authorized", null, null);
         }
         
     }    
@@ -432,6 +433,8 @@ public class WampApplication
             module.onUnregister(clientSocket, requestId, registrationId);
             //calleeRegistrationById.remove(registration.getProcedureURI());
             //calleeRegistrationPatterns.remove(registration.getProcedureURI());
+            
+            if(requestId != null) WampProtocol.sendUnregisteredMessage(clientSocket, requestId);
 
         } catch(Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
@@ -461,33 +464,31 @@ public class WampApplication
         
     }
     
-    
-    private void processInvocationProgress(WampSocket providerSocket, WampList request) throws Exception
-    {
-        Long invocationId = request.getLong(1);
-        WampAsyncCallback callback = providerSocket.getAsyncCallback(invocationId);
-        WampList progress = (WampList)request.get(2);
-        WampDict progressKw = (WampDict)request.get(3);
-        callback.progress(progress, progressKw);
-    }    
-    
+
     private void processInvocationResult(WampSocket providerSocket, WampList request) throws Exception
     {
         Long invocationId = request.getLong(1);
         WampAsyncCallback callback = providerSocket.getAsyncCallback(invocationId);
-        WampList result = (WampList)request.get(2);
-        WampDict resultKw = (WampDict)request.get(3);
-        callback.resolve(result,resultKw);
-        providerSocket.removeAsyncCallback(invocationId);
+        WampDict details = (WampDict)request.get(2);
+        WampList result = (WampList)request.get(3);
+        WampDict resultKw = (WampDict)request.get(4);
+        if(details != null && details.has("progress") && details.getBoolean("progress")) {
+            callback.progress(invocationId,details,result, resultKw);
+        } else {
+            callback.resolve(invocationId,details,result,resultKw);
+            providerSocket.removeAsyncCallback(invocationId);
+        }
     }
     
     private void processInvocationError(WampSocket providerSocket, WampList request) throws Exception
     {
         Long invocationId = request.getLong(1);
-        String errorURI = request.getText(2);
-        Object exception = request.get(3);
+        WampDict options = new WampDict();
+        String errorURI = request.getText(3);
+        WampList args = new WampList();
+        WampDict argsKw = (WampDict)request.get(5);
         WampAsyncCallback callback = providerSocket.getAsyncCallback(invocationId);
-        callback.reject(errorURI, exception);
+        callback.reject(invocationId, options, errorURI, args, argsKw);
         providerSocket.removeAsyncCallback(invocationId);
     }
     

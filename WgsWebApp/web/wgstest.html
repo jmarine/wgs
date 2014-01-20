@@ -319,7 +319,7 @@ function getAppDescription(app) {
 }
 
 
-function update_apps(payload, payloadKw) {
+function update_apps(id,details,errorURI,payload,payloadKw) {
     if(payloadKw.apps) { 
         // listApps:
         $('#btn_automatch_group').attr("disabled", "true");
@@ -347,10 +347,10 @@ function update_apps(payload, payloadKw) {
 
 function list_apps() {
     $("#apps option").remove();
-    wgsclient.listApps(false, function(result,resultKw) {
-        if(resultKw && resultKw.valid) {
+    wgsclient.listApps(false, function(id,details,errorURI,result,resultKw) {
+        if(!errorURI) {
             wgsclient.subscribe("wgs.apps_event", update_apps, null, {});
-            update_apps(result,resultKw);
+            update_apps(id,details,errorURI,result,resultKw);
             $("#app_params").hide();
             $("#app_list").slideDown(500);
         }
@@ -435,7 +435,7 @@ function getGroupListItem(group) {
    return opt;
 }
 
-function update_groups(payload, payloadKw) {
+function update_groups(id,details,errorURI,payload,payloadKw) {
     $('#btn_play_group').attr("disabled", "true");
     $('#btn_view_group').attr("disabled", "true");
         
@@ -505,10 +505,10 @@ function list_groups(scope) {
     if(!scope) scope = $("input[name=group_scope]:checked").val();
     $("#groups option").remove();
 
-    wgsclient.listGroups(appId, { scope: scope }, function(result,resultKw) {
-        if(resultKw && resultKw.valid) {
+    wgsclient.listGroups(appId, { scope: scope }, function(id,details,errorURI,result,resultKw) {
+        if(!errorURI) {
             currentApp = resultKw.app;
-            update_groups(result,resultKw);
+            update_groups(id,details,errorURI,result,resultKw);
             $("#app_list").hide();
             $("#group_list").slideDown(500);
             $("#group_list fieldset legend").html("Groups: " + resultKw.app.name);
@@ -520,14 +520,14 @@ function list_groups(scope) {
 function delete_app() {
     var appId = $("#apps").val();
     if(confirm("Do you really want to delete the application?")) {
-        wgsclient.deleteApp(appId, function(response) {
-            if(!response.valid) {
+        wgsclient.deleteApp(appId, function(id,details,errorURI,result,resultKw) {
+            if(!errorURI) {
                 alert("Error deleting application:"+response.errorDesc);
             } else {
                 $('#btn_automatch_group').attr("disabled", "true");
                 $('#btn_select_app').attr("disabled", "true");
                 $('#btn_delete_app').attr("disabled", "true");
-                update_apps(response);
+                update_apps(id,details,errorURI,result,resultKw);
             }
         });
     }
@@ -549,11 +549,11 @@ function create_app() {
     var roles = [];
     $("#app_roles option").each(function() { roles[roles.length] = $(this).attr("value"); });
     
-    wgsclient.newApp(name, domain, version, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, function(response) {
-        if(!response.valid) {
+    wgsclient.newApp(name, domain, version, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, function(id,details,errorURI,result,resultKw) {
+        if(!errorURI) {
             alert("Error creating application:"+response.errorDesc);
         } else {
-            update_apps(response);
+            update_apps(id,details,errorURI,result,resultKw);
             hide_app_params();
         }
     });
@@ -604,13 +604,13 @@ function open_group(gid, options) {
     var appId = $("#apps").val();
     
     wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, {});
-    wgsclient.openGroup(appId, gid, options, function(result,resultKw) {
-       if(resultKw && resultKw.valid) {
+    wgsclient.openGroup(appId, gid, options, function(id,details,errorURI,result,resultKw) {
+       if(!errorURI) {
             //wgsclient.setSubscriptionStatus("wgs.app_event:" + appId, "busy", null );
             currentApp = resultKw.app;
             wgsclient.subscribe("wgs.group_event:" + resultKw.gid, update_group_callback, null, {} );
             show_group(resultKw); 
-       } else if(result.errorURI == "wgs.incorrectpassword") {
+       } else if(errorURI == "wgs.incorrectpassword") {
             var password = prompt("Introduce the password to access the group:");
             if(password) {
                 if(!options) options = {};
@@ -834,8 +834,8 @@ function remove_last_member(memberId) {
     var appId = $("#apps").val();
     var gid = $("#group_gid").val();
     var slot = $("#group_params table[id='members'] tbody tr").size();
-    wgsclient.updateMember(appId, gid, "", -slot, false, false, false, false, false, function(response) {
-        if(!response.valid) {
+    wgsclient.updateMember(appId, gid, "", -slot, false, false, false, false, false, function(id,details,errorURI,result,resultKw) {
+        if(!errorURI) {
             alert("error while removing slot");
         } else {
             $("button.remove_member").each(function(index, item) { 
@@ -845,8 +845,8 @@ function remove_last_member(memberId) {
     });
 }
 
-function update_group_callback(payload, payloadKw) {
-        if(payloadKw.valid) {  // TODO: check it is currentGroup gid
+function update_group_callback(id,details,errorURI,payload,payloadKw) {
+        if(!errorURI) {  // TODO: check it is currentGroup gid
             
             var num_members = wgsclient.getGroupMembers(payloadKw.gid).length;
 
@@ -913,8 +913,8 @@ function update_group(state, data) {
     var dynamic = $("#grp_dynamic").is(':checked');
     var alliances = $("#grp_alliances").is(':checked');
 
-    wgsclient.updateGroup(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, function(result,resultKw) {
-        if(resultKw.valid) update_group_callback(result,resultKw);
+    wgsclient.updateGroup(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, function(id,details,errorURI,result,resultKw) {
+        if(!errorURI) update_group_callback(id,details,errorURI,result,resultKw);
     });
 }
 
@@ -926,7 +926,7 @@ function start_group() {
 function exit_group(toOfflineMode) {
     var gid = $("#group_gid").val();
     if(gid.length > 0) {
-        wgsclient.exitGroup(gid, function(response) {
+        wgsclient.exitGroup(gid, function(id,details,errorURI,result,resultKw) {
             wgsclient.unsubscribe("wgs.group_event:" + gid, update_group_callback, null, {});
             //wgsclient.setSubscriptionStatus("wgs.app_event:" + $("#apps").val(), null, null );        
             
@@ -1087,14 +1087,14 @@ function openid_connect_menu(self) {
     var redirectUri = clear_openid_connect_params(true);
     
     wgsclient = getWgsClient();
-    wgsclient.openIdConnectProviders(redirectUri, function(result,resultKw) { 
+    wgsclient.openIdConnectProviders(redirectUri, function(id,details,errorURI,result,resultKw) { 
 
         var providers = $("#openid_providers_menu");
         providers.find("li:gt(0)").each(function(){
             $(this).remove();
         });
 
-        if(resultKw.valid) {
+        if(!errorURI) {
             resultKw.providers.forEach(function(provider) {
                 var link = $("<a>");
                 link.text(provider.name);
@@ -1144,14 +1144,14 @@ function test_call_rcp()
     clear_messages();
     wgsclient.call("mymodule.myfunc", [1,2,3], {}, {"runon": "all", "runmode": "progressive", "disclose_me": 1})
         .then(
-            function(result,resultKw) { append_message("Result: " + JSON.stringify(result))} ,
-            function(error) { append_message("Error: " + error.errorURI)},
-            function(progress,progressKw) { append_message("Progress: " + JSON.stringify(progress)) }
+            function(id,details,errorURI,result,resultKw) { append_message("Result: " + JSON.stringify(result))} ,
+            function(id,details,errorURI,result,resultKw) { append_message("Error: " + errorURI)},
+            function(id,details,errorURI,progress,progressKw) { append_message("Progress: " + JSON.stringify(progress)) }
         );
 }
 
 
-function on_mytopic_events(payload,payloadKw,topicURI)
+function on_mytopic_events(publicationId, details, errorURI, payload, payloadKw, topicURI)
 {
     append_message("TopicURI: " + JSON.stringify(topicURI));
     append_message("Payload: " + JSON.stringify(payload));

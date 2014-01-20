@@ -28,10 +28,10 @@ public class WampCRA extends WampModule
     public String authRequest(WampSocket socket, String authKey, WampDict extra) throws Exception
     {
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
-            throw new WampException("wamp.cra.error.already_authenticated", "already authenticated");
+            throw new WampException(null, "wamp.cra.error.already_authenticated", null, null);
         }
         if(socket.getSessionData().containsKey("_clientPendingAuthInfo")) {
-            throw new WampException("wamp.cra.error.authentication_already_requested", "authentication request already issues - authentication pending");
+            throw new WampException(null, "wamp.cra.error.authentication_already_requested", null, null);
         }
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS");
@@ -66,10 +66,11 @@ public class WampCRA extends WampModule
     public WampDict auth(WampSocket socket, String signature) throws Exception
     {
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
-            throw new WampException("wamp.cra.error.already_authenticated", "already authenticated");
+            throw new WampException(null, "wamp.cra.error.already_authenticated", null, null);
         }
         if(!socket.getSessionData().containsKey("_clientPendingAuthInfo")) {
-            throw new WampException("wamp.cra.error.authentication_failed", "no authentication previously requested");
+            System.out.println("wamp.cra.error.authentication_failed: no authentication previously requested");
+            throw new WampException(null, "wamp.cra.error.authentication_failed", null, null);
         }
 
         WampDict info = (WampDict)socket.getSessionData().remove("_clientPendingAuthInfo");;
@@ -82,7 +83,8 @@ public class WampCRA extends WampModule
             socket.setState(WampConnectionState.ANONYMOUS);
         } else {
             if(!signature.equals(clientPendingAuthSig)) {
-                throw new WampException("wamp.cra.error.authentication_failed", "signature for authentication request is invalid");
+                System.out.println("wamp.cra.error.authentication_failed: signature for authentication request is invalid");
+                throw new WampException(null, "wamp.cra.error.authentication_failed", null, null);
             }
 
             String authKey = info.getText("authkey");
@@ -121,7 +123,8 @@ public class WampCRA extends WampModule
             User usr = manager.find(User.class, userId);
             manager.close();
             if(usr == null) {
-                throw new WampException("wamp.cra.error.no_such_authkey", authKey + " authKey doesn't exists");
+                System.out.println("wamp.cra.error.no_such_authkey:  authKey doesn't exists" + authKey);
+                throw new WampException(null, "wamp.cra.error.no_such_authkey", null, null);
             }
             return usr.getPassword();
         } else {

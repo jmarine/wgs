@@ -174,7 +174,7 @@ public class Module extends WampModule
         usr = manager.find(User.class, userId);
         manager.close();
         
-        if(usr != null) throw new WampException(WGS_MODULE_NAME + ".user_already_exists", "The user is reserved by another user");
+        if(usr != null) throw new WampException(null, WGS_MODULE_NAME + ".user_already_exists", null, null);
         
         usr = new User();
         usr.setProfileCaducity(null);
@@ -201,12 +201,12 @@ public class Module extends WampModule
         Client client = clients.get(socket.getSessionId());
 
         if(client == null || client.getSocket().getState() != WampConnectionState.AUTHENTICATED) {
-            throw new WampException(WGS_MODULE_NAME + ".anonymous_user", "User not authenticated");
+            throw new WampException(null, WGS_MODULE_NAME + ".anonymous_user", null, null);
         }
         
         User usr = client.getUser();
         if(usr == null) {
-            throw new WampException(WGS_MODULE_NAME + ".unknown_userinfo", "User info not registered");
+            throw new WampException(null, WGS_MODULE_NAME + ".unknown_userinfo", null, null);
         }
         
         return usr.toWampObject();
@@ -277,7 +277,8 @@ public class Module extends WampModule
             
         } catch(Exception ex) {
             
-            throw new WampException(WGS_MODULE_NAME + ".oic_error", "OpenID Connect provider error: " + ex.getMessage());
+            System.out.println("OpenID Connect provider error: " + ex.getMessage());
+            throw new WampException(null, WGS_MODULE_NAME + ".oic_error", null, null);
         
         } finally {
             if(manager != null) {
@@ -307,7 +308,10 @@ public class Module extends WampModule
                 URL url = new URL(normalizedIdentityURL); 
                 providerDomain = url.getHost();
             } finally {
-                if(providerDomain == null) throw new WampException(WGS_MODULE_NAME + ".oic_error", "Unsupported OpenID Connect principal format");
+                if(providerDomain == null) {
+                    System.err.println("Unsupported OpenID Connect principal format");
+                    throw new WampException(null, WGS_MODULE_NAME + ".oic_error", null, null);
+                }
             }
         }
         
@@ -373,8 +377,8 @@ public class Module extends WampModule
             }
             
         } catch(Exception ex) {
-            
-            throw new WampException(WGS_MODULE_NAME + ".oic_error", "OpenID Connect provider error: " + ex.getMessage());
+            System.err.println("OpenID Connect provider error: " + ex.getMessage());
+            throw new WampException(null, WGS_MODULE_NAME + ".oic_error", null, null);
         
         } finally {
             if(manager != null) {
@@ -402,7 +406,10 @@ public class Module extends WampModule
             manager = Storage.getEntityManager();
             OpenIdConnectClientPK oicId = new OpenIdConnectClientPK(providerDomain, redirectUri);
             OpenIdConnectClient oic = manager.find(OpenIdConnectClient.class, oicId);
-            if(oic == null) throw new WampException(WGS_MODULE_NAME + ".unknown_oidc_provider", "Unknown OpenId Connect provider domain");
+            if(oic == null) {
+                System.err.println("Unknown OpenId Connect provider domain");
+                throw new WampException(null, WGS_MODULE_NAME + ".unknown_oidc_provider", null, null);
+            }
 
             String accessTokenResponse = oic.getAccessTokenResponse(code);
             logger.fine("AccessToken endpoint response: " + accessTokenResponse);
@@ -506,7 +513,10 @@ public class Module extends WampModule
             }
         }
 
-        if(usr == null) throw new WampException(WGS_MODULE_NAME + ".oic_error", "OpenID Connect protocol error");
+        if(usr == null) {
+            System.err.println("OpenID Connect protocol error");
+            throw new WampException(null, WGS_MODULE_NAME + ".oic_error", null, null);
+        }
         return usr.toWampObject();
     }    
     
@@ -545,7 +555,10 @@ public class Module extends WampModule
 
         boolean valid = false;
         Client client = clients.get(socket.getSessionId());
-        if(socket.getState() != WampConnectionState.AUTHENTICATED) throw new WampException(WGS_MODULE_NAME + ".unknown_user", "The user hasn't logged in");
+        if(socket.getState() != WampConnectionState.AUTHENTICATED) {
+            System.err.println("The user hasn't logged in");
+            throw new WampException(null, WGS_MODULE_NAME + ".unknown_user", null, null);
+        }
         
         // TODO: check user is administrator
         //if(!client.getUser().isAdministrator()) throw new WampException(MODULE_URL + "adminrequired", "The user is not and administrator");
@@ -635,7 +648,8 @@ public class Module extends WampModule
             event = broadcastAppInfo(socket, app, "app_deleted", true);
             return event;
         } else {
-            throw new WampException(WGS_MODULE_NAME + ".appid_not_found", "AppId " + appId + " doesn't exist");
+            System.err.println("AppId " + appId + " doesn't exist");
+            throw new WampException(null, WGS_MODULE_NAME + ".appid_not_found", null, null);
         }
     }
     
@@ -707,7 +721,10 @@ public class Module extends WampModule
             String pwd = g.getPassword();
             if( (pwd != null) && (pwd.length()>0) ) {
                 String pwd2 = (options!=null && options.has("password"))? options.getText("password") : "";
-                if(!pwd.equals(pwd2)) throw new WampException(WGS_MODULE_NAME + ".incorrectpassword", "Incorrect password");
+                if(!pwd.equals(pwd2)) {
+                    System.err.println("Incorrect password");
+                    throw new WampException(null, WGS_MODULE_NAME + ".incorrectpassword", null, null);
+                }
             }
             
         } else if(!spectator) {  

@@ -76,59 +76,27 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }
     
-    public static void sendCallProgress(WampSocket clientSocket, Long callID, WampList args, WampDict argsKw)
+    
+    public static void sendResult(WampSocket clientSocket, Long requestId, WampDict details, WampList args, WampDict argsKw)
     {
         WampList response = new WampList();
-        response.add(72);
-        response.add(callID);
-        response.add(args);
-        response.add(argsKw);
+        response.add(50);
+        response.add(requestId);
+        response.add((details != null)? details : new WampDict());
+        if(args != null || argsKw != null) {
+            response.add((args != null)? args : new WampList());
+            if(argsKw != null) response.add(argsKw);
+        }
         sendWampMessage(clientSocket, response);
     }    
     
-    public static void sendCallResult(WampSocket clientSocket, Long callID, WampList args, WampDict argsKw)
-    {
-        WampList response = new WampList();
-        response.add(73);
-        response.add(callID);
-        response.add(args);
-        response.add(argsKw);
-        sendWampMessage(clientSocket, response);
-    }    
-    
-    public static void sendCallError(WampSocket clientSocket, Long callID, String errorURI, String errorDesc, Object errorDetails)
-    {
-        if(errorURI == null) errorURI = WampException.ERROR_PREFIX+".call_error";
-        if(errorDesc == null) errorDesc = "";
-
-        WampList response = new WampList();
-        response.add(74);
-        response.add(callID);
-        response.add(errorURI);
-        
-        if(errorDetails == null) response.add(errorDesc);
-        else response.add(errorDesc + ": " + errorDetails.toString());
-        
-        sendWampMessage(clientSocket, response);
-    }    
-
     
     public static void sendSubscribed(WampSocket clientSocket, Long requestId, Long subscriptionId)
     {    
         WampList response = new WampList();
-        response.add(11);
+        response.add(33);
         response.add(requestId);
         response.add(subscriptionId);
-        sendWampMessage(clientSocket, response);
-    }
-    
-    
-    public static void sendSubscribeError(WampSocket clientSocket, Long requestId, String errorUri)
-    {    
-        WampList response = new WampList();
-        response.add(12);
-        response.add(requestId);
-        response.add(errorUri);
         sendWampMessage(clientSocket, response);
     }
     
@@ -136,26 +104,16 @@ public class WampProtocol
     public static void sendUnsubscribed(WampSocket clientSocket, Long requestId)
     {    
         WampList response = new WampList();
-        response.add(21);
+        response.add(35);
         response.add(requestId);
         sendWampMessage(clientSocket, response);
     }
     
     
-    public static void sendUnsubscribeError(WampSocket clientSocket, Long requestId, String errorUri)
-    {    
-        WampList response = new WampList();
-        response.add(22);
-        response.add(requestId);
-        response.add(errorUri);
-        sendWampMessage(clientSocket, response);
-    }    
-    
-    
     public static void sendPublished(WampSocket clientSocket, Long requestId, Long publicationId)
     {    
         WampList response = new WampList();
-        response.add(31);
+        response.add(17);
         response.add(requestId);
         response.add(publicationId);
         sendWampMessage(clientSocket, response);
@@ -179,12 +137,14 @@ public class WampProtocol
             }
             
             WampList response = new WampList();
-            response.add(40);
+            response.add(36);
             response.add(subscription.getId());
             response.add(publicationId);
             response.add(eventDetails);
-            response.add(payload);
-            response.add(payloadKw);
+            if(payload != null || payloadKw != null) {
+                response.add((payload!=null) ? payload : new WampList());
+                if(payloadKw != null) response.add(payloadKw);
+            }
                                     
             Set<Long> eligible = (eligibleParam != null) ? new HashSet<Long>(eligibleParam) : null;
             if(eligible == null) eligible = subscription.getSessionIds();
@@ -214,18 +174,24 @@ public class WampProtocol
     }
 
     
-    public static void sendMetaEvents(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, Object metaEvent) throws Exception 
+    public static void sendMetaEvents(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, WampDict metaEvent) throws Exception 
     {
         // METAEVENT data (only in WAMP v2)
+        metaEvent.put("metatopic", metaTopic);
         Long toClient = (eligible != null && eligible.size() > 0) ? eligible.iterator().next() : null;
 
         for(WampSubscription subscription : topic.getSubscriptions()) {
             
+            if(subscription.getOptions().getMatchType() == MatchEnum.exact) {
+                metaEvent.remove("topic");
+            } else {
+                metaEvent.put("topic", topic.getURI());
+            }            
+            
             WampList response = new WampList();
-            response.add(41);
+            response.add(36);
             response.add(subscription.getId());
             response.add(publicationId);
-            response.add(metaTopic);
             response.add(metaEvent);
             
             if(toClient != null) {
@@ -253,40 +219,54 @@ public class WampProtocol
     }
 
     
+    public static void sendError(WampSocket clientSocket, Long requestId, WampDict details, String errorUri, WampList args, WampDict argsKw)
+    {    
+        WampList response = new WampList();
+        response.add(4);
+        response.add(requestId);
+        response.add((details != null)? details : new WampDict());
+        response.add(errorUri);
+        if(args != null || argsKw != null) {
+            response.add((args != null)? args : new WampList());
+            if(argsKw != null) response.add(argsKw);
+        }
+        sendWampMessage(clientSocket, response);
+    }    
+    
     public static void sendRegisteredMessage(WampSocket clientSocket, Long requestId, Long registrationId)
     {    
         WampList response = new WampList();
-        response.add(51);
+        response.add(65);
         response.add(requestId);
         response.add(registrationId);
         sendWampMessage(clientSocket, response);
     }      
-    
-    
-    public static void sendRegisterError(WampSocket clientSocket, Long requestId, String errorUri)
+        
+    public static void sendUnregisteredMessage(WampSocket clientSocket, Long requestId)
     {    
         WampList response = new WampList();
-        response.add(52);
+        response.add(67);
         response.add(requestId);
-        response.add(errorUri);
         sendWampMessage(clientSocket, response);
-    }
-        
+    }      
 
-    public static void sendInvocationMessage(WampSocket remotePeer, Long invocationId, Long registrationId, WampDict invocationOptions, WampList args, WampDict argsKw) 
+    
+    public static void sendInvocationMessage(WampSocket remotePeer, Long invocationId, Long registrationId, WampDict details, WampList args, WampDict argsKw) 
     {
         WampList msg = new WampList();
-        msg.add(80);
+        msg.add(68);
         msg.add(invocationId);
         msg.add(registrationId);
-        msg.add(invocationOptions);
-        msg.add(args);
-        msg.add(argsKw); 
+        msg.add(details);
+        if(args != null || argsKw != null) {
+            msg.add((args!=null)? args : new WampList());
+            if(argsKw != null) msg.add(argsKw); 
+        }
         sendWampMessage(remotePeer, msg);        
     }
     
     
-    public static void sendCancelInvocation(WampSocket remotePeer, Long invocationId, WampDict cancelOptions) 
+    public static void sendInterruptMessage(WampSocket remotePeer, Long invocationId, WampDict cancelOptions) 
     {
         WampList msg = new WampList();
         msg.add(81);

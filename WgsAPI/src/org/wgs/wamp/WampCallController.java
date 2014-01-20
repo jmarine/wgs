@@ -65,7 +65,7 @@ public class WampCallController implements Runnable
 
         callID  = request.getLong(1);
         if(callID == null || callID == 0L) {
-            WampProtocol.sendCallError(clientSocket, callID, WampException.ERROR_PREFIX + ".requestid_unknown", "CallID not present", null);
+            WampProtocol.sendError(clientSocket, callID, null, WampException.ERROR_PREFIX + ".requestid_unknown", null, null);
             return;
         }        
         
@@ -74,40 +74,41 @@ public class WampCallController implements Runnable
                 throw new Exception("ProcURI not implemented");
             }
 
-            arguments = new WampList();
-            argumentsKw = new WampDict();
             setResult(new WampList());
             setResultKw(new WampDict());
-            if(clientSocket.getWampVersion() >= WampApplication.WAMPv2 && request.size() > 2) {
-                callOptions = new WampCallOptions((WampDict)request.get(2));
+            
+            arguments = new WampList();
+            argumentsKw = new WampDict();
+            if(request.size()>4) {
                 if (request.get(4) instanceof WampList) {
                     arguments = (WampList) request.get(4);
                 } else {
                     arguments.add(request.get(4));
                 }
+            }
+            if(request.size()>5) {
                 argumentsKw = (WampDict)request.get(5);
-            } else {
-                for (int i = 3; i < request.size(); i++) {
-                    arguments.add(request.get(i));
-                }
             }
             
+            callOptions = new WampCallOptions((WampDict)request.get(2));
             if (callOptions == null) {
                 callOptions = new WampCallOptions(null);
             }
 
-            // TRY LOCAL CALL:
             Object response = module.onCall(this, clientSocket, procedureURI, arguments, argumentsKw, callOptions);
             if(response != null && response instanceof WampAsyncCall) {
                 asyncCall = (WampAsyncCall)response;
                 if(!asyncCall.hasAsyncCallback()) asyncCall.setAsyncCallback(new WampAsyncCallback() {
                     @Override
                     public void resolve(Object... results) {
-                        WampList result = (WampList)results[0];
-                        WampDict resultKw = (WampDict)results[1];
+                        Long id = (Long)results[0];
+                        WampDict details = (WampDict)results[1];
+                        WampList result = (WampList)results[2];
+                        WampDict resultKw = (WampDict)results[3];
                         if(getClientSocket().supportProgressiveCalls() && callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
                             setResult(result);
                             setResultKw(resultKw);
+                            //setDetails(details);
                             sendCallResults();                            
                         } else {
                             getResult().add(result);
@@ -118,10 +119,14 @@ public class WampCallController implements Runnable
 
                     @Override
                     public void progress(Object... progressParams) {
-                        WampList progress = (WampList)progressParams[0];
-                        WampDict progressKw = (WampDict)progressParams[1];
+                        Long id = (Long)progressParams[0];
+                        WampDict details = (WampDict)progressParams[1];
+                        WampList progress = (WampList)progressParams[2];
+                        WampDict progressKw = (WampDict)progressParams[3];
                         if(getClientSocket().supportProgressiveCalls() && callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
-                            WampProtocol.sendCallProgress(getClientSocket(), getCallID(), progress, progressKw);
+                            if(details==null) details = new WampDict();
+                            details.put("progress", true);
+                            WampProtocol.sendResult(getClientSocket(), getCallID(), details, progress, progressKw);
                         } else {
                             getResult().add(progress);
                             getResultKw().putAll(progressKw);
@@ -130,7 +135,12 @@ public class WampCallController implements Runnable
 
                     @Override
                     public void reject(Object... errors) {
-                        WampProtocol.sendCallError(clientSocket, callID, (String)errors[0], null, errors[1]);
+                        Long invocationId = (Long)errors[0];
+                        WampDict details  = (WampDict)errors[1];
+                        String errorURI   = (String)errors[2];
+                        WampList args     = (errors.length > 3) ? (WampList)errors[3] : null;
+                        WampDict argsKw   = (errors.length > 4) ? (WampDict)errors[4] : null;
+                        WampProtocol.sendError(clientSocket, callID, details, "wamp.error.invocation_error", args, argsKw);
                     }
                 });
                 asyncCall.call();
@@ -156,12 +166,13 @@ public class WampCallController implements Runnable
             if (ex instanceof WampException) {
                 WampException wex = (WampException) ex;
                 if (!isCancelled()) {
-                    WampProtocol.sendCallError(clientSocket, callID, wex.getErrorURI(), wex.getErrorDesc(), wex.getErrorDetails());
+                    WampProtocol.sendError(clientSocket, callID, wex.getDetails(), wex.getErrorURI(), wex.getArgs(), wex.getArgsKw() );
                 }
-                logger.log(Level.FINE, "Error calling method " + procedureURI + ": " + wex.getErrorDesc());
+                logger.log(Level.SEVERE, "Error calling method " + procedureURI, wex);
             } else {
                 if (!isCancelled()) {
-                    WampProtocol.sendCallError(clientSocket, callID, WampException.ERROR_PREFIX+".call_error", "Error calling method " + procedureURI, ex.getMessage());
+                    System.out.println("Error calling method " + procedureURI + ": " + ex.getMessage());
+                    WampProtocol.sendError(clientSocket, callID, null, WampException.ERROR_PREFIX+".call_error", null, null);
                 }
                 logger.log(Level.SEVERE, "Error calling method " + procedureURI, ex);
             }
@@ -172,9 +183,10 @@ public class WampCallController implements Runnable
     public void sendCallResults()
     {
         if (isCancelled()) {
-            WampProtocol.sendCallError(clientSocket, callID, WampException.ERROR_PREFIX + ".CanceledByCaller", "RPC cancelled by caller: " + callID, null);
+            System.out.println("RPC cancelled by caller: " + callID);
+            WampProtocol.sendError(clientSocket, callID, null, WampException.ERROR_PREFIX + ".CanceledByCaller", null, null);
         } else {
-            WampProtocol.sendCallResult(clientSocket, callID, getResult(), getResultKw());
+            WampProtocol.sendResult(clientSocket, callID, null, getResult(), getResultKw());
             done = true;
         }
         

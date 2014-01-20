@@ -222,7 +222,7 @@ public class WampServices
         Collection<WampTopic> matchingTopics = null;
         WampSubscription subscription = clientSocket.getSubscription(subscriptionId);
         if(subscription == null) {
-            if(requestId != null) WampProtocol.sendUnsubscribeError(clientSocket, requestId, "wamp.error.no_such_subscription");            
+            if(requestId != null) WampProtocol.sendError(clientSocket, requestId, null, "wamp.error.no_such_subscription", null, null);            
         } else {
             matchingTopics = subscription.getTopics();
             for(WampTopic topic : matchingTopics) {

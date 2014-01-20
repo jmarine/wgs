@@ -18,18 +18,13 @@ WgsClient.prototype = {
   sid: null,
   state: WgsClient.DISCONNECTED,
   groups: new Array(),
-  calls: new Array(),
-  heartbeatIntervalHandler: null,
   incomingHeartbeatSeq: 0,
   outgoingHeartbeatSeq: 0,
-  rpcHandlers: new Array(),
+  heartbeatIntervalHandler: null,
+  pendingRequests: new Array(),
   rpcRegistrationsById: new Array(),
   rpcRegistrationsByURI: new Array(),
-  rpcRegistrationRequests: new Array(),
-  rpcUnregistrationRequests: new Array(),
-  publicationRequests: new Array(),
-  subscriptionRequests: new Array(),
-  unsubscriptionRequests: new Array(),
+  rpcHandlers: new Array(),
   subscriptionsById: new Array(),
   subscriptionsByTopicAndOptions: new Array(),
   eventHandlers: new Array(),
@@ -115,24 +110,24 @@ WgsClient.prototype = {
       if(timeout != 0) client.heartbeatIntervalHandler = setInterval(sendHeartbeat, timeout);
   },
  
-  call: function(cmd, args, argumentsKw, wampOptions) {
+  call: function(cmd, args, argsKw, wampOptions) {
       var dfd = $.Deferred();
       var msg = [];
-      msg[0] = 70;
+      msg[0] = 48;
       msg[1] = this._newid();
       msg[2] = (wampOptions!=null) ? wampOptions : {};
       msg[3] = cmd;
-      msg[4] = (args!=null)? ((args instanceof Array)? args : [args] ) : [];
-      msg[5] = (argumentsKw!=null) ? argumentsKw : {};
+      if(args != null || argsKw != null) msg[4] = (args!=null)? ((args instanceof Array)? args : [args] ) : [];
+      if(argsKw!=null) msg[5] = argsKw;
 
-      this.calls[msg[1]] = dfd;
+      this.pendingRequests[msg[1]] = [dfd];
       this.send(JSON.stringify(msg));
       return dfd.promise();
   },  
   
-  callCancel: function(callID, options) {
+  cancelCall: function(callID, options) {
       var arr = [];
-      arr[0] = 71;  // CALL_CANCEL
+      arr[0] = 49;  // CANCEL CALL
       arr[1] = callID;
       if(options) arr[2] = options;
       this.send(JSON.stringify(arr));      
@@ -152,12 +147,12 @@ WgsClient.prototype = {
 
         var dfd = $.Deferred();            
         var arr = [];
-        arr[0] = 10;  // SUBSCRIBE
+        arr[0] = 32;  // SUBSCRIBE
         arr[1] = this._newid();
         arr[2] = options;
         arr[3] = topicURI;      
         var topicAndOptionsKey = this._getTopicAndOptionsKey(topicURI,options);
-        this.subscriptionRequests[arr[1]] = [dfd, topicURI, event_cb, metaevent_cb, options];
+        this.pendingRequests[arr[1]] = [dfd, topicURI, event_cb, metaevent_cb, options];
         this.send(JSON.stringify(arr));
         return dfd.promise();
   },
@@ -191,11 +186,11 @@ WgsClient.prototype = {
         
         var dfd = $.Deferred();            
         var arr = [];
-        arr[0] = 20;  // Unsubscribe message type
+        arr[0] = 34;  // UNSUBSCRIBE
         arr[1] = this._newid();
         arr[2] = this.getSubscriptionIdByTopicOptions(topic,options);
         var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
-        this.unsubscriptionRequests[arr[1]] = [dfd, arr[2], topicAndOptionsKey, event_cb, metaevent_cb];
+        this.pendingRequests[arr[1]] = [dfd, arr[2], topicAndOptionsKey, event_cb, metaevent_cb];
         this.send(JSON.stringify(arr));
         
         return dfd.promise();
@@ -204,37 +199,37 @@ WgsClient.prototype = {
   publish: function(topic, payload, payloadKw, options) {
       var dfd = $.Deferred();
       var arr = [];
-      arr[0] = 30;  // PUBLISH
+      arr[0] = 16;  // PUBLISH
       arr[1] = this._newid();
       arr[2] = (options) ? options : {};      
       arr[3] = topic;
       arr[4] = payload;
       arr[5] = payloadKw;
       this.send(JSON.stringify(arr));
-      this.publicationRequests[arr[1]] = dfd;
+      this.pendingRequests[arr[1]] = dfd;
       return dfd.promise();
   }, 
-
+  
   registerRPC: function(options, procedureURI, callback) {
         var dfd = $.Deferred();            
         var arr = [];
-        arr[0] = 50;  // REGISTER
+        arr[0] = 64;  // REGISTER
         arr[1] = this._newid();
         arr[2] = options;
         arr[3] = procedureURI;      
-        this.rpcRegistrationRequests[arr[1]] = [dfd, procedureURI, callback];
+        this.pendingRequests[arr[1]] = [dfd, procedureURI, callback];
         this.send(JSON.stringify(arr));
-        return dfd.promise();      
+        return dfd.promise();   
   },
   
   unregisterRPC: function(options, procedureURI, callback) {
         var registrationId = this.rpcRegistrationsByURI[procedureURI];
         var dfd = $.Deferred();            
         var arr = [];
-        arr[0] = 60;  // UNREGISTER
+        arr[0] = 66;  // UNREGISTER
         arr[1] = this._newid();
         arr[2] = registrationId;
-        this.rpcUnregistrationRequests[arr[1]] = [dfd, procedureURI, callback];
+        this.pendingRequests[arr[1]] = [dfd, procedureURI, callback];
         this.send(JSON.stringify(arr));
         return dfd.promise();      
   },
@@ -266,7 +261,7 @@ WgsClient.prototype = {
             onstatechange(WgsState.ANONYMOUS);              
           } else {
             var authExtra = null; // { salt: "RANDOMTEXT", keylen: 32, iterations: 4096 };
-            client.authreq(user, authExtra, function(result,resultKw) {
+            client.authreq(user, authExtra, function(id,details,errorURI,result,resultKw) {
                 if(result && result.length > 0 && typeof(result[0]) == "string") {
                     var challenge = JSON.parse(result[0]);
                     password = CryptoJS.MD5(password).toString();
@@ -275,10 +270,10 @@ WgsClient.prototype = {
                         password = key.toString(CryptoJS.enc.Base64);                        
                     }
                     var signature = CryptoJS.HmacSHA256(result[0], password).toString(CryptoJS.enc.Base64);
-                    client.auth(signature, function(result,resultKw) {
-                        if(resultKw && resultKw.valid) {
-                            client.getUserInfo(function(result,resultKw) {
-                                if(resultKw.valid) {
+                    client.auth(signature, function(id,details,errorURI,result,resultKw) {
+                        if(!errorURI) {
+                            client.getUserInfo(function(id,details,errorURI,result,resultKw) {
+                                if(!errorURI) {
                                     client.user = user;
                                     client.state = WgsState.AUTHENTICATED;
                                     onstatechange(WgsState.AUTHENTICATED, resultKw);
@@ -313,14 +308,13 @@ WgsClient.prototype = {
             msg.password = CryptoJS.MD5(password).toString();
             msg.email = email;
             client.call("wgs.register", msg).then(
-                function(result,resultKw) {
+                function(id,details,errorURI,result,resultKw) {
                     client.user = resultKw.user;
                     client.state = WgsState.AUTHENTICATED;
                     onstatechange(WgsState.AUTHENTICATED, resultKw);
                 }, 
-                function(result,resultKw) {
-                    var errorCode = resultKw.errorURI;
-                    onstatechange(WgsState.ERROR, errorCode);
+                function(id,details,errorURI,result,resultKw) {
+                    onstatechange(WgsState.ERROR, errorURI);
                 });
         }
       });
@@ -334,13 +328,13 @@ WgsClient.prototype = {
             var msg = Object();
             msg.redirect_uri = redirectUri;
             client.call("wgs.openid_connect_providers", msg).then(
-                function(result,resultKw) {
+                function(id,details,errorURI,result,resultKw) {
                     //client.close();
-                    callback(result,resultKw);
+                    callback(id,details,errorURI,result,resultKw);
                 }, 
-                function(result,resultKw) {
+                function(id,details,errorURI,result,resultKw) {
                     client.close();
-                    callback(result,resultKw);
+                    callback(id,details,errorURI,result,resultKw);
                 });
         } 
       });
@@ -355,14 +349,13 @@ WgsClient.prototype = {
             msg.redirect_uri = redirectUri;
             msg.state = notificationChannel;
             client.call("wgs.openid_connect_login_url", msg).then(
-                function(result,resultKw) {
+                function(id,details,errorURI,result,resultKw) {
                     client.close();
                     document.location.href = result;
                     //window.open(response + "&nonce=" + escape(client.sid), "_blank");
                 }, 
-                function(result,resultKw) {
-                    var errorCode = resultKw.errorURI;
-                    onstatechange(WgsState.ERROR, errorCode);
+                function(id,details,errorURI,result,resultKw) {
+                    onstatechange(WgsState.ERROR, errorURI);
                 });
         }
       });
@@ -381,14 +374,13 @@ WgsClient.prototype = {
             if(notificationChannel) msg.notification_channel = notificationChannel;
             
             client.call("wgs.openid_connect_auth", msg).then(
-                function(result,resultKw) {
+                function(id,details,errorURI,result,resultKw) {
                     client.user = resultKw.user;
                     client.state = WgsState.AUTHENTICATED;
                     onstatechange(WgsState.AUTHENTICATED, resultKw);
                 }, 
-                function(result,resultKw) {
-                    var errorCode = resultKw.errorURI;
-                    onstatechange(WgsState.ERROR, errorCode);
+                function(id,details,errorURI,result,resultKw) {
+                    onstatechange(WgsState.ERROR, errorURI);
                 });
         }
       });
@@ -447,90 +439,75 @@ WgsClient.prototype = {
               client.sid = arr[1];
               client.state = WgsState.WELCOMED;
               onstatechange(WgsState.WELCOMED);
+              
           } else if (arr[0] == 2) {  // GOODBYE 
               onstatechange(WgsState.DISCONNECTED);    
               client.close();
+              
           } else if (arr[0] == 3) {  // HEARTBEAT
               client.incomingHeartbeatSeq = arr[2];
               // TODO: request unreceived EVENTs ?
-          } else if (arr[0] == 72) {  // CALLPROGRESS
-              var call = arr[1];
-              if(client.calls[call]) {       
-                  var progress = (arr && arr.length >= 3)? arr[2] : [];
-                  var progressKw = (arr && arr.length >= 4)? arr[3] : {};
-                  if(!progress) progress = [];
-                  if(!progressKw) progressKw = {};
-                  progress.valid = true;
-                  progressKw.valid = true;
-                  client.calls[call].notify(progress,progressKw);
-              } else {
-                  client.debug("call not found: " + call);
-              }              
-          } else if (arr[0] == 3 || arr[0] == 73) {  // CALLRESULT
-              var call = arr[1];
-              if(client.calls[call]) {       
-                  var result = (arr && arr.length >= 3)? arr[2] : [];
-                  var resultKw = (arr && arr.length >= 4)? arr[3] : {};
-                  if(!result) result = [];
-                  if(!resultKw) resultKw = {};
-                  result.valid = true;
-                  resultKw.valid = true;
-                  client.calls[call].resolve(result,resultKw);
-                  delete client.calls[call];
-              } else {
-                  client.debug("call not found: " + call);
-              }
-          } else if (arr[0] == 4 || arr[0] == 74) {  // CALLERROR
-              var call = arr[1];
-              if(client.calls[call]) {  
-                  var args = {};
-                  args.valid = false;
-                  args.errorURI = arr[2];
-                  if(arr.length >= 4) args.errorDesc = arr[3];
-                  if(arr.length == 5) args.errorDetails = arr[4];
-                  client.calls[call].reject(args);
-                  delete client.calls[call];
-              } else {
-                  client.debug("call not found: " + call);
-              }            
               
-          } else if(arr[0] == 11) {  // SUBSCRIBED
+          } else if (arr[0] == 4) {  // ERROR
               var requestId = arr[1];
-              if(requestId && client.subscriptionRequests[requestId]) {
+              if(client.pendingRequests[requestId]) {
+                var details = arr[2];
+                var errorURI = arr[3];
+                var args = (arr.length>4)? arr[4] : [];
+                var argsKw = (arr.length>5)? arr[5] : {};
+                var promise = client.pendingRequests[requestId][0];
+                promise.reject(requestId, details, errorURI, args, argsKw);
+                delete client.pendingRequests[requestId];     
+              }
+
+          } else if (arr[0] == 50) {  // RESULT
+              var requestId = arr[1];
+              if(client.pendingRequests[requestId]) {      
+                  var promise = client.pendingRequests[requestId][0];
+                  var details = arr[2];
+                  var result = (arr && arr.length > 2)? arr[3] : [];
+                  var resultKw = (arr && arr.length > 3)? arr[4] : {};
+                  if(details && details.progress) {
+                      promise.notify(requestId, details, null, result, resultKw);
+                  } else {
+                      promise.resolve(requestId, details, null, result, resultKw);
+                      delete client.pendingRequests[requestId];
+                  }
+              } else {
+                  client.debug("call not found: " + requestId);
+              }
+              
+          } else if(arr[0] == 33) {  // SUBSCRIBED
+              var requestId = arr[1];
+              if(requestId && client.pendingRequests[requestId]) {
                   var subscriptionId = arr[2];
-                  var promise = client.subscriptionRequests[requestId][0];
-                  var topicURI = client.subscriptionRequests[requestId][1];
-                  var options = client.subscriptionRequests[requestId][4];
+                  var promise = client.pendingRequests[requestId][0];
+                  var topicURI = client.pendingRequests[requestId][1];
+                  var options = client.pendingRequests[requestId][4];
                   var topicAndOptionsKey = client._getTopicAndOptionsKey(topicURI,options);
                   client.subscriptionsById[subscriptionId] = topicURI;
                   client.subscriptionsByTopicAndOptions[topicAndOptionsKey] = subscriptionId;
-                  if(client.subscriptionRequests[requestId][2]) {
+                  if(client.pendingRequests[requestId][2]) {
                     if(!client.eventHandlers[subscriptionId]) client.eventHandlers[subscriptionId] = [];
-                    client.eventHandlers[subscriptionId].push(client.subscriptionRequests[requestId][2]);
+                    client.eventHandlers[subscriptionId].push(client.pendingRequests[requestId][2]);
                   }
-                  if(client.subscriptionRequests[requestId][3]) {                  
+                  if(client.pendingRequests[requestId][3]) {                  
                     if(!client.metaeventHandlers[subscriptionId]) client.metaeventHandlers[subscriptionId] = [];
-                    client.metaeventHandlers[subscriptionId].push(client.subscriptionRequests[requestId][3]);
+                    client.metaeventHandlers[subscriptionId].push(client.pendingRequests[requestId][3]);
                   }
                   promise.resolve(requestId,subscriptionId);
-                  delete client.subscriptionRequests[requestId];
+                  delete client.pendingRequests[requestId];
               }
               
-          } else if(arr[0] == 12) {  // SUBSCRIBE_ERROR
+          } else if(arr[0] == 35) {  // UNSUBSCRIBED
               var requestId = arr[1];
-              var promise = client.subscriptionRequests[requestId][0];
-              promise.reject(requestId);
-              delete client.subscriptionRequests[requestId];
-
-          } else if(arr[0] == 21) {  // UNSUBSCRIBED
-              var requestId = arr[1];
-              if(requestId && client.unsubscriptionRequests[requestId]) {
-                  var promise = client.unsubscriptionRequests[requestId][0];
-                  var subscriptionId = client.unsubscriptionRequests[requestId][1];
-                  var topicAndOptionsKey = client.unsubscriptionRequests[requestId][2];
+              if(requestId && client.pendingRequests[requestId]) {
+                  var promise = client.pendingRequests[requestId][0];
+                  var subscriptionId = client.pendingRequests[requestId][1];
+                  var topicAndOptionsKey = client.pendingRequests[requestId][2];
                   
-                  var event_cb = client.unsubscriptionRequests[requestId][3];
-                  var metaevent_cb = client.unsubscriptionRequests[requestId][4];
+                  var event_cb = client.pendingRequests[requestId][3];
+                  var metaevent_cb = client.pendingRequests[requestId][4];
                   var callbacks = client.eventHandlers[subscriptionId];
                   if(callbacks && callbacks.length>0) {
                       var indexOfEventHandlerToClear = callbacks.indexOf(event_cb);
@@ -546,32 +523,19 @@ WgsClient.prototype = {
                   }
                   
                   promise.resolve(requestId,subscriptionId);
-                  delete client.unsubscriptionRequests[requestId];
+                  delete client.pendingRequests[requestId];
                   //delete client.subscriptionsById[subscriptionId];
                   //delete client.subscriptionsByTopicAndOptions[topicAndOptionsKey];              
               }
               
-          } else if(arr[0] == 22) {  // UNSUBSCRIBE_ERROR
-              var requestId = arr[1];
-              var promise = client.unsubscriptionRequests[requestId][0];
-              promise.reject(requestId);
-              delete client.unsubscriptionRequests[requestId];
-              
-          } else if(arr[0] == 31) {  // PUBLISHED
+          } else if(arr[0] == 17) {  // PUBLISHED
               var requestId = arr[1];
               var publicationId = arr[2];
-              var promise = client.publicationRequests[requestId];
+              var promise = client.pendingRequests[requestId];
               promise.resolve(requestId, publicationId);
-              delete client.publicationRequests[requestId];
+              delete client.pendingRequests[requestId];
               
-          } else if(arr[0] == 32) {  // PUBLISH_ERROR
-              var requestId = arr[1];
-              var errorURI  = arr[2];
-              var promise = client.publicationRequests[requestId];
-              promise.reject(requestId, errorURI);
-              delete client.publicationRequests[requestId];              
-              
-          } else if(arr[0] == 8 || arr[0] == 40) {  // EVENT
+          } else if(arr[0] == 36) {  // EVENT
               var subscriptionId = arr[1];
               var publicationId = arr[2];
               var details = arr[3];
@@ -580,56 +544,51 @@ WgsClient.prototype = {
               var topicURI = client.subscriptionsById[subscriptionId];
               if(details && details.topic) topicURI = details.topic;
               
-              if(client.eventHandlers[subscriptionId]) {
-                  client.eventHandlers[subscriptionId].forEach(function(callback) {
-                      callback.call(client, payload, payloadKw, topicURI);                
-                  });
-              } else {
-                  // client.debug("subscription not found: " + topic);
-              } 
+              if(details && details.metatopic) {
+                var metatopic = details.metatopic;
+                var metaevent = details;
 
-          } else if(arr[0] == 41) {  // META-EVENT  (not supported by WAMP v1)
-              var subscriptionId = arr[1];
-              var publicationId = arr[2];
-              var metatopic = arr[3];
-              var metaevent = arr[4];
-              var topicURI = null;
-              
-              if(client.metaeventHandlers[subscriptionId]) {
-                  client.metaeventHandlers[subscriptionId].forEach(function(callback) {
-                      callback.call(client, topicURI, metatopic, metaevent);
-                  });
+                if(client.metaeventHandlers[subscriptionId]) {
+                    client.metaeventHandlers[subscriptionId].forEach(function(callback) {
+                        callback.call(client, topicURI, metatopic, metaevent);
+                    });
+                } 
+                
               } else {
-                  // client.debug("subscription not found: " + topic);
-              }            
+                if(client.eventHandlers[subscriptionId]) {
+                    client.eventHandlers[subscriptionId].forEach(function(callback) {
+                        callback.call(client, publicationId, details, null, payload, payloadKw, topicURI);                
+                    });
+                } 
+              }
               
-          } else if(arr[0] == 51) {  // REGISTERED
+          } else if(arr[0] == 65) {  // REGISTERED
               var requestId = arr[1];
               var registrationId = arr[2];
-              if(requestId && client.rpcRegistrationRequests[requestId]) {
-                  var promise = client.rpcRegistrationRequests[requestId][0];
-                  var procedureURI = client.rpcRegistrationRequests[requestId][1];
-                  var callback = client.rpcRegistrationRequests[requestId][2];
+              if(requestId && client.pendingRequests[requestId]) {
+                  var promise = client.pendingRequests[requestId][0];
+                  var procedureURI = client.pendingRequests[requestId][1];
+                  var callback = client.pendingRequests[requestId][2];
                   client.rpcRegistrationsById[registrationId] = procedureURI;
                   client.rpcRegistrationsByURI[procedureURI] = registrationId;
                   client.rpcHandlers[registrationId] = callback;
                   promise.resolve(requestId, registrationId);
               }
 
-          } else if(arr[0] == 61) {  // UNREGISTERED                
+          } else if(arr[0] == 67) {  // UNREGISTERED                
               var requestId = arr[1];
-              if(requestId && client.rpcUnregistrationRequests[requestId]) {
+              if(requestId && client.pendingRequests[requestId]) {
                   var registrationId = arr[2];
-                  var promise = client.rpcUnregistrationRequests[requestId][0];
-                  var procedureURI = client.rpcUnregistrationRequests[requestId][1];
+                  var promise = client.pendingRequests[requestId][0];
+                  var procedureURI = client.pendingRequests[requestId][1];
                   promise.resolve(requestId,registrationId);
                   delete client.rpcHandlers[registrationId];
-                  delete client.rpcUnregistrationRequests[requestId];                  
+                  delete client.pendingRequests[requestId];                  
                   //delete client.rpcRegistrationsById[registrationId];
                   //delete client.rpcRegistrationsByURI[procedureURI];              
               }
               
-          } else if(arr[0] == 80) {  // INVOCATION
+          } else if(arr[0] == 68) {  // INVOCATION
               var requestId = arr[1];
               try {
                 var registrationId = arr[2];
@@ -651,19 +610,22 @@ WgsClient.prototype = {
                   }
                   
                   var arr = [];
-                  arr[0] = 83;  // 
+                  arr[0] = 70;  // YIELD (=INVOCATION_RESULT)
                   arr[1] = requestId;
-                  arr[2] = result;
-                  arr[3] = resultKw;
+                  arr[2] = {};  // options
+                  arr[3] = result;
+                  arr[4] = resultKw;
                   client.send(JSON.stringify(arr)); 
                 }
                 
               } catch(e) {
                 var arr = [];
-                arr[0] = 84;  // INVOCATION_ERROR
+                arr[0] = 4;  // ERROR
                 arr[1] = requestId;
-                arr[2] = "wamp.error.invalid_argument";
-                arr[3] = e;
+                arr[2] = {}; // details
+                arr[3] = "wamp.error.invalid_argument";
+                arr[4] = [];
+                arr[5] = e;
                 client.send(JSON.stringify(arr)); 
               }
 
@@ -681,11 +643,11 @@ WgsClient.prototype = {
       if(filterByDomain) msg.domain = document.domain.toString();
 
       this.call("wgs.list_apps", [], msg).then(
-        function(result,resultKw) {
-          callback(result,resultKw);
+        function(id,details,errorURI,result,resultKw) {
+          callback(id,details,errorURI,result,resultKw);
         }, 
-        function(result,resultKw) {
-          callback(result,resultKw);
+        function(id,details,errorURI,result,resultKw) {
+          callback(id,details,errorURI,result,resultKw);
         });
   },
   
@@ -720,7 +682,7 @@ WgsClient.prototype = {
       this.call("wgs.delete_app", msg).then(callback, callback);
   },  
   
-  _update_group_users: function(payload, payloadKw, topicURI) {
+  _update_group_users: function(id,details,errorURI,payload, payloadKw, topicURI) {
       var client = this;
       if(payloadKw.connections) {
           client.groups[payloadKw.gid] = new Object();
@@ -763,10 +725,10 @@ WgsClient.prototype = {
       args[1] = gid? gid : null;
       args[2] = options;
 
-      this.call("wgs.open_group", args).then(function(result,resultKw) {
+      this.call("wgs.open_group", args).then(function(id,details,errorURI,result,resultKw) {
           client.subscribe("wgs.group_event:" + resultKw.gid, client._update_group_users, null, {} );
-          client._update_group_users(result, resultKw);
-          callback(result,resultKw);
+          client._update_group_users(id,details,errorURI,result,resultKw);
+          callback(id,details,errorURI,result,resultKw);
       }, callback);
   },
   
@@ -810,13 +772,13 @@ WgsClient.prototype = {
       if(state) msg.state = state;
       if(data) msg.data  = data;
      
-      this.call("wgs.update_group", msg).then(function(result,resultKw) { 
-          client._update_group_users(result, resultKw);
-          callback(result, resultKw);
+      this.call("wgs.update_group", msg).then(function(id,details,errorURI,result,resultKw) { 
+          client._update_group_users(id,details,errorURI,result,resultKw);
+          callback(id,details,errorURI,result,resultKw);
       }, 
-      function(result,resultKw) { 
-          client._update_group_users(result, resultKw);
-          callback(result, resultKw) 
+      function(id,details,errorURI,result,resultKw) { 
+          client._update_group_users(id,details,errorURI,result,resultKw);
+          callback(id,details,errorURI,result,resultKw);
       } );
   },
 
@@ -835,13 +797,13 @@ WgsClient.prototype = {
         msg.type = usertype;
       }
       this.call("wgs.update_member", msg).then(
-        function(result,resultKw) { 
-            client._update_group_users(result, resultKw);
-            callback(result, resultKw);
+        function(id,details,errorURI,result,resultKw) { 
+            client._update_group_users(id,details,errorURI,result,resultKw);
+            callback(id,details,errorURI,result,resultKw);
         }, 
-        function(result, resultKw) { 
-            client._update_group_users(result, resultKw);
-            callback(result, resultKw) 
+        function(id,details,errorURI,result,resultKw) { 
+            client._update_group_users(id,details,errorURI,result,resultKw);
+            callback(id,details,errorURI,result,resultKw) 
         } );
   },
   

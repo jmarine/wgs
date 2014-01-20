@@ -65,7 +65,7 @@ public class WampRemoteMethod extends WampMethod
 
             @Override
             public void cancel(WampDict cancelOptions) {
-                WampProtocol.sendCancelInvocation(remotePeer, invocationId, cancelOptions);
+                WampProtocol.sendInterruptMessage(remotePeer, invocationId, cancelOptions);
             }           
             
         };

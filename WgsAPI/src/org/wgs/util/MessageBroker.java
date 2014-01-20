@@ -255,10 +255,10 @@ public class MessageBroker
     }
 
     
-    public static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, Object metaevent, Long toClient) throws Exception
+    public static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, WampDict metaEventDetails, Long toClient) throws Exception
     {
-        WampList payload = new WampList();
-        payload.add(metaevent);
+        if(metaEventDetails == null) metaEventDetails = new WampDict();
+        metaEventDetails.put("metatopic", metatopic);
         
         HashSet<Long> eligible = null;
         if(toClient != null) {
@@ -266,7 +266,7 @@ public class MessageBroker
             eligible.add(toClient);
         }
         
-        publish(publicationId, topic, payload, null, metatopic, eligible, null, null);
+        publish(publicationId, topic, null, metaEventDetails, metatopic, eligible, null, null);
     } 
     
     
@@ -274,11 +274,11 @@ public class MessageBroker
     {
         if(metaTopic == null) {
             // EVENT data
-            WampProtocol.sendEvents(publicationId, topic, eligible, excluded, publisherId, (WampList)payload, payloadKw);
+            WampProtocol.sendEvents(publicationId, topic, eligible, excluded, publisherId, payload, payloadKw);
         } else {
             // METAEVENT data (WAMP v2)
-            Object metaevent = payload.get(0);
-            WampProtocol.sendMetaEvents(publicationId, topic, metaTopic, eligible, metaevent);
+            WampDict metaEventDetails = payloadKw;
+            WampProtocol.sendMetaEvents(publicationId, topic, metaTopic, eligible, metaEventDetails);
         }
     }       
     
