@@ -132,7 +132,7 @@ public class WampModule
                                                 if(details == null) details = new WampDict();
                                                 details.put("progress", true);                                                
                                                 WampProtocol.sendResult(clientSocket, task.getCallID(), details, progress, progressKw);
-                                            } else {
+                                            } else {  // RunModeEnum.gather
                                                 task.getResult().add(progress);
                                                 task.getResultKw().putAll(progressKw);
                                             }
