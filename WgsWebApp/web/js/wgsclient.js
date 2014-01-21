@@ -73,12 +73,12 @@ WgsClient.prototype = {
       arr[0] = 1;  // HELLO
       arr[1] = this.serverSID;
       arr[2] = {};  // HelloDetails
-      arr[2].agent = "wgsclient/2.0.0";
+      arr[2].agent = "wgs-client-2.0-alpha1";
       arr[2].roles = {};
-      arr[2].roles.publisher = {};
-      arr[2].roles.subscriber = {};
-      arr[2].roles.caller = { "progressive" : 1 };
-      arr[2].roles.callee = {};
+      arr[2].roles.publisher = { "subscriber_blackwhite_listing": true, "publisher_exclusion": true };
+      arr[2].roles.subscriber = { "publisher_identification": true, "pattern_based_subscription": true, "subscriber_metaevents": true };
+      arr[2].roles.caller = { "caller_identification": true, "call_canceling": true, "progressive_call_results": true };
+      arr[2].roles.callee = { "caller_identification": true, "pattern_based_registration": true };
       this.send(JSON.stringify(arr));
   },
           

@@ -1188,7 +1188,7 @@ function test_unsubscribe()
 
 function test_publish()
 {
-    wgsclient.publish("myapp.topic1", [1,"data2"], { "item1" : 1 }, {});
+    wgsclient.publish("myapp.topic1", [1,"data2"], { "item1" : 1 }, { "exclude_me": false });
 }
 
 function clear_messages()

@@ -81,7 +81,7 @@ public class WampModule
                                 WampDict details = (WampDict)results[1];
                                 WampList result = new WampList();
                                 WampDict resultKw = new WampDict();
-                                if(!clientSocket.supportProgressiveCalls() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive) {
+                                if(!clientSocket.supportsProgressiveCallResults() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive) {
                                     result = task.getResult();
                                     resultKw = task.getResultKw();
                                 }
@@ -94,7 +94,7 @@ public class WampModule
                                 WampDict details = (WampDict)progressParams[1];
                                 WampList progress = (WampList)progressParams[2];
                                 WampDict progressKw = (WampDict)progressParams[3];
-                                if(clientSocket.supportProgressiveCalls() && options.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
+                                if(clientSocket.supportsProgressiveCallResults() && options.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
                                     if(details == null) details = new WampDict();
                                     details.put("progress", true);
                                     WampProtocol.sendResult(clientSocket, task.getCallID(), details, progress, progressKw);
@@ -128,7 +128,7 @@ public class WampModule
                                             WampDict details = (WampDict)results[1];
                                             WampList progress = (WampList)results[2];
                                             WampDict progressKw = (WampDict)results[3];
-                                            if(clientSocket.supportProgressiveCalls() && options.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
+                                            if(clientSocket.supportsProgressiveCallResults() && options.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
                                                 if(details == null) details = new WampDict();
                                                 details.put("progress", true);                                                
                                                 WampProtocol.sendResult(clientSocket, task.getCallID(), details, progress, progressKw);
@@ -246,12 +246,12 @@ public class WampModule
         if(requestId != null) {
             WampList payload   = (request.size() >= 5)? (WampList)request.get(4) : null;
             WampDict payloadKw = (request.size() >= 6)? (WampDict)request.get(5) : null;;
-            WampPublishOptions options = new WampPublishOptions();
-            options.init((WampDict)request.get(2));
+            WampPublishOptions options = new WampPublishOptions((WampDict)request.get(2));
             if(options.hasExcludeMe()) {
                 Set<Long> excludedSet = options.getExcluded();
                 if(excludedSet == null) excludedSet = new HashSet<Long>();
                 excludedSet.add(clientSocket.getSessionId());
+                options.setExcluded(excludedSet);
             }
 
             WampProtocol.sendPublished(clientSocket, requestId, publicationId);

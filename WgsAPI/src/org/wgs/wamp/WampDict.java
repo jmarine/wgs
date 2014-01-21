@@ -6,7 +6,7 @@ import java.util.Set;
 
 public class WampDict extends WampObject
 {
-    HashMap<String,Object> hashmap;
+    private HashMap<String,Object> hashmap;
             
     public WampDict()
     {

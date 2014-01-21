@@ -122,7 +122,7 @@ public class WampSocket
         this.helloDetails = helloDetails;
     }
     
-    public boolean supportProgressiveCalls()
+    public boolean supportsProgressiveCallResults()
     {
         boolean retval = true;
         if(helloDetails != null) {
@@ -131,7 +131,7 @@ public class WampSocket
                 if(rolesDetails.has("callee")) {
                     WampDict callerDetails = (WampDict)rolesDetails.get("caller");
                     if(callerDetails.has("progressive")) {
-                        retval = callerDetails.getBoolean("progressive");
+                        retval = callerDetails.getBoolean("progressive_call_results");
                     }
                 }
             }

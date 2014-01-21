@@ -49,15 +49,31 @@ public class WampProtocol
             case WampApplication.WAMPv2:
                 WampDict roles = new WampDict();
                 WampDict broker = new WampDict();
-                broker.put("exclude", 1);
-                broker.put("eligible", 1);
-                broker.put("exclude_me", 1);
-                broker.put("disclose_me", 1);
+                broker.put("subscriber_blackwhite_listing", true);
+                broker.put("publisher_exclusion", true);
+                broker.put("publisher_identification", true);
+                //broker.put("publication_trustlevels", false);
+                broker.put("pattern_based_subscription", true);
+                broker.put("partitioned_pubsub", true);
+                broker.put("subscriber_metaevents", true);
+                //broker.put("subscriber_list", false);
+                //broker.put("event_history", false);
                 roles.put("broker", broker);
-                roles.put("dealer", new WampDict());
+                
+                WampDict dealer = new WampDict();
+                //dealer.put("callee_blackwhite_listing", false);
+                //dealer.put("caller_exclusion", false);
+                dealer.put("caller_identification", true);
+                //dealer.put("call_trustlevels", false);
+                dealer.put("pattern_based_registration", true);
+                dealer.put("partitioned_rpc", true);
+                //dealer.put("call_timeout", false);
+                dealer.put("call_canceling", true);
+                dealer.put("progressive_call_results", true);
+                roles.put("dealer", dealer);
 
                 WampDict helloDetails = new WampDict();
-                helloDetails.put("agent", "wgs");
+                helloDetails.put("agent", "wgs-server-2.0-alpha1");
                 helloDetails.put("roles", roles);
                 response.add(helloDetails);  
                 break;

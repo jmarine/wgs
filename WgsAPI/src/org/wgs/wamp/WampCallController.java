@@ -105,7 +105,7 @@ public class WampCallController implements Runnable
                         WampDict details = (WampDict)results[1];
                         WampList result = (WampList)results[2];
                         WampDict resultKw = (WampDict)results[3];
-                        if(getClientSocket().supportProgressiveCalls() && callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
+                        if(getClientSocket().supportsProgressiveCallResults() && callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
                             setResult(result);
                             setResultKw(resultKw);
                             //setDetails(details);
@@ -123,7 +123,7 @@ public class WampCallController implements Runnable
                         WampDict details = (WampDict)progressParams[1];
                         WampList progress = (WampList)progressParams[2];
                         WampDict progressKw = (WampDict)progressParams[3];
-                        if(getClientSocket().supportProgressiveCalls() && callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
+                        if(getClientSocket().supportsProgressiveCallResults() && callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
                             if(details==null) details = new WampDict();
                             details.put("progress", true);
                             WampProtocol.sendResult(getClientSocket(), getCallID(), details, progress, progressKw);
