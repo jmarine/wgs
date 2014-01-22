@@ -82,7 +82,7 @@ button {
     margin-left: -5px;
     padding-left: 0px;
     padding-right: 0px;
-    background-image: url(images/oic.png) ;
+    background-image: url(images/oic.png);
     background-repeat: no-repeat;
     background-position: left center;
     background-size: 14px,14px;
@@ -213,27 +213,11 @@ function fnScroll(tableName){
   //$('#' + tableName + 'FirstRow').scrollTop($('#' + tableName + 'Table').scrollTop());
 }
 
-function enable_network() {
-    notificationChannel = get_url_param("gcmChannelId");
-    if(notificationChannel == null) notificationChannel = get_url_param("state");
+
+function initApp() {
+    enable_network();
     
-    $("#group_params").hide();
-    $("#login").slideDown(500);
-    $("#enable_network").hide();
-    $("#exit_group").show();
-    
-    $("#server_url").removeAttr("disabled");
-    $("#user").removeAttr("disabled");
-    $("#password").removeAttr("disabled");
-    $("#register").removeAttr("disabled");
-    
-    $("#user").val("");
-    $("#password").val("");
-    $("#user_picture").width(0).height(0);    
-    $("#password").show();
-    $("#lbl_password").show();
-    
-        $( "#toggle_connect" )
+    $( "#toggle_connect" )
             .button()
             .click(function() {
                 toggle_connect(false);
@@ -253,8 +237,28 @@ function enable_network() {
                     .buttonset()
                     .next()
                         .hide()
-                        .menu();
- 
+                        .menu();    
+}
+
+function enable_network() {
+    notificationChannel = get_url_param(document.location.href,"gcmChannelId");
+    if(notificationChannel == null) notificationChannel = get_url_param(document.location.href,"state");
+    
+    $("#group_params").hide();
+    $("#login").slideDown(500);
+    $("#enable_network").hide();
+    $("#exit_group").show();
+    
+    $("#server_url").removeAttr("disabled");
+    $("#user").removeAttr("disabled");
+    $("#password").removeAttr("disabled");
+    $("#register").removeAttr("disabled");
+    
+    $("#user").val("");
+    $("#password").val("");
+    $("#user_picture").width(0).height(0);    
+    $("#password").show();
+    $("#lbl_password").show();
 }
 
 
@@ -972,10 +976,10 @@ function getWgsClient() {
     return wgsclient;
 }
 
-function openid_connect(login) {
+function openid_connect(redirectUri) {
     
-    if(login) {
-        var redirectUri = clear_openid_connect_params(true);
+    if(!redirectUri) {
+        redirectUri = get_openid_connect_callback_url();
         var user = $("#user").val();
         if(user.length == 0) {
             alert("User name is empty");
@@ -985,39 +989,46 @@ function openid_connect(login) {
         }
         
     } else {
-        var redirectUri = clear_openid_connect_params(false);
-        var code = get_url_param("code");
+        var code = get_url_param(redirectUri, "code");
         if(code != null) {
             var url = $("#server_url").val();
-            var provider = get_url_param("provider");
+            var provider = get_url_param(redirectUri, "provider");
+            redirectUri = clear_openid_connect_params(redirectUri, false);
             
             wgsclient = new WgsClient(url);
             wgsclient.openIdConnectAuthCode(provider, redirectUri, code, notificationChannel, authentication);
+        } else {
+            var error = get_url_param(redirectUri, "error");
+            disconnect();
         }
     }
 }
 
-function get_url_param(param) {
+function get_url_param(url, param) {
     var value = null;
-    var pos = document.location.href.indexOf("&"+param+"=");
-    if(pos == -1) pos = document.location.href.indexOf("?"+param+"=");
+    var pos = url.indexOf("&"+param+"=");
+    if(pos == -1) pos = url.indexOf("?"+param+"=");
     if(pos != -1) {
-        value = document.location.href.substring(pos+param.length+2);
+        value = url.substring(pos+param.length+2);
         pos = value.indexOf("&");
         if(pos != -1) value = value.substring(0, pos);
     }
     return value;
 }
 
-function clear_openid_connect_params(clearProvider) {
+function get_openid_connect_callback_url() {
+    var url = "http://localhost:8080/oauth2callback.html";
+    return url;
+}
+
+function clear_openid_connect_params(url,clearProvider) {
     // Clear OpenId Connect's parameters
-    var url = document.location.href;
     var oicParams = ["code","state","error","error_description","authuser","prompt","session_state"];
     if(clearProvider) oicParams = ["provider", "code","state","error","error_description","authuser","prompt","session_state","gcmChannelId"];
     oicParams.forEach(function(param) {
         var paramPos = url.indexOf("&"+param+"=");
         if(paramPos == -1) paramPos = url.indexOf("?"+param+"=");
-        if(paramPos != -1) {    
+        if(paramPos != -1) {
             var paramEnd = url.indexOf("&", paramPos+1);
             var otherParams = (paramEnd != -1)? url.substring(paramEnd+1) : "";
             var offset = (otherParams.length==0)? 0 : 1;
@@ -1027,6 +1038,8 @@ function clear_openid_connect_params(clearProvider) {
 
     return url;
 }
+
+
 
 function disconnect() {
     exit_group(true);
@@ -1055,8 +1068,6 @@ function disconnect() {
     $("#group_params").slideDown(500);  
     
     enable_network();
-    document.location.href = clear_openid_connect_params(true);
-    
 }
 
 
@@ -1084,7 +1095,7 @@ function toggle_connect(create_user) {
 
 function openid_connect_menu(self) {
     var url = $("#server_url").val();
-    var redirectUri = clear_openid_connect_params(true);
+    var redirectUri = get_openid_connect_callback_url();
     
     wgsclient = getWgsClient();
     wgsclient.openIdConnectProviders(redirectUri, function(id,details,errorURI,result,resultKw) { 
@@ -1099,8 +1110,8 @@ function openid_connect_menu(self) {
                 var link = $("<a>");
                 link.text(provider.name);
                 link.attr("class", "ui-corner-all")
-                if(provider.authEndpoint) link.attr("href", provider.authEndpoint + "&state=" + escape(notificationChannel));
-                else link.attr("href", "javascript:wgsclient.openIdConnectLoginUrl('"+provider.registrationEndpoint+"', clear_openid_connect_params(true), notificationChannel, authentication);");
+                if(provider.authEndpoint) link.attr("onclick", "javascript:window.open('" + provider.authEndpoint + "&state=" + escape(notificationChannel) + "','_blank')");
+                else link.attr("onclick", "javascript:wgsclient.openIdConnectLoginUrl('"+provider.registrationEndpoint+"', get_openid_connect_callback_url(), notificationChannel, authentication);");
 
                 var item = $("<li>");
                 item.attr("class", "ui-menu-item").append(link)
@@ -1203,8 +1214,8 @@ function append_message(text)
 
 </script>
 
-        </head>
-<body onload="javascript:enable_network();openid_connect(false)">
+</head>
+<body onload="javascript:initApp();">
 <div id="wrapper" style="width: 370px">
   <div id="login" class="section hidden">
     <fieldset>

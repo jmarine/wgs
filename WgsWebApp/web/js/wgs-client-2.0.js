@@ -351,8 +351,8 @@ WgsClient.prototype = {
             client.call("wgs.openid_connect_login_url", msg).then(
                 function(id,details,errorURI,result,resultKw) {
                     client.close();
-                    document.location.href = result;
-                    //window.open(response + "&nonce=" + escape(client.sid), "_blank");
+                    //document.location.href = result;
+                    window.open(response, "_blank");  // + "&nonce=" + escape(client.sid)
                 }, 
                 function(id,details,errorURI,result,resultKw) {
                     onstatechange(WgsState.ERROR, errorURI);
