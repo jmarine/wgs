@@ -47,30 +47,35 @@ public class WampProtocol
                 response.add(app.getServerId());
                 break;
             case WampApplication.WAMPv2:
-                WampDict roles = new WampDict();
-                WampDict broker = new WampDict();
-                broker.put("subscriber_blackwhite_listing", true);
-                broker.put("publisher_exclusion", true);
-                broker.put("publisher_identification", true);
-                //broker.put("publication_trustlevels", false);
-                broker.put("pattern_based_subscription", true);
-                broker.put("partitioned_pubsub", true);
-                broker.put("subscriber_metaevents", true);
-                //broker.put("subscriber_list", false);
-                //broker.put("event_history", false);
-                roles.put("broker", broker);
+                WampDict brokerFeatures = new WampDict();
+                brokerFeatures.put("subscriber_blackwhite_listing", true);
+                brokerFeatures.put("publisher_exclusion", true);
+                brokerFeatures.put("publisher_identification", true);
+                //brokerFeatures.put("publication_trustlevels", false);
+                brokerFeatures.put("pattern_based_subscription", true);
+                brokerFeatures.put("partitioned_pubsub", true);
+                brokerFeatures.put("subscriber_metaevents", true);
+                //brokerFeatures.put("subscriber_list", false);
+                //brokerFeatures.put("event_history", false);
+
+                WampDict dealerFeatures = new WampDict();
+                //dealerFeatures.put("callee_blackwhite_listing", false);
+                //dealerFeatures.put("caller_exclusion", false);
+                dealerFeatures.put("caller_identification", true);
+                //dealerFeatures.put("call_trustlevels", false);
+                dealerFeatures.put("pattern_based_registration", true);
+                dealerFeatures.put("partitioned_rpc", true);
+                //dealerFeatures.put("call_timeout", false);
+                dealerFeatures.put("call_canceling", true);
+                dealerFeatures.put("progressive_call_results", true);
                 
+                WampDict broker = new WampDict();
+                broker.put("features", brokerFeatures);
                 WampDict dealer = new WampDict();
-                //dealer.put("callee_blackwhite_listing", false);
-                //dealer.put("caller_exclusion", false);
-                dealer.put("caller_identification", true);
-                //dealer.put("call_trustlevels", false);
-                dealer.put("pattern_based_registration", true);
-                dealer.put("partitioned_rpc", true);
-                //dealer.put("call_timeout", false);
-                dealer.put("call_canceling", true);
-                dealer.put("progressive_call_results", true);
-                roles.put("dealer", dealer);
+                dealer.put("features", dealerFeatures);
+                WampDict roles = new WampDict();
+                roles.put("broker", broker);
+                roles.put("dealer", dealerFeatures);
 
                 WampDict helloDetails = new WampDict();
                 helloDetails.put("agent", "wgs-server-2.0-alpha1");

@@ -127,11 +127,14 @@ public class WampSocket
         boolean retval = true;
         if(helloDetails != null) {
             if(helloDetails.has("roles")) {
-                WampDict rolesDetails = (WampDict)helloDetails.get("roles");
-                if(rolesDetails.has("callee")) {
-                    WampDict callerDetails = (WampDict)rolesDetails.get("caller");
-                    if(callerDetails.has("progressive")) {
-                        retval = callerDetails.getBoolean("progressive_call_results");
+                WampDict roles = (WampDict)helloDetails.get("roles");
+                if(roles.has("callee")) {
+                    WampDict caller = (WampDict)roles.get("caller");
+                    if(caller.has("features")) {
+                        WampDict callerFeatures = (WampDict)roles.get("features");
+                        if(callerFeatures.has("progressive_call_results")) {
+                            retval = callerFeatures.getBoolean("progressive_call_results");
+                        }
                     }
                 }
             }
