@@ -131,7 +131,7 @@ public class WampSocket
                 if(roles.has("callee")) {
                     WampDict caller = (WampDict)roles.get("caller");
                     if(caller.has("features")) {
-                        WampDict callerFeatures = (WampDict)roles.get("features");
+                        WampDict callerFeatures = (WampDict)caller.get("features");
                         if(callerFeatures.has("progressive_call_results")) {
                             retval = callerFeatures.getBoolean("progressive_call_results");
                         }
