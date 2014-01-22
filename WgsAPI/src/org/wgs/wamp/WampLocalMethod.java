@@ -45,6 +45,10 @@ public class WampLocalMethod extends WampMethod
                 } else {
                     params.add(argsKw);  
                 }
+            } else if(paramType.isEnum()) {
+                String text = (String)args.get(argCount++);
+                if(text == null) params.add(null);
+                else params.add(Enum.valueOf(paramType, text));
             } else {
                 Object val = args.get(argCount++);
                 params.add(val);

@@ -1345,12 +1345,12 @@ public class Module extends WampModule
     
     
     @WampRPC(name = "list_groups")
-    public WampDict listGroups(WampSocket socket, String appId, WampDict argsKw) throws Exception
+    public WampDict listGroups(WampSocket socket, String appId, GroupFilter.Scope scope, GroupState state) throws Exception
     {
-        GroupFilter filter = new GroupFilter(argsKw);
+        GroupFilter filter = new GroupFilter(appId, scope, state);
         Client client = clients.get(socket.getSessionId());
         Application app = applications.get(appId);
-        if(app == null) throw new WampException(null, "wgs.error.application_not_found", null, null);
+        if(app == null) throw new WampException(null, "wgs.error.application_id_not_specified", null, null);
                 
         WampList groupsArray = new WampList();
         for(Group g : filter.getGroups(client)) {

@@ -23,17 +23,33 @@ public class GroupFilter
     private Scope  scope;
     private GroupState state;
 
-    public GroupFilter(WampDict node) 
+    public GroupFilter(String appId, Scope scope, GroupState state) 
     {
-        this.appId = null;
-        this.state = null;        
-        this.scope = Scope.mine;
-        if (node != null) {
-            if(node.has("appId")) this.appId = node.getText("appId");
-            if(node.has("scope")) this.scope = Scope.valueOf(node.getText("scope"));
-            if(node.has("state")) this.state = GroupState.valueOf(node.getText("state"));
-        }
+        this.appId = appId;
+        this.scope = scope;
+        this.state = state;        
     }
+    
+    /**
+     * @param appId the appId to set
+     */
+    public void setAppId(String appId) {
+        this.appId = appId;
+    }
+
+    /**
+     * @param scope the scope to set
+     */
+    public void setScope(Scope scope) {
+        this.scope = scope;
+    }
+
+    /**
+     * @param state the state to set
+     */
+    public void setState(GroupState state) {
+        this.state = state;
+    }    
     
     public List<Group> getGroups(Client client)
     {
@@ -52,14 +68,15 @@ public class GroupFilter
             params.put("state", state);
         }      
         if(scope != null && scope != Scope.all) {
-            ejbql = ejbql + ", IN(g.members) m ";
+            
             if(where.length() > 0) where.append(" AND ");
             if(scope == Scope.mine) {
+                ejbql = ejbql + ", IN(g.members) m ";
                 where.append("m.user = :user");
             } else {  
                 // scope == Scope.friends
                 // IMPORTANT: IT REQUIRES EclipseLink >= 2.4.0
-                where.append("(m.user = :user OR m.user.id IN (SELECT f.id FROM User t, IN(t.friends) f where t = :user))");
+                where.append("g.gid IN (SELECT g.gid FROM AppGroup g2, IN(g2.members) m WHERE m.user = :user OR EXISTS(SELECT f.id FROM User t, IN(t.friends) f WHERE t = :user AND m.user = f))");
             }
             params.put("user", client.getUser());
         }      
