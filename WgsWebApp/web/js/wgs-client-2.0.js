@@ -655,9 +655,12 @@ WgsClient.prototype = {
         });
   },
   
-  listGroups: function(appId, filters, callback) {
-      var args = [ appId, filters ];
-      this.call("wgs.list_groups", args).then(callback, callback);
+  listGroups: function(appId, scope, state, callback) {
+      var argsKw = {};
+      if(appId) argsKw.appId = appId;
+      if(scope) argsKw.scope = scope;
+      if(state) argsKw.state = state;
+      this.call("wgs.list_groups", [appId], argsKw).then(callback, callback);
   },
 
   newApp: function(name, domain, version, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, callback) {

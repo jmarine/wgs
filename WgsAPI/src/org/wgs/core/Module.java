@@ -102,34 +102,11 @@ public class Module extends WampModule
         return WGS_MODULE_NAME + "." + topicName;
     }
 
+
+
     @Override
-    public Object onCall(WampCallController task, WampSocket socket, String method, WampList args, WampDict argsKw, WampCallOptions callOptions) throws Exception 
+    public void onConnect(WampSocket socket) throws Exception 
     {
-        Object retval = null;
-        if(method.equals("wgs.list_groups")) {
-            String appId = args.getText(0);
-
-            WampList metaTopics = new WampList();
-            metaTopics.add(WampMetaTopic.SUBSCRIBER_ADDED);
-            metaTopics.add(WampMetaTopic.SUBSCRIBER_REMOVED);
-
-            WampDict filterOptions = (WampDict)args.get(1);
-            GroupFilter options = new GroupFilter(this, filterOptions);
-            options.setMetaTopics(metaTopics);
-            
-            if(appId.indexOf("*") != -1) options.setMatchType(MatchEnum.wildcard);
-             
-            //WampServices.subscribeClientWithTopic(wampApp, socket, null, getFQtopicURI("app_event:"+appId), options);
-            retval = listGroups(socket, appId, options);
-        } else {
-            retval = super.onCall(task, socket, method, args, argsKw, callOptions);
-        }
-        return retval;
-    }
-
-
-    @Override
-    public void onConnect(WampSocket socket) throws Exception {
         super.onConnect(socket);
         Client client = new Client();
         client.setSocket(socket);
@@ -146,7 +123,8 @@ public class Module extends WampModule
     }
     
     @Override
-    public void onDisconnect(WampSocket socket) throws Exception {
+    public void onDisconnect(WampSocket socket) throws Exception 
+    {
         Client client = clients.get(socket.getSessionId());
         socket.setState(WampConnectionState.OFFLINE);
         for(String gid : client.getGroups().keySet()) {
@@ -912,7 +890,7 @@ public class Module extends WampModule
 
             }
 
-            response.put("members", getMembers(g.getGid(), 0));
+            response.put("members", getMembers(g, 0));
             
             broadcastAppEventInfo(socket, g, created? "group_created" : "group_updated", false);
             
@@ -1024,7 +1002,7 @@ public class Module extends WampModule
                 }
             }
             
-            response.put("members", getMembers(gid,0));            
+            response.put("members", getMembers(g,0));            
 
             g.setVersion(Storage.saveEntity(g).getVersion());
             
@@ -1042,9 +1020,20 @@ public class Module extends WampModule
     @WampRPC(name="list_members")
     public WampList getMembers(String gid, int team) throws Exception 
     {
+        Group g = groups.get(gid);
+        if(g == null) {
+            g = Storage.findEntity(Group.class, gid);
+            if(g != null) groups.put(gid, g);
+            else throw new WampException(null, "wgs.error.group_not_found", null, null);
+        }
+        
+        return getMembers(g, team);
+    }
+    
+    private WampList getMembers(Group g, int team) 
+    {
         WampList membersArray = new WampList();
 
-        Group g = groups.get(gid);
         if(g != null) {
             for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                 Member member = g.getMember(slot);
@@ -1342,7 +1331,7 @@ public class Module extends WampModule
     {
         WampDict event = g.toWampObject();
         event.put("cmd", cmd);
-        event.put("members", getMembers(g.getGid(),0));
+        event.put("members", getMembers(g,0));
         socket.publishEvent(WampServices.getTopic(getFQtopicURI("app_event:"+g.getApplication().getAppId())), null, event, excludeMe, false);
     }
     
@@ -1350,40 +1339,30 @@ public class Module extends WampModule
     {
         WampDict event = g.toWampObject();
         event.put("cmd", cmd);
-        event.put("members", getMembers(g.getGid(),0));
+        event.put("members", getMembers(g,0));
         socket.publishEvent(WampServices.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, excludeMe, false);
     }    
     
     
-    private WampDict listGroups(WampSocket socket, String appId, GroupFilter options) throws Exception
+    @WampRPC(name = "list_groups")
+    public WampDict listGroups(WampSocket socket, String appId, WampDict argsKw) throws Exception
     {
-        System.out.println("Listing groups for app: '" + appId + "'");
+        GroupFilter filter = new GroupFilter(argsKw);
         Client client = clients.get(socket.getSessionId());
-        WampDict retval = new WampDict();
-        WampList groupsArray = new WampList();
         Application app = applications.get(appId);
-        if(app != null) {
-            retval.put("app", app.toWampObject());
-            for(Group group : app.getGroupsByState(null)) {
-                if(!group.isHidden() && options.subscribeGroup(group, client)) {
-                    WampDict obj = group.toWampObject();
-                    obj.put("members", getMembers(group.getGid(),0));                
-                    groupsArray.add(obj);
-                }
-            }   
-        } else {
-            retval.put("app", "*");
-            for(Group group : groups.values()) {
-                if(!group.isHidden() && options.subscribeGroup(group, client)) {
-                    WampDict obj = group.toWampObject();
-                    obj.put("members", getMembers(group.getGid(),0));                
-                    groupsArray.add(obj);
-                }
-            }               
-        }
-        
+        if(app == null) throw new WampException(null, "wgs.error.application_not_found", null, null);
+                
+        WampList groupsArray = new WampList();
+        for(Group g : filter.getGroups(client)) {
+            if(!g.isHidden()) {
+                WampDict obj = g.toWampObject();
+                obj.put("members", getMembers(g,0));                
+                groupsArray.add(obj);
+            }
+        }   
+        WampDict retval = new WampDict();
+        retval.put("app", app.toWampObject());
         retval.put("groups", groupsArray);
-
         return retval;
     }    
 

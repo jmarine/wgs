@@ -1,9 +1,13 @@
 package org.wgs.core;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import javax.persistence.EntityManager;
+import javax.persistence.TypedQuery;
 
 import org.wgs.entity.User;
+import org.wgs.util.Storage;
 import org.wgs.wamp.WampDict;
 import org.wgs.wamp.WampList;
 import org.wgs.wamp.WampObject;
@@ -11,95 +15,71 @@ import org.wgs.wamp.WampSubscription;
 import org.wgs.wamp.WampSubscriptionOptions;
 
 
-public class GroupFilter extends WampSubscriptionOptions 
+public class GroupFilter
 {
     public enum Scope { mine, friends, all };
     
-    private Module module;
+    private String appId;
     private Scope  scope;
-    private HashSet<String> subscriptions;
+    private GroupState state;
 
-    public GroupFilter(Module module, WampDict node) 
+    public GroupFilter(WampDict node) 
     {
-        super(node);
-        this.subscriptions = new HashSet<String>();
-        this.module = module;
-        this.scope = Scope.all;
+        this.appId = null;
+        this.state = null;        
+        this.scope = Scope.mine;
         if (node != null) {
-            scope = Scope.valueOf(node.getText("scope"));
+            if(node.has("appId")) this.appId = node.getText("appId");
+            if(node.has("scope")) this.scope = Scope.valueOf(node.getText("scope"));
+            if(node.has("state")) this.state = GroupState.valueOf(node.getText("state"));
         }
     }
+    
+    public List<Group> getGroups(Client client)
+    {
+        HashMap<String,Object> params = new HashMap<String,Object>();        
+        
+        String ejbql = "SELECT OBJECT(g) FROM AppGroup g";
+        StringBuilder where = new StringBuilder();
+        if(appId != null) {
+            if(where.length() > 0) where.append(" AND ");
+            where.append("g.application.id = :appId");
+            params.put("appId", appId);
+        }
+        if(state != null) {
+            if(where.length() > 0) where.append(" AND ");
+            where.append("g.state = :state");
+            params.put("state", state);
+        }      
+        if(scope != null && scope != Scope.all) {
+            ejbql = ejbql + " JOIN g.members m ";
+            if(where.length() > 0) where.append(" AND ");
+            if(scope == Scope.mine) {
+                where.append("m.user = :user");
+            } else {  
+                // scope == Scope.friends
+                // IMPORTANT: IT REQUIRES EclipseLink >= 2.4.0
+                where.append("(m.user = :user OR m.user.id IN (SELECT f.id FROM User t, IN(t.friends) f where t = :user))");
+            }
+            params.put("user", client.getUser());
+        }      
+        
+        if(where.length() > 0) {
+            ejbql = ejbql + " WHERE " + where.toString();
+        }
+        
+        EntityManager manager = Storage.getEntityManager();
+        TypedQuery<Group> query = manager.createQuery(ejbql, Group.class);        
+        for(String key : params.keySet()) 
+        {
+            query.setParameter(key, params.get(key));
+        }
+        
+        
+        List<Group> groups = query.getResultList();
+        manager.close();
 
-    
-    public boolean subscribeGroup(Group group, Client client) 
-    {
-        if (scope == Scope.all) {
-            return true;
-        }
-                
-        User user = client.getUser();
-        String userId = (user != null) ? user.getFQid() : "";
-        List<User> friends = (scope == Scope.friends) ? client.getUser().getFriends() : null;
-        for (Member member : group.getMembers()) {
-            User memberUser = member.getUser();
-            if(memberUser != null) {
-                String memberFQid = memberUser.getFQid();
-                if(userId.equals(memberFQid)) {
-                    subscriptions.add(group.getGid());
-                    return true;
-                } else if (friends != null) {
-                    for (User friend : friends) {
-                        if(memberFQid.equals(friend.getFQid())) {
-                            subscriptions.add(group.getGid());
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        
-        return false;
-    }
-    
-    
-    @Override
-    public void updateOptions(WampSubscriptionOptions options)
-    {
-        super.updateOptions(options);
-        if(options != null && options instanceof GroupFilter) {
-            this.scope = ((GroupFilter)options).scope;
-            this.subscriptions = new HashSet<String>();
-        }
-    }
-    
-    
-    @Override
-    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, WampList payload, WampDict payloadKw) 
-    {
-        if (scope == Scope.all) {
-            return true;
-        }
-        
-        WampDict dict = payloadKw;
-        String gid = (dict.has("gid")) ? dict.getText("gid") : null;
-        if (gid != null) {
-            String cmd = dict.has("cmd")? dict.getText("cmd") : "";
-            boolean wasSubscribed = subscriptions.contains(gid);
-            if(cmd.equals("group_deleted")) subscriptions.remove(gid);
-            
-            if(wasSubscribed) {
-                return true;
-            } else {
-                Group  group = module.getGroup(gid);
-                if(group == null) {
-                    return false;
-                } else if(sid != null) {
-                    Client client = module.getClient(sid);
-                    return subscribeGroup(group, client);
-                }
-            }
-        }
-        return false;
+        return groups;
     }
     
 }

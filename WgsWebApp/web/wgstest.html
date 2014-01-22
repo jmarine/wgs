@@ -509,14 +509,14 @@ function list_groups(scope) {
     if(!scope) scope = $("input[name=group_scope]:checked").val();
     $("#groups option").remove();
 
-    wgsclient.listGroups(appId, { scope: scope }, function(id,details,errorURI,result,resultKw) {
+    wgsclient.listGroups(appId, scope, null, function(id,details,errorURI,result,resultKw) {
         if(!errorURI) {
             currentApp = resultKw.app;
             update_groups(id,details,errorURI,result,resultKw);
             $("#app_list").hide();
             $("#group_list").slideDown(500);
             $("#group_list fieldset legend").html("Groups: " + resultKw.app.name);
-            wgsclient.subscribe("wgs.app_event:" + appId, update_groups, app_metaevent, {"metatopics": ["wamp.metatopic.subscriber.add", "wamp.metatopic.subscriber.remove"]} );            
+            wgsclient.subscribe("wgs.app_event:" + appId, update_groups, app_metaevent, { "match": "exact", "metatopics": ["wamp.metatopic.subscriber.add", "wamp.metatopic.subscriber.remove"]} );
         }
     });
 }
