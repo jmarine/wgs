@@ -52,7 +52,7 @@ public class GroupFilter
             params.put("state", state);
         }      
         if(scope != null && scope != Scope.all) {
-            ejbql = ejbql + " JOIN g.members m ";
+            ejbql = ejbql + ", IN(g.members) m ";
             if(where.length() > 0) where.append(" AND ");
             if(scope == Scope.mine) {
                 where.append("m.user = :user");
