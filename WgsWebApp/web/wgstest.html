@@ -1385,25 +1385,29 @@ function append_message(text)
   </div>
 
 
-
+  <div id="dev_section" class="section">
+    <fieldset>
+        <legend>WAMP tests</legend>
+        <button onclick="test_register_rcp();">Register RPC</button>
+        <button onclick="test_unregister_rcp();">Unregister RPC</button>          
+        <button onclick="test_call_rcp();">Call RPC</button>
+        <br>  
+        <button onclick="test_subscribe();">Subscribe</button>
+        <button onclick="test_unsubscribe();">Unsubscribe</button>          
+        <button onclick="test_publish();">Publish</button>
+        <br>          
+        <button onclick="clear_messages();">Clear messages</button>
+        <br>          
+    </fieldset>
+  </div>
+    
   <div id="dev_section" class="section">
     <fieldset>
       <legend>Messages</legend>
       <div id="messages">
-
       </div>
     </fieldset>
       
-    <button onclick="test_register_rcp();">Register RPC</button>
-    <button onclick="test_unregister_rcp();">Unregister RPC</button>          
-    <button onclick="test_call_rcp();">Call RPC</button>
-    <br>  
-    <button onclick="test_subscribe();">Subscribe</button>
-    <button onclick="test_unsubscribe();">Unsubscribe</button>          
-    <button onclick="test_publish();">Publish</button>
-    <br>          
-    <button onclick="clear_messages();">Clear</button>
-    <br>          
   </div>
 </div>
 </body>
