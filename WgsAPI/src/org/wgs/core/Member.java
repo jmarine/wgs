@@ -14,7 +14,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.wgs.entity.User;
-import org.wgs.wamp.WampDict;
+import org.wgs.wamp.types.WampDict;
 
 
 @Entity(name="GroupMember")

@@ -6,6 +6,7 @@
 
 package org.wgs.util;
 
+import org.wgs.wamp.topic.JmsServices;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -28,8 +29,9 @@ import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.ServerContainer;
 import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.WampServices;
-import org.wgs.wamp.WampEndpoint;
+import org.wgs.wamp.topic.Broker;
+import org.wgs.wamp.transport.http.websocket.WampEndpoint;
+import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
 
 
 public class Server 
@@ -107,7 +109,7 @@ public class Server
                 System.out.println("Creating WAMP context URI: " + uri);
 
                 int wampVersion = Integer.parseInt(serverConfig.getProperty("context." + context + ".wampVersion", "1"));
-                WampApplication wampApplication = new WampApplication(wampVersion, WampEndpoint.class, uri);
+                WampApplication wampApplication = new WampApplication(wampVersion, uri);
                 //tyrusServerConfig = tyrusServerConfig.endpoint(WampEndpoint.class, uri);
                 //server.publishServer(WampEndpoint.class  /* , uri */ );
 
@@ -117,7 +119,7 @@ public class Server
                     while(tkTopics.hasMoreTokens()) {
                         String topic = tkTopics.nextToken();
                         System.out.println("> Creating topic at "+uri+": " + topic);
-                        WampServices.createTopic(wampApplication, topic, null);
+                        Broker.createTopic(wampApplication, topic, null);
                     }
                 }                    
 
@@ -132,9 +134,8 @@ public class Server
                 }
 
                 // register the application
-                // server.deploy(wampApplication.getEndpointClass().newInstance(), wampApplication);
-                //dynamicallyAddedEndpointConfigs.add(wampApplication);
-                server.register(wampApplication);
+                // server.deploy(new WampEndpointConfig(wampApplication, WampEndpoint.class));
+                server.register(new WampEndpointConfig(WampEndpoint.class, wampApplication));
                 
             }
         }
@@ -168,7 +169,7 @@ public class Server
             execService = Executors.newCachedThreadPool();
             ctx.bind("concurrent/WampRpcExecutorService", execService);
             
-            MessageBroker.start(serverConfig);
+            JmsServices.start(serverConfig);
 
             setupDataSources(ctx, serverConfig);
 
@@ -182,7 +183,7 @@ public class Server
         } finally {
 
             try {
-                MessageBroker.stop();
+                JmsServices.stop();
             } catch (Exception ex) {
                 System.err.println("OpenMQ broker shutdown error: " + ex.getMessage());
                 ex.printStackTrace();

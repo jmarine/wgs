@@ -1,5 +1,15 @@
 package org.wgs.wamp;
 
+import org.wgs.wamp.types.WampConnectionState;
+import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.types.WampObject;
+import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.rpc.WampCallController;
+import org.wgs.wamp.rpc.WampAsyncCallback;
+import org.wgs.wamp.topic.WampTopic;
+import org.wgs.wamp.topic.WampSubscription;
+import org.wgs.wamp.topic.WampPublishOptions;
 import java.security.Principal;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,7 +22,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
-import org.wgs.util.MessageBroker;
+import org.wgs.wamp.topic.JmsServices;
 
 
 public class WampSocket 
@@ -248,7 +258,7 @@ public class WampSocket
             }
         } catch(Exception e) {
             logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
-            app.onWampClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
+            app.onWampClose(this, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
         }
     }
 
@@ -256,7 +266,7 @@ public class WampSocket
     public void close(CloseReason reason)
     {
         this.connected = false;
-        app.onWampClose(session, reason);
+        app.onWampClose(this, reason);
     }
     
     public boolean isOpen() {
@@ -322,7 +332,7 @@ public class WampSocket
         options.setExcluded(excludedSet);
         options.setDiscloseMe(identifyMe);
 
-        MessageBroker.publish(WampProtocol.newId(), topic, payload, payloadKw, null, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? this.getSessionId() : null));
+        JmsServices.publish(WampProtocol.newId(), topic, payload, payloadKw, null, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? this.getSessionId() : null));
     }
 
 

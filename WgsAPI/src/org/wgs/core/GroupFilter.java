@@ -10,11 +10,11 @@ import javax.persistence.TypedQuery;
 import org.wgs.entity.User;
 import org.wgs.entity.UserId;
 import org.wgs.util.Storage;
-import org.wgs.wamp.WampDict;
-import org.wgs.wamp.WampList;
-import org.wgs.wamp.WampObject;
-import org.wgs.wamp.WampSubscription;
-import org.wgs.wamp.WampSubscriptionOptions;
+import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.types.WampObject;
+import org.wgs.wamp.topic.WampSubscription;
+import org.wgs.wamp.topic.WampSubscriptionOptions;
 
 
 public class GroupFilter

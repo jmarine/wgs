@@ -1,5 +1,13 @@
 package org.wgs.wamp;
 
+import org.wgs.wamp.types.WampMatchType;
+import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.types.WampObject;
+import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.topic.WampTopic;
+import org.wgs.wamp.topic.WampSubscription;
+import org.wgs.wamp.topic.WampSubscriptionOptions;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -78,7 +86,7 @@ public class WampProtocol
                 roles.put("dealer", dealerFeatures);
 
                 WampDict helloDetails = new WampDict();
-                helloDetails.put("agent", "wgs-server-2.0-alpha1");
+                helloDetails.put("agent", app.getServerId());
                 helloDetails.put("roles", roles);
                 response.add(helloDetails);  
                 break;
@@ -151,7 +159,7 @@ public class WampProtocol
             
             Object[] msg = new Object[WampEncoding.values().length];
             
-            if(subscription.getOptions().getMatchType() == MatchEnum.exact) {
+            if(subscription.getOptions().getMatchType() == WampMatchType.exact) {
                 eventDetails.remove("topic");
             } else {
                 eventDetails.put("topic", topic.getURI());
@@ -203,7 +211,7 @@ public class WampProtocol
 
         for(WampSubscription subscription : topic.getSubscriptions()) {
             
-            if(subscription.getOptions().getMatchType() == MatchEnum.exact) {
+            if(subscription.getOptions().getMatchType() == WampMatchType.exact) {
                 metaEvent.remove("topic");
             } else {
                 metaEvent.put("topic", topic.getURI());

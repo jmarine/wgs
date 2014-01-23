@@ -17,7 +17,7 @@ import javax.persistence.OrderBy;
 import javax.persistence.Table;
 import javax.persistence.TemporalType;
 
-import org.wgs.wamp.WampDict;
+import org.wgs.wamp.types.WampDict;
 
 
 @Entity

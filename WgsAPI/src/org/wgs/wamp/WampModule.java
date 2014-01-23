@@ -1,5 +1,23 @@
 package org.wgs.wamp;
 
+import org.wgs.wamp.types.WampMatchType;
+import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.rpc.WampCallController;
+import org.wgs.wamp.rpc.WampCallOptions;
+import org.wgs.wamp.rpc.WampRemoteMethod;
+import org.wgs.wamp.rpc.WampCalleeRegistration;
+import org.wgs.wamp.rpc.WampAsyncCall;
+import org.wgs.wamp.rpc.WampAsyncCallback;
+import org.wgs.wamp.rpc.WampLocalMethod;
+import org.wgs.wamp.rpc.WampMethod;
+import org.wgs.wamp.topic.WampTopic;
+import org.wgs.wamp.topic.WampSubscription;
+import org.wgs.wamp.topic.WampSubscriptionOptions;
+import org.wgs.wamp.topic.WampMetaTopic;
+import org.wgs.wamp.topic.WampPublishOptions;
+import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.annotation.WampModuleName;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -8,7 +26,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.wgs.util.MessageBroker;
+import org.wgs.wamp.topic.JmsServices;
 
 
 public class WampModule 
@@ -185,14 +203,14 @@ public class WampModule
     public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription, WampSubscriptionOptions options) throws Exception { 
         long sinceN = 0L;       // options.getSinceN();
         long sinceTime = 0L;    // options.getSinceTime();
-        MessageBroker.subscribeMessageListener(topic, sinceTime, sinceN);
+        JmsServices.subscribeMessageListener(topic, sinceTime, sinceN);
         topic.addSubscription(subscription);
         clientSocket.addSubscription(subscription);
         if(options != null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_ADDED)) {
             if(options.hasEventsEnabled()) {
                 WampDict metaEvent = new WampDict();
                 metaEvent.put("session", clientSocket.getSessionId());
-                MessageBroker.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
+                JmsServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
             }
         }
     }
@@ -204,7 +222,7 @@ public class WampModule
             if(options!=null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_REMOVED)) {
                 WampDict metaEvent = new WampDict();
                 metaEvent.put("session", clientSocket.getSessionId());                
-                MessageBroker.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
+                JmsServices.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
             }
 
             clientSocket.removeSubscription(subscription.getId());
@@ -213,13 +231,13 @@ public class WampModule
                 topic.removeSubscription(subscription.getId());
             
                 if(topic.getSubscriptionCount() == 0) {
-                    MessageBroker.unsubscribeMessageListener(topic);
+                    JmsServices.unsubscribeMessageListener(topic);
                 }
             }
         }
     }
     
-    public void onRegister(Long registrationId, WampSocket clientSocket, WampCalleeRegistration registration, MatchEnum matchType, String methodUriOrPattern, WampList request) throws Exception
+    public void onRegister(Long registrationId, WampSocket clientSocket, WampCalleeRegistration registration, WampMatchType matchType, String methodUriOrPattern, WampList request) throws Exception
     {
         Long requestId = request.getLong(1);
         WampDict options = (WampDict)request.get(2);
@@ -256,7 +274,7 @@ public class WampModule
 
             WampProtocol.sendPublished(clientSocket, requestId, publicationId);
         
-            MessageBroker.publish(publicationId, topic, payload, payloadKw, null, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? clientSocket.getSessionId() : null));
+            JmsServices.publish(publicationId, topic, payload, payloadKw, null, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? clientSocket.getSessionId() : null));
             
         }
 

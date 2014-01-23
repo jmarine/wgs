@@ -10,7 +10,7 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
-import org.wgs.wamp.WampDict;
+import org.wgs.wamp.types.WampDict;
 
 
 @Entity

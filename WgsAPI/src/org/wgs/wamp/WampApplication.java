@@ -1,6 +1,22 @@
 package org.wgs.wamp;
 
+import org.wgs.wamp.types.WampMatchType;
+import org.wgs.wamp.topic.Broker;
+import org.wgs.wamp.api.WampCRA;
+import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.types.WampObject;
+import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.rpc.WampCallController;
+import org.wgs.wamp.rpc.WampCallOptions;
+import org.wgs.wamp.rpc.WampRemoteMethod;
+import org.wgs.wamp.rpc.WampCalleeRegistration;
+import org.wgs.wamp.rpc.WampAsyncCallback;
+import org.wgs.wamp.rpc.WampMethod;
+import org.wgs.wamp.topic.WampSubscriptionOptions;
+import org.wgs.wamp.topic.WampSubscription;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -12,19 +28,16 @@ import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
-import javax.websocket.Decoder;
-import javax.websocket.Encoder;
-import javax.websocket.EndpointConfig;
-import javax.websocket.Extension;
-import javax.websocket.MessageHandler;
-import javax.websocket.Session;
+
+import javax.naming.InitialContext;
+import org.wgs.wamp.WampException;
+import org.wgs.wamp.WampModule;
+import org.wgs.wamp.WampProtocol;
+import org.wgs.wamp.WampSocket;
 
 
 public class WampApplication 
-    extends javax.websocket.server.ServerEndpointConfig.Configurator
-    implements javax.websocket.server.ServerEndpointConfig
 {
     public  static final int WAMPv1 = 1;
     public  static final int WAMPv2 = 2;   
@@ -32,7 +45,6 @@ public class WampApplication
     private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
 
     private int     wampVersion;
-    private Class   endpointClass;
     private String  path;
     private boolean started;
     private Map<String,WampModule> modules;
@@ -48,7 +60,7 @@ public class WampApplication
     
     
     
-    public WampApplication(int version, Class endpointClass, String path)
+    public WampApplication(int version, String path)
     {
         try {
             InitialContext ctx = new InitialContext();
@@ -56,7 +68,6 @@ public class WampApplication
         } catch(Exception ex) { }
         
         this.wampVersion = version;
-        this.endpointClass = endpointClass;
         this.path = path;
         
         this.sockets = new ConcurrentHashMap<String,WampSocket>();
@@ -69,7 +80,7 @@ public class WampApplication
         this.registerWampModule(WampCRA.class);
         
         this.defaultModule = new WampModule(this);
-        WampServices.registerApplication(path, this);
+        //WampServices.registerApplication(path, this);
     }
     
     public int getWampVersion() {
@@ -86,14 +97,7 @@ public class WampApplication
         return !val;
     }
     
-    public WampSocket getWampSocket(String sessionId)
-    {
-        if(sessionId == null) {
-            return null;
-        } else {
-            return sockets.get(sessionId);
-        }
-    }
+
 
     
     public WampModule getDefaultWampModule() {
@@ -120,69 +124,21 @@ public class WampApplication
     
     public String getServerId() 
     {
-        return "wgs";
+        return "wgs-server-2.0-alpha1";
     }
 
     
-    public void onWampOpen(final Session session, final EndpointConfig config) {
-        System.out.println("##################### Session opened");
-        
-        final WampSocket clientSocket = new WampSocket(this, session);
-        sockets.put(session.getId(), clientSocket);
-
+    public void onWampOpen(WampSocket clientSocket) 
+    {
         for(WampModule module : modules.values()) {
             try { 
                 module.onConnect(clientSocket); 
             } catch(Exception ex) {
                 logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
             }
-        }        
-
-
-        session.setMaxIdleTimeout(0L);  // forever
-        
-        String subproto = (session.getNegotiatedSubprotocol());
-        
-        if(subproto != null && subproto.equalsIgnoreCase("wamp.2.msgpack")) {
-            session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
-
-                @Override
-                public void onMessage(byte[] message) {
-                    try {
-                        WampList request = (WampList)WampObject.getSerializer(WampEncoding.MsgPack).deserialize(message);
-                        WampApplication.this.onWampMessage(clientSocket, request);
-                    } catch(Exception ex) { 
-                        logger.log(Level.SEVERE, "Error processing message: "+message, ex);
-                    }
-                }
-
-            });
-            
-        } else {
-            
-            session.addMessageHandler(new MessageHandler.Whole<String>() {
-
-                @Override
-                public void onMessage(String message) {
-                    try {
-                        System.out.println("onWampMessage: " + message);
-                        WampList request = (WampList)WampObject.getSerializer(WampEncoding.JSon).deserialize(message);
-                        WampApplication.this.onWampMessage(clientSocket, request);
-                    } catch(Exception ex) { 
-                        logger.log(Level.SEVERE, "Error processing message: "+message, ex);
-                    }
-                }
-
-
-            });
-
-        }
-        
-        // Send WELCOME message to client:
-        WampProtocol.sendWelcomeMessage(this, clientSocket);
-       
-    }   
-
+        }                
+    }
+    
     public void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
     {
         Long requestType = request.getLong(0);
@@ -208,7 +164,7 @@ public class WampApplication
                 WampDict subOptionsNode = (request.size() > 2) ? (WampDict)request.get(2) : null;
                 WampSubscriptionOptions subOptions = new WampSubscriptionOptions(subOptionsNode);
                 String subscriptionTopicName = request.getText(3);
-                WampServices.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
+                Broker.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
                 break;
             case 34:    // UNSUBSCRIBE
                 Long requestId2 = (request.size() > 1) ? request.getLong(1) : null;
@@ -216,11 +172,11 @@ public class WampApplication
                 if(requestId2 == null || subscriptionId2 == null)  {
                     WampProtocol.sendError(clientSocket, requestId2, null, "wamp.error.protocol_violation", null, null);
                 } else {
-                    WampServices.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
+                    Broker.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
                 }
                 break;
             case 16:    // PUBLISH
-                WampServices.processPublishMessage(this, clientSocket, request);
+                Broker.processPublishMessage(this, clientSocket, request);
                 break;                
             case 64:    // REGISTER
                 processRegisterMessage(this, clientSocket, request);
@@ -253,9 +209,8 @@ public class WampApplication
     }
     
     
-    public void onWampClose(Session session, CloseReason reason) 
+    public void onWampClose(WampSocket clientSocket, CloseReason reason) 
     {
-        WampSocket clientSocket = sockets.remove(session.getId());
         if(clientSocket != null) {
 
             try { clientSocket.close(reason); }
@@ -271,14 +226,14 @@ public class WampApplication
 
             // First remove subscriptions to topic patterns:
             for(WampSubscription subscription : clientSocket.getSubscriptions()) {
-                if(subscription.getOptions().getMatchType() != MatchEnum.exact) {  // prefix or wildcards
-                    WampServices.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
+                if(subscription.getOptions().getMatchType() != WampMatchType.exact) {  // prefix or wildcards
+                    Broker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
                 }
             }
 
             // Then, remove remaining subscriptions to single topics:
             for(WampSubscription subscription : clientSocket.getSubscriptions()) {
-                WampServices.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
+                Broker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
             }        
             
             logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
@@ -304,7 +259,7 @@ public class WampApplication
             logger.log(Level.SEVERE, "WgsEndpoint: Error registering WGS module", ex);
         }        
     }
-
+    
     
     public void createRPC(String name, WampMethod rpc)
     {
@@ -339,7 +294,7 @@ public class WampApplication
         }
         
         for(WampCalleeRegistration registration : calleePatterns.values()) {
-            if(WampServices.isUriMatchingWithRegExp(name, registration.getRegExp())) {
+            if(Broker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
                 for(WampRemoteMethod remoteMethod : registration.getRemoteMethods()) {
                     if(remoteMethod.hasPartition(partition)) {
                         retval.add(remoteMethod);
@@ -382,9 +337,9 @@ public class WampApplication
         Long requestId = request.getLong(1);
         WampDict options = (WampDict)request.get(2);
         String methodUriOrPattern = clientSocket.normalizeURI(request.getText(3));
-        MatchEnum matchType = MatchEnum.exact;
+        WampMatchType matchType = WampMatchType.exact;
         if(options != null && options.has("match")) {
-            matchType = MatchEnum.valueOf(options.getText("match").toLowerCase());
+            matchType = WampMatchType.valueOf(options.getText("match").toLowerCase());
             
         }
         
@@ -393,7 +348,7 @@ public class WampApplication
             throw new WampException(null, "wamp.error.procedure_already_exists", null, null);
         }
         
-        if(matchType == MatchEnum.prefix && !methodUriOrPattern.endsWith("..")) {
+        if(matchType == WampMatchType.prefix && !methodUriOrPattern.endsWith("..")) {
             methodUriOrPattern = methodUriOrPattern + "..";
         }
 
@@ -405,7 +360,7 @@ public class WampApplication
             registration = new WampCalleeRegistration(registrationId, matchType, methodUriOrPattern);
             calleeRegistrationById.put(registrationId, registration);
             calleeRegistrationByUri.put(methodUriOrPattern, registration);
-            if(matchType != MatchEnum.exact) calleePatterns.put(methodUriOrPattern, registration);
+            if(matchType != WampMatchType.exact) calleePatterns.put(methodUriOrPattern, registration);
         }               
         
         
@@ -493,63 +448,9 @@ public class WampApplication
     }
     
     
-    @Override
-    public Class<?> getEndpointClass() {
-        return endpointClass;
-    }
 
-    @Override
     public String getPath() {
         return path;
-    }
-
-    @Override
-    public List<String> getSubprotocols() {
-        List<String> subprotocols = java.util.Arrays.asList("wamp");
-        return subprotocols;
-    }
-
-    @Override
-    public List<Extension> getExtensions() {
-        List<Extension> extensions = Collections.emptyList();
-        return extensions;
-    }
-
-    @Override
-    public Configurator getConfigurator() {
-        return this;
-    }
-
-    @Override
-    public List<Class<? extends Encoder>> getEncoders() {
-        List<Class<? extends Encoder>> encoders = Collections.emptyList();
-        return encoders;
-    }
-
-    @Override
-    public List<Class<? extends Decoder>> getDecoders() {
-        List<Class<? extends Decoder>> decoders = Collections.emptyList();
-        return decoders;
-    }
-
-    @Override
-    public Map<String, Object> getUserProperties() {
-        Map<String, Object> userProperties = new HashMap<String, Object>();
-        return userProperties;
-    }
-
-    @Override
-    public String getNegotiatedSubprotocol(List<String> supported, List<String> requested) {
-        String subprotocol = "wamp";
-        if (requested != null) {
-            for (String clientProtocol : requested) {
-                if (supported.contains(clientProtocol)) {
-                    subprotocol = clientProtocol;
-                    break;
-                }
-            }
-        }
-        return subprotocol;
     }
     
 }

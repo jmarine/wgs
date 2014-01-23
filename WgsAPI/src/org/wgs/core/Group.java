@@ -22,7 +22,7 @@ import javax.persistence.Table;
 import javax.persistence.Version;
 
 import org.wgs.entity.UserId;
-import org.wgs.wamp.WampDict;
+import org.wgs.wamp.types.WampDict;
 
 
 @Entity(name="AppGroup")

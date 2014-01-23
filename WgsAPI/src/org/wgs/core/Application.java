@@ -18,8 +18,8 @@ import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.wgs.entity.User;
-import org.wgs.wamp.WampDict;
-import org.wgs.wamp.WampList;
+import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.types.WampList;
 
 
 
