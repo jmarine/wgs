@@ -1,5 +1,6 @@
 package org.wgs.core;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -7,6 +8,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 
 import org.wgs.entity.User;
+import org.wgs.entity.UserId;
 import org.wgs.util.Storage;
 import org.wgs.wamp.WampDict;
 import org.wgs.wamp.WampList;
@@ -17,17 +19,19 @@ import org.wgs.wamp.WampSubscriptionOptions;
 
 public class GroupFilter
 {
-    public enum Scope { mine, friends, all };
+    public enum Scope { mine, all };
     
     private String appId;
-    private Scope  scope;
     private GroupState state;
+    private Scope  scope;
+    private User user;
 
-    public GroupFilter(String appId, Scope scope, GroupState state) 
+    public GroupFilter(String appId, GroupState state, Scope scope, User user) 
     {
         this.appId = appId;
-        this.scope = scope;
         this.state = state;        
+        this.scope = scope;
+        this.user = user;
     }
     
     /**
@@ -51,35 +55,30 @@ public class GroupFilter
         this.state = state;
     }    
     
-    public List<Group> getGroups(Client client)
+    public List<Group> getGroups()
     {
-        HashMap<String,Object> params = new HashMap<String,Object>();        
-        
         String ejbql = "SELECT OBJECT(g) FROM AppGroup g";
         StringBuilder where = new StringBuilder();
+        HashMap<String,Object> params = new HashMap<String,Object>();        
+        
         if(appId != null) {
             if(where.length() > 0) where.append(" AND ");
             where.append("g.application.id = :appId");
             params.put("appId", appId);
         }
+        
         if(state != null) {
             if(where.length() > 0) where.append(" AND ");
             where.append("g.state = :state");
             params.put("state", state);
         }      
-        if(scope != null && scope != Scope.all) {
-            
+        
+        if(scope == Scope.mine && user != null) {
+            ejbql = ejbql + ", IN(g.members) m";
             if(where.length() > 0) where.append(" AND ");
-            if(scope == Scope.mine) {
-                ejbql = ejbql + ", IN(g.members) m ";
-                where.append("m.user = :user");
-            } else {  
-                // scope == Scope.friends
-                // IMPORTANT: IT REQUIRES EclipseLink >= 2.4.0
-                where.append("g.gid IN (SELECT g.gid FROM AppGroup g2, IN(g2.members) m WHERE m.user = :user OR EXISTS(SELECT f.id FROM User t, IN(t.friends) f WHERE t = :user AND m.user = f))");
-            }
-            params.put("user", client.getUser());
-        }      
+            where.append("m.user = :user");
+            params.put("user", user);
+        }
         
         if(where.length() > 0) {
             ejbql = ejbql + " WHERE " + where.toString();
@@ -91,7 +90,6 @@ public class GroupFilter
         {
             query.setParameter(key, params.get(key));
         }
-        
         
         List<Group> groups = query.getResultList();
         manager.close();

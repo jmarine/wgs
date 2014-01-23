@@ -684,8 +684,11 @@ public class Module extends WampModule
                     
                 }                
                 logger.log(Level.INFO, "open_group: search group for automatch");
+                
             } else {
                 g = groups.get(gid);
+                if(g == null) g = Storage.findEntity(Group.class, gid);
+                
                 if(g != null) {
                     logger.log(Level.INFO, "open_group: group found: " + gid);
                     valid = true;
@@ -694,6 +697,7 @@ public class Module extends WampModule
         } 
         
         if(g != null) {
+            groups.put(gid, g);            
             String pwd = g.getPassword();
             if( (pwd != null) && (pwd.length()>0) ) {
                 String pwd2 = (options!=null && options.has("password"))? options.getText("password") : "";
@@ -1345,23 +1349,26 @@ public class Module extends WampModule
     
     
     @WampRPC(name = "list_groups")
-    public WampDict listGroups(WampSocket socket, String appId, GroupFilter.Scope scope, GroupState state) throws Exception
+    public WampDict listGroups(WampSocket socket, String appId, GroupState state, GroupFilter.Scope scope) throws Exception
     {
-        GroupFilter filter = new GroupFilter(appId, scope, state);
         Client client = clients.get(socket.getSessionId());
-        Application app = applications.get(appId);
-        if(app == null) throw new WampException(null, "wgs.error.application_id_not_specified", null, null);
+        GroupFilter filter = new GroupFilter(appId, state, scope, client.getUser());
                 
         WampList groupsArray = new WampList();
-        for(Group g : filter.getGroups(client)) {
+        for(Group t : filter.getGroups()) {
+            Group g = groups.get(t.getGid());
+            if(g == null) g = t;
+            
             if(!g.isHidden()) {
                 WampDict obj = g.toWampObject();
                 obj.put("members", getMembers(g,0));                
                 groupsArray.add(obj);
             }
         }   
+        
         WampDict retval = new WampDict();
-        retval.put("app", app.toWampObject());
+        Application app = applications.get(appId);
+        if(app != null) retval.put("app", app.toWampObject());
         retval.put("groups", groupsArray);
         return retval;
     }    

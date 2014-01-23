@@ -656,7 +656,7 @@ WgsClient.prototype = {
   },
   
   listGroups: function(appId, scope, state, callback) {
-      this.call("wgs.list_groups", [appId, scope, state]).then(callback, callback);
+      this.call("wgs.list_groups", [appId, state, scope]).then(callback, callback);
   },
 
   newApp: function(name, domain, version, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, callback) {
@@ -707,7 +707,7 @@ WgsClient.prototype = {
           
           if(payloadKw.members) {
               payloadKw.members.forEach(function(item) {
-                  if(item.sid.length > 0) client.groups[gid].connections[item.sid] = item;
+                  if(isFinite(item.sid) > 0) client.groups[gid].connections[item.sid] = item;
                   if(isFinite(item.slot)) client.groups[gid].members[item.slot] = item;
               });
           }
