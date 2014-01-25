@@ -180,6 +180,7 @@ public class Broker
     {
         return topicSubscriptionsById.get(subscriptionId);
     }    
+
     
     public static Collection<WampTopic> subscribeClientWithTopic(WampApplication app, WampSocket clientSocket, Long requestId, String topicUriOrPattern, WampSubscriptionOptions options)
     {
@@ -200,17 +201,27 @@ public class Broker
         }        
         
         subscription.addSocket(clientSocket);
-        WampProtocol.sendSubscribed(clientSocket, requestId, subscription.getId());
 
-        for(WampTopic topic : subscription.getTopics()) {
-            WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
-
-            try { 
-                module.onSubscribe(clientSocket, topic, subscription, options);
-            } catch(Exception ex) {
-                System.err.println("Error: " + ex.getClass().getName() + ": " + ex.getMessage());
-                ex.printStackTrace();
+        try {
+            for(WampTopic topic : subscription.getTopics()) {
+                JmsServices.subscribeMessageListener(topic);
             }
+            
+            WampProtocol.sendSubscribed(clientSocket, requestId, subscription.getId());
+        
+            for(WampTopic topic : subscription.getTopics()) {
+                WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+
+                try { 
+                    module.onSubscribe(clientSocket, topic, subscription, options);
+                } catch(Exception ex) {
+                    System.err.println("Error: " + ex.getClass().getName() + ": " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+            }
+            
+        } catch(Exception ex) {
+            WampProtocol.sendError(clientSocket, requestId, null, "wamp.error.subscription_error", null, null);
         }
 
         return subscription.getTopics();
@@ -231,8 +242,13 @@ public class Broker
                     module.onUnsubscribe(clientSocket, subscriptionId, topic);
                 } catch(Exception ex) {
                     logger.log(Level.FINE, "Error in unsubscription to topic", ex);
-                }          
+                } finally {      
+                    if(topic.getSubscriptionCount() == 0) {
+                        JmsServices.unsubscribeMessageListener(topic);
+                    }            
+                }
             }
+            
 
             clientSocket.removeSubscription(subscriptionId);
 

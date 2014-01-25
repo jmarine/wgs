@@ -204,7 +204,6 @@ public class WampModule
     public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription, WampSubscriptionOptions options) throws Exception { 
         long sinceN = 0L;       // options.getSinceN();
         long sinceTime = 0L;    // options.getSinceTime();
-        JmsServices.subscribeMessageListener(topic, sinceTime, sinceN);
         topic.addSubscription(subscription);
         clientSocket.addSubscription(subscription);
         if(options != null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_ADDED)) {
@@ -230,10 +229,6 @@ public class WampModule
             subscription.removeSocket(clientSocket.getSessionId());
             if(subscription.getSocketsCount() == 0) {
                 topic.removeSubscription(subscription.getId());
-            
-                if(topic.getSubscriptionCount() == 0) {
-                    JmsServices.unsubscribeMessageListener(topic);
-                }
             }
         }
     }

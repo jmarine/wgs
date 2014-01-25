@@ -172,7 +172,7 @@ public class JmsServices
     }
 
     
-    public static void subscribeMessageListener(WampTopic wampTopic, long sinceTime, long sinceN) throws Exception 
+    static void subscribeMessageListener(WampTopic wampTopic) throws Exception 
     {
         synchronized(wampTopic) {
             if(isJmsBrokerAvailable() && !topicSubscriptions.containsKey(wampTopic)) {
@@ -182,16 +182,18 @@ public class JmsServices
                 TopicSession subSession = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
                 Topic jmsTopic = subSession.createTopic(normalizeTopicName(topicName));
 
+                /*
                 String selector = "";
                 if(sinceTime > 0L) selector = "JMSTimestamp >= " + sinceTime;
                 if(sinceN > 0L) {
                     if(selector.length() > 0) selector += " and ";
                     selector = "id >= " + sinceN;
                 }
+                */
 
                 synchronized(connection) {
                     connection.stop();
-                    TopicSubscriber subscriber = subSession.createSubscriber(jmsTopic, selector, false);
+                    TopicSubscriber subscriber = subSession.createSubscriber(jmsTopic);  // (jmsTopic, selector, false);
                     subscriber.setMessageListener(new BrokerMessageListener());
                     connection.start();
                     topicSubscriptions.put(wampTopic, subscriber);
@@ -204,12 +206,14 @@ public class JmsServices
         }
     }
     
-    
-    public static void unsubscribeMessageListener(WampTopic topic) throws Exception 
+
+    static void unsubscribeMessageListener(WampTopic topic)
     {
         if(isJmsBrokerAvailable()) {
-            TopicSubscriber subscriber = topicSubscriptions.remove(topic);
-            subscriber.close();
+            try {
+                TopicSubscriber subscriber = topicSubscriptions.remove(topic);
+                subscriber.close();
+            } catch(Exception ex) { }
         }
     }
     
@@ -309,7 +313,7 @@ public class JmsServices
         @Override
         public void onMessage(Message receivedMessageFromBroker) {
             try {
-                //System.out.println ("Received message from broker.");
+                System.out.println ("Received message from broker.");
                 String excludeBroker = receivedMessageFromBroker.getStringProperty("excludeBroker");
                 if(excludeBroker != null && excludeBroker.equals(brokerId)) return;
                 
