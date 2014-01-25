@@ -182,10 +182,10 @@ public class JmsServices
                 TopicSession subSession = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
                 Topic jmsTopic = subSession.createTopic(normalizeTopicName(topicName));
 
-                /*
                 String selector = "";
+                /*
                 if(sinceTime > 0L) selector = "JMSTimestamp >= " + sinceTime;
-                if(sinceN > 0L) {
+                if(sinceN >= 0L) {
                     if(selector.length() > 0) selector += " and ";
                     selector = "id >= " + sinceN;
                 }
@@ -193,7 +193,7 @@ public class JmsServices
 
                 synchronized(connection) {
                     connection.stop();
-                    TopicSubscriber subscriber = subSession.createSubscriber(jmsTopic);  // (jmsTopic, selector, false);
+                    TopicSubscriber subscriber = subSession.createSubscriber(jmsTopic, selector, false);
                     subscriber.setMessageListener(new BrokerMessageListener());
                     connection.start();
                     topicSubscriptions.put(wampTopic, subscriber);
