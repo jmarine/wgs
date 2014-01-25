@@ -40,11 +40,13 @@ import org.wgs.wamp.types.WampDict;
 import org.wgs.wamp.WampException;
 import org.wgs.wamp.types.WampList;
 import org.wgs.wamp.WampModule;
+import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.types.WampObject;
 import org.wgs.wamp.topic.Broker;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.topic.JmsServices;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampTopic;
@@ -58,9 +60,10 @@ public class Module extends WampModule
     public  static final String WGS_MODULE_NAME = "wgs";
     
     private WampApplication wampApp = null;
-    private Map<Long,Client> clients = new ConcurrentHashMap<Long,Client>();
     private Map<String, Application> applications = new ConcurrentHashMap<String,Application>();
     private Map<String, Group> groups = new ConcurrentHashMap<String,Group>();
+    private Map<Long,Client> clients = new ConcurrentHashMap<Long,Client>();
+
     
     public Module(WampApplication app)
     {
@@ -755,7 +758,7 @@ public class Module extends WampModule
         }
 
         // generate response:
-        WampDict response = (g!=null)? g.toWampObject() : new WampDict();
+        WampDict response = (g!=null)? g.toWampObject(true) : new WampDict();
         response.put("cmd", "user_joined");
 
         if(valid) {
@@ -891,7 +894,7 @@ public class Module extends WampModule
 
             response.put("members", getMembers(g, 0));
             
-            broadcastAppEventInfo(socket, g, created? "group_created" : "group_updated", false);
+            broadcastAppEventInfo(socket, g, created? "group_created" : "group_updated");
             
             g.setVersion(Storage.saveEntity(g).getVersion());
 
@@ -989,7 +992,7 @@ public class Module extends WampModule
             }
 
             
-            response.putAll(g.toWampObject());
+            response.putAll(g.toWampObject(true));
             if(node.has("state")) {            
                 if(g.getState() == GroupState.STARTED) {
                     for(int slot = 0; slot < g.getNumSlots(); slot++) {
@@ -1010,7 +1013,7 @@ public class Module extends WampModule
 
         response.put("valid", valid);
 
-        if(broadcastAppInfo)    broadcastAppEventInfo(socket, g, "group_updated", true);
+        if(broadcastAppInfo)    broadcastAppEventInfo(socket, g, "group_updated");
         if(broadcastGroupInfo)  socket.publishEvent(Broker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, response, true, false);  // exclude Me
         return response;
     }
@@ -1060,7 +1063,7 @@ public class Module extends WampModule
             if(g != null) {
                 logger.log(Level.FINE, "open_group: group found: " + gid);
                 
-                response.putAll(g.toWampObject());
+                response.putAll(g.toWampObject(true));
                 if(data.has("slot")) {
                     
                     // UPDATE MEMBER SLOT
@@ -1088,7 +1091,8 @@ public class Module extends WampModule
                         String usertype = data.getText("type");
                         int team = data.getLong("team").intValue();
 
-                        Client c = clients.get(data.getLong("sid"));
+                        Long sid = data.getLong("sid");
+                        Client c = (sid != null) ? clients.get(sid) : null;
                         if(c!=null) {
                             // when it's not a reservation of a member slot
                             User u = c.getUser();
@@ -1165,7 +1169,7 @@ public class Module extends WampModule
 
             if(valid) {
                 //response.putAll(g.toJSON());
-                broadcastAppEventInfo(socket, g, "group_updated", false);  // exclude Me
+                broadcastAppEventInfo(socket, g, "group_updated");
                 socket.publishEvent(Broker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, response, false, false);
                 g.setVersion(Storage.saveEntity(g).getVersion());
             }  
@@ -1316,7 +1320,7 @@ public class Module extends WampModule
                             deleted = true;
                         }
 
-                        broadcastAppEventInfo(socket, g, deleted? "group_deleted" : "group_updated", false);
+                        broadcastAppEventInfo(socket, g, deleted? "group_deleted" : "group_updated");
                     }
                 }
                 
@@ -1326,17 +1330,30 @@ public class Module extends WampModule
     }
 
     
-    private void broadcastAppEventInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
+    private void broadcastAppEventInfo(WampSocket socket, Group g, String cmd) throws Exception
     {
-        WampDict event = g.toWampObject();
+        WampDict event = g.toWampObject(false);
         event.put("cmd", cmd);
         event.put("members", getMembers(g,0));
-        socket.publishEvent(Broker.getTopic(getFQtopicURI("app_event:"+g.getApplication().getAppId())), null, event, excludeMe, false);
+
+        HashSet<Long> eligible = new HashSet<Long>();
+        eligible.add(socket.getSessionId());
+        for(Member m : g.getMembers()) {
+            Client client = m.getClient();
+            if(client != null) {
+                Long sid = client.getSessionId();
+                eligible.add(sid);  // TODO: addAll(client.getUser().getSessionIds());
+            }
+        }
+        
+        Broker.publishEvent(WampProtocol.newId(), Broker.getTopic(getFQtopicURI("apps_event")), null, event, eligible, null, null);  // only broadcasts to caller and group memebers
+        
+        socket.publishEvent(Broker.getTopic(getFQtopicURI("app_event:" + g.getApplication().getAppId())), null, event, false, false);     // broadcasts to all application subscribers
     }
     
     private void broadcastGroupEventInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
     {
-        WampDict event = g.toWampObject();
+        WampDict event = g.toWampObject(true);
         event.put("cmd", cmd);
         event.put("members", getMembers(g,0));
         socket.publishEvent(Broker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, excludeMe, false);
@@ -1355,16 +1372,20 @@ public class Module extends WampModule
             if(g == null) g = t;
             
             if(!g.isHidden()) {
-                WampDict obj = g.toWampObject();
+                WampDict obj = g.toWampObject(false);
                 obj.put("members", getMembers(g,0));                
                 groupsArray.add(obj);
             }
         }   
         
         WampDict retval = new WampDict();
-        Application app = applications.get(appId);
-        if(app != null) retval.put("app", app.toWampObject());
         retval.put("groups", groupsArray);
+        
+        if(appId != null) {
+            Application app = applications.get(appId);
+            if(app != null) retval.put("app", app.toWampObject());
+        }
+        
         return retval;
     }    
 

@@ -214,7 +214,7 @@ public class JmsServices
     }
     
     
-    public static void publish(Long id, WampTopic wampTopic, WampList payload, WampDict payloadKw, String metaTopic, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
+    static void publishEvent(Long id, WampTopic wampTopic, String metaTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
     {
         broadcastClusterEventToLocalNodeClients(id, wampTopic,metaTopic,eligible,exclude,publisherId, payload, payloadKw);  
         
@@ -254,7 +254,7 @@ public class JmsServices
     }
 
     
-    public static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, WampDict metaEventDetails, Long toClient) throws Exception
+    static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, WampDict metaEventDetails, Long toClient) throws Exception
     {
         if(metaEventDetails == null) metaEventDetails = new WampDict();
         metaEventDetails.put("metatopic", metatopic);
@@ -265,7 +265,7 @@ public class JmsServices
             eligible.add(toClient);
         }
         
-        publish(publicationId, topic, null, metaEventDetails, metatopic, eligible, null, null);
+        publishEvent(publicationId, topic, metatopic, null, metaEventDetails, eligible, null, null);
     } 
     
     

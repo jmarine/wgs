@@ -8,11 +8,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampProtocol;
 
 
@@ -24,6 +26,15 @@ public final class WampLongPollingServlet extends HttpServlet
     private static String WAMP_SESSION_ID_ATTRIBUTE = "wamp2_sid";
     private static ConcurrentHashMap<String, AsyncContext> asyncContexts = new ConcurrentHashMap<String, AsyncContext>();
 
+    
+    private WampApplication app;
+    
+    @Override
+    public void init(ServletConfig config) throws ServletException
+    {
+        super.init(config);
+        this.app = new WampApplication(WampApplication.WAMPv2, config.getServletContext().getContextPath());
+    }
 
     @Override
     public void service(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException 

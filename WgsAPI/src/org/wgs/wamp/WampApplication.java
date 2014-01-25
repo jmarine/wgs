@@ -3,9 +3,7 @@ package org.wgs.wamp;
 import org.wgs.wamp.types.WampMatchType;
 import org.wgs.wamp.topic.Broker;
 import org.wgs.wamp.api.WampCRA;
-import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampObject;
 import org.wgs.wamp.types.WampList;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
@@ -16,10 +14,7 @@ import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.topic.WampSubscription;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,13 +23,8 @@ import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.websocket.CloseReason;
-
 import javax.naming.InitialContext;
-import org.wgs.wamp.WampException;
-import org.wgs.wamp.WampModule;
-import org.wgs.wamp.WampProtocol;
-import org.wgs.wamp.WampSocket;
+import javax.websocket.CloseReason;
 
 
 public class WampApplication 
@@ -213,8 +203,10 @@ public class WampApplication
     {
         if(clientSocket != null) {
 
-            try { clientSocket.close(reason); }
-            catch(Exception ex) { }            
+            if(clientSocket.isOpen()) {  // avoid recursivity
+                try { clientSocket.close(reason); }
+                catch(Exception ex) { }            
+            }
             
             for(WampModule module : modules.values()) {
                 try { 

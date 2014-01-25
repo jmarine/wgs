@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -20,6 +21,7 @@ import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.topic.JmsServices;
+import org.wgs.wamp.types.WampDict;
 
 
 public class Broker 
@@ -161,6 +163,16 @@ public class Broker
         } catch(Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
         }  
+    }
+    
+    public static void publishEvent(Long id, WampTopic wampTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
+    {
+        JmsServices.publishEvent(id, wampTopic, null, payload, payloadKw, eligible, exclude, publisherId);
+    }
+
+    public static void publishMetaEvent(Long id, WampTopic wampTopic, String metatopic, WampDict metaEventDetails, Long toClient) throws Exception
+    {
+        JmsServices.publishMetaEvent(id, wampTopic, metatopic, metaEventDetails, toClient);
     }
     
     

@@ -430,11 +430,12 @@ public class Group implements java.io.Serializable
     
     
     
-    public WampDict toWampObject()
+    public WampDict toWampObject(boolean withData)
     {
         WampDict obj = new WampDict();
         obj.put("gid", getGid());
         obj.put("appId", getApplication().getAppId());
+        obj.put("appName", getApplication().getName());
         obj.put("admin", (adminUserId != null) ? adminUserId.toString() : "" );
         obj.put("automatch", isAutoMatchEnabled());
         obj.put("hidden", isHidden());
@@ -450,6 +451,7 @@ public class Group implements java.io.Serializable
         obj.put("state", String.valueOf(getState()));
         obj.put("turn", getTurn());
         obj.put("password", (password != null) && (password.length() > 0) );
+        obj.put("data", data);
         return obj;
     }
 

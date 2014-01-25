@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
-import org.wgs.wamp.topic.JmsServices;
+import org.wgs.wamp.topic.Broker;
 
 
 public class WampSocket 
@@ -332,15 +332,8 @@ public class WampSocket
         options.setExcluded(excludedSet);
         options.setDiscloseMe(identifyMe);
 
-        JmsServices.publish(WampProtocol.newId(), topic, payload, payloadKw, null, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? this.getSessionId() : null));
+        Broker.publishEvent(WampProtocol.newId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? this.getSessionId() : null));
     }
 
-
-    public WampObject toWampObject()
-    {
-        WampDict retval = new WampDict();
-        retval.put("sessionId", sessionId);
-        return retval;
-    }
     
 }
