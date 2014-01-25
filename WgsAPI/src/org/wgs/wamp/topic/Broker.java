@@ -56,6 +56,7 @@ public class Broker
                             exactTopicOpt.setEventsEnabled(subscription.getOptions().hasEventsEnabled());
                             exactTopicOpt.setMetaTopics(subscription.getOptions().getMetaTopics());
                             
+                            JmsServices.subscribeMessageListener(topic);                            
                             WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
                             module.onSubscribe(socket, topic, subscription, exactTopicOpt);
                         }
