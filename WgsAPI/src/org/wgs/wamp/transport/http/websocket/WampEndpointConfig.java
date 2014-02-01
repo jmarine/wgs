@@ -75,7 +75,6 @@ public class WampEndpointConfig
         
         if(subproto != null && subproto.equalsIgnoreCase("wamp.2.msgpack")) {
             session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
-
                 @Override
                 public void onMessage(byte[] message) {
                     try {
@@ -92,7 +91,6 @@ public class WampEndpointConfig
         } else {
             
             session.addMessageHandler(new MessageHandler.Whole<String>() {
-
                 @Override
                 public void onMessage(String message) {
                     try {
@@ -105,28 +103,6 @@ public class WampEndpointConfig
                 }
 
             });
-            
-            
-            session.addMessageHandler(new MessageHandler.Whole<ByteBuffer>() {
-
-                @Override
-                public void onMessage(ByteBuffer buffer) {
-
-                  logger.info(" binary message: " + new String(buffer.array()));
-                }
-              });
-
-            session.addMessageHandler(new MessageHandler.Whole<PongMessage>() {
-
-             @Override
-             public void onMessage(PongMessage pongMessage) {
-
-               StringBuffer pong = new StringBuffer();
-               pong.append("pong message: ").append(new String(pongMessage.getApplicationData().array()));
-               logger.info(pong.toString());
-             }
-            });
-
 
         }
         
