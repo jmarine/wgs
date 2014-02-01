@@ -9,10 +9,9 @@ import org.wgs.wamp.types.WampList;
 
 public class WampSubscriptionOptions 
 {
-
-    private WampMatchType    matchType;
-    private boolean      eventsEnabled;
+    private WampMatchType   matchType;
     private HashSet<String> metaTopics;
+    private boolean         eventsEnabled;
     
 
     public WampSubscriptionOptions(WampDict node) 

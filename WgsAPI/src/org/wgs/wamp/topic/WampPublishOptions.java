@@ -12,6 +12,7 @@ public class WampPublishOptions
     private Set<Long> excluded;
     private Set<Long> eligible;
     private boolean   discloseMe;
+    private boolean   ack;
         
     public WampPublishOptions() { 
         init(null);
@@ -23,6 +24,7 @@ public class WampPublishOptions
     
     public void init(WampDict node) 
     {
+        setAck(false);      // By default, no acknowledgement
         setExcludeMe(true); // By default, a Publisher of an event will not itself receive an event published
         
         if(node != null) {
@@ -40,6 +42,10 @@ public class WampPublishOptions
             
             if(node.has("exclude")) {
                 setExcluded((WampList)node.get("exclude"));
+            }
+            
+            if(node.has("acknowledgement")) {
+                setAck(node.getBoolean("acknowledgement"));
             }
             
         }
@@ -122,6 +128,20 @@ public class WampPublishOptions
         this.discloseMe = identifyMe;
     }
     
+
+    /**
+     * @return the ack
+     */
+    public boolean hasAck() {
+        return ack;
+    }
+
+    /**
+     * @param ack the ack to set
+     */
+    public void setAck(boolean ack) {
+        this.ack = ack;
+    }    
     
 }
 

@@ -97,13 +97,9 @@ public class WampModule
                             @Override
                             public void resolve(Object... results) {
                                 Long id = (Long)results[0];
-                                WampDict details = (WampDict)results[1];
-                                WampList result = new WampList();
-                                WampDict resultKw = new WampDict();
-                                if(!clientSocket.supportsProgressiveCallResults() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive) {
-                                    result = task.getResult();
-                                    resultKw = task.getResultKw();
-                                }
+                                WampDict details  = (WampDict)results[1];
+                                WampList result   = (WampList)results[2];
+                                WampDict resultKw = (WampDict)results[3];
                                 WampProtocol.sendResult(clientSocket, task.getCallID(), details, result, resultKw);
                             }
 
@@ -153,27 +149,29 @@ public class WampModule
                                         public void resolve(Object... results) {
                                             Long id = (Long)results[0];
                                             WampDict details = (WampDict)results[1];
-                                            WampList progress = (WampList)results[2];
-                                            WampDict progressKw = (WampDict)results[3];
-                                            if(clientSocket.supportsProgressiveCallResults() && options.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
-                                                if(details == null) details = new WampDict();
-                                                details.put("progress", true);                                                
-                                                WampProtocol.sendResult(clientSocket, task.getCallID(), details, progress, progressKw);
-                                            } else {  // RunModeEnum.gather
-                                                task.getResultKw().putAll(progressKw);
-                                                switch(progress.size()) {
+                                            WampList result = (WampList)results[2];
+                                            WampDict resultKw = (WampDict)results[3];
+                                            if(!clientSocket.supportsProgressiveCallResults() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive) {
+                                                task.getResultKw().putAll(resultKw);
+                                                switch(result.size()) {
                                                     case 0: 
                                                         break;
                                                     case 1:
-                                                        task.getResult().add(progress.get(0));
+                                                        task.getResult().add(result.get(0));
                                                         break;
                                                     default:
-                                                        task.getResult().add(progress);
+                                                        task.getResult().add(result);
                                                 }
+                                                
+                                                result = task.getResult();
+                                                resultKw = task.getResultKw();
+                                                if((result.size() == 1) && (remoteMethods.size() == 1) && (result.get(0) instanceof WampList)) {
+                                                    result = (WampList)result.get(0);
+                                                }                                                           
                                             }
                                             
                                             if(barrier.decrementAndGet() <= 0) {
-                                                completeCallback.resolve(id, null, null, null);
+                                                completeCallback.resolve(id, null, result, resultKw);
                                             }
                                         }
 
@@ -286,7 +284,9 @@ public class WampModule
                 options.setExcluded(excludedSet);
             }
 
-            WampProtocol.sendPublished(clientSocket, requestId, publicationId);
+            if(options.hasAck()) {
+                WampProtocol.sendPublished(clientSocket, requestId, publicationId);
+            }
         
             Broker.publishEvent(publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? clientSocket.getSessionId() : null));
         }

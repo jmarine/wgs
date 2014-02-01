@@ -19,6 +19,7 @@ public class WampCallOptions
         this.timeout = 0;
         this.discloseMe = false;
         this.runOn = RunOnEnum.all;
+        this.runMode = RunModeEnum.gather;
         
         if(options != null) {
             
@@ -32,6 +33,10 @@ public class WampCallOptions
                     setPartition(options.getText("rkey"));
                 }
             }                 
+            
+            if(options.has("receive_progress")) {
+                setRunMode(RunModeEnum.progressive);
+            }
             
             if(options.has("runmode")) {
                 setRunMode(RunModeEnum.valueOf(options.getText("runmode").toLowerCase()));

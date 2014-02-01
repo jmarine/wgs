@@ -1,30 +1,30 @@
 package org.wgs.wamp;
 
-import java.io.IOException;
-import org.wgs.wamp.types.WampConnectionState;
-import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampObject;
-import org.wgs.wamp.types.WampList;
-import org.wgs.wamp.rpc.WampCallController;
-import org.wgs.wamp.rpc.WampAsyncCallback;
-import org.wgs.wamp.topic.WampTopic;
-import org.wgs.wamp.topic.WampSubscription;
-import org.wgs.wamp.topic.WampPublishOptions;
 import java.security.Principal;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
+
+import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.rpc.WampCallController;
+import org.wgs.wamp.rpc.WampAsyncCallback;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
+import org.wgs.wamp.topic.WampTopic;
+import org.wgs.wamp.topic.WampSubscription;
+import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.Broker;
+import org.wgs.wamp.types.WampConnectionState;
+import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.types.WampList;
 
 
 public class WampSocket 
@@ -67,7 +67,7 @@ public class WampSocket
         prefixes    = new HashMap<String,String>();
         rpcAsyncCallbacks = new HashMap<Long,WampAsyncCallback>();
         rpcController = new HashMap<Long,WampCallController>();
-        rpcRegistrations = new HashMap<Long,WampCalleeRegistration>();
+        rpcRegistrations = new java.util.concurrent.ConcurrentHashMap<Long,WampCalleeRegistration>();
         
         String subprotocol = session.getNegotiatedSubprotocol();
         if(subprotocol != null) {
@@ -148,7 +148,7 @@ public class WampSocket
                         WampDict callerFeatures = (WampDict)caller.get("features");
                         if(callerFeatures.has("progressive_call_results")) {
                             retval = callerFeatures.getBoolean("progressive_call_results");
-                        }
+                        } 
                     }
                 }
             }

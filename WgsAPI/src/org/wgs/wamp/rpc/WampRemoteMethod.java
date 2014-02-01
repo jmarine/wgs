@@ -63,6 +63,7 @@ public class WampRemoteMethod extends WampMethod
                 WampDict invocationOptions = new WampDict();
                 if(matchType != WampMatchType.exact) invocationOptions.put("procedure", task.getProcedureURI());
                 if(callOptions.hasDiscloseMe())  invocationOptions.put("caller", clientSocket.getSessionId());
+                if(callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) invocationOptions.put("receive_progress", true);
 
                 WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
                     
