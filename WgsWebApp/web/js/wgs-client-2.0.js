@@ -406,9 +406,9 @@ WgsClient.prototype = {
         this.ws = null;
         
         if ("WebSocket" in window) {
-          ws = new WebSocket(this.url);
+          ws = new WebSocket(this.url, "wamp.2.json");
         } else if ("MozWebSocket" in window) {
-          ws = new MozWebSocket(this.url);
+          ws = new MozWebSocket(this.url, "wamp.2.json");
         } else {
           this.debug("This Browser does not support WebSockets");
           onstatechange(WgsState.ERROR, "browser.websockets_not_supported");
