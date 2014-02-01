@@ -14,6 +14,7 @@ import org.msgpack.type.FloatValue;
 import org.msgpack.type.IntegerValue;
 import org.msgpack.type.MapValue;
 import org.msgpack.type.NilValue;
+import org.msgpack.type.RawValue;
 import org.msgpack.type.Value;
 import org.msgpack.unpacker.Unpacker;
 
@@ -21,7 +22,8 @@ import org.msgpack.unpacker.Unpacker;
 public class WampSerializerMsgPack extends WampObject implements WampSerializer
 {
     @Override
-    public Object serialize(WampObject obj) throws Exception {
+    public Object serialize(WampObject obj) throws Exception 
+    {
         MessagePack msgpack = new MessagePack();
         BufferPacker packer = msgpack.createBufferPacker();
         write(packer, obj);
@@ -60,7 +62,8 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
     }    
     
     @Override
-    public WampObject deserialize(Object obj) throws Exception {
+    public WampObject deserialize(Object obj) throws Exception 
+    {
         byte[] bytes = (byte[])obj;
         MessagePack msgpack = new MessagePack();
         Unpacker unpacker = msgpack.createUnpacker(new ByteArrayInputStream(bytes));
@@ -69,7 +72,8 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
         return (WampObject)castToWampObject(val);
     }
     
-    public Object castToWampObject(Object obj) {
+    public Object castToWampObject(Object obj) 
+    {
         Object retval = null;
         if(obj instanceof NilValue) {
             retval = null;
@@ -81,6 +85,8 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
             retval = new Double(((FloatValue)obj).getDouble());
         } else if(obj instanceof String) {
             retval = (String)obj;
+        } else if(obj instanceof RawValue) {
+            retval = ((RawValue)obj).getString();
         } else if(obj instanceof ArrayValue) {
             retval = createWampList((ArrayValue)obj);
         } else if(obj instanceof MapValue) {

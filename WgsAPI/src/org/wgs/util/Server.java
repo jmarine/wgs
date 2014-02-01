@@ -12,9 +12,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.HashSet;
 import java.util.Properties;
-import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
@@ -22,12 +20,11 @@ import java.util.concurrent.ExecutorService;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
-import javax.websocket.server.ServerEndpointConfig;
 
 import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
 import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import org.glassfish.tyrus.server.TyrusServerContainer;
-import org.glassfish.tyrus.spi.ServerContainer;
+
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.topic.Broker;
 import org.wgs.wamp.transport.http.websocket.WampEndpoint;

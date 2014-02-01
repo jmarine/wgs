@@ -59,8 +59,10 @@ public class WampDict extends WampObject
     
     public void putAll(WampDict obj)
     {
-        for(String key : obj.keySet()) {
-            hashmap.put(key, obj.get(key));
+        if(obj != null) {
+            for(String key : obj.keySet()) {
+                hashmap.put(key, obj.get(key));
+            }
         }
     }
     

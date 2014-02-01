@@ -118,8 +118,16 @@ public class WampModule
                                     details.put("progress", true);
                                     WampProtocol.sendResult(clientSocket, task.getCallID(), details, progress, progressKw);
                                 } else {
-                                    task.getResult().add(progress);
                                     task.getResultKw().putAll(progressKw);
+                                    switch(progress.size()) {
+                                        case 0: 
+                                            break;
+                                        case 1:
+                                            task.getResult().add(progress.get(0));
+                                            break;
+                                        default:
+                                            task.getResult().add(progress);
+                                    }
                                 }
                             }
 
@@ -152,8 +160,16 @@ public class WampModule
                                                 details.put("progress", true);                                                
                                                 WampProtocol.sendResult(clientSocket, task.getCallID(), details, progress, progressKw);
                                             } else {  // RunModeEnum.gather
-                                                task.getResult().add(progress);
                                                 task.getResultKw().putAll(progressKw);
+                                                switch(progress.size()) {
+                                                    case 0: 
+                                                        break;
+                                                    case 1:
+                                                        task.getResult().add(progress.get(0));
+                                                        break;
+                                                    default:
+                                                        task.getResult().add(progress);
+                                                }
                                             }
                                             
                                             if(barrier.decrementAndGet() <= 0) {

@@ -417,8 +417,8 @@ public class WampApplication
         Long invocationId = request.getLong(1);
         WampAsyncCallback callback = providerSocket.getAsyncCallback(invocationId);
         WampDict details = (WampDict)request.get(2);
-        WampList result = (WampList)request.get(3);
-        WampDict resultKw = (WampDict)request.get(4);
+        WampList result = (request.size() > 3) ? (WampList)request.get(3) : null;
+        WampDict resultKw = (request.size() > 4) ? (WampDict)request.get(4) : null;
         if(details != null && details.has("progress") && details.getBoolean("progress")) {
             callback.progress(invocationId,details,result, resultKw);
         } else {

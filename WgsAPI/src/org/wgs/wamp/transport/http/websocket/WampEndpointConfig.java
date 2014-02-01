@@ -1,43 +1,23 @@
 package org.wgs.wamp.transport.http.websocket;
 
 import org.wgs.wamp.*;
-import org.wgs.wamp.types.WampMatchType;
-import org.wgs.wamp.topic.Broker;
-import org.wgs.wamp.api.WampCRA;
 import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.types.WampDict;
 import org.wgs.wamp.types.WampObject;
 import org.wgs.wamp.types.WampList;
-import org.wgs.wamp.rpc.WampCallController;
-import org.wgs.wamp.rpc.WampCallOptions;
-import org.wgs.wamp.rpc.WampRemoteMethod;
-import org.wgs.wamp.rpc.WampCalleeRegistration;
-import org.wgs.wamp.rpc.WampAsyncCallback;
-import org.wgs.wamp.rpc.WampMethod;
-import org.wgs.wamp.topic.WampSubscriptionOptions;
-import org.wgs.wamp.topic.WampSubscription;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
 import javax.websocket.Decoder;
 import javax.websocket.Encoder;
-import javax.websocket.EndpointConfig;
 import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
-import org.wgs.wamp.WampException;
-import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
 
@@ -97,6 +77,7 @@ public class WampEndpointConfig
                 @Override
                 public void onMessage(byte[] message) {
                     try {
+                        System.out.println("onWampMessage (binary): " + message);
                         WampList request = (WampList)WampObject.getSerializer(WampEncoding.MsgPack).deserialize(message);
                         WampEndpointConfig.this.application.onWampMessage(clientSocket, request);
                     } catch(Exception ex) { 
@@ -113,7 +94,7 @@ public class WampEndpointConfig
                 @Override
                 public void onMessage(String message) {
                     try {
-                        System.out.println("onWampMessage: " + message);
+                        System.out.println("onWampMessage (text): " + message);
                         WampList request = (WampList)WampObject.getSerializer(WampEncoding.JSon).deserialize(message);
                         WampEndpointConfig.this.application.onWampMessage(clientSocket, request);
                     } catch(Exception ex) { 
@@ -121,8 +102,8 @@ public class WampEndpointConfig
                     }
                 }
 
-
             });
+            
 
         }
         
@@ -157,7 +138,7 @@ public class WampEndpointConfig
 
     @Override
     public List<String> getSubprotocols() {
-        List<String> subprotocols = java.util.Arrays.asList("wamp");
+        List<String> subprotocols = java.util.Arrays.asList("wamp.2.json", "wamp.2.msgpack");
         return subprotocols;
     }
 
@@ -192,7 +173,7 @@ public class WampEndpointConfig
 
     @Override
     public String getNegotiatedSubprotocol(List<String> supported, List<String> requested) {
-        String subprotocol = "wamp";
+        String subprotocol = "wamp.2.json";
         if (requested != null) {
             for (String clientProtocol : requested) {
                 if (supported.contains(clientProtocol)) {

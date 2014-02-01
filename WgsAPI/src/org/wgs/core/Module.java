@@ -123,12 +123,14 @@ public class Module extends WampModule
     @Override
     public void onDisconnect(WampSocket socket) throws Exception 
     {
-        Client client = clients.get(socket.getSessionId());
         socket.setState(WampConnectionState.OFFLINE);
-        for(String gid : client.getGroups().keySet()) {
-            exitGroup(socket, gid);
+        Client client = clients.get(socket.getSessionId());
+        if(client != null) {
+            for(String gid : client.getGroups().keySet()) {
+                exitGroup(socket, gid);
+            }
+            clients.remove(socket.getSessionId());
         }
-        clients.remove(socket.getSessionId());
         super.onDisconnect(socket);
     }
     
