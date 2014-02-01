@@ -137,7 +137,7 @@ public class WampEndpointConfig
 
     @Override
     public List<String> getSubprotocols() {
-        List<String> subprotocols = java.util.Arrays.asList("wamp.2.json");  // , "wamp.2.msgpack");
+        List<String> subprotocols = java.util.Arrays.asList("wamp.2.json", "wamp.2.msgpack");
         return subprotocols;
     }
 
