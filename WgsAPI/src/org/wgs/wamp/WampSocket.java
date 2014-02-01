@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
+import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.topic.Broker;
 
 
@@ -39,6 +40,7 @@ public class WampSocket
     private Map<Long,WampSubscription> subscriptions;
     private Map<Long,WampCallController> rpcController;
     private Map<Long,WampAsyncCallback> rpcAsyncCallbacks;
+    private Map<Long,WampCalleeRegistration> rpcRegistrations;
     private WampConnectionState state;
     private Principal principal;
     private long incomingHeartbeatSeq;
@@ -65,6 +67,7 @@ public class WampSocket
         prefixes    = new HashMap<String,String>();
         rpcAsyncCallbacks = new HashMap<Long,WampAsyncCallback>();
         rpcController = new HashMap<Long,WampCallController>();
+        rpcRegistrations = new HashMap<Long,WampCalleeRegistration>();
         
         String subprotocol = session.getNegotiatedSubprotocol();
         if(subprotocol != null) {
@@ -311,6 +314,22 @@ public class WampSocket
     public void sendHeartbeatMessage(String discard)
     {
         WampProtocol.sendHeartbeatMessage(this, discard);
+    }
+    
+    
+    public void addRpcRegistration(WampCalleeRegistration registration)
+    {
+        rpcRegistrations.put(registration.getId(), registration);
+    }
+    
+    public WampCalleeRegistration removeRpcRegistration(Long registrationId)
+    {
+        return rpcRegistrations.remove(registrationId);
+    }
+    
+    public Collection<WampCalleeRegistration> getRpcRegistrations()
+    {
+        return rpcRegistrations.values();
     }
     
     /**

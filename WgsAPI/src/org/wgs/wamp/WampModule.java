@@ -251,19 +251,21 @@ public class WampModule
     
     public void onRegister(Long registrationId, WampSocket clientSocket, WampCalleeRegistration registration, WampMatchType matchType, String methodUriOrPattern, WampList request) throws Exception
     {
-        Long requestId = request.getLong(1);
         WampDict options = (WampDict)request.get(2);
         
         WampRemoteMethod remoteMethod = new WampRemoteMethod(registration.getId(), clientSocket, matchType, options);
         registration.addRemoteMethod(clientSocket.getSessionId(), remoteMethod);
+        
+        clientSocket.addRpcRegistration(registration);
     }
     
-    public void onUnregister(WampSocket clientSocket, Long requestId, Long registrationId) throws Exception
+    public void onUnregister(WampSocket clientSocket, Long registrationId) throws Exception
     {
         WampCalleeRegistration registration = app.getRegistration(registrationId);
         if(registration == null) {
             throw new WampException(null, "wamp.error.registration_not_found", null, null);
         } else {
+            clientSocket.removeRpcRegistration(registrationId);
             registration.removeRemoteMethod(clientSocket.getSessionId());
             //rpcsByName.remove(method.getProcedureURI());
         }

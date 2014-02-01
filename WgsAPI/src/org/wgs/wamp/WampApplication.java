@@ -14,6 +14,7 @@ import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.topic.WampSubscription;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -46,8 +47,6 @@ public class WampApplication
     private ConcurrentHashMap<String,WampCalleeRegistration> calleePatterns;
     private ConcurrentHashMap<Long,WampCalleeRegistration>   calleeRegistrationById;
     private ConcurrentHashMap<String,WampCalleeRegistration> calleeRegistrationByUri;
-    
-    
     
     
     public WampApplication(int version, String path)
@@ -223,7 +222,15 @@ public class WampApplication
             // Then, remove remaining subscriptions to single topics:
             for(WampSubscription subscription : clientSocket.getSubscriptions()) {
                 Broker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
-            }        
+            }      
+            
+            // Remove RPC registrations
+            WampModule module = getDefaultWampModule();            
+            for(WampCalleeRegistration registration : clientSocket.getRpcRegistrations()) {
+                try {
+                    module.onUnregister(clientSocket, registration.getId());
+                } catch(Exception ex) { }
+            }
             
             logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
         }
@@ -352,7 +359,6 @@ public class WampApplication
             if(matchType != WampMatchType.exact) calleePatterns.put(methodUriOrPattern, registration);
         }               
         
-        
         try {
             WampModule module = app.getDefaultWampModule();
             module.onRegister(registration.getId(), clientSocket, registration, matchType, methodUriOrPattern, request);
@@ -374,7 +380,7 @@ public class WampApplication
         try {
             WampCalleeRegistration registration = calleeRegistrationById.get(registrationId);
             WampModule module = app.getDefaultWampModule();
-            module.onUnregister(clientSocket, requestId, registrationId);
+            module.onUnregister(clientSocket, registrationId);
             //calleeRegistrationById.remove(registration.getProcedureURI());
             //calleeRegistrationPatterns.remove(registration.getProcedureURI());
             
