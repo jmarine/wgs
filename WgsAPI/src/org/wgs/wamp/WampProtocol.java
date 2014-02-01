@@ -95,6 +95,17 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }
     
+    public static void sendGoodBye(WampSocket clientSocket, String reason, String message)
+    {
+        WampDict details = new WampDict();
+        if(reason != null) details.put("reason", reason);
+        if(message != null) details.put("message", message);
+        WampList response = new WampList();
+        response.add(2);
+        response.add(details);
+        sendWampMessage(clientSocket, response);
+    }
+    
     public static void sendHeartbeatMessage(WampSocket clientSocket, String discard)
     {
         WampList response = new WampList();

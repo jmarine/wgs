@@ -203,10 +203,7 @@ public class WampApplication
     {
         if(clientSocket != null) {
 
-            if(clientSocket.isOpen()) {  // avoid recursivity
-                try { clientSocket.close(reason); }
-                catch(Exception ex) { }            
-            }
+            clientSocket.close(reason);
             
             for(WampModule module : modules.values()) {
                 try { 

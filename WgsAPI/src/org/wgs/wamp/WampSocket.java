@@ -1,5 +1,6 @@
 package org.wgs.wamp;
 
+import java.io.IOException;
 import org.wgs.wamp.types.WampConnectionState;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.types.WampDict;
@@ -240,36 +241,29 @@ public class WampSocket
         try {
             if(isOpen()) {
                 session.getBasicRemote().sendObject(msg);
-
-                /*
-                switch(getEncoding()) {
-                    case JSon:
-                        session.getBasicRemote().sendText(msg.toString());
-                        break;
-                    case MsgPack:
-                        byte[] src = (byte[])msg;
-                        ByteBuffer buffer = ByteBuffer.allocate(src.length);
-                        buffer.put(src);
-                        session.getBasicRemote().sendBinary(buffer);
-                        break;
-                }
-                */
-
             }
         } catch(Exception e) {
             logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
-            app.onWampClose(this, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
+            close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
         }
     }
 
     
     public void close(CloseReason reason)
     {
-        this.connected = false;
-        app.onWampClose(this, reason);
+        if(isOpen()) {
+            WampProtocol.sendGoodBye(this, null, reason.getReasonPhrase());
+
+            this.connected = false;
+            
+            try { session.close(reason); } 
+            catch(Exception ex) { }
+        }
+        
     }
     
-    public boolean isOpen() {
+    public boolean isOpen() 
+    {
         return connected && session.isOpen();
     }
     
