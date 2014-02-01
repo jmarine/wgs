@@ -1,5 +1,6 @@
 package org.wgs.wamp.transport.http.websocket;
 
+import java.nio.ByteBuffer;
 import org.wgs.wamp.*;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.types.WampObject;
@@ -17,6 +18,7 @@ import javax.websocket.Decoder;
 import javax.websocket.Encoder;
 import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
+import javax.websocket.PongMessage;
 import javax.websocket.Session;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
@@ -104,6 +106,27 @@ public class WampEndpointConfig
 
             });
             
+            
+            session.addMessageHandler(new MessageHandler.Whole<ByteBuffer>() {
+
+                @Override
+                public void onMessage(ByteBuffer buffer) {
+
+                  logger.info(" binary message: " + new String(buffer.array()));
+                }
+              });
+
+            session.addMessageHandler(new MessageHandler.Whole<PongMessage>() {
+
+             @Override
+             public void onMessage(PongMessage pongMessage) {
+
+               StringBuffer pong = new StringBuffer();
+               pong.append("pong message: ").append(new String(pongMessage.getApplicationData().array()));
+               logger.info(pong.toString());
+             }
+            });
+
 
         }
         
@@ -138,7 +161,7 @@ public class WampEndpointConfig
 
     @Override
     public List<String> getSubprotocols() {
-        List<String> subprotocols = java.util.Arrays.asList("wamp.2.json", "wamp.2.msgpack");
+        List<String> subprotocols = java.util.Arrays.asList("wamp.2.json");  // , "wamp.2.msgpack");
         return subprotocols;
     }
 

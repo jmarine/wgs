@@ -37,27 +37,31 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
         JsonNode retval = null;      
         if(obj != null) {
             if(obj instanceof String) {
-                    retval = new org.codehaus.jackson.node.TextNode((String)obj);
+                retval = new org.codehaus.jackson.node.TextNode((String)obj);
             } else if(obj instanceof Boolean) {
-                    retval = new org.codehaus.jackson.node.IntNode(((Boolean)obj).booleanValue()? 1 : 0);
+                if(((Boolean)obj).booleanValue()) {
+                    retval = org.codehaus.jackson.node.BooleanNode.TRUE;
+                } else {
+                    retval = org.codehaus.jackson.node.BooleanNode.FALSE;
+                }
             } else if(obj instanceof Long) {
-                    retval = new org.codehaus.jackson.node.LongNode((Long)obj);
+                retval = new org.codehaus.jackson.node.LongNode((Long)obj);
             } else if(obj instanceof Double) {
-                    retval = new org.codehaus.jackson.node.DoubleNode((Double)obj);
+                retval = new org.codehaus.jackson.node.DoubleNode((Double)obj);
             } else if(obj instanceof WampDict) {
-                    WampDict dict = (WampDict)obj;
-                    ObjectNode objNode = mapper.createObjectNode();
-                    for(String key : dict.keySet()) {
-                        objNode.put(key, convertToJsonNode(mapper, dict.get(key)));
-                    }
-                    retval = objNode;
+                WampDict dict = (WampDict)obj;
+                ObjectNode objNode = mapper.createObjectNode();
+                for(String key : dict.keySet()) {
+                    objNode.put(key, convertToJsonNode(mapper, dict.get(key)));
+                }
+                retval = objNode;
             } else if(obj instanceof WampList) {
-                    WampList arr = (WampList)obj;
-                    ArrayNode arrNode = mapper.createArrayNode();
-                    for(int i = 0; i < arr.size(); i++) {
-                        arrNode.add(convertToJsonNode(mapper, arr.get(i)));
-                    }
-                    retval = arrNode;
+                WampList arr = (WampList)obj;
+                ArrayNode arrNode = mapper.createArrayNode();
+                for(int i = 0; i < arr.size(); i++) {
+                    arrNode.add(convertToJsonNode(mapper, arr.get(i)));
+                }
+                retval = arrNode;
             }
         }
         return retval;
