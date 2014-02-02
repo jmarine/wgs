@@ -1,4 +1,4 @@
-var WgsState = {
+var ConnectionState = {
   DISCONNECTED: 0,
   ERROR: 1,
   CONNECTED: 2,
@@ -8,7 +8,6 @@ var WgsState = {
 };
 
 function WgsClient(u) {
-  this.serverWampVersion = 1;
   this.url = u;
   return this;
 }
@@ -51,7 +50,7 @@ WgsClient.prototype = {
         this.ws.close();
         this.ws = null;
     }
-    this.state = WgsState.DISCONNECTED;
+    this.state = ConnectionState.DISCONNECTED;
   },
 
   send: function(msg) {
@@ -62,13 +61,13 @@ WgsClient.prototype = {
       }
   },
   
-  _newid: function() {
+  newid: function() {
       var r = Math.random()*131072.0*131072.0*131072.0 + Math.random()*131072.0*131072.0 + Math.random()*131072.0;
       return Math.floor(r);
   },
           
   hello: function() {
-      this.serverSID = this._newid();
+      this.serverSID = this.newid();
       var arr = [];
       arr[0] = 1;  // HELLO
       arr[1] = this.serverSID;
@@ -118,7 +117,7 @@ WgsClient.prototype = {
       var dfd = $.Deferred();
       var msg = [];
       msg[0] = 48;
-      msg[1] = this._newid();
+      msg[1] = this.newid();
       msg[2] = (wampOptions!=null) ? wampOptions : {};
       msg[3] = cmd;
       if(args != null || argsKw != null) msg[4] = (args!=null)? ((args instanceof Array)? args : [args] ) : [];
@@ -138,73 +137,71 @@ WgsClient.prototype = {
   },
   
   subscribe: function(topicURI, event_cb, metaevent_cb, options) {
-        if(!options) options = {};
-        if(event_cb==null && metaevent_cb!=null) options.metaonly = 1;
+      if(!options) options = {};
+      if(event_cb==null && metaevent_cb!=null) options.metaonly = 1;
         
-        if(!options.match && topicURI.indexOf("..") != -1) {
-            options.match = "wildcard";
-        }
+      if(!options.match && topicURI.indexOf("..") != -1) {
+          options.match = "wildcard";
+      }
         
-        if(options.match && options.match.toLowerCase() == "prefix") {
-            topicURI = topicURI + "..";
-        }
+      if(options.match && options.match.toLowerCase() == "prefix") {
+          topicURI = topicURI + "..";
+      }
 
-        var dfd = $.Deferred();            
-        var arr = [];
-        arr[0] = 32;  // SUBSCRIBE
-        arr[1] = this._newid();
-        arr[2] = options;
-        arr[3] = topicURI;      
-        var topicAndOptionsKey = this._getTopicAndOptionsKey(topicURI,options);
-        this.pendingRequests[arr[1]] = [dfd, topicURI, event_cb, metaevent_cb, options];
-        this.send(JSON.stringify(arr));
-        return dfd.promise();
+      var dfd = $.Deferred();            
+      var arr = [];
+      arr[0] = 32;  // SUBSCRIBE
+      arr[1] = this.newid();
+      arr[2] = options;
+      arr[3] = topicURI;      
+      var topicAndOptionsKey = this._getTopicAndOptionsKey(topicURI,options);
+      this.pendingRequests[arr[1]] = [dfd, topicURI, event_cb, metaevent_cb, options];
+      this.send(JSON.stringify(arr));
+      return dfd.promise();
   },
   
-  _getTopicAndOptionsKey: function(topicPattern, options)
-  {
+  _getTopicAndOptionsKey: function(topicPattern, options) {
       if(!options) options = {};
       if(!options.match) options.match = (topicPattern.indexOf("..") != -1)? "wildcard" : "exact";
       else if(options.match=="prefix") topicPattern = topicPattern + "..";
       return topicPattern;
   },
   
-  getSubscriptionIdByTopicOptions: function(topicPattern, options)
-  {
+  getSubscriptionIdByTopicOptions: function(topicPattern, options) {
       var topicAndOptionsKey = this._getTopicAndOptionsKey(topicPattern, options);
       return this.subscriptionsByTopicAndOptions[topicAndOptionsKey];
   },
   
   unsubscribe: function(topic, event_cb, metaevent_cb, options) {
-        var client = this;
+      var client = this;
         
-        if(!options) options = {};
+      if(!options) options = {};
         
-        if(!options.match && topic.indexOf("..") != -1) {
-            options.match = "wildcard";
-        }
+      if(!options.match && topic.indexOf("..") != -1) {
+          options.match = "wildcard";
+      }
         
-        if(options.match && options.match.toLowerCase() == "prefix") {
-            topic = topic + "..";
-        }
+      if(options.match && options.match.toLowerCase() == "prefix") {
+          topic = topic + "..";
+      }
         
-        var dfd = $.Deferred();            
-        var arr = [];
-        arr[0] = 34;  // UNSUBSCRIBE
-        arr[1] = this._newid();
-        arr[2] = this.getSubscriptionIdByTopicOptions(topic,options);
-        var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
-        this.pendingRequests[arr[1]] = [dfd, arr[2], topicAndOptionsKey, event_cb, metaevent_cb];
-        this.send(JSON.stringify(arr));
+      var dfd = $.Deferred();            
+      var arr = [];
+      arr[0] = 34;  // UNSUBSCRIBE
+      arr[1] = this.newid();
+      arr[2] = this.getSubscriptionIdByTopicOptions(topic,options);
+      var topicAndOptionsKey = this._getTopicAndOptionsKey(topic,options);
+      this.pendingRequests[arr[1]] = [dfd, arr[2], topicAndOptionsKey, event_cb, metaevent_cb];
+      this.send(JSON.stringify(arr));
         
-        return dfd.promise();
+      return dfd.promise();
   },
   
   publish: function(topic, payload, payloadKw, options) {
       var dfd = $.Deferred();
       var arr = [];
       arr[0] = 16;  // PUBLISH
-      arr[1] = this._newid();
+      arr[1] = this.newid();
       arr[2] = (options) ? options : {};      
       arr[3] = topic;
       arr[4] = payload;
@@ -215,27 +212,27 @@ WgsClient.prototype = {
   }, 
   
   registerRPC: function(options, procedureURI, callback) {
-        var dfd = $.Deferred();            
-        var arr = [];
-        arr[0] = 64;  // REGISTER
-        arr[1] = this._newid();
-        arr[2] = options;
-        arr[3] = procedureURI;      
-        this.pendingRequests[arr[1]] = [dfd, procedureURI, callback];
-        this.send(JSON.stringify(arr));
-        return dfd.promise();   
+      var dfd = $.Deferred();            
+      var arr = [];
+      arr[0] = 64;  // REGISTER
+      arr[1] = this.newid();
+      arr[2] = options;
+      arr[3] = procedureURI;      
+      this.pendingRequests[arr[1]] = [dfd, procedureURI, callback];
+      this.send(JSON.stringify(arr));
+      return dfd.promise();   
   },
   
   unregisterRPC: function(options, procedureURI, callback) {
-        var registrationId = this.rpcRegistrationsByURI[procedureURI];
-        var dfd = $.Deferred();            
-        var arr = [];
-        arr[0] = 66;  // UNREGISTER
-        arr[1] = this._newid();
-        arr[2] = registrationId;
-        this.pendingRequests[arr[1]] = [dfd, procedureURI, callback];
-        this.send(JSON.stringify(arr));
-        return dfd.promise();      
+      var registrationId = this.rpcRegistrationsByURI[procedureURI];
+      var dfd = $.Deferred();            
+      var arr = [];
+      arr[0] = 66;  // UNREGISTER
+      arr[1] = this.newid();
+      arr[2] = registrationId;
+      this.pendingRequests[arr[1]] = [dfd, procedureURI, callback];
+      this.send(JSON.stringify(arr));
+      return dfd.promise();      
   },
   
   authreq: function(authKey, authExtra, callback) {
@@ -258,11 +255,11 @@ WgsClient.prototype = {
       var client = this;
       client._connect(function(state, msg) {
         onstatechange(state, msg);
-        if(state == WgsState.WELCOMED) {
+        if(state == ConnectionState.WELCOMED) {
           if(user == null || user.length == 0) {
             client.user = "#anonymous-" + client.sid;
-            client.state = WgsState.ANONYMOUS;
-            onstatechange(WgsState.ANONYMOUS);              
+            client.state = ConnectionState.ANONYMOUS;
+            onstatechange(ConnectionState.ANONYMOUS);              
           } else {
             var authExtra = null; // { salt: "RANDOMTEXT", keylen: 32, iterations: 4096 };
             client.authreq(user, authExtra, function(id,details,errorURI,result,resultKw) {
@@ -279,21 +276,21 @@ WgsClient.prototype = {
                             client.getUserInfo(function(id,details,errorURI,result,resultKw) {
                                 if(!errorURI) {
                                     client.user = user;
-                                    client.state = WgsState.AUTHENTICATED;
-                                    onstatechange(WgsState.AUTHENTICATED, resultKw);
+                                    client.state = ConnectionState.AUTHENTICATED;
+                                    onstatechange(ConnectionState.AUTHENTICATED, resultKw);
                                 } else {
                                     var errorCode = resultKw.errorURI;
-                                    onstatechange(WgsState.ERROR, errorCode);
+                                    onstatechange(ConnectionState.ERROR, errorCode);
                                 }
                             });
                         } else {
                             var errorCode = resultKw.errorURI;
-                            onstatechange(WgsState.ERROR, errorCode);
+                            onstatechange(ConnectionState.ERROR, errorCode);
                         }
                     });
                 } else {
                     var errorCode = resultKw.errorURI;
-                    onstatechange(WgsState.ERROR, errorCode);
+                    onstatechange(ConnectionState.ERROR, errorCode);
                 }
             });
           }
@@ -306,7 +303,7 @@ WgsClient.prototype = {
       var client = this;
       client._connect(function(state, msg) {
         onstatechange(state, msg);
-        if(state == WgsState.WELCOMED) {
+        if(state == ConnectionState.WELCOMED) {
             var msg = Object();
             msg.user = user;
             msg.password = CryptoJS.MD5(password).toString();
@@ -314,11 +311,11 @@ WgsClient.prototype = {
             client.call("wgs.register", msg).then(
                 function(id,details,errorURI,result,resultKw) {
                     client.user = resultKw.user;
-                    client.state = WgsState.AUTHENTICATED;
-                    onstatechange(WgsState.AUTHENTICATED, resultKw);
+                    client.state = ConnectionState.AUTHENTICATED;
+                    onstatechange(ConnectionState.AUTHENTICATED, resultKw);
                 }, 
                 function(id,details,errorURI,result,resultKw) {
-                    onstatechange(WgsState.ERROR, errorURI);
+                    onstatechange(ConnectionState.ERROR, errorURI);
                 });
         }
       });
@@ -328,7 +325,7 @@ WgsClient.prototype = {
   openIdConnectProviders: function(redirectUri, callback) {
       var client = this;
       client._connect(function(state, msg) {
-        if(state == WgsState.WELCOMED) {
+        if(state == ConnectionState.WELCOMED) {
             var msg = Object();
             msg.redirect_uri = redirectUri;
             client.call("wgs.openid_connect_providers", msg).then(
@@ -347,7 +344,7 @@ WgsClient.prototype = {
   openIdConnectLoginUrl: function(principal, redirectUri, notificationChannel, onstatechange) {
       var client = this;
       client._connect(function(state, msg) {
-        if(state == WgsState.WELCOMED) {
+        if(state == ConnectionState.WELCOMED) {
             var msg = Object();
             msg.principal = principal;
             msg.redirect_uri = redirectUri;
@@ -359,7 +356,7 @@ WgsClient.prototype = {
                     window.open(response, "_blank");  // + "&nonce=" + escape(client.sid)
                 }, 
                 function(id,details,errorURI,result,resultKw) {
-                    onstatechange(WgsState.ERROR, errorURI);
+                    onstatechange(ConnectionState.ERROR, errorURI);
                 });
         }
       });
@@ -370,7 +367,7 @@ WgsClient.prototype = {
       var client = this;
       client._connect(function(state, msg) {
         onstatechange(state, msg);          
-        if(state == WgsState.WELCOMED) {
+        if(state == ConnectionState.WELCOMED) {
             var msg = Object();
             msg.provider = provider;
             msg.code = code;
@@ -380,11 +377,11 @@ WgsClient.prototype = {
             client.call("wgs.openid_connect_auth", msg).then(
                 function(id,details,errorURI,result,resultKw) {
                     client.user = resultKw.user;
-                    client.state = WgsState.AUTHENTICATED;
-                    onstatechange(WgsState.AUTHENTICATED, resultKw);
+                    client.state = ConnectionState.AUTHENTICATED;
+                    onstatechange(ConnectionState.AUTHENTICATED, resultKw);
                 }, 
                 function(id,details,errorURI,result,resultKw) {
-                    onstatechange(WgsState.ERROR, errorURI);
+                    onstatechange(ConnectionState.ERROR, errorURI);
                 });
         }
       });
@@ -396,9 +393,9 @@ WgsClient.prototype = {
       this.user = null;
       this.debug("Connecting to url: " + this.url);
 
-      if(this.state >= WgsState.WELCOMED) {
+      if(this.state >= ConnectionState.WELCOMED) {
         // REAUTHENTICATION
-        onstatechange(WgsState.WELCOMED);
+        onstatechange(ConnectionState.WELCOMED);
         
       } else {
         // RESET CONNECTION:
@@ -411,27 +408,27 @@ WgsClient.prototype = {
           ws = new MozWebSocket(this.url, "wamp.2.json");
         } else {
           this.debug("This Browser does not support WebSockets");
-          onstatechange(WgsState.ERROR, "browser.websockets_not_supported");
+          onstatechange(ConnectionState.ERROR, "browser.websockets_not_supported");
           return;
         }
 
         ws.onopen = function(e) {
           client.debug("A connection to "+this.url+" has been opened.");
           client.ws = ws;
-          this.state = WgsState.CONNECTED;
-          onstatechange(WgsState.CONNECTED);
+          this.state = ConnectionState.CONNECTED;
+          onstatechange(ConnectionState.CONNECTED);
           client.hello();  // FIX: move to ws.onopen
         };
 
         ws.onclose = function(e) {
           client.debug("The connection to "+this.url+" was closed.");
-          onstatechange(WgsState.DISCONNECTED);    
+          onstatechange(ConnectionState.DISCONNECTED);    
           client.close();
         };
 
         ws.onerror = function(e) {
           client.debug("WebSocket error: " + e);
-          onstatechange(WgsState.ERROR, "wgs.websocket.error");
+          onstatechange(ConnectionState.ERROR, "wgs.websocket.error");
           client.close();
         };
 
@@ -441,11 +438,11 @@ WgsClient.prototype = {
 
           if (arr[0] == 1) {  // HELLO
               client.sid = arr[1];
-              client.state = WgsState.WELCOMED;
-              onstatechange(WgsState.WELCOMED);
+              client.state = ConnectionState.WELCOMED;
+              onstatechange(ConnectionState.WELCOMED);
               
           } else if (arr[0] == 2) {  // GOODBYE 
-              onstatechange(WgsState.DISCONNECTED);    
+              onstatechange(ConnectionState.DISCONNECTED);    
               client.close();
               
           } else if (arr[0] == 3) {  // HEARTBEAT
@@ -824,12 +821,6 @@ WgsClient.prototype = {
       args[1] = data;
       
       this.call("wgs.send_team_message", args).then(callback, callback);
-  },
-          
-  topicMatchesWithPattern: function(topicURI,pattern) {
-      topicURI = topicURI.replace("..", ".*");
-      var re = new RegExp(pattern);
-      return topicURI.match(re);
-  },
+  }
   
 }

@@ -258,7 +258,7 @@ function onUserChange(user) {
     //var old = $("#toggle_connect").html();
     if(user.length > 0) {
         $("#toggle_connect").html("Log in");  
-    } else if(wgsclient!=null && wgsclient.getState() == WgsState.ANONYMOUS) {
+    } else if(wgsclient!=null && wgsclient.getState() == ConnectionState.ANONYMOUS) {
         $("#toggle_connect").html("Disconnect");  
     } else {
         $("#toggle_connect").html("Connect");
@@ -268,25 +268,25 @@ function onUserChange(user) {
 function authentication(state, msg) {
     console.log("authentication state: " + state);
 
-    if(state == WgsState.ERROR) {
-        if(wgsclient.getState() == WgsState.ANONYMOUS) {
+    if(state == ConnectionState.ERROR) {
+        if(wgsclient.getState() == ConnectionState.ANONYMOUS) {
             $("#toggle_connect").html("Disconnect");  
         } else {
             $("#toggle_connect").html("Connect");
         }
         alert(msg);
         
-    } else if(state == WgsState.CONNECTED) {
+    } else if(state == ConnectionState.CONNECTED) {
         $("#server_url").attr("disabled", "disabled");
         $("#register").attr("disabled", "disabled");
         $("#oic_connect").attr("disabled", "disabled");
         
         wgsclient.heartbeat(5000, "*****DISCARDED HEARTBEAT PAYLOAD*******");
         
-    } else if(state == WgsState.ANONYMOUS || state == WgsState.AUTHENTICATED) {
+    } else if(state == ConnectionState.ANONYMOUS || state == ConnectionState.AUTHENTICATED) {
         $("#toggle_connect").html("Disconnect");
         
-        if(state == WgsState.AUTHENTICATED) {
+        if(state == ConnectionState.AUTHENTICATED) {
             $("#user").attr("disabled", "disabled");
             $("#password").attr("disabled", "disabled");
             
@@ -297,7 +297,7 @@ function authentication(state, msg) {
 
         if(msg && msg.picture) {
             $("#user_picture").attr("src", msg.picture).width(48).height(48);
-        } else if(state == WgsState.ANONYMOUS) {
+        } else if(state == ConnectionState.ANONYMOUS) {
             $("#user_picture").attr("src", "images/anonymous.png").width(48).height(48);
         } else {
             $("#user_picture").width(0).height(0);
