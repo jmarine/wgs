@@ -19,6 +19,29 @@ public class WampProtocol
 {
     private static final Logger logger = Logger.getLogger(WampProtocol.class.toString());    
     private static Random randomizer = new Random();
+
+    public static final int HELLO = 1;
+    public static final int GOODBYE = 2;
+    public static final int HEARTBEAT = 3;
+    public static final int ERROR = 4;
+    public static final int PUBLISH = 16;
+    public static final int PUBLISHED = 17;
+    public static final int SUBSCRIBE = 32;
+    public static final int SUBSCRIBED = 33;
+    public static final int UNSUBSCRIBE = 34;
+    public static final int UNSUBSCRIBED = 35;
+    public static final int EVENT = 36;
+    public static final int METAEVENT = 36;
+    public static final int REGISTER = 64;
+    public static final int REGISTERED = 65;
+    public static final int UNREGISTER = 66;
+    public static final int UNREGISTERED = 67;
+    public static final int CALL = 48;
+    public static final int CANCEL_CALL = 49;
+    public static final int CALL_RESULT = 50;
+    public static final int INVOCATION = 68;
+    public static final int INTERRUPT = 69;     // INVOCATION CANCELLATION
+    public static final int YIELD = 70;         // INVOCATION RESULT
     
     
     public static long newId()
@@ -47,50 +70,43 @@ public class WampProtocol
     {
         // Send WELCOME message to client:
         WampList response = new WampList();
-        response.add(1);  // WELCOME message code
+        response.add(HELLO);
         response.add(clientSocket.getSessionId());
-        switch(app.getWampVersion()) {
-            case WampApplication.WAMPv1:
-                response.add(1);  // WAMP v1
-                response.add(app.getServerId());
-                break;
-            case WampApplication.WAMPv2:
-                WampDict brokerFeatures = new WampDict();
-                brokerFeatures.put("subscriber_blackwhite_listing", true);
-                brokerFeatures.put("publisher_exclusion", true);
-                brokerFeatures.put("publisher_identification", true);
-                //brokerFeatures.put("publication_trustlevels", false);
-                brokerFeatures.put("pattern_based_subscription", true);
-                brokerFeatures.put("partitioned_pubsub", true);
-                brokerFeatures.put("subscriber_metaevents", true);
-                //brokerFeatures.put("subscriber_list", false);
-                //brokerFeatures.put("event_history", false);
 
-                WampDict dealerFeatures = new WampDict();
-                //dealerFeatures.put("callee_blackwhite_listing", false);
-                //dealerFeatures.put("caller_exclusion", false);
-                dealerFeatures.put("caller_identification", true);
-                //dealerFeatures.put("call_trustlevels", false);
-                dealerFeatures.put("pattern_based_registration", true);
-                dealerFeatures.put("partitioned_rpc", true);
-                //dealerFeatures.put("call_timeout", false);
-                dealerFeatures.put("call_canceling", true);
-                dealerFeatures.put("progressive_call_results", true);
-                
-                WampDict broker = new WampDict();
-                broker.put("features", brokerFeatures);
-                WampDict dealer = new WampDict();
-                dealer.put("features", dealerFeatures);
-                WampDict roles = new WampDict();
-                roles.put("broker", broker);
-                roles.put("dealer", dealerFeatures);
+        WampDict brokerFeatures = new WampDict();
+        brokerFeatures.put("subscriber_blackwhite_listing", true);
+        brokerFeatures.put("publisher_exclusion", true);
+        brokerFeatures.put("publisher_identification", true);
+        //brokerFeatures.put("publication_trustlevels", false);
+        brokerFeatures.put("pattern_based_subscription", true);
+        brokerFeatures.put("partitioned_pubsub", true);
+        brokerFeatures.put("subscriber_metaevents", true);
+        //brokerFeatures.put("subscriber_list", false);
+        //brokerFeatures.put("event_history", false);
 
-                WampDict helloDetails = new WampDict();
-                helloDetails.put("agent", app.getServerId());
-                helloDetails.put("roles", roles);
-                response.add(helloDetails);  
-                break;
-        }
+        WampDict dealerFeatures = new WampDict();
+        //dealerFeatures.put("callee_blackwhite_listing", false);
+        //dealerFeatures.put("caller_exclusion", false);
+        dealerFeatures.put("caller_identification", true);
+        //dealerFeatures.put("call_trustlevels", false);
+        dealerFeatures.put("pattern_based_registration", true);
+        dealerFeatures.put("partitioned_rpc", true);
+        //dealerFeatures.put("call_timeout", false);
+        dealerFeatures.put("call_canceling", true);
+        dealerFeatures.put("progressive_call_results", true);
+
+        WampDict broker = new WampDict();
+        broker.put("features", brokerFeatures);
+        WampDict dealer = new WampDict();
+        dealer.put("features", dealerFeatures);
+        WampDict roles = new WampDict();
+        roles.put("broker", broker);
+        roles.put("dealer", dealerFeatures);
+
+        WampDict helloDetails = new WampDict();
+        helloDetails.put("agent", app.getServerId());
+        helloDetails.put("roles", roles);
+        response.add(helloDetails);  
         
         sendWampMessage(clientSocket, response);
     }
@@ -101,7 +117,7 @@ public class WampProtocol
         if(reason != null) details.put("reason", reason);
         if(message != null) details.put("message", message);
         WampList response = new WampList();
-        response.add(2);
+        response.add(GOODBYE);
         response.add(details);
         sendWampMessage(clientSocket, response);
     }
@@ -109,7 +125,7 @@ public class WampProtocol
     public static void sendHeartbeatMessage(WampSocket clientSocket, String discard)
     {
         WampList response = new WampList();
-        response.add(3);
+        response.add(HEARTBEAT);
         response.add(clientSocket.getIncomingHeartbeat());
         response.add(clientSocket.getNextOutgoingHeartbeatSeq());
         response.add(discard);
@@ -120,7 +136,7 @@ public class WampProtocol
     public static void sendResult(WampSocket clientSocket, Long requestId, WampDict details, WampList args, WampDict argsKw)
     {
         WampList response = new WampList();
-        response.add(50);
+        response.add(CALL_RESULT);
         response.add(requestId);
         response.add((details != null)? details : new WampDict());
         if(args != null || argsKw != null) {
@@ -134,7 +150,7 @@ public class WampProtocol
     public static void sendSubscribed(WampSocket clientSocket, Long requestId, Long subscriptionId)
     {    
         WampList response = new WampList();
-        response.add(33);
+        response.add(SUBSCRIBED);
         response.add(requestId);
         response.add(subscriptionId);
         sendWampMessage(clientSocket, response);
@@ -144,7 +160,7 @@ public class WampProtocol
     public static void sendUnsubscribed(WampSocket clientSocket, Long requestId)
     {    
         WampList response = new WampList();
-        response.add(35);
+        response.add(UNSUBSCRIBED);
         response.add(requestId);
         sendWampMessage(clientSocket, response);
     }
@@ -153,7 +169,7 @@ public class WampProtocol
     public static void sendPublished(WampSocket clientSocket, Long requestId, Long publicationId)
     {    
         WampList response = new WampList();
-        response.add(17);
+        response.add(PUBLISHED);
         response.add(requestId);
         response.add(publicationId);
         sendWampMessage(clientSocket, response);
@@ -177,7 +193,7 @@ public class WampProtocol
             }
             
             WampList response = new WampList();
-            response.add(36);
+            response.add(EVENT);
             response.add(subscription.getId());
             response.add(publicationId);
             response.add(eventDetails);
@@ -229,7 +245,7 @@ public class WampProtocol
             }            
             
             WampList response = new WampList();
-            response.add(36);
+            response.add(METAEVENT);
             response.add(subscription.getId());
             response.add(publicationId);
             response.add(metaEvent);
@@ -259,10 +275,11 @@ public class WampProtocol
     }
 
     
-    public static void sendError(WampSocket clientSocket, Long requestId, WampDict details, String errorUri, WampList args, WampDict argsKw)
+    public static void sendError(WampSocket clientSocket, int requestType, Long requestId, WampDict details, String errorUri, WampList args, WampDict argsKw)
     {    
         WampList response = new WampList();
-        response.add(4);
+        response.add(ERROR);
+        response.add(requestType);
         response.add(requestId);
         response.add((details != null)? details : new WampDict());
         response.add(errorUri);
@@ -276,7 +293,7 @@ public class WampProtocol
     public static void sendRegisteredMessage(WampSocket clientSocket, Long requestId, Long registrationId)
     {    
         WampList response = new WampList();
-        response.add(65);
+        response.add(REGISTERED);
         response.add(requestId);
         response.add(registrationId);
         sendWampMessage(clientSocket, response);
@@ -285,7 +302,7 @@ public class WampProtocol
     public static void sendUnregisteredMessage(WampSocket clientSocket, Long requestId)
     {    
         WampList response = new WampList();
-        response.add(67);
+        response.add(UNREGISTERED);
         response.add(requestId);
         sendWampMessage(clientSocket, response);
     }      
@@ -294,7 +311,7 @@ public class WampProtocol
     public static void sendInvocationMessage(WampSocket remotePeer, Long invocationId, Long registrationId, WampDict details, WampList args, WampDict argsKw) 
     {
         WampList msg = new WampList();
-        msg.add(68);
+        msg.add(INVOCATION);
         msg.add(invocationId);
         msg.add(registrationId);
         msg.add(details);
@@ -309,7 +326,7 @@ public class WampProtocol
     public static void sendInterruptMessage(WampSocket remotePeer, Long invocationId, WampDict cancelOptions) 
     {
         WampList msg = new WampList();
-        msg.add(81);
+        msg.add(INTERRUPT);
         msg.add(invocationId);
         msg.add(cancelOptions);
         sendWampMessage(remotePeer, msg);        

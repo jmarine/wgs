@@ -134,62 +134,61 @@ public class WampApplication
         //logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
 
         switch(requestType.intValue()) {
-            case 1:     // HELLO
+            case WampProtocol.HELLO:
                 clientSocket.setVersionSupport(WampApplication.WAMPv2);                
                 clientSocket.setHelloDetails((WampDict)request.get(2));
                 break;
-            case 2:     // GOODBYE
+            case WampProtocol.GOODBYE:
                 clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "goodbye received"));
                 break;
-            case 3:     // HEARTBEAT
+            case WampProtocol.HEARTBEAT:
                 processHeartbeatMessage(clientSocket, request);
                 break;                
-            case 4:    // ERROR
+            case WampProtocol.ERROR:
                 // FIXME: the current implementation only expects invocation errors
                 processInvocationError(clientSocket, request);
                 break;
-            case 32:    // SUBSCRIBE
+            case WampProtocol.SUBSCRIBE:
                 Long requestId1 = request.getLong(1);
                 WampDict subOptionsNode = (request.size() > 2) ? (WampDict)request.get(2) : null;
                 WampSubscriptionOptions subOptions = new WampSubscriptionOptions(subOptionsNode);
                 String subscriptionTopicName = request.getText(3);
                 Broker.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
                 break;
-            case 34:    // UNSUBSCRIBE
+            case WampProtocol.UNSUBSCRIBE:
                 Long requestId2 = (request.size() > 1) ? request.getLong(1) : null;
                 Long subscriptionId2 = (request.size() > 2) ? request.getLong(2) : null;
                 if(requestId2 == null || subscriptionId2 == null)  {
-                    WampProtocol.sendError(clientSocket, requestId2, null, "wamp.error.protocol_violation", null, null);
+                    WampProtocol.sendError(clientSocket, WampProtocol.UNSUBSCRIBE, requestId2, null, "wamp.error.protocol_violation", null, null);
                 } else {
                     Broker.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
                 }
                 break;
-            case 16:    // PUBLISH
+            case WampProtocol.PUBLISH:
                 Broker.processPublishMessage(this, clientSocket, request);
                 break;                
-            case 64:    // REGISTER
+            case WampProtocol.REGISTER:
                 processRegisterMessage(this, clientSocket, request);
                 break;
-            case 66:    // UNREGISTER
+            case WampProtocol.UNREGISTER:
                 processUnregisterMessage(this, clientSocket, request);
                 break;                
-            case 48:    // CALL
+            case WampProtocol.CALL:
                 processCallMessage(clientSocket, request);
                 break;
-            case 49:    // CANCEL CALL
+            case WampProtocol.CANCEL_CALL:
                 processCancelCallMessage(clientSocket, request);
                 break;
-            case 68:    // INVOCATION
-                // TODO: this server implementation only implements the "dealear" role
-                // (it doesn't receive invocatoin messages)
-                break;
-            case 69:    // INTERRUPT
-                // TODO: this server implementation only implements the "dealear" role
-                // (it doesn't receive interrupt messages)
-                break;
-            case 70:    // YIELD (INVOCATION RESULT)
+            case WampProtocol.YIELD:  // INVOCATION RESULT
                 processInvocationResult(clientSocket, request);
                 break;
+
+            case WampProtocol.INVOCATION:
+                // TODO: this server implementation only implements the "dealear" role
+                // (it doesn't receive invocatoin messages)
+            case WampProtocol.INTERRUPT:
+                // TODO: this server implementation only implements the "dealear" role
+                // (it doesn't receive interrupt messages)
             default:
                 logger.log(Level.SEVERE, "Request type not implemented: {0}", new Object[]{requestType});
         }
@@ -340,7 +339,7 @@ public class WampApplication
         }
         
         if(rpcsByName.get(methodUriOrPattern) != null) {  // Don't override system functions
-            if(requestId != null) WampProtocol.sendError(clientSocket, requestId, null, "wamp.error.procedure_already_exists", null, null);
+            if(requestId != null) WampProtocol.sendError(clientSocket, WampProtocol.REGISTER, requestId, null, "wamp.error.procedure_already_exists", null, null);
             throw new WampException(null, "wamp.error.procedure_already_exists", null, null);
         }
         
@@ -367,7 +366,7 @@ public class WampApplication
             
         } catch(Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
-            WampProtocol.sendError(clientSocket, requestId, null, "wamp.error.not_authorized", null, null);
+            if(requestId != null) WampProtocol.sendError(clientSocket, WampProtocol.REGISTER, requestId, null, "wamp.error.not_authorized", null, null);
         }
         
     }    
@@ -388,6 +387,7 @@ public class WampApplication
 
         } catch(Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
+            if(requestId != null) WampProtocol.sendError(clientSocket, WampProtocol.UNREGISTER, requestId, null, "wamp.error.not_authorized", null, null);
         }  
         
     }
@@ -432,11 +432,12 @@ public class WampApplication
     
     private void processInvocationError(WampSocket providerSocket, WampList request) throws Exception
     {
-        Long invocationId = request.getLong(1);
+        Long requestType = request.getLong(1);
+        Long invocationId = request.getLong(2);
         WampDict options = new WampDict();
-        String errorURI = request.getText(3);
-        WampList args = new WampList();
-        WampDict argsKw = (WampDict)request.get(5);
+        String errorURI = request.getText(4);
+        WampList args = (request.size() > 5) ? (WampList)request.get(5) : null;
+        WampDict argsKw = (request.size() > 6) ? (WampDict)request.get(6) : null;
         WampAsyncCallback callback = providerSocket.getAsyncCallback(invocationId);
         callback.reject(invocationId, options, errorURI, args, argsKw);
         providerSocket.removeAsyncCallback(invocationId);

@@ -222,7 +222,7 @@ public class Broker
             }
             
         } catch(Exception ex) {
-            WampProtocol.sendError(clientSocket, requestId, null, "wamp.error.subscription_error", null, null);
+            WampProtocol.sendError(clientSocket, WampProtocol.SUBSCRIBE, requestId, null, "wamp.error.subscription_error", null, null);
         }
 
         return subscription.getTopics();
@@ -234,7 +234,7 @@ public class Broker
         Collection<WampTopic> matchingTopics = null;
         WampSubscription subscription = clientSocket.getSubscription(subscriptionId);
         if(subscription == null) {
-            if(requestId != null) WampProtocol.sendError(clientSocket, requestId, null, "wamp.error.no_such_subscription", null, null);            
+            if(requestId != null) WampProtocol.sendError(clientSocket, WampProtocol.UNSUBSCRIBE, requestId, null, "wamp.error.no_such_subscription", null, null);            
         } else {
             matchingTopics = subscription.getTopics();
             for(WampTopic topic : matchingTopics) {

@@ -78,7 +78,7 @@ public class WampEndpointConfig
                 @Override
                 public void onMessage(byte[] message) {
                     try {
-                        System.out.println("onWampMessage (binary): " + message);
+                        System.out.println("onWampMessage (binary)");
                         WampList request = (WampList)WampObject.getSerializer(WampEncoding.MsgPack).deserialize(message);
                         System.out.println("onWampMessage (deserialized request): " + request);
                         WampEndpointConfig.this.application.onWampMessage(clientSocket, request);
@@ -97,7 +97,6 @@ public class WampEndpointConfig
                     try {
                         System.out.println("onWampMessage (text): " + message);
                         WampList request = (WampList)WampObject.getSerializer(WampEncoding.JSon).deserialize(message);
-                        System.out.println("onWampMessage (deserialized request): " + request);
                         WampEndpointConfig.this.application.onWampMessage(clientSocket, request);
                     } catch(Exception ex) { 
                         logger.log(Level.SEVERE, "Error processing message: "+message, ex);

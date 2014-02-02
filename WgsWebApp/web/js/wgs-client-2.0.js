@@ -450,12 +450,13 @@ WgsClient.prototype = {
               // TODO: request unreceived EVENTs ?
               
           } else if (arr[0] == 4) {  // ERROR
-              var requestId = arr[1];
+              var requestType = arr[1];
+              var requestId = arr[2];
               if(client.pendingRequests[requestId]) {
-                var details = arr[2];
-                var errorURI = arr[3];
-                var args = (arr.length>4)? arr[4] : [];
-                var argsKw = (arr.length>5)? arr[5] : {};
+                var details = arr[3];
+                var errorURI = arr[4];
+                var args = (arr.length>5)? arr[5] : [];
+                var argsKw = (arr.length>6)? arr[6] : {};
                 var promise = client.pendingRequests[requestId][0];
                 promise.reject(requestId, details, errorURI, args, argsKw);
                 delete client.pendingRequests[requestId];     

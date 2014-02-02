@@ -134,7 +134,7 @@ public class WampModule
                                 String   errorURI = (String)errors[2];
                                 WampList args = (errors.length > 3) ? (WampList)errors[3] : null;
                                 WampDict argsKw = (errors.length > 4) ? (WampDict)errors[4] : null;
-                                WampProtocol.sendError(clientSocket, task.getCallID(), details, errorURI, args, argsKw);
+                                WampProtocol.sendError(clientSocket, WampProtocol.CALL, task.getCallID(), details, errorURI, args, argsKw);
                             }                            
                         };
                                 
@@ -153,18 +153,10 @@ public class WampModule
                                             WampDict resultKw = (WampDict)results[3];
                                             if(!clientSocket.supportsProgressiveCallResults() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive) {
                                                 task.getResultKw().putAll(resultKw);
-                                                switch(result.size()) {
-                                                    case 0: 
-                                                        break;
-                                                    case 1:
-                                                        task.getResult().add(result.get(0));
-                                                        break;
-                                                    default:
-                                                        task.getResult().add(result);
-                                                }
+                                                task.getResult().add(result);
                                                 
-                                                result = task.getResult();
                                                 resultKw = task.getResultKw();
+                                                result = task.getResult();
                                                 if((result.size() == 1) && (remoteMethods.size() == 1) && (result.get(0) instanceof WampList)) {
                                                     result = (WampList)result.get(0);
                                                 }                                                           
@@ -187,7 +179,7 @@ public class WampModule
                                             String   errorURI = (String)errors[2];
                                             WampList args = (errors.length > 3) ? (WampList)errors[3] : null;
                                             WampDict argsKw = (errors.length > 4) ? (WampDict)errors[4] : null;
-                                            WampProtocol.sendError(clientSocket, task.getCallID(), details, errorURI, args, argsKw);
+                                            WampProtocol.sendError(clientSocket, WampProtocol.CALL, task.getCallID(), details, errorURI, args, argsKw);
                                         }
                                     });
 
