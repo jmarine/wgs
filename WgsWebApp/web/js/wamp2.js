@@ -94,7 +94,7 @@ Wamp2.prototype = {
         if(timeout != 0) client.heartbeatIntervalHandler = setInterval(sendHeartbeat, timeout);
     },
 
-    // Callee API
+    // Caller API
     call: function(cmd, args, argsKw, wampOptions) {
         var dfd = $.Deferred();
         var msg = [];
@@ -118,7 +118,7 @@ Wamp2.prototype = {
         this.send(JSON.stringify(arr));      
     },
 
-    // Caller API
+    // Callee API
     registerRPC: function(options, procedureURI, callback) {
         var dfd = $.Deferred();            
         var arr = [];
