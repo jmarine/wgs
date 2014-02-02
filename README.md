@@ -11,11 +11,11 @@ This repository implements the following services in Java for multi-player onlin
     
 * local user registration/authentication.
 * authentication with OpenID Connect providers.
-* group creation/joining/listing (classified by applications and domains)
+* lobby application (to list/join or create new groups)
 * presence service and communication between users of each group (including broadcast to all group members, and multicast to members of the same team).
 
 
-This services are provided via WebSockets with the [WebSocket Application Messaging Protocol (WAMP)](http://wamp.ws/spec) specification.
+This services are provided via WebSockets with the [WebSocket Application Messaging Protocol](https://github.com/tavendo/WAMP/tree/master/spec) (WAMP v2) specification.
 
 
 
