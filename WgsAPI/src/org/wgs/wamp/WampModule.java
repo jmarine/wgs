@@ -159,12 +159,17 @@ public class WampModule
                                                 result = task.getResult();
                                                 if((result.size() == 1) && (remoteMethods.size() == 1) && (result.get(0) instanceof WampList)) {
                                                     result = (WampList)result.get(0);
-                                                }                                                           
+                                                }   
+                                                
+                                            } else if(remoteMethods.size() > 1) {
+                                                completeCallback.progress(id, null, result, resultKw);
+                                                result = null;
+                                                resultKw = null;
                                             }
                                             
                                             if(barrier.decrementAndGet() <= 0) {
                                                 completeCallback.resolve(id, null, result, resultKw);
-                                            }
+                                            } 
                                         }
 
                                         @Override

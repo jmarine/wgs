@@ -36,6 +36,10 @@ public class WampPublishOptions
                 setDiscloseMe(node.getBoolean("disclose_me"));
             }
             
+            if(node.has("discloseme")) {
+                setDiscloseMe(node.getBoolean("discloseme"));
+            }            
+            
             if(node.has("eligible")) {
                 setEligible((WampList)node.get("eligible"));
             }                   
@@ -47,6 +51,10 @@ public class WampPublishOptions
             if(node.has("acknowledgement")) {
                 setAck(node.getBoolean("acknowledgement"));
             }
+            
+            if(node.has("acknowledge")) {
+                setAck(node.getBoolean("acknowledge"));
+            }            
             
         }
     }
