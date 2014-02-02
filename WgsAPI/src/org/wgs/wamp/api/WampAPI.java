@@ -6,7 +6,7 @@ import org.wgs.wamp.annotation.WampModuleName;
 import java.util.Collection;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
-import org.wgs.wamp.topic.Broker;
+import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.WampSocket;
 
 
@@ -32,7 +32,7 @@ public class WampAPI extends WampModule
     @WampRPC(name=".broker.subscriber.list")
     public Collection<Long> getSubscribedSessions(WampSocket socket, Long subscriptionId) throws Exception
     {
-        return Broker.getSubscriptionById(subscriptionId).getSessionIds();
+        return WampBroker.getSubscriptionById(subscriptionId).getSessionIds();
     }    
     
     @WampRPC(name=".topic.history.last")

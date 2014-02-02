@@ -26,7 +26,7 @@ import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 
 import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.topic.Broker;
+import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.transport.http.websocket.WampEndpoint;
 import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
 
@@ -116,7 +116,7 @@ public class Server
                     while(tkTopics.hasMoreTokens()) {
                         String topic = tkTopics.nextToken();
                         System.out.println("> Creating topic at "+uri+": " + topic);
-                        Broker.createTopic(wampApplication, topic, null);
+                        WampBroker.createTopic(wampApplication, topic, null);
                     }
                 }                    
 

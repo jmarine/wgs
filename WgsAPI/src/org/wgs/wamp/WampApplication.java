@@ -20,7 +20,7 @@ import org.wgs.wamp.rpc.WampRemoteMethod;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampAsyncCallback;
 import org.wgs.wamp.rpc.WampMethod;
-import org.wgs.wamp.topic.Broker;
+import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.types.WampMatchType;
@@ -153,7 +153,7 @@ public class WampApplication
                 WampDict subOptionsNode = (request.size() > 2) ? (WampDict)request.get(2) : null;
                 WampSubscriptionOptions subOptions = new WampSubscriptionOptions(subOptionsNode);
                 String subscriptionTopicName = request.getText(3);
-                Broker.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
+                WampBroker.subscribeClientWithTopic(this, clientSocket, requestId1, subscriptionTopicName, subOptions);
                 break;
             case WampProtocol.UNSUBSCRIBE:
                 Long requestId2 = (request.size() > 1) ? request.getLong(1) : null;
@@ -161,11 +161,11 @@ public class WampApplication
                 if(requestId2 == null || subscriptionId2 == null)  {
                     WampProtocol.sendError(clientSocket, WampProtocol.UNSUBSCRIBE, requestId2, null, "wamp.error.protocol_violation", null, null);
                 } else {
-                    Broker.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
+                    WampBroker.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
                 }
                 break;
             case WampProtocol.PUBLISH:
-                Broker.processPublishMessage(this, clientSocket, request);
+                WampBroker.processPublishMessage(this, clientSocket, request);
                 break;                
             case WampProtocol.REGISTER:
                 processRegisterMessage(this, clientSocket, request);
@@ -214,13 +214,13 @@ public class WampApplication
             // First remove subscriptions to topic patterns:
             for(WampSubscription subscription : clientSocket.getSubscriptions()) {
                 if(subscription.getOptions().getMatchType() != WampMatchType.exact) {  // prefix or wildcards
-                    Broker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
+                    WampBroker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
                 }
             }
 
             // Then, remove remaining subscriptions to single topics:
             for(WampSubscription subscription : clientSocket.getSubscriptions()) {
-                Broker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
+                WampBroker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
             }      
             
             // Remove RPC registrations
@@ -289,7 +289,7 @@ public class WampApplication
         }
         
         for(WampCalleeRegistration registration : calleePatterns.values()) {
-            if(Broker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
+            if(WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
                 for(WampRemoteMethod remoteMethod : registration.getRemoteMethods()) {
                     if(remoteMethod.hasPartition(partition)) {
                         retval.add(remoteMethod);

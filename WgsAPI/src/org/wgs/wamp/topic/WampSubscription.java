@@ -25,7 +25,7 @@ public class WampSubscription
     public WampSubscription(Long subscriptionId, WampMatchType matchType, String topicUriOrPattern, Collection<WampTopic> topics, WampSubscriptionOptions options) 
     {
         this.subscriptionId = subscriptionId;
-        this.topicRegExp = Broker.getPatternRegExp(matchType, topicUriOrPattern);        
+        this.topicRegExp = WampBroker.getPatternRegExp(matchType, topicUriOrPattern);        
         this.topics  = topics;
         this.options = (options != null)? options : new WampSubscriptionOptions(null);
     }

@@ -5,7 +5,7 @@ import org.wgs.wamp.types.WampMatchType;
 import org.wgs.wamp.types.WampDict;
 import org.wgs.wamp.types.WampList;
 import org.wgs.wamp.WampProtocol;
-import org.wgs.wamp.topic.Broker;
+import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.WampSocket;
 
 
@@ -35,7 +35,7 @@ public class WampRemoteMethod extends WampMethod
     {
         if(options != null && options.has("partition")) {
             String regExp = options.getText("paritition");
-            return partition == null || Broker.isUriMatchingWithRegExp(partition, regExp);
+            return partition == null || WampBroker.isUriMatchingWithRegExp(partition, regExp);
         } else {
             return true;
         }

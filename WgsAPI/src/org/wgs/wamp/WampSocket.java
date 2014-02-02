@@ -21,7 +21,7 @@ import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.topic.WampTopic;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampPublishOptions;
-import org.wgs.wamp.topic.Broker;
+import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.types.WampConnectionState;
 import org.wgs.wamp.types.WampDict;
 import org.wgs.wamp.types.WampList;
@@ -345,7 +345,7 @@ public class WampSocket
         options.setExcluded(excludedSet);
         options.setDiscloseMe(identifyMe);
 
-        Broker.publishEvent(WampProtocol.newId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? this.getSessionId() : null));
+        WampBroker.publishEvent(WampProtocol.newId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? this.getSessionId() : null));
     }
 
     

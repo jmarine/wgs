@@ -42,7 +42,7 @@ import org.wgs.wamp.types.WampList;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.types.WampObject;
-import org.wgs.wamp.topic.Broker;
+import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
@@ -70,7 +70,7 @@ public class Module extends WampModule
         super(app);
         this.wampApp = app;
         
-        Broker.createTopic(app, getFQtopicURI("apps_event"), null);
+        WampBroker.createTopic(app, getFQtopicURI("apps_event"), null);
 
         try {
             List<Application> apps = Storage.findEntities(Application.class, "wgs.findAllApps");
@@ -514,12 +514,12 @@ public class Module extends WampModule
     
     
     private void registerApplication(Application app) {
-        Broker.createTopic(wampApp, getFQtopicURI("app_event:"+app.getAppId()), null);
+        WampBroker.createTopic(wampApp, getFQtopicURI("app_event:"+app.getAppId()), null);
         applications.put(app.getAppId(), app);
     }
     
     private void unregisterApplication(Application app) {
-        Broker.removeTopic(wampApp, getFQtopicURI("app_event:"+app.getAppId()));
+        WampBroker.removeTopic(wampApp, getFQtopicURI("app_event:"+app.getAppId()));
         applications.remove(app.getAppId());
     }
     
@@ -634,7 +634,7 @@ public class Module extends WampModule
     {
         WampDict event = app.toWampObject();
         event.put("cmd", cmd);
-        socket.publishEvent(Broker.getTopic(getFQtopicURI("apps_event")), null, event, excludeMe, false);
+        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("apps_event")), null, event, excludeMe, false);
         return event;
     }
 
@@ -774,10 +774,10 @@ public class Module extends WampModule
             response.put("app", app.toWampObject());
 
             String topicName = getFQtopicURI("group_event:" + g.getGid());
-            WampTopic topic = Broker.getTopic(topicName);
+            WampTopic topic = WampBroker.getTopic(topicName);
             if(topic == null) {
                 WampTopicOptions topicOptions = new WampTopicOptions();
-                topic = Broker.createTopic(wampApp, topicName, topicOptions);
+                topic = WampBroker.createTopic(wampApp, topicName, topicOptions);
             }
             
             //WampSubscriptionOptions subscriptionOptions = new WampSubscriptionOptions(null);
@@ -889,7 +889,7 @@ public class Module extends WampModule
                     event.put("gid", g.getGid());
                     event.put("valid", true);
 
-                    socket.publishEvent(Broker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, true, false);  // exclude Me
+                    socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, true, false);  // exclude Me
                 }
 
             }
@@ -918,7 +918,7 @@ public class Module extends WampModule
             event.put("type", "user");
             event.put("valid", valid);
                     
-            socket.publishEvent(Broker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, true, false);  // exclude Me
+            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, true, false);  // exclude Me
         }
         
         
@@ -1016,7 +1016,7 @@ public class Module extends WampModule
         response.put("valid", valid);
 
         if(broadcastAppInfo)    broadcastAppEventInfo(socket, g, "group_updated");
-        if(broadcastGroupInfo)  socket.publishEvent(Broker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, response, true, false);  // exclude Me
+        if(broadcastGroupInfo)  socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, response, true, false);  // exclude Me
         return response;
     }
     
@@ -1172,7 +1172,7 @@ public class Module extends WampModule
             if(valid) {
                 //response.putAll(g.toJSON());
                 broadcastAppEventInfo(socket, g, "group_updated");
-                socket.publishEvent(Broker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, response, false, false);
+                socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, response, false, false);
                 g.setVersion(Storage.saveEntity(g).getVersion());
             }  
             return response;
@@ -1187,7 +1187,7 @@ public class Module extends WampModule
             WampDict event = new WampDict();
             event.put("cmd", "group_message");
             event.put("message", data);
-            socket.publishEvent(Broker.getTopic(getFQtopicURI("group_event:"+gid)), null, event, false, true); // don't exclude Me
+            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+gid)), null, event, false, true); // don't exclude Me
         }
     }
     
@@ -1229,7 +1229,7 @@ public class Module extends WampModule
                     WampPublishOptions options = new WampPublishOptions();
                     options.setEligible(eligibleSet);
                     options.setDiscloseMe(true);
-                    socket.publishEvent(Broker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, false, true);
+                    socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, false, true);
                 }
             }
         }
@@ -1290,13 +1290,13 @@ public class Module extends WampModule
                 }
                 response.put("members", membersArray);
 
-                socket.publishEvent(Broker.getTopic(getFQtopicURI("group_event:"+gid)), null, response, true, false); // exclude Me
+                socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+gid)), null, response, true, false); // exclude Me
 
                 client.removeGroup(g);
                 
                 String topicName = getFQtopicURI("group_event:" + g.getGid());
 
-                WampTopic topic = Broker.getTopic(topicName);
+                WampTopic topic = WampBroker.getTopic(topicName);
                 for(WampSubscription subscription : topic.getSubscriptions()) {
                     if(subscription.removeSocket(socket.getSessionId()) != null) {
                         boolean deleted = false;
@@ -1318,7 +1318,7 @@ public class Module extends WampModule
 
                             //updateAppInfo(socket, applications.get(appId), "app_updated", false);
 
-                            Broker.removeTopic(wampApp, topicName);
+                            WampBroker.removeTopic(wampApp, topicName);
                             deleted = true;
                         }
 
@@ -1348,9 +1348,9 @@ public class Module extends WampModule
             }
         }
         
-        Broker.publishEvent(WampProtocol.newId(), Broker.getTopic(getFQtopicURI("apps_event")), null, event, eligible, null, null);  // only broadcasts to caller and group memebers
+        WampBroker.publishEvent(WampProtocol.newId(), WampBroker.getTopic(getFQtopicURI("apps_event")), null, event, eligible, null, null);  // only broadcasts to caller and group memebers
         
-        socket.publishEvent(Broker.getTopic(getFQtopicURI("app_event:" + g.getApplication().getAppId())), null, event, false, false);     // broadcasts to all application subscribers
+        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("app_event:" + g.getApplication().getAppId())), null, event, false, false);     // broadcasts to all application subscribers
     }
     
     private void broadcastGroupEventInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
@@ -1358,7 +1358,7 @@ public class Module extends WampModule
         WampDict event = g.toWampObject(true);
         event.put("cmd", cmd);
         event.put("members", getMembers(g,0));
-        socket.publishEvent(Broker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, excludeMe, false);
+        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, excludeMe, false);
     }    
     
     

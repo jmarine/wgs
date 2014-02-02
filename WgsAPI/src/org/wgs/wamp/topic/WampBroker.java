@@ -1,30 +1,23 @@
 package org.wgs.wamp.topic;
 
-import org.wgs.wamp.types.WampList;
-import org.wgs.wamp.topic.WampTopic;
-import org.wgs.wamp.topic.WampTopicOptions;
-import org.wgs.wamp.topic.WampSubscription;
-import org.wgs.wamp.topic.WampSubscriptionOptions;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.wgs.wamp.types.WampMatchType;
+
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
-import org.wgs.wamp.topic.JmsServices;
 import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.types.WampMatchType;
 
 
-public class Broker 
+public class WampBroker 
 {
     private static final Logger logger = Logger.getLogger(JmsServices.class.getName());
     
@@ -155,8 +148,8 @@ public class Broker
     public static void processPublishMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
         String topicName = clientSocket.normalizeURI(request.getText(3));
-        WampTopic topic = Broker.getTopic(topicName);
-        if(topic == null) topic = Broker.createTopic(app, topicName, null);
+        WampTopic topic = WampBroker.getTopic(topicName);
+        if(topic == null) topic = WampBroker.createTopic(app, topicName, null);
         
         try {
             WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
@@ -194,7 +187,7 @@ public class Broker
         WampSubscription subscription = topicSubscriptionsByTopicURI.get(topicUriOrPattern);
         if(subscription == null) {
             Long subscriptionId = WampProtocol.newId();  
-            Collection<WampTopic> matchingTopics = Broker.getTopics(app, options.getMatchType(), topicUriOrPattern);            
+            Collection<WampTopic> matchingTopics = WampBroker.getTopics(app, options.getMatchType(), topicUriOrPattern);            
             subscription = new WampSubscription(subscriptionId, options.getMatchType(), topicUriOrPattern, matchingTopics, options);
             topicSubscriptionsById.put(subscriptionId, subscription);
             topicSubscriptionsByTopicURI.put(topicUriOrPattern, subscription);

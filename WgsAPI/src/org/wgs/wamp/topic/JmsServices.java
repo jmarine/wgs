@@ -330,7 +330,7 @@ public class JmsServices
                 Set<Long> eligible = receivedMessageFromBroker.propertyExists("eligible")? parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible")) : null;
                 Set<Long> exclude  = receivedMessageFromBroker.propertyExists("exclude")?  parseSessionIDs(receivedMessageFromBroker.getStringProperty("exclude"))  : null;
 
-                for(WampSubscription subscription : Broker.getTopic(topicName).getSubscriptions()) {
+                for(WampSubscription subscription : WampBroker.getTopic(topicName).getSubscriptions()) {
                     for(WampTopic topic : subscription.getTopics()) {
                         broadcastClusterEventToLocalNodeClients(subscription.getId(), topic, metaTopic, eligible, exclude, publisherId, payload, payloadKw);
                     }
