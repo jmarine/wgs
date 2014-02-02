@@ -1,20 +1,6 @@
 package org.wgs.wamp;
 
-import org.wgs.wamp.types.WampMatchType;
-import org.wgs.wamp.topic.Broker;
-import org.wgs.wamp.api.WampCRA;
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampList;
-import org.wgs.wamp.rpc.WampCallController;
-import org.wgs.wamp.rpc.WampCallOptions;
-import org.wgs.wamp.rpc.WampRemoteMethod;
-import org.wgs.wamp.rpc.WampCalleeRegistration;
-import org.wgs.wamp.rpc.WampAsyncCallback;
-import org.wgs.wamp.rpc.WampMethod;
-import org.wgs.wamp.topic.WampSubscriptionOptions;
-import org.wgs.wamp.topic.WampSubscription;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -26,6 +12,20 @@ import java.util.logging.Logger;
 
 import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
+
+import org.wgs.wamp.api.WampCRA;
+import org.wgs.wamp.rpc.WampCallController;
+import org.wgs.wamp.rpc.WampCallOptions;
+import org.wgs.wamp.rpc.WampRemoteMethod;
+import org.wgs.wamp.rpc.WampCalleeRegistration;
+import org.wgs.wamp.rpc.WampAsyncCallback;
+import org.wgs.wamp.rpc.WampMethod;
+import org.wgs.wamp.topic.Broker;
+import org.wgs.wamp.topic.WampSubscription;
+import org.wgs.wamp.topic.WampSubscriptionOptions;
+import org.wgs.wamp.types.WampMatchType;
+import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.types.WampList;
 
 
 public class WampApplication 

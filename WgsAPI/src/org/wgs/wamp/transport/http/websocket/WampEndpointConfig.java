@@ -80,6 +80,7 @@ public class WampEndpointConfig
                     try {
                         System.out.println("onWampMessage (binary): " + message);
                         WampList request = (WampList)WampObject.getSerializer(WampEncoding.MsgPack).deserialize(message);
+                        System.out.println("onWampMessage (deserialized request): " + request);
                         WampEndpointConfig.this.application.onWampMessage(clientSocket, request);
                     } catch(Exception ex) { 
                         logger.log(Level.SEVERE, "Error processing message: "+message, ex);
@@ -96,6 +97,7 @@ public class WampEndpointConfig
                     try {
                         System.out.println("onWampMessage (text): " + message);
                         WampList request = (WampList)WampObject.getSerializer(WampEncoding.JSon).deserialize(message);
+                        System.out.println("onWampMessage (deserialized request): " + request);
                         WampEndpointConfig.this.application.onWampMessage(clientSocket, request);
                     } catch(Exception ex) { 
                         logger.log(Level.SEVERE, "Error processing message: "+message, ex);
@@ -137,7 +139,7 @@ public class WampEndpointConfig
 
     @Override
     public List<String> getSubprotocols() {
-        List<String> subprotocols = java.util.Arrays.asList("wamp.2.json");  // todo: , "wamp.2.msgpack");
+        List<String> subprotocols = java.util.Arrays.asList("wamp.2.json", "wamp.2.msgpack");
         return subprotocols;
     }
 

@@ -112,7 +112,7 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
         Iterator<Value> iter = node.keySet().iterator();
         while(iter.hasNext()) {
             Value key = iter.next();
-            dict.put(key.toString(), castToWampObject(node.get(key)));
+            dict.put(castToWampObject(key).toString(), castToWampObject(node.get(key)));
         }
         return dict;
     }          

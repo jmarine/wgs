@@ -67,5 +67,11 @@ public class WampList extends WampObject
         return array.size();
     }
     
+    @Override
+    public String toString()
+    {
+        return array.toString();
+    }
+    
     
 }

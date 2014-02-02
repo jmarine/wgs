@@ -83,4 +83,10 @@ public class WampDict extends WampObject
         return hashmap.size();
     }
     
+    @Override
+    public String toString()
+    {
+        return hashmap.toString();
+    }
+        
 }
