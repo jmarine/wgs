@@ -18,6 +18,7 @@ import javax.persistence.Table;
 import javax.persistence.TemporalType;
 
 import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.types.WampList;
 
 
 @Entity
@@ -296,12 +297,21 @@ public class User implements Serializable, Principal
         return id.hashCode();
     }
 
-    public WampDict toWampObject() 
+    public WampDict toWampObject(boolean includeFriends) 
     {
         WampDict retval = new WampDict();
         retval.put("user", id.toString());
         retval.put("name", getName());
         retval.put("picture", getPicture());    
+
+        if(includeFriends) {
+            WampList friends = new WampList();
+            for(User friend : getFriends()) {
+                friends.add(friend.toWampObject(false));
+            }
+            retval.put("friends", friends);
+        }
+        
         return retval;
     }
 

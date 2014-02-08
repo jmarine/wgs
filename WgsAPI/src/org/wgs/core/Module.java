@@ -6,7 +6,6 @@
 
 package org.wgs.core;
 
-
 import java.math.BigDecimal;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -46,7 +45,6 @@ import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
-import org.wgs.wamp.topic.JmsServices;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampTopic;
@@ -166,7 +164,7 @@ public class Module extends WampModule
         socket.setUserPrincipal(usr);
         socket.setState(WampConnectionState.AUTHENTICATED);
         
-        return usr.toWampObject();
+        return usr.toWampObject(true);
     }
     
     
@@ -185,7 +183,7 @@ public class Module extends WampModule
             throw new WampException(null, WGS_MODULE_NAME + ".unknown_userinfo", null, null);
         }
         
-        return usr.toWampObject();
+        return usr.toWampObject(true);
     }
 
     
@@ -493,7 +491,7 @@ public class Module extends WampModule
             System.err.println("OpenID Connect protocol error");
             throw new WampException(null, WGS_MODULE_NAME + ".oic_error", null, null);
         }
-        return usr.toWampObject();
+        return usr.toWampObject(true);
     }    
     
     
