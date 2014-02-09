@@ -126,6 +126,7 @@ public class OpenIdConnectProvider implements Serializable
     {
         String scopes = "openid profile email";
         if(domain.equalsIgnoreCase("accounts.google.com")) scopes = "https://www.googleapis.com/auth/plus.login https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gcm_for_chrome";
+        if(domain.equalsIgnoreCase("www.facebook.com")) scopes = "email,publish_actions";
         return scopes;
     }
     
@@ -133,8 +134,10 @@ public class OpenIdConnectProvider implements Serializable
     public String getUserInfo(String accessToken) throws Exception
     {
         StringBuffer retval = new StringBuffer();
-        URL url = new URL(getUserInfoEndpointUrl() + "?schema=openid");
-        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        String url = getUserInfoEndpointUrl();
+        if(!getDomain().equalsIgnoreCase("www.facebook.com")) url = url + "?schema=openid";
+        else url = url + "?access_token=" + URLEncoder.encode(accessToken, "utf-8");
+        HttpURLConnection connection = (HttpURLConnection)(new URL(url)).openConnection();
         connection.setRequestProperty("Authorization", "Bearer " + accessToken);
         connection.setDoOutput(false);
 

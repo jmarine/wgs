@@ -6,7 +6,10 @@
 
 package org.wgs.core;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -26,6 +29,7 @@ import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
+import org.glassfish.grizzly.http.util.URLDecoder;
 import org.wgs.util.Storage;
 import org.wgs.entity.User;
 import org.wgs.entity.UserId;
@@ -387,93 +391,130 @@ public class Module extends WampModule
 
             String accessTokenResponse = oic.getAccessTokenResponse(code);
             logger.fine("AccessToken endpoint response: " + accessTokenResponse);
+            
+            if(providerDomain.equalsIgnoreCase("www.facebook.com")) {
+                
+                int pos = accessTokenResponse.indexOf("&");
+                String accessToken = URLDecoder.decode(accessTokenResponse.substring("access_token=".length(), pos));
+                String expires = accessTokenResponse.substring(pos + "&expires=".length());
+                
+                String userInfo = oic.getProvider().getUserInfo(accessToken);
+                System.out.println("user info: " + userInfo);
 
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode   response = (ObjectNode)mapper.readTree(accessTokenResponse);
-
-            if(response != null && response.has("id_token") && !response.get("id_token").isNull()) {
-                String idTokenJWT = response.get("id_token").asText();
-                //System.out.println("Encoded id_token: " + idToken);
-
-                int pos1 = idTokenJWT.indexOf(".")+1;
-                int pos2 = idTokenJWT.indexOf(".", pos1);
-                String idTokenData = idTokenJWT.substring(pos1, pos2);
-                while((idTokenData.length() % 4) != 0) idTokenData = idTokenData + "=";
-                idTokenData = Base64.decodeBase64ToString(idTokenData);
-                logger.fine("Decoded id_token: " + idTokenData);
-
-                ObjectNode   idTokenNode = (ObjectNode)mapper.readTree(idTokenData);          
-
-
-                String issuer = idTokenNode.get("iss").asText();
-                UserId userId = new UserId(providerDomain, idTokenNode.get("sub").asText());
+                ObjectMapper mapper = new ObjectMapper();
+                ObjectNode   userInfoNode = (ObjectNode)mapper.readTree(userInfo);
+                
+                String id = userInfoNode.get("id").asText();
+                UserId userId = new UserId(providerDomain, id);
                 usr = manager.find(User.class, userId);
-
-                Calendar now = Calendar.getInstance();
-                if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
-                    // Use cached UserInfo from local database
-                    logger.fine("Cached OIC User: " + usr);
-                    socket.setUserPrincipal(usr);
-                    socket.setState(WampConnectionState.AUTHENTICATED);
-                    
-                } else if(response.has("access_token")) {
-                    // Get UserInfo from OpenId Connect Provider
-                    String accessToken = response.get("access_token").asText();
-                    System.out.println("Access token: " + accessToken);
-
-                    String userInfo = oic.getProvider().getUserInfo(accessToken);
-                    logger.fine("OIC UserInfo: " + userInfo);
-
-                    ObjectNode userInfoNode = (ObjectNode)mapper.readTree(userInfo);
-
+                if(usr == null) {
                     usr = new User();
                     usr.setId(userId);
                     usr.setName(userInfoNode.get("name").asText());
                     usr.setAdministrator(false);
 
                     if(userInfoNode.has("email")) usr.setEmail(userInfoNode.get("email").asText());
-                    if(userInfoNode.has("picture")) usr.setPicture(userInfoNode.get("picture").asText());
-                    if(idTokenNode.has("exp")) {
-                        Calendar caducity = Calendar.getInstance();
-                        caducity.setTimeInMillis(idTokenNode.get("exp").asLong()*1000l);
-                        usr.setProfileCaducity(caducity);
-                    }
-
-                    usr = Storage.saveEntity(usr);
-
-                    socket.setUserPrincipal(usr);
-                    socket.setState(WampConnectionState.AUTHENTICATED);
-                } 
-                
-
-                if(response.has("refresh_token")) {
-                    usr.setRefreshToken(response.get("refresh_token").asText());
+                    usr.setPicture("https://graph.facebook.com/"+id+"/picture");
                 }
                 
-                if(response.has("access_token")) {
-                    usr.setAccessToken(response.get("access_token").asText());
-                    if(response.has("expires_in")) {
-                        int expires_in = response.get("expires_in").asInt();
-                        Calendar expiration = Calendar.getInstance();
-                        expiration.add(Calendar.SECOND, expires_in);
-                        usr.setTokenCaducity(expiration);
-                    }
-                }
-                
-                if(usr!= null && data.has("notification_channel")) {
-                    String notificationChannel = data.getText("notification_channel");
-                    if(!notificationChannel.equals(usr.getNotificationChannel())) {
-                        usr.setNotificationChannel(notificationChannel);
-                    }
-                }
-                
-                usr.setLastLoginTime(now);
+                Calendar expiration = Calendar.getInstance();
+                expiration.add(Calendar.SECOND, Integer.parseInt(expires));
+                usr.setTokenCaducity(expiration);                
+                usr.setAccessToken(accessToken);
                 usr = Storage.saveEntity(usr);
                 
-                oic.getFriends(usr);
+                socket.setUserPrincipal(usr);
+                socket.setState(WampConnectionState.AUTHENTICATED);                           
+                
+            } else {
+                // OpenID Connect
+
+                ObjectMapper mapper = new ObjectMapper();
+                ObjectNode   response = (ObjectNode)mapper.readTree(accessTokenResponse);
+
+                if(response != null && response.has("id_token") && !response.get("id_token").isNull()) {
+                    String idTokenJWT = response.get("id_token").asText();
+                    //System.out.println("Encoded id_token: " + idToken);
+
+                    int pos1 = idTokenJWT.indexOf(".")+1;
+                    int pos2 = idTokenJWT.indexOf(".", pos1);
+                    String idTokenData = idTokenJWT.substring(pos1, pos2);
+                    while((idTokenData.length() % 4) != 0) idTokenData = idTokenData + "=";
+                    idTokenData = Base64.decodeBase64ToString(idTokenData);
+                    logger.fine("Decoded id_token: " + idTokenData);
+
+                    ObjectNode   idTokenNode = (ObjectNode)mapper.readTree(idTokenData);          
+
+
+                    String issuer = idTokenNode.get("iss").asText();
+                    UserId userId = new UserId(providerDomain, idTokenNode.get("sub").asText());
+                    usr = manager.find(User.class, userId);
+
+                    Calendar now = Calendar.getInstance();
+                    if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
+                        // Use cached UserInfo from local database
+                        logger.fine("Cached OIC User: " + usr);
+                        socket.setUserPrincipal(usr);
+                        socket.setState(WampConnectionState.AUTHENTICATED);
+
+                    } else if(response.has("access_token")) {
+                        // Get UserInfo from OpenId Connect Provider
+                        String accessToken = response.get("access_token").asText();
+                        System.out.println("Access token: " + accessToken);
+
+                        String userInfo = oic.getProvider().getUserInfo(accessToken);
+                        logger.fine("OIC UserInfo: " + userInfo);
+
+                        ObjectNode userInfoNode = (ObjectNode)mapper.readTree(userInfo);
+
+                        usr = new User();
+                        usr.setId(userId);
+                        usr.setName(userInfoNode.get("name").asText());
+                        usr.setAdministrator(false);
+
+                        if(userInfoNode.has("email")) usr.setEmail(userInfoNode.get("email").asText());
+                        if(userInfoNode.has("picture")) usr.setPicture(userInfoNode.get("picture").asText());
+                        if(idTokenNode.has("exp")) {
+                            Calendar caducity = Calendar.getInstance();
+                            caducity.setTimeInMillis(idTokenNode.get("exp").asLong()*1000l);
+                            usr.setProfileCaducity(caducity);
+                        }
+
+                        usr = Storage.saveEntity(usr);
+
+                        socket.setUserPrincipal(usr);
+                        socket.setState(WampConnectionState.AUTHENTICATED);
+                    } 
+
+
+                    if(response.has("refresh_token")) {
+                        usr.setRefreshToken(response.get("refresh_token").asText());
+                    }
+
+                    if(response.has("access_token")) {
+                        usr.setAccessToken(response.get("access_token").asText());
+                        if(response.has("expires_in")) {
+                            int expires_in = response.get("expires_in").asInt();
+                            Calendar expiration = Calendar.getInstance();
+                            expiration.add(Calendar.SECOND, expires_in);
+                            usr.setTokenCaducity(expiration);
+                        }
+                    }
+
+                    if(usr!= null && data.has("notification_channel")) {
+                        String notificationChannel = data.getText("notification_channel");
+                        if(!notificationChannel.equals(usr.getNotificationChannel())) {
+                            usr.setNotificationChannel(notificationChannel);
+                        }
+                    }
+
+                    usr.setLastLoginTime(now);
+                    usr = Storage.saveEntity(usr);
+                }
                 
             }
             
+            oic.getFriends(usr);
             
             
         } catch(Exception ex) {
