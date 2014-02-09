@@ -85,8 +85,8 @@ WgsClient.prototype.openIdConnectLoginUrl = function(principal, redirectUri, not
             client.call("wgs.openid_connect_login_url", msg).then(
                 function(id,details,errorURI,result,resultKw) {
                     client.close();
-                    //document.location.href = result;
-                    window.open(response, "_blank");  // + "&nonce=" + escape(client.sid)
+                    //document.location.href = result[0];
+                    window.open(result[0], "_blank");  // + "&nonce=" + escape(client.sid)
                 }, 
                 function(id,details,errorURI,result,resultKw) {
                     onstatechange(ConnectionState.ERROR, errorURI);
