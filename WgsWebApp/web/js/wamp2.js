@@ -46,6 +46,10 @@ Wamp2.prototype = {
         var r = Math.random()*131072.0*131072.0*131072.0 + Math.random()*131072.0*131072.0 + Math.random()*131072.0;
         return Math.floor(r);
     },
+    
+    getAgent: function() {
+        return "wamp2-client";
+    },
 
     hello: function() {
         this.serverSID = this.newid();
@@ -53,7 +57,7 @@ Wamp2.prototype = {
         arr[0] = 1;  // HELLO
         arr[1] = this.serverSID;
         arr[2] = {};  // HelloDetails
-        arr[2].agent = "wgs-client-2.0-alpha1";
+        arr[2].agent = this.getAgent();
         arr[2].roles = {};
         arr[2].roles.publisher = {};
         arr[2].roles.publisher.features = { "subscriber_blackwhite_listing": true, "publisher_exclusion": true };

@@ -10,6 +10,10 @@ function WgsClient(u) {
     return this;
 }
 
+WgsClient.prototype.getAgent = function() {
+    return "wgs-client-2.0-alpha1";
+}
+
 WgsClient.prototype.getUserInfo = function(callback) {
     this.call("wgs.get_user_info").then(callback,callback);
 }
