@@ -10,7 +10,7 @@ About
 This repository implements the following services in Java for multi-player online games:
     
 * local user registration/authentication.
-* authentication with OpenID Connect providers.
+* authentication with Google+, Facebook, and OpenID Connect providers.
 * lobby services (to list/join or create new groups), and manager for turn-based games.
 * presence service and communication between users of each group (including broadcast to all group members, and multicast to members of the same team).
 
