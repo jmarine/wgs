@@ -1,9 +1,12 @@
 package org.wgs.wamp.encoding;
 
+import java.util.Iterator;
+
+import org.wgs.util.Base64;
 import org.wgs.wamp.types.WampDict;
 import org.wgs.wamp.types.WampObject;
 import org.wgs.wamp.types.WampList;
-import java.util.Iterator;
+
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -38,6 +41,9 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
         if(obj != null) {
             if(obj instanceof String) {
                 retval = new org.codehaus.jackson.node.TextNode((String)obj);
+            } else if(obj instanceof byte[]) {
+                String str = Character.toString((char)0) + Base64.encodeByteArrayToBase64((byte[])obj);
+                retval = new org.codehaus.jackson.node.TextNode(str);
             } else if(obj instanceof Boolean) {
                 if(((Boolean)obj).booleanValue()) {
                     retval = org.codehaus.jackson.node.BooleanNode.TRUE;
@@ -82,7 +88,13 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
         } else if(obj instanceof DoubleNode) {
             retval = new Double(((DoubleNode)obj).asDouble());
         } else if(obj instanceof TextNode) {
-            retval = ((TextNode)obj).asText();
+            String str = ((TextNode)obj).asText();
+            if(str.length() == 0 || str.charAt(0) != 0) {
+                retval = str;
+            } else {
+                try { retval = Base64.decodeBase64ToByteArray(str.substring(1)); }
+                catch(Exception ex) { retval = str; } 
+            }
         } else if(obj instanceof ArrayNode) {
             retval = createWampList((ArrayNode)obj);
         } else if(obj instanceof ObjectNode) {
