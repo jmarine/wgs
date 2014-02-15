@@ -26,11 +26,12 @@ public class WampLocalMethod extends WampMethod
     }
     
     @Override
+    @SuppressWarnings("unchecked")
     public Object invoke(WampCallController task, WampSocket clientSocket, WampList args, WampDict argsKw, WampCallOptions options) throws Exception
     {
         int argCount = 0;
         
-        ArrayList params = new ArrayList();
+        ArrayList<Object> params = new ArrayList<Object>();
         for(Class paramType : method.getParameterTypes()) {
             if(paramType.isInstance(clientSocket)) {  // WampSocket parameter info
                 params.add(clientSocket);
