@@ -21,12 +21,12 @@ WgsClient.prototype.getUserInfo = function(callback) {
 WgsClient.prototype.login = function(user, password, onstatechange) {
     var client = this;
     Wamp2.prototype.login.call(this, user, password, function(state, msg) {
-      if(state == ConnectionState.AUTHENTICATED) {
+      if(state == ConnectionState.AUTHENTICATED || state == ConnectionState.ANONYMOUS) {
           client.getUserInfo(function(id,details,errorURI,result,resultKw) {
-              if(!errorURI) {
-                  onstatechange(ConnectionState.AUTHENTICATED, resultKw);
-              } else {
+              if(errorURI) {
                   onstatechange(ConnectionState.ERROR, errorURI);
+              } else {
+                  onstatechange(state, resultKw);
               }
           });
        } else {
