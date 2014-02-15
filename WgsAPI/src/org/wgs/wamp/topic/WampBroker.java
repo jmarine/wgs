@@ -129,7 +129,7 @@ public class WampBroker
                 NavigableMap<String,WampTopic> navMap = topics.subMap(topicUriBegin, true, topicUriEnd, false);
                 String regExp = getPatternRegExp(matchType, topicUriOrPattern);
                 for(WampTopic topic : navMap.values()) {
-                    if(isUriMatchingWithRegExp(topic.getURI(), regExp)) {
+                    if(isUriMatchingWithRegExp(topic.getTopicName(), regExp)) {
                         retval.add(topic);
                     }
                 }

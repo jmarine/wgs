@@ -177,14 +177,13 @@ public class Module extends WampModule
     {
         boolean user_valid = false;
         Client client = clients.get(socket.getSessionId());
-
-        if(client == null || client.getSocket().getState() != WampConnectionState.AUTHENTICATED) {
-            throw new WampException(null, WGS_MODULE_NAME + ".anonymous_user", null, null);
-        }
         
         User usr = client.getUser();
         if(usr == null) {
-            throw new WampException(null, WGS_MODULE_NAME + ".unknown_userinfo", null, null);
+            usr = new User();
+            usr.setId(new UserId("#anonymous-" + socket.getSessionId()));
+            usr.setName("Anonymous");
+            usr.setPicture("images/anonymous.png");
         }
         
         return usr.toWampObject(true);
@@ -698,13 +697,28 @@ public class Module extends WampModule
         Client client = clients.get(socket.getSessionId());
         
         if(gid != null) {
-            if(gid.equals("automatch")) {
+                g = groups.get(gid);
+                if(g == null) g = Storage.findEntity(Group.class, gid);
+                
+                if(g != null) {
+                    logger.log(Level.INFO, "open_group: group found: " + gid);
+                    valid = true;
+                } 
+                
+        } else {
+            
+            if(options.has("automatch") && options.getBoolean("automatch")) {
                 Application app = applications.get(appId);
+                if(app == null) {
+                    List<Application> list = Storage.findEntities(Application.class, "wgs.findAppByName", appId );
+                    if(list.size() > 0) app = list.get(0);
+                }
+                
                 if(app != null) {
                     autoMatchMode = true;
                     
                     String jpaQuery = "SELECT DISTINCT OBJECT(g) FROM AppGroup g WHERE g.state = org.wgs.core.GroupState.OPEN AND g.autoMatchEnabled = TRUE AND g.autoMatchCompleted = FALSE AND g.application = :application";
-                    // TODO: automatch criteria (role, ELO range, game variant, time criteria,...)                    
+                    // TODO: automatch criteria (opponents, role, ELO range, game variant, time criteria,...)                    
                     TypedQuery<Group> groupQuery = manager.createQuery(jpaQuery, Group.class);
                     groupQuery.setParameter("application", app);
                     List<Group> groupList = groupQuery.getResultList();
@@ -723,15 +737,7 @@ public class Module extends WampModule
                     
                 }                
                 logger.log(Level.INFO, "open_group: search group for automatch");
-                
-            } else {
-                g = groups.get(gid);
-                if(g == null) g = Storage.findEntity(Group.class, gid);
-                
-                if(g != null) {
-                    logger.log(Level.INFO, "open_group: group found: " + gid);
-                    valid = true;
-                } 
+
             }
         } 
         
@@ -751,6 +757,10 @@ public class Module extends WampModule
             try {
                 logger.log(Level.FINE, "open_group: creating new group");
                 Application app = applications.get(appId);
+                if(app == null) {
+                    List<Application> list = Storage.findEntities(Application.class, "wgs.findAppByName", appId);
+                    if(list.size() > 0) app = list.get(0);
+                }                
                 g = new Group();
                 g.setGid(UUID.randomUUID().toString());
                 g.setApplication(app);
@@ -876,6 +886,9 @@ public class Module extends WampModule
                 }
             }
 
+            WampList opponents = new WampList();
+            if(options.has("opponents")) opponents = (WampList)options.get("opponents");
+            
             int requiredSlot = (options != null && options.has("slot"))? options.getLong("slot").intValue() : -1;
             for(int index = (requiredSlot >= 0)? requiredSlot : 0;
                     ((index < Math.max(num_slots, g.getMinMembers())) || (requiredRoles.size() > 0))
@@ -899,7 +912,8 @@ public class Module extends WampModule
                     String roleName = requiredRoles.remove(0);
                     member.setRole(g.getApplication().getRoleByName(roleName));
                 }
-
+                
+                boolean userUpdated = false;
                 boolean connected = (member.getClient() != null);
                 if(!spectator && !connected && !joined && (!reserved || index == reservedSlot)) {
                     member.setClient(client);
@@ -918,7 +932,32 @@ public class Module extends WampModule
 
                     joined = true;
                     connected = true;
-
+                    userUpdated = true;
+                }
+                
+                User u = member.getUser();
+                if(u != null) {
+                    for(int i = opponents.size()-1; i >= 0; i--) {
+                        WampDict opponent = (WampDict)opponents.get(i);
+                        if(opponent.getText("user").equals(u.getFQid())) opponents.remove(i);
+                    }
+                } else if(opponents.size() > 0) {
+                    WampDict opponent = (WampDict)opponents.remove(0);
+                    String domain = User.LOCAL_USER_DOMAIN;
+                    String user = opponent.getText("user");
+                    int pos = user.indexOf("@");
+                    if(pos != -1) {
+                        domain = user.substring(pos+1);
+                        user = user.substring(0, pos);
+                    }
+                    
+                    UserId userId = new UserId(domain, user);
+                    u = Storage.findEntity(User.class, userId);
+                    member.setUser(u);
+                    userUpdated = true;
+                }           
+                
+                if(userUpdated) {
                     WampDict event = member.toWampObject();
                     event.put("cmd", "user_joined");
                     //event.put("sid", client.getSessionId());

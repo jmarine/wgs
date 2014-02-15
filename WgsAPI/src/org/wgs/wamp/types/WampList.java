@@ -61,6 +61,11 @@ public class WampList extends WampObject
     {
         return new WampList(array.subList(fromIndex, toIndex));
     }
+    
+    public Object remove(int index)
+    {
+        return array.remove(index);
+    }
 
     public int size()
     {

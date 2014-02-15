@@ -26,8 +26,9 @@ import org.wgs.wamp.types.WampList;
 @Entity
 @NamedQueries({
     @NamedQuery(name="wgs.findAllApps",query="SELECT OBJECT(a) FROM Application a"),
-    @NamedQuery(name="wgs.findAppById",query="SELECT OBJECT(a) FROM Application a WHERE a.id = :id"),
-    @NamedQuery(name="wgs.findAppBySpec",query="SELECT OBJECT(a) FROM Application a WHERE a.name = :name AND a.domain = :domain AND a.version = :version")
+    @NamedQuery(name="wgs.findAppById",query="SELECT OBJECT(a) FROM Application a WHERE a.id = ?1"),
+    @NamedQuery(name="wgs.findAppByName",query="SELECT OBJECT(a) FROM Application a WHERE a.name = ?1 ORDER BY a.version DESC")
+
 })
 public class Application implements Serializable {
     

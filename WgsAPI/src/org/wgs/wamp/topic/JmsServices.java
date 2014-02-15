@@ -176,7 +176,7 @@ public class JmsServices
     {
         synchronized(wampTopic) {
             if(isJmsBrokerAvailable() && !topicSubscriptions.containsKey(wampTopic)) {
-                String topicName = wampTopic.getURI();
+                String topicName = wampTopic.getTopicName();
                 TopicConnection connection = getTopicConnectionFromPool();
 
                 TopicSession subSession = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
@@ -223,7 +223,7 @@ public class JmsServices
         broadcastClusterEventToLocalNodeClients(id, wampTopic,metaTopic,eligible,exclude,publisherId, payload, payloadKw);  
         
         if(isJmsBrokerAvailable()) {
-            String topicName = wampTopic.getURI();
+            String topicName = wampTopic.getTopicName();
             TopicConnection connection = getTopicConnectionFromPool();
 
             TopicSession pubSession = connection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);

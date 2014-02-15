@@ -26,6 +26,7 @@ import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 
 import org.wgs.wamp.WampApplication;
+import org.wgs.wamp.WampModule;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.transport.http.websocket.WampEndpoint;
 import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
@@ -124,9 +125,10 @@ public class Server
                 if(modules != null) {
                     StringTokenizer tkModules = new StringTokenizer(modules, ",");
                     while(tkModules.hasMoreTokens()) {
-                        String cls = tkModules.nextToken();
-                        System.out.println("> Registering module at "+uri+": " + cls);
-                        wampApplication.registerWampModule(Class.forName(cls));
+                        String moduleClass = tkModules.nextToken();
+                        System.out.println("> Registering module at "+uri+": " + moduleClass);
+                        WampModule module = (WampModule)Class.forName(moduleClass).getConstructor(WampApplication.class).newInstance(wampApplication);                        
+                        wampApplication.registerWampModule(module);
                     }
                 }
 

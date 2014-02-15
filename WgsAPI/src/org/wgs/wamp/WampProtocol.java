@@ -189,7 +189,7 @@ public class WampProtocol
             if(subscription.getOptions().getMatchType() == WampMatchType.exact) {
                 eventDetails.remove("topic");
             } else {
-                eventDetails.put("topic", topic.getURI());
+                eventDetails.put("topic", topic.getTopicName());
             }
             
             WampList response = new WampList();
@@ -241,7 +241,7 @@ public class WampProtocol
             if(subscription.getOptions().getMatchType() == WampMatchType.exact) {
                 metaEvent.remove("topic");
             } else {
-                metaEvent.put("topic", topic.getURI());
+                metaEvent.put("topic", topic.getTopicName());
             }            
             
             WampList response = new WampList();

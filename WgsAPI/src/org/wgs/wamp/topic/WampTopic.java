@@ -3,13 +3,16 @@ package org.wgs.wamp.topic;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.jms.JMSException;
+import javax.jms.TemporaryTopic;
 
+import javax.jms.Topic;
 import javax.persistence.Transient;
 
 
-public class WampTopic 
+public class WampTopic implements Topic, TemporaryTopic
 {
-    private String uri;
+    private String topicName;
     private WampTopicOptions options;
 
     @Transient
@@ -17,9 +20,9 @@ public class WampTopic
 
     public WampTopic() { }
     
-    public WampTopic( String uri, WampTopicOptions options) 
+    public WampTopic( String topicName, WampTopicOptions options) 
     {
-        setURI(uri);
+        setTopicName(topicName);
         if(options == null) options = new WampTopicOptions(); // default values
         this.options = options;
     }
@@ -29,24 +32,30 @@ public class WampTopic
         return options;
     }
     
+    
+    @Override
+    public void delete() throws JMSException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }    
+    
     /**
      * @return the name
      */
-    public String getURI() {
-        return uri;
+    public String getTopicName() {
+        return topicName;
     }
 
     /**
      * @param name the name to set
      */
-    public void setURI(String uri) {
-        this.uri = uri;
+    public void setTopicName(String uri) {
+        this.topicName = uri;
     }
     
     public String getBaseURI() {
-        int pos = uri.lastIndexOf("#");
-        if(pos == -1)  return uri;
-        else return uri.substring(0, pos+1);
+        int pos = topicName.lastIndexOf("#");
+        if(pos == -1)  return topicName;
+        else return topicName.substring(0, pos+1);
     }
 
     

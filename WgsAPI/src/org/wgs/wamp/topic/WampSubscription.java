@@ -46,7 +46,7 @@ public class WampSubscription
     {
         RefCount<WampSocket> ref = sockets.get(socket.getSessionId());
         if(ref == null) {
-            ref = new RefCount(socket, 1);
+            ref = new RefCount<WampSocket>(socket, 1);
             sockets.put(socket.getSessionId(), ref);
             return true;
         } else {

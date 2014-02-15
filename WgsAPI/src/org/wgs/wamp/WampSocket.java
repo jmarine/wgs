@@ -35,7 +35,7 @@ public class WampSocket
     private boolean connected;
     private Session session;
     private Long    sessionId;
-    private Map     sessionData;
+    private Map<String,Object> sessionData;
     private Map<String,String> prefixes;
     private Map<Long,WampSubscription> subscriptions;
     private Map<Long,WampCallController> rpcController;
@@ -62,7 +62,7 @@ public class WampSocket
         this.state = (principal != null) ? WampConnectionState.AUTHENTICATED : WampConnectionState.ANONYMOUS;
         
         sessionId   = WampProtocol.newId();
-        sessionData = new ConcurrentHashMap();
+        sessionData = new ConcurrentHashMap<String,Object>();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
         rpcAsyncCallbacks = new HashMap<Long,WampAsyncCallback>();
@@ -100,7 +100,7 @@ public class WampSocket
      * Get the session data 
      * @return the user name
      */
-    public Map getSessionData() {
+    public Map<String,Object> getSessionData() {
         return sessionData;
     }
 
@@ -337,7 +337,7 @@ public class WampSocket
      */
     public void publishEvent(WampTopic topic, WampList payload, WampDict payloadKw, boolean excludeMe, boolean identifyMe) throws Exception
     {
-        logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1},{2}", new Object[]{topic.getURI(),payload,payloadKw});
+        logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1},{2}", new Object[]{topic.getTopicName(),payload,payloadKw});
         Set<Long> excludedSet = new HashSet<Long>();
         if(excludeMe) excludedSet.add(this.getSessionId());
         WampPublishOptions options = new WampPublishOptions();

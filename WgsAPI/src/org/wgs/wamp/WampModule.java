@@ -287,7 +287,11 @@ public class WampModule
         
             WampBroker.publishEvent(publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? clientSocket.getSessionId() : null));
         }
-
+    }
+    
+    public void onEvent(WampSocket serverSocket, WampList request) throws Exception     
+    {
+        
     }
 
     

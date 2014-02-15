@@ -47,10 +47,8 @@ public class Client
             } else {
                 String principalName = principal.getName();
                 if(this.user == null) {
-                    EntityManager manager = Storage.getEntityManager();
                     UserId userId = new UserId(User.LOCAL_USER_DOMAIN, principalName);
-                    this.user = manager.find(User.class, userId);
-                    manager.close();                    
+                    this.user = Storage.findEntity(User.class, userId);
                 }
                 user = this.user;
             }

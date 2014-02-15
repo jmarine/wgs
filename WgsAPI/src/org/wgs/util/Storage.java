@@ -4,6 +4,7 @@ import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
+import javax.persistence.Parameter;
 import javax.persistence.Persistence;
 
 
@@ -61,14 +62,14 @@ public class Storage
         return entity;
     }
     
-    public static <T> List<T> findEntities(Class<T> cls, String namedQueryName, Object[] ... params)
+    public static <T> List<T> findEntities(Class<T> cls, String namedQueryName, Object ... params)
     {
         EntityManager manager = getEntityManager();
 
         javax.persistence.TypedQuery<T> query = manager.createNamedQuery(namedQueryName, cls);
         if(params != null) {
             for(int index = 0; index < params.length; index++) {
-                query.setParameter(index, params[index]);
+                query.setParameter(index+1, params[index]);
             }
         }
 

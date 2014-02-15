@@ -304,7 +304,7 @@ public class User implements Serializable, Principal
         retval.put("name", getName());
         retval.put("picture", getPicture());    
 
-        if(includeFriends) {
+        if(includeFriends && getFriends() != null) {
             WampList friends = new WampList();
             for(User friend : getFriends()) {
                 friends.add(friend.toWampObject(false));

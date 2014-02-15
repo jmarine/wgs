@@ -66,7 +66,7 @@ public class WampApplication
         this.calleeRegistrationByUri = new ConcurrentHashMap<String,WampCalleeRegistration>();
         this.calleePatterns = new ConcurrentHashMap<String,WampCalleeRegistration>();
         
-        this.registerWampModule(WampCRA.class);
+        this.registerWampModule(new WampCRA(this));        
         
         this.defaultModule = new WampModule(this);
         //WampServices.registerApplication(path, this);
@@ -167,6 +167,9 @@ public class WampApplication
             case WampProtocol.PUBLISH:
                 WampBroker.processPublishMessage(this, clientSocket, request);
                 break;                
+            case WampProtocol.EVENT:
+                processEventMessage(this, clientSocket, request);
+                break;
             case WampProtocol.REGISTER:
                 processRegisterMessage(this, clientSocket, request);
                 break;
@@ -244,11 +247,9 @@ public class WampApplication
         return moduleName;
     }
     
-    @SuppressWarnings("unchecked")
-    public void registerWampModule(Class moduleClass)
+    public void registerWampModule(WampModule module)
     {
         try {
-            WampModule module = (WampModule)moduleClass.getConstructor(WampApplication.class).newInstance(this);
             modules.put(normalizeModuleName(module.getModuleName()), module);
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "WgsEndpoint: Error registering WGS module", ex);
@@ -326,6 +327,12 @@ public class WampApplication
         clientSocket.setIncomingHeartbeat(heartbeatSequenceNo);
     }
 
+    public void processEventMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception
+    {    
+        for(WampModule module : this.modules.values()) {
+            module.onEvent(clientSocket, request);
+        }
+    }
     
     public void processRegisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
