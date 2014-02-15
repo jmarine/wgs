@@ -530,12 +530,12 @@ function delete_app() {
 function create_app() {
     var name = $("#app_name").val();
     var domain = $("#app_domain").val();
-    var version = $("#app_version").val();
-    var maxScores = $("#app_max_scores").val();
+    var version = parseInt($("#app_version").val());
+    var maxScores = parseInt($("#app_max_scores").val());
     var descScoreOrder = $("#app_desc_score_order").is(':checked');
-    var min = $("#app_min").val();
-    var max = $("#app_max").val();
-    var delta = $("#app_delta").val();
+    var min = parseInt($("#app_min").val()); 
+    var max = parseInt($("#app_max").val());
+    var delta = parseInt($("#app_delta").val());
     var observable = $("#app_observable").is(':checked');
     var dynamic = $("#app_dynamic").is(':checked');
     var alliances = $("#app_alliances").is(':checked');
