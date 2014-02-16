@@ -57,7 +57,7 @@ public class WampCRA extends WampModule
         if(res.has("authextra")) info.put("authextra", res.get("authextra"));
         
         String infoser = WampObject.getSerializer(WampEncoding.JSon).serialize(info).toString();
-        String authSecret = this.getAuthSecret(authKey);
+        String authSecret = this.getAuthSecret(socket.getRealm(), authKey);
         String sig = "";
         if(authKey != null && authKey.length() > 0) {
             sig = this.authSignature(infoser, authSecret, extra);
@@ -100,7 +100,7 @@ public class WampCRA extends WampModule
 
             String authKey = info.getText("authkey");
 
-            UserId userId = new UserId(User.LOCAL_DOMAIN, authKey);
+            UserId userId = new UserId(socket.getRealm(), authKey);
             User usr = Storage.findEntity(User.class, userId);
             usr.setLastLoginTime(Calendar.getInstance());
             usr = Storage.saveEntity(usr);
@@ -126,11 +126,11 @@ public class WampCRA extends WampModule
     }
     
     
-    private String getAuthSecret(String authKey) throws WampException
+    private String getAuthSecret(String realm, String authKey) throws WampException
     {
         if(authKey != null) {
             EntityManager manager = Storage.getEntityManager();
-            UserId userId = new UserId(User.LOCAL_DOMAIN, authKey);
+            UserId userId = new UserId(realm, authKey);
             User usr = manager.find(User.class, userId);
             manager.close();
             if(usr == null) {

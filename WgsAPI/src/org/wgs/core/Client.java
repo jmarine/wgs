@@ -47,7 +47,7 @@ public class Client
             } else {
                 String principalName = principal.getName();
                 if(this.user == null) {
-                    UserId userId = new UserId(User.LOCAL_DOMAIN, principalName);
+                    UserId userId = new UserId(socket.getRealm(), principalName);
                     this.user = Storage.findEntity(User.class, userId);
                 }
                 user = this.user;

@@ -114,7 +114,7 @@ public class Module extends WampModule
         socket.setState(WampConnectionState.ANONYMOUS);
         if(socket.getUserPrincipal() != null) {
             EntityManager manager = Storage.getEntityManager();
-            UserId userId = new UserId(User.LOCAL_DOMAIN, socket.getUserPrincipal().getName());
+            UserId userId = new UserId(socket.getRealm(), socket.getUserPrincipal().getName());
             User usr = manager.find(User.class, userId);
             manager.close();
             socket.setUserPrincipal(usr);
@@ -147,7 +147,7 @@ public class Module extends WampModule
         Client client = clients.get(socket.getSessionId());
 
         String user = data.getText("user");
-        UserId userId = new UserId(User.LOCAL_DOMAIN, user);
+        UserId userId = new UserId(socket.getRealm(), user);
         
         EntityManager manager = Storage.getEntityManager();
         usr = manager.find(User.class, userId);
@@ -944,7 +944,7 @@ public class Module extends WampModule
                     }
                 } else if(opponents.size() > 0) {
                     WampDict opponent = (WampDict)opponents.remove(0);
-                    String domain = User.LOCAL_DOMAIN;
+                    String domain = socket.getRealm();
                     String user = opponent.getText("user");
                     int pos = user.indexOf("@");
                     if(pos != -1) {

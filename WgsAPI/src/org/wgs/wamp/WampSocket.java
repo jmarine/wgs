@@ -29,6 +29,7 @@ import org.wgs.wamp.types.WampList;
 
 public class WampSocket 
 {
+    private static final String LOCAL_DOMAIN = "";
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
 
     private WampApplication app;
@@ -48,6 +49,7 @@ public class WampSocket
     private int versionSupport;
     private WampEncoding wampEncoding;
     private WampDict helloDetails;
+    private String realm;
     
 
     public WampSocket(WampApplication app, Session session) 
@@ -128,6 +130,17 @@ public class WampSocket
      */
     public WampConnectionState getState() {
         return state;
+    }
+    
+    
+    public String getRealm()
+    {
+        return (realm == null || realm.equals("null") || realm.equals("localhost")) ? LOCAL_DOMAIN : realm;
+    }
+    
+    public void setRealm(String realm)
+    {
+        this.realm = (realm == null || realm.equals("null") || realm.equals("localhost")) ? LOCAL_DOMAIN : realm;
     }
     
     

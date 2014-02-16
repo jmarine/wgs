@@ -136,6 +136,7 @@ public class WampApplication
         switch(requestType.intValue()) {
             case WampProtocol.HELLO:
                 clientSocket.setVersionSupport(WampApplication.WAMPv2);                
+                clientSocket.setRealm(request.getText(1));
                 clientSocket.setHelloDetails((WampDict)request.get(2));
                 WampProtocol.sendWelcomeMessage(this, clientSocket);
                 break;
