@@ -243,9 +243,9 @@ public class OpenIdConnectClient implements Serializable
     public List<User> getFriends(User usr) throws Exception
     {
         String domain = provider.getDomain();
-        if(domain.equalsIgnoreCase("www.facebook.com")) {
+        if(domain.endsWith("facebook.com")) {
             return getFacebookFriends(usr);
-        } else if(domain.equalsIgnoreCase("accounts.google.com")) {
+        } else if(domain.endsWith("google.com")) {
             return getGoogleFriends(usr);
         } else {
             return usr.getFriends();

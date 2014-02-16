@@ -391,7 +391,7 @@ public class Module extends WampModule
             String accessTokenResponse = oic.getAccessTokenResponse(code);
             logger.fine("AccessToken endpoint response: " + accessTokenResponse);
             
-            if(providerDomain.equalsIgnoreCase("www.facebook.com")) {
+            if(providerDomain.endsWith("facebook.com")) {
                 
                 int pos = accessTokenResponse.indexOf("&");
                 String accessToken = URLDecoder.decode(accessTokenResponse.substring("access_token=".length(), pos));
@@ -1343,13 +1343,7 @@ public class Module extends WampModule
                             logger.log(Level.INFO, "clearing slot " + slot);
 
                             member.setClient(null);
-                            if(g.getState() == GroupState.OPEN) {
-                                member.setState(MemberState.EMPTY);
-                                member.setUser(null);
-                                member.setUserType("user");
-                            } else {
-                                member.setState(MemberState.DETACHED);
-                            }
+                            member.setState(MemberState.DETACHED);
                             g.setMember(slot, member);
                             
                             if(g.isAutoMatchEnabled() && g.isAutoMatchCompleted()) {
@@ -1376,33 +1370,10 @@ public class Module extends WampModule
 
                 WampTopic topic = WampBroker.getTopic(topicName);
                 for(WampSubscription subscription : topic.getSubscriptions()) {
-                    if(subscription.removeSocket(socket.getSessionId()) != null) {
-                        boolean deleted = false;
-                        if(subscription.getSocketsCount() == 0 && g.getState() != GroupState.STARTED) {
-
-                            switch(g.getState()) {
-                                case OPEN:
-                                    Storage.removeEntity(g);
-                                    break;
-                                case FINISHED:
-                                    // move group to historic table?
-                                    break;
-                            }
-
-                            logger.log(Level.INFO, "closing group {0}: {1}", new Object[]{ g.getGid(), g.getDescription()});
-
-                            groups.remove(g.getGid());
-                            applications.get(appId).removeGroup(g);
-
-                            //updateAppInfo(socket, applications.get(appId), "app_updated", false);
-
-                            WampBroker.removeTopic(wampApp, topicName);
-                            deleted = true;
-                        }
-
-                        broadcastAppEventInfo(socket, g, deleted? "group_deleted" : "group_updated");
-                    }
+                    subscription.removeSocket(socket.getSessionId());
                 }
+                
+                broadcastAppEventInfo(socket, g, "group_updated");                
                 
             }
 
