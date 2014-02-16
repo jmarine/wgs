@@ -28,7 +28,7 @@ import org.wgs.wamp.types.WampList;
 })
 public class User implements Serializable, Principal
 {
-    public static final String LOCAL_USER_DOMAIN = "";
+    public static final String LOCAL_DOMAIN = "";
     
     
     @EmbeddedId

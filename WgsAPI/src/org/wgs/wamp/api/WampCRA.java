@@ -100,7 +100,7 @@ public class WampCRA extends WampModule
 
             String authKey = info.getText("authkey");
 
-            UserId userId = new UserId(User.LOCAL_USER_DOMAIN, authKey);
+            UserId userId = new UserId(User.LOCAL_DOMAIN, authKey);
             User usr = Storage.findEntity(User.class, userId);
             usr.setLastLoginTime(Calendar.getInstance());
             usr = Storage.saveEntity(usr);
@@ -130,7 +130,7 @@ public class WampCRA extends WampModule
     {
         if(authKey != null) {
             EntityManager manager = Storage.getEntityManager();
-            UserId userId = new UserId(User.LOCAL_USER_DOMAIN, authKey);
+            UserId userId = new UserId(User.LOCAL_DOMAIN, authKey);
             User usr = manager.find(User.class, userId);
             manager.close();
             if(usr == null) {
