@@ -64,7 +64,7 @@ public class Group implements java.io.Serializable
     
     @AttributeOverrides({
         @AttributeOverride(name="uid", column=@Column(name = "admin_uid")),
-        @AttributeOverride(name="openIdConnectProviderDomain", column=@Column(name = "admin_oidc_provider"))}
+        @AttributeOverride(name="providerDomain", column=@Column(name = "admin_oidc_provider"))}
     )    
     @Embedded
     private UserId adminUserId;

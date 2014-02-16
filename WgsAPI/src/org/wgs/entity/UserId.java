@@ -2,7 +2,6 @@ package org.wgs.entity;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
-import javax.persistence.Id;
 
 
 @Embeddable
@@ -12,7 +11,7 @@ public class UserId implements java.io.Serializable
     private String uid;
     
     @Column(name="oidc_provider", nullable = false)    
-    private String openIdConnectProviderDomain;    
+    private String providerDomain;    
     
     public UserId() { }
     
@@ -21,17 +20,17 @@ public class UserId implements java.io.Serializable
         int pos = fqUser.indexOf("@");
         if(pos == -1) {
             this.uid = fqUser;
-            this.openIdConnectProviderDomain = "";
+            this.providerDomain = "";
         } else {
             this.uid = fqUser.substring(0, pos);
-            this.openIdConnectProviderDomain = fqUser.substring(pos+1);
+            this.providerDomain = fqUser.substring(pos+1);
         }
     }
     
-    public UserId(String openIdConnectProviderDomain, String uid) 
+    public UserId(String providerDomain, String uid) 
     {
-        if(openIdConnectProviderDomain == null) openIdConnectProviderDomain = "";
-        this.openIdConnectProviderDomain = openIdConnectProviderDomain;
+        if(providerDomain == null) providerDomain = "";
+        this.providerDomain = providerDomain;
         this.uid = uid;
     }
     
@@ -51,17 +50,17 @@ public class UserId implements java.io.Serializable
     
     
     /**
-     * @return the openIdConnectProviderDomain
+     * @return the providerDomain
      */
-    public String getOpenIdConnectProviderDomain() {
-        return openIdConnectProviderDomain;
+    public String getProviderDomain() {
+        return providerDomain;
     }
 
     /**
-     * @param openIdConnectProviderDomain the openIdConnectProviderDomain to set
+     * @param providerDomain the providerDomain to set
      */
-    public void setOpenIdConnectProviderDomain(String openIdConnectProviderDomain) {
-        this.openIdConnectProviderDomain = openIdConnectProviderDomain;
+    public void setProviderDomain(String providerDomain) {
+        this.providerDomain = providerDomain;
     }
     
 
@@ -69,7 +68,7 @@ public class UserId implements java.io.Serializable
     public boolean equals(Object o) { 
         if( (o != null) && (o instanceof UserId) ) {
             UserId pk = (UserId)o;
-            return uid.equals(pk.getUid()) && openIdConnectProviderDomain.equals(pk.getOpenIdConnectProviderDomain());
+            return uid.equals(pk.getUid()) && providerDomain.equals(pk.getProviderDomain());
         } else {
             return false;
         }
@@ -85,10 +84,10 @@ public class UserId implements java.io.Serializable
     @Override
     public String toString()
     {
-        if(openIdConnectProviderDomain == null || openIdConnectProviderDomain.length() == 0) {
+        if(providerDomain == null || providerDomain.length() == 0) {
             return uid;
         } else {
-            return uid + "@" + openIdConnectProviderDomain;
+            return uid + "@" + providerDomain;
         }
     }
     

@@ -37,6 +37,7 @@ import org.wgs.entity.OpenIdConnectClient;
 import org.wgs.entity.OpenIdConnectClientPK;
 import org.wgs.entity.OpenIdConnectProvider;
 import org.wgs.util.Base64;
+import org.wgs.util.Social;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.types.WampConnectionState;
 import org.wgs.wamp.types.WampDict;
@@ -513,7 +514,7 @@ public class Module extends WampModule
                 
             }
             
-            oic.getFriends(usr);
+            Social.getFriends(usr);
             
             
         } catch(Exception ex) {
