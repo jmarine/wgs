@@ -115,10 +115,10 @@ public class WampProtocol
     public static void sendGoodBye(WampSocket clientSocket, String reason, String message)
     {
         WampDict details = new WampDict();
-        if(reason != null) details.put("reason", reason);
         if(message != null) details.put("message", message);
         WampList response = new WampList();
         response.add(GOODBYE);
+        response.add(reason);
         response.add(details);
         sendWampMessage(clientSocket, response);
     }

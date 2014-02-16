@@ -70,11 +70,12 @@ Wamp2.prototype = {
         this.send(JSON.stringify(arr));
     },
     
-    goodbye: function(details) {
+    goodbye: function(reason, details) {
         if(!details) details = {};
         var arr = [];
         arr[0] = 5;   // Goodbye
-        arr[1] = details;
+        arr[1] = reason;
+        arr[2] = details;
         this.send(JSON.stringify(arr));
     },
 
