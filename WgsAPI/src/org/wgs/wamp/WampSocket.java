@@ -247,7 +247,7 @@ public class WampSocket
             }
         } catch(Exception e) {
             logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
-            close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
+            close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "wamp.close.error"));
         }
     }
 

@@ -137,9 +137,13 @@ public class WampApplication
             case WampProtocol.HELLO:
                 clientSocket.setVersionSupport(WampApplication.WAMPv2);                
                 clientSocket.setHelloDetails((WampDict)request.get(2));
+                WampProtocol.sendWelcomeMessage(this, clientSocket);
                 break;
+            case WampProtocol.WELCOME:
+                // processWelcomeMessage(clientSocket, request);
+                break;                
             case WampProtocol.GOODBYE:
-                clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "goodbye received"));
+                clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
                 break;
             case WampProtocol.HEARTBEAT:
                 processHeartbeatMessage(clientSocket, request);

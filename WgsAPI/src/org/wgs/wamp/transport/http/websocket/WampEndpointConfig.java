@@ -63,10 +63,6 @@ public class WampEndpointConfig
         System.out.println("##################### Session opened");
 
         final WampSocket clientSocket = getWampSocket(session);
-        
-        if(application.start()) endpoint.onApplicationStart(application);
-        application.onWampOpen(clientSocket);
-
 
 
         session.setMaxIdleTimeout(0L);  // forever
@@ -107,8 +103,10 @@ public class WampEndpointConfig
 
         }
         
-        // Send WELCOME message to client:
-        WampProtocol.sendWelcomeMessage(application, clientSocket);
+        
+        if(application.start()) endpoint.onApplicationStart(application);
+        application.onWampOpen(clientSocket);
+
        
     }   
 

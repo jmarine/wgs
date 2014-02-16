@@ -21,9 +21,10 @@ public class WampProtocol
     private static Random randomizer = new Random();
 
     public static final int HELLO = 1;
-    public static final int GOODBYE = 2;
-    public static final int HEARTBEAT = 3;
-    public static final int ERROR = 4;
+    public static final int WELCOME = 2;
+    public static final int GOODBYE = 5;
+    public static final int HEARTBEAT = 6;    
+    public static final int ERROR = 7;    
     public static final int PUBLISH = 16;
     public static final int PUBLISHED = 17;
     public static final int SUBSCRIBE = 32;
@@ -70,7 +71,7 @@ public class WampProtocol
     {
         // Send WELCOME message to client:
         WampList response = new WampList();
-        response.add(HELLO);
+        response.add(WELCOME);
         response.add(clientSocket.getSessionId());
 
         WampDict brokerFeatures = new WampDict();

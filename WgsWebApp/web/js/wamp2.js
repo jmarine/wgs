@@ -50,12 +50,12 @@ Wamp2.prototype = {
     getAgent: function() {
         return "wamp2-client";
     },
-
+    
     hello: function() {
         this.serverSID = this.newid();
         var arr = [];
         arr[0] = 1;  // HELLO
-        arr[1] = this.serverSID;
+        arr[1] = "browser";  // REALM
         arr[2] = {};  // HelloDetails
         arr[2].agent = this.getAgent();
         arr[2].roles = {};
@@ -66,14 +66,14 @@ Wamp2.prototype = {
         arr[2].roles.caller = {};
         arr[2].roles.caller.features = { "caller_identification": true, "call_canceling": true, "progressive_call_results": true };
         arr[2].roles.callee = {};
-        arr[2].roles.callee.features = { "caller_identification": true, "pattern_based_registration": true };
+        arr[2].roles.callee.features = { "caller_identification": true, "pattern_based_registration": true };        
         this.send(JSON.stringify(arr));
     },
-
+    
     goodbye: function(details) {
         if(!details) details = {};
         var arr = [];
-        arr[0] = 2;   // Goodbye
+        arr[0] = 5;   // Goodbye
         arr[1] = details;
         this.send(JSON.stringify(arr));
     },
@@ -83,7 +83,7 @@ Wamp2.prototype = {
 
         var sendHeartbeat = function() {
             var arr = [];
-            arr[0] = 3;   // Goodbye
+            arr[0] = 6;   // HEARTBEAT
             arr[1] = client.incomingHeartbeatSeq;
             arr[2] = ++client.outgoingHeartbeatSeq;
             arr[3] = discard;
@@ -326,7 +326,7 @@ Wamp2.prototype = {
                 client.ws = ws;
                 this.state = ConnectionState.CONNECTED;
                 onstatechange(ConnectionState.CONNECTED);
-                client.hello();  // FIX: move to ws.onopen
+                client.hello();
             };
 
             ws.onclose = function(e) {
@@ -345,20 +345,20 @@ Wamp2.prototype = {
                 client.debug("ws.onmessage: " + e.data);
                 var arr = JSON.parse(e.data);
 
-                if (arr[0] == 1) {  // HELLO
+                if (arr[0] == 2) {  // WELCOME
                     client.sid = arr[1];
                     client.state = ConnectionState.WELCOMED;
                     onstatechange(ConnectionState.WELCOMED);
 
-                } else if (arr[0] == 2) {  // GOODBYE 
+                } else if (arr[0] == 5) {  // GOODBYE 
                     onstatechange(ConnectionState.DISCONNECTED);    
                     client.close();
 
-                } else if (arr[0] == 3) {  // HEARTBEAT
+                } else if (arr[0] == 6) {  // HEARTBEAT
                     client.incomingHeartbeatSeq = arr[2];
                     // TODO: request unreceived EVENTs ?
 
-                } else if (arr[0] == 4) {  // ERROR
+                } else if (arr[0] == 7) {  // ERROR
                     var requestType = arr[1];
                     var requestId = arr[2];
                     if(client.pendingRequests[requestId]) {

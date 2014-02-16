@@ -63,7 +63,7 @@ public class WampEndpoint extends Endpoint
     {
          super.onError(session, thr);        
          logger.fine("##################### Session error");
-         onClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "onError"));
+         onClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "wamp.close.error"));
     }    
 
 }
