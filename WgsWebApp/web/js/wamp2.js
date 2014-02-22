@@ -18,6 +18,7 @@ Wamp2.prototype = {
     ws: null,
     sid: null,
     state: ConnectionState.DISCONNECTED,
+    goodbyeRequested: false,
     incomingHeartbeatSeq: 0,
     outgoingHeartbeatSeq: 0,
     heartbeatIntervalHandler: null,
@@ -70,13 +71,25 @@ Wamp2.prototype = {
         this.send(JSON.stringify(arr));
     },
     
-    goodbye: function(reason, details) {
+    abort: function(reason, details) {
         if(!details) details = {};
         var arr = [];
-        arr[0] = 5;   // Goodbye
-        arr[1] = reason;
-        arr[2] = details;
+        arr[0] = 3;   // Abort
+        arr[1] = details;
+        arr[2] = reason;
         this.send(JSON.stringify(arr));
+    },
+    
+    goodbye: function(reason, details) {
+        if(!this.goodbyeRequested) {
+            this.goodbyeRequested = true;
+            if(!details) details = {};
+            var arr = [];
+            arr[0] = 6;   // Goodbye
+            arr[1] = details;
+            arr[2] = reason;
+            this.send(JSON.stringify(arr));
+        }
     },
 
     heartbeat: function(timeout, discard) {
@@ -84,7 +97,7 @@ Wamp2.prototype = {
 
         var sendHeartbeat = function() {
             var arr = [];
-            arr[0] = 6;   // HEARTBEAT
+            arr[0] = 7;   // HEARTBEAT
             arr[1] = client.incomingHeartbeatSeq;
             arr[2] = ++client.outgoingHeartbeatSeq;
             arr[3] = discard;
@@ -280,7 +293,7 @@ Wamp2.prototype = {
 
     send: function(msg) {
         if(!this.ws || this.ws.readyState != 1) {
-           this.debug("Websocket is not avaliable for writing");
+           this.debug("Websocket is not available for writing");
         } else {
            this.ws.send(msg);
         }
@@ -350,16 +363,23 @@ Wamp2.prototype = {
                     client.sid = arr[1];
                     client.state = ConnectionState.WELCOMED;
                     onstatechange(ConnectionState.WELCOMED);
-
-                } else if (arr[0] == 5) {  // GOODBYE 
-                    onstatechange(ConnectionState.DISCONNECTED);    
+                    
+                } else if (arr[0] == 3) {  // ABORT
+                    var reason = arr[2];
+                    onstatechange(ConnectionState.DISCONNECTED, reason);
                     client.close();
 
-                } else if (arr[0] == 6) {  // HEARTBEAT
+                } else if (arr[0] == 6) {  // GOODBYE 
+                    var reason = arr[2];
+                    onstatechange(ConnectionState.DISCONNECTED, reason);
+                    client.goodbye();
+                    client.close();
+
+                } else if (arr[0] == 7) {  // HEARTBEAT
                     client.incomingHeartbeatSeq = arr[2];
                     // TODO: request unreceived EVENTs ?
 
-                } else if (arr[0] == 7) {  // ERROR
+                } else if (arr[0] == 8) {  // ERROR
                     var requestType = arr[1];
                     var requestId = arr[2];
                     if(client.pendingRequests[requestId]) {

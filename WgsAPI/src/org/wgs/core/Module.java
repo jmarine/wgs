@@ -743,6 +743,7 @@ public class Module extends WampModule
         } 
         
         if(g != null) {
+            gid = g.getGid();
             groups.put(gid, g);            
             String pwd = g.getPassword();
             if( (pwd != null) && (pwd.length()>0) ) {

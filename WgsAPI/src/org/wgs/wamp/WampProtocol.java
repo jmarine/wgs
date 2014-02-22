@@ -22,9 +22,10 @@ public class WampProtocol
 
     public static final int HELLO = 1;
     public static final int WELCOME = 2;
-    public static final int GOODBYE = 5;
-    public static final int HEARTBEAT = 6;    
-    public static final int ERROR = 7;    
+    public static final int ABORT = 3;
+    public static final int GOODBYE = 6;
+    public static final int HEARTBEAT = 7;    
+    public static final int ERROR = 8;
     public static final int PUBLISH = 16;
     public static final int PUBLISHED = 17;
     public static final int SUBSCRIBE = 32;
@@ -111,16 +112,30 @@ public class WampProtocol
         
         sendWampMessage(clientSocket, response);
     }
-    
-    public static void sendGoodBye(WampSocket clientSocket, String reason, String message)
+
+    public static void sendAbort(WampSocket clientSocket, String reason, String message)
     {
         WampDict details = new WampDict();
         if(message != null) details.put("message", message);
         WampList response = new WampList();
-        response.add(GOODBYE);
-        response.add(reason);
+        response.add(ABORT);
         response.add(details);
+        response.add(reason);
         sendWampMessage(clientSocket, response);
+    }
+    
+    public static void sendGoodBye(WampSocket clientSocket, String reason, String message)
+    {
+        if(!clientSocket.isGoodbyeRequested()) {
+            clientSocket.setGoodbyeRequested(true);
+            WampDict details = new WampDict();
+            if(message != null) details.put("message", message);
+            WampList response = new WampList();
+            response.add(GOODBYE);
+            response.add(details);
+            response.add(reason);
+            sendWampMessage(clientSocket, response);
+        }
     }
     
     public static void sendHeartbeatMessage(WampSocket clientSocket, String discard)

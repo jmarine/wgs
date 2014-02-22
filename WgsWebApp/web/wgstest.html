@@ -306,6 +306,8 @@ function authentication(state, msg) {
         
         list_apps();
 
+    } else if(state == ConnectionState.DISCONNECTED) {
+        disconnect();
     }
         
 }
@@ -1079,7 +1081,7 @@ function toggle_connect(create_user) {
             wgsclient.login(null, null, authentication);
         }
     } else {
-        disconnect();
+        wgsclient.goodbye("wamp.close.normal");
     }
 }
 

@@ -50,6 +50,7 @@ public class WampSocket
     private WampEncoding wampEncoding;
     private WampDict helloDetails;
     private String realm;
+    private boolean goodbyeRequested;
     
 
     public WampSocket(WampApplication app, Session session) 
@@ -281,6 +282,17 @@ public class WampSocket
     public boolean isOpen() 
     {
         return connected && session.isOpen();
+    }
+    
+    
+    public boolean  isGoodbyeRequested()
+    {
+        return goodbyeRequested;
+    }
+    
+    public void setGoodbyeRequested(boolean goodbyeRequested)
+    {
+        this.goodbyeRequested = goodbyeRequested;
     }
     
     

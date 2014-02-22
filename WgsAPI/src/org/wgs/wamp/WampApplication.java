@@ -135,7 +135,7 @@ public class WampApplication
 
         switch(requestType.intValue()) {
             case WampProtocol.HELLO:
-                clientSocket.setVersionSupport(WampApplication.WAMPv2);                
+                clientSocket.setVersionSupport(WampApplication.WAMPv2);
                 clientSocket.setRealm(request.getText(1));
                 clientSocket.setHelloDetails((WampDict)request.get(2));
                 WampProtocol.sendWelcomeMessage(this, clientSocket);
@@ -143,7 +143,11 @@ public class WampApplication
             case WampProtocol.WELCOME:
                 // processWelcomeMessage(clientSocket, request);
                 break;                
+            case WampProtocol.ABORT:
+                clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.abort"));
+                break;
             case WampProtocol.GOODBYE:
+                WampProtocol.sendGoodBye(clientSocket, "wamp.close.normal", null);
                 clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
                 break;
             case WampProtocol.HEARTBEAT:
