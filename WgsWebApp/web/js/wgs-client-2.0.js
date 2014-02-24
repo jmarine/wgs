@@ -168,7 +168,7 @@ WgsClient.prototype.deleteApp = function(appId, callback) {
     this.call("wgs.delete_app", msg).then(callback, callback);
 }
 
-WgsClient.prototype._update_group_users = function(id,details,errorURI,payload, payloadKw, topicURI) {
+WgsClient.prototype._update_group_users = function(id,details,errorURI,payload, payloadKw, topicURI, group_change_callback, register_callback) {
     var client = this;
     if(payloadKw.connections) {
         client.groups[payloadKw.gid] = new Object();
@@ -202,6 +202,17 @@ WgsClient.prototype._update_group_users = function(id,details,errorURI,payload, 
             });
         }
     }
+    
+    if(register_callback && group_change_callback) {
+        client.groups[payloadKw.gid].group_change_callback = group_change_callback;
+    } else if(group_change_callback) {
+        group_change_callback(id,details,errorURI,payload,payloadKw);
+    }
+    
+    if(client.groups[payloadKw.gid].group_change_callback) {
+        client.groups[payloadKw.gid].group_change_callback(id,details,errorURI,payload,payloadKw);
+    }        
+
 } 
 
 WgsClient.prototype.openGroup = function(appId, gid, options, callback) {
@@ -213,8 +224,7 @@ WgsClient.prototype.openGroup = function(appId, gid, options, callback) {
 
     this.call("wgs.open_group", args).then(function(id,details,errorURI,result,resultKw) {
         client.subscribe("wgs.group_event:" + resultKw.gid, client._update_group_users, null, {} );
-        client._update_group_users(id,details,errorURI,result,resultKw);
-        callback(id,details,errorURI,result,resultKw);
+        client._update_group_users(id,details,errorURI,result,resultKw, null, callback, true);
     }, callback);
 }
 
@@ -245,6 +255,15 @@ WgsClient.prototype.getGroupMember = function(gid,slot) {
     return this.groups[gid].members[slot];
 }
 
+WgsClient.prototype.isMemberOfGroup = function(gid) {
+    var retval = false;
+    var client = this;
+    this.groups[gid].members.forEach(function(item) {
+        if(item.user == client.user) retval = true;
+    });
+    return retval;
+}
+
 WgsClient.prototype.updateGroup = function(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, callback) {
     var client = this;
     var msg = Object();
@@ -259,12 +278,10 @@ WgsClient.prototype.updateGroup = function(appId, gid, state, data, automatch, h
     if(data) msg.data  = data;
 
     this.call("wgs.update_group", msg).then(function(id,details,errorURI,result,resultKw) { 
-        client._update_group_users(id,details,errorURI,result,resultKw);
-        callback(id,details,errorURI,result,resultKw);
+        client._update_group_users(id,details,errorURI,result,resultKw, null, callback, false);
     }, 
     function(id,details,errorURI,result,resultKw) { 
-        client._update_group_users(id,details,errorURI,result,resultKw);
-        callback(id,details,errorURI,result,resultKw);
+        client._update_group_users(id,details,errorURI,result,resultKw, null, callback, false);
     } );
 }
 
@@ -285,12 +302,10 @@ WgsClient.prototype.updateMember = function(appId, gid, state, slot, sid, userty
     
     this.call("wgs.update_member", msg).then(
         function(id,details,errorURI,result,resultKw) { 
-            client._update_group_users(id,details,errorURI,result,resultKw);
-            callback(id,details,errorURI,result,resultKw);
+            client._update_group_users(id,details,errorURI,result,resultKw, null, callback, false);
         }, 
         function(id,details,errorURI,result,resultKw) { 
-            client._update_group_users(id,details,errorURI,result,resultKw);
-            callback(id,details,errorURI,result,resultKw) 
+            client._update_group_users(id,details,errorURI,result,resultKw, null, callback, false);
         } );
 }
 
