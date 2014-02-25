@@ -970,6 +970,7 @@ function getWgsClient() {
 
 function openid_connect(redirectUri) {
     
+    var realm = wgsclient.getDefaultRealm();
     if(!redirectUri) {
         redirectUri = get_openid_connect_callback_url();
         var user = $("#user").val();
@@ -977,7 +978,7 @@ function openid_connect(redirectUri) {
             alert("User name is empty");
         } else {
             wgsclient = getWgsClient();
-            wgsclient.openIdConnectLoginUrl(user, redirectUri, notificationChannel, authentication);
+            wgsclient.openIdConnectLoginUrl(realm, user, redirectUri, notificationChannel, authentication);
         }
         
     } else {
@@ -988,7 +989,7 @@ function openid_connect(redirectUri) {
             redirectUri = clear_openid_connect_params(redirectUri, false);
             
             wgsclient = new WgsClient(url);
-            wgsclient.openIdConnectAuthCode(provider, redirectUri, code, notificationChannel, authentication);
+            wgsclient.openIdConnectAuthCode(realm, provider, redirectUri, code, notificationChannel, authentication);
         } else {
             var error = get_url_param(redirectUri, "error");
             disconnect();
@@ -1072,13 +1073,14 @@ function toggle_connect(create_user) {
         $("#user_picture").width(0).height(0);
         
         wgsclient = getWgsClient();
+        var realm = wgsclient.getDefaultRealm();
         if(create_user) {
             var email = prompt("Enter e-mail:");
-            if(email) wgsclient.registerUser(user, pass, email, authentication);
+            if(email) wgsclient.registerUser(realm, user, pass, email, authentication);
         } else if(user.length > 0) {
-            wgsclient.login(user, pass, authentication);
+            wgsclient.login(realm, user, pass, authentication);
         } else {
-            wgsclient.login(null, null, authentication);
+            wgsclient.login(realm, null, null, authentication);
         }
     } else {
         wgsclient.goodbye("wamp.close.normal");
@@ -1088,9 +1090,10 @@ function toggle_connect(create_user) {
 function openid_connect_menu(self) {
     var url = $("#server_url").val();
     var redirectUri = get_openid_connect_callback_url();
-    
     wgsclient = getWgsClient();
-    wgsclient.openIdConnectProviders(redirectUri, function(id,details,errorURI,result,resultKw) { 
+    var realm = wgsclient.getDefaultRealm();
+    
+    wgsclient.openIdConnectProviders(realm, redirectUri, function(id,details,errorURI,result,resultKw) { 
 
         var providers = $("#openid_providers_menu");
         providers.find("li:gt(0)").each(function(){
@@ -1103,7 +1106,7 @@ function openid_connect_menu(self) {
                 link.text(provider.name);
                 link.attr("class", "ui-corner-all")
                 if(provider.authEndpoint) link.attr("onclick", "javascript:window.open('" + provider.authEndpoint + "&state=" + escape(notificationChannel) + "','_blank')");
-                else link.attr("onclick", "javascript:wgsclient.openIdConnectLoginUrl('"+provider.registrationEndpoint+"', get_openid_connect_callback_url(), notificationChannel, authentication);");
+                else link.attr("onclick", "javascript:wgsclient.openIdConnectLoginUrl('"+realm+"','"+provider.registrationEndpoint+"', get_openid_connect_callback_url(), notificationChannel, authentication);");
 
                 var item = $("<li>");
                 item.attr("class", "ui-menu-item").append(link)

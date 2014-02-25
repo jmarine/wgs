@@ -52,11 +52,11 @@ Wamp2.prototype = {
         return "wamp2-client";
     },
     
-    hello: function() {
+    hello: function(realm) {
         this.serverSID = this.newid();
         var arr = [];
         arr[0] = 1;  // HELLO
-        arr[1] = document.location.hostname;  // REALM
+        arr[1] = realm;
         arr[2] = {};  // HelloDetails
         arr[2].agent = this.getAgent();
         arr[2].roles = {};
@@ -253,9 +253,9 @@ Wamp2.prototype = {
 
 
     // Connection API
-    login: function(user, password, onstatechange) {
+    login: function(realm, user, password, onstatechange) {
         var client = this;
-        client.connect(function(state, msg) {
+        client.connect(realm, function(state, msg) {
             onstatechange(state, msg);
             if(state == ConnectionState.WELCOMED) {
                 if(user == null || user.length == 0) {
@@ -311,7 +311,7 @@ Wamp2.prototype = {
         this.state = ConnectionState.DISCONNECTED;
     },
     
-    connect: function(onstatechange) {
+    connect: function(realm, onstatechange) {
         var client = this;
         this.user = null;
         this.debug("Connecting to url: " + this.url);
@@ -340,7 +340,7 @@ Wamp2.prototype = {
                 client.ws = ws;
                 this.state = ConnectionState.CONNECTED;
                 onstatechange(ConnectionState.CONNECTED);
-                client.hello();
+                client.hello(realm);
             };
 
             ws.onclose = function(e) {

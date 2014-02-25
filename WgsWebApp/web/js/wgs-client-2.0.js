@@ -18,9 +18,9 @@ WgsClient.prototype.getUserInfo = function(callback) {
     this.call("wgs.get_user_info").then(callback,callback);
 }
   
-WgsClient.prototype.login = function(user, password, onstatechange) {
+WgsClient.prototype.login = function(realm, user, password, onstatechange) {
     var client = this;
-    Wamp2.prototype.login.call(this, user, password, function(state, msg) {
+    Wamp2.prototype.login.call(this, realm, user, password, function(state, msg) {
       if(state == ConnectionState.AUTHENTICATED || state == ConnectionState.ANONYMOUS) {
           client.getUserInfo(function(id,details,errorURI,result,resultKw) {
               if(errorURI) {
@@ -33,12 +33,16 @@ WgsClient.prototype.login = function(user, password, onstatechange) {
           onstatechange(state, msg);
        }
     });
+
 }
 
+WgsClient.prototype.getDefaultRealm = function() {
+    return document.location.hostname;
+}
 
-WgsClient.prototype.registerUser = function(user, password, email, onstatechange) {
+WgsClient.prototype.registerUser = function(realm, user, password, email, onstatechange) {
     var client = this;
-    client.connect(function(state, msg) {
+    client.connect(realm, function(state, msg) {
         onstatechange(state, msg);
         if(state == ConnectionState.WELCOMED) {
             var msg = Object();
@@ -59,9 +63,9 @@ WgsClient.prototype.registerUser = function(user, password, email, onstatechange
 }
 
 
-WgsClient.prototype.openIdConnectProviders = function(redirectUri, callback) {
+WgsClient.prototype.openIdConnectProviders = function(realm, redirectUri, callback) {
     var client = this;
-    client.connect(function(state, msg) {
+    client.connect(realm, function(state, msg) {
         if(state == ConnectionState.WELCOMED) {
             var msg = Object();
             msg.redirect_uri = redirectUri;
@@ -78,9 +82,9 @@ WgsClient.prototype.openIdConnectProviders = function(redirectUri, callback) {
     });
 }
 
-WgsClient.prototype.openIdConnectLoginUrl = function(principal, redirectUri, notificationChannel, onstatechange) {
+WgsClient.prototype.openIdConnectLoginUrl = function(realm, principal, redirectUri, notificationChannel, onstatechange) {
     var client = this;
-    client.connect(function(state, msg) {
+    client.connect(realm, function(state, msg) {
         if(state == ConnectionState.WELCOMED) {
             var msg = Object();
             msg.principal = principal;
@@ -100,9 +104,9 @@ WgsClient.prototype.openIdConnectLoginUrl = function(principal, redirectUri, not
 }
 
 
-WgsClient.prototype.openIdConnectAuthCode = function(provider, redirectUri, code, notificationChannel, onstatechange) {
+WgsClient.prototype.openIdConnectAuthCode = function(realm, provider, redirectUri, code, notificationChannel, onstatechange) {
     var client = this;
-    client.connect(function(state, msg) {
+    client.connect(realm, function(state, msg) {
         onstatechange(state, msg);          
         if(state == ConnectionState.WELCOMED) {
             var msg = Object();
