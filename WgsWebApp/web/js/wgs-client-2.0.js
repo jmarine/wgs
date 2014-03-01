@@ -313,6 +313,16 @@ WgsClient.prototype.updateMember = function(appId, gid, state, slot, sid, userty
         } );
 }
 
+WgsClient.prototype.addAction = function(gid, slot, type, value) {
+    var client = this;
+    var args = [];
+    args[0] = gid? gid : null;
+    args[1] = slot;
+    args[2] = type;
+    args[3] = value;
+    return this.call("wgs.add_action", args);
+}
+
 WgsClient.prototype.sendGroupMessage = function(gid, data, callback) {
     var args = Array();
     args[0] = gid;

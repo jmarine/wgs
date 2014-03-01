@@ -6,10 +6,7 @@
 
 package org.wgs.core;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -1466,6 +1463,32 @@ public class Module extends WampModule
         return scoresNode;
     }
     
+    @WampRPC(name = "add_action")
+    public void addAction(WampSocket socket, String gid, Long playerSlot, String actionName, String actionValue) throws Exception
+    {
+        Group g = groups.get(gid);
+        if(g != null) {
+            Member member = g.getMember(playerSlot.intValue());
+            if(!member.getUser().equals(socket.getUserPrincipal())) throw new WampException(null, "wgs.incorrect_user_member", null, null);
+            
+            GroupAction action = new GroupAction();
+            action.setApplicationGroup(g);
+            action.setActionOrder(g.getActions().size()+1);
+            action.setActionName(actionName);
+            action.setActionValue(actionValue);
+            action.setActionTime(Calendar.getInstance());
+            action.setMember(member);
+            action.setUser(member.getUser());
+            g.getActions().add(action);
+            action = Storage.saveEntity(action);
+            
+            boolean excludeMe = false;
+            WampDict event = new WampDict();
+            event.put("gid", g.getGid());
+            event.put("action", action.toWampObject());
+            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, excludeMe, false);
+        }
+    }
     
     @WampRPC(name = "add_score")
     public int addScore(WampSocket socket, String appId, int leaderBoardId, BigDecimal value)

@@ -23,6 +23,7 @@ import javax.persistence.Version;
 
 import org.wgs.entity.UserId;
 import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.types.WampList;
 
 
 @Entity(name="AppGroup")
@@ -91,6 +92,10 @@ public class Group implements java.io.Serializable
     @OneToMany(mappedBy = "applicationGroup", fetch=FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true)
     @OrderBy("slot")
     private ArrayList<Member> members = new ArrayList<Member>();
+    
+    @OneToMany(mappedBy = "applicationGroup", fetch=FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true)
+    @OrderBy("actionOrder")
+    private List<GroupAction> actions = new ArrayList<GroupAction>();    
 
     @ManyToOne(fetch=FetchType.LAZY)
     private Application application;
@@ -368,6 +373,17 @@ public class Group implements java.io.Serializable
         return removed;
     }
     
+    
+    public List<GroupAction> getActions() 
+    {
+        return this.actions;
+    }
+    
+    public void setActions(List<GroupAction> actions) 
+    {
+        this.actions = actions;
+    }        
+    
     /**
      * @return the hidden
      */
@@ -451,7 +467,14 @@ public class Group implements java.io.Serializable
         obj.put("state", String.valueOf(getState()));
         obj.put("turn", getTurn());
         obj.put("password", (password != null) && (password.length() > 0) );
-        obj.put("data", data);
+        if(withData) {
+            obj.put("data", data);
+            WampList actions = new WampList();
+            for(GroupAction action : getActions()) {
+                actions.add(action.toWampObject());
+            }
+            obj.put("actions", actions);
+        }
         return obj;
     }
 

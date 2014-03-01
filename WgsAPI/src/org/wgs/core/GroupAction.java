@@ -13,6 +13,7 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import javax.persistence.TemporalType;
+import org.wgs.wamp.types.WampDict;
 
 
 @Entity
@@ -38,9 +39,6 @@ public class GroupAction implements java.io.Serializable
 
     @Column(name="actionName")
     private String actionName;
-    
-    @Column(name="actionType")
-    private String actionType;
     
     @Column(name="actionValue")
     private String actionValue;
@@ -118,19 +116,6 @@ public class GroupAction implements java.io.Serializable
         this.actionName = actionName;
     }
 
-    /**
-     * @return the actionType
-     */
-    public String getActionType() {
-        return actionType;
-    }
-
-    /**
-     * @param actionType the actionType to set
-     */
-    public void setActionType(String actionType) {
-        this.actionType = actionType;
-    }
 
     /**
      * @return the actionValue
@@ -176,4 +161,17 @@ public class GroupAction implements java.io.Serializable
         return member;
     }
     
+
+    public WampDict toWampObject() 
+    {
+        WampDict event = new WampDict();
+        if(member != null) event.put("slot", member.getSlot());
+
+        event.put("order", actionOrder);
+        event.put("type",  actionName);
+        event.put("value", actionValue);
+        
+        return event;
+    }
+
 }
