@@ -855,12 +855,16 @@ public class Module extends WampModule
             int reservedSlot = 0;
             int num_slots = g.getNumSlots();
             if(!spectator) {
-                int  avail_slots = 0;
                 User currentUser = client.getUser();
-                for(int index = 0;
-                        (index < Math.max(num_slots, g.getMinMembers()));
-                        index++) {
-
+                int avail_slots = 0;
+                int minSlot = 0;
+                int maxSlot = Math.max(num_slots, g.getMinMembers());
+                if(options.has("slot")) {
+                    minSlot = options.getLong("slot").intValue();
+                    maxSlot = minSlot+1;
+                }
+                
+                for(int index = minSlot; index < maxSlot; index++) {
                     Member member = null;
                     member = g.getMember(index);
                     boolean connected = (member != null) && (member.getClient() != null);
