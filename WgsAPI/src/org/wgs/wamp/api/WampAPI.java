@@ -1,13 +1,16 @@
 package org.wgs.wamp.api;
 
-import org.wgs.wamp.types.WampList;
-import org.wgs.wamp.annotation.WampRPC;
-import org.wgs.wamp.annotation.WampModuleName;
 import java.util.Collection;
+import org.wgs.util.Storage;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
-import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.WampSocket;
+import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.annotation.WampModuleName;
+import org.wgs.wamp.topic.WampBroker;
+import org.wgs.wamp.topic.WampSubscription;
+import org.wgs.wamp.topic.WampTopic;
+import org.wgs.wamp.types.WampList;
 
 
 @WampModuleName("wamp")
@@ -20,34 +23,57 @@ public class WampAPI extends WampModule
 
     //TODO:
     
-    //wamp.reflection.topic.list
     //wamp.reflection.procedure.list
     //wamp.reflection.error.list
     
     //wamp.reflection.topic.describe
     //wamp.reflection.procedure.describe
     //wamp.reflection.error.describe
+    
+    @WampRPC(name="reflection.procedure.list")
+    public WampList getProcedureList() throws Exception
+    {
+        return this.getWampApplication().getAllRpcNames();
+    }
+    
+    @WampRPC(name="reflection.topic.list")
+    public WampList getTopicList() throws Exception
+    {
+        WampList names = new WampList();
+        for(WampTopic topic : Storage.findEntities(WampTopic.class, "wgs.findAllTopics")) {
+            names.add(topic.getTopicName());
+        }
+        return names;
+    }
 
     
-    @WampRPC(name=".broker.subscriber.list")
-    public Collection<Long> getSubscribedSessions(WampSocket socket, Long subscriptionId) throws Exception
+    @WampRPC(name="broker.subscriber.list")
+    public WampList getSubscribedSessions(WampSocket socket, Long subscriptionId) throws Exception
     {
-        return WampBroker.getSubscriptionById(subscriptionId).getSessionIds();
+        WampList retval = new WampList();
+        WampSubscription subscription = WampBroker.getSubscriptionById(subscriptionId);
+        if(subscription != null) {
+            for(Long sid : subscription.getSessionIds()) {
+                retval.add(sid);
+            }
+        }
+        return retval;
     }    
     
-    @WampRPC(name=".topic.history.last")
+    
+    @WampRPC(name="topic.history.last")
     public WampList getLastTopicEvents(String topicName, int limit)
     {
         return null;
     }
     
-    @WampRPC(name=".topic.history.since")
+    @WampRPC(name="topic.history.since")
     public WampList getTopicEventsSinceTimestamp(String topicName, Long timestampInMillis)
     {
         return null;
     }
     
-    @WampRPC(name=".topic.history.after")
+    @WampRPC(name="topic.history.after")
     public WampList getTopicEventsAfterID(String topicName, Long id)
     {
         return null;

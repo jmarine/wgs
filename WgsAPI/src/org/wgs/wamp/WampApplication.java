@@ -1,6 +1,7 @@
 package org.wgs.wamp;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -12,6 +13,7 @@ import java.util.logging.Logger;
 
 import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
+import org.wgs.wamp.api.WampAPI;
 
 import org.wgs.wamp.api.WampCRA;
 import org.wgs.wamp.rpc.WampCallController;
@@ -65,7 +67,8 @@ public class WampApplication
         this.calleeRegistrationById = new ConcurrentHashMap<Long,WampCalleeRegistration>();
         this.calleeRegistrationByUri = new ConcurrentHashMap<String,WampCalleeRegistration>();
         this.calleePatterns = new ConcurrentHashMap<String,WampCalleeRegistration>();
-        
+
+        this.registerWampModule(new WampAPI(this));
         this.registerWampModule(new WampCRA(this));        
         
         this.defaultModule = new WampModule(this);
@@ -93,6 +96,10 @@ public class WampApplication
         return defaultModule;
     }
     
+    public Collection<WampModule> getWampModules()
+    {
+        return modules.values();
+    }
     
     public WampModule getWampModule(String moduleName, WampModule defaultModule)
     {
@@ -276,6 +283,18 @@ public class WampApplication
         this.rpcsByName.remove(name);
     }
     
+    public WampList getAllRpcNames()
+    {
+        WampList names = new WampList();
+        for(String name : rpcsByName.keySet()) {
+            names.add(name);
+        }
+        for(String name : calleeRegistrationByUri.keySet()) {
+            names.add(name);
+        }
+        return names;
+    }
+    
     public WampMethod getLocalRPCs(String name, WampCallOptions options)
     {
 
@@ -396,8 +415,20 @@ public class WampApplication
             WampCalleeRegistration registration = calleeRegistrationById.get(registrationId);
             WampModule module = app.getDefaultWampModule();
             module.onUnregister(clientSocket, registrationId);
-            //calleeRegistrationById.remove(registration.getProcedureURI());
-            //calleeRegistrationPatterns.remove(registration.getProcedureURI());
+            
+            if(registration.getRemoteMethods().size() == 0) {
+                for(String name : calleeRegistrationByUri.keySet()) {
+                    if(WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
+                        calleeRegistrationByUri.remove(name);
+                    }
+                }
+                for(String name : calleePatterns.keySet()) {
+                    if(WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
+                        calleePatterns.remove(name);
+                    }
+                }
+            }
+            
             
             if(requestId != null) WampProtocol.sendUnregisteredMessage(clientSocket, requestId);
 

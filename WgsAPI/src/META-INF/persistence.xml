@@ -13,6 +13,7 @@
     <class>org.wgs.entity.User</class>
     <class>org.wgs.entity.OpenIdConnectProvider</class>
     <class>org.wgs.entity.OpenIdConnectClient</class>
+    <class>org.wgs.wamp.topic.WampTopic</class>
     <properties>
       <property name="eclipselink.ddl-generation" value="create-tables"/>
       <property name="eclipselink.logging.level.sql" value="FINE"/>

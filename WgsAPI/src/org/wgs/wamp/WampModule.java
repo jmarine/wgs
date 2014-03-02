@@ -240,6 +240,11 @@ public class WampModule
             subscription.removeSocket(clientSocket.getSessionId());
             if(subscription.getSocketsCount() == 0) {
                 topic.removeSubscription(subscription.getId());
+                if(topic.getSubscriptionCount() == 0) {
+                    if(topic.getOptions() != null && topic.getOptions().isTemporary()) {
+                        WampBroker.removeTopic(null, topic.getTopicName());
+                    }
+                }
             }
         }
     }

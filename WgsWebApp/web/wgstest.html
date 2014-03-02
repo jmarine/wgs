@@ -1156,6 +1156,28 @@ function test_call_rcp()
         );
 }
 
+function list_rpcs()
+{
+    clear_messages();
+    wgsclient.call("wamp.reflection.procedure.list", [], {}, {"runon": "any", "runmode": "gather", "disclose_me": 1})
+        .then(
+            function(id,details,errorURI,result,resultKw) { append_message("Result: " + JSON.stringify(result))} ,
+            function(id,details,errorURI,result,resultKw) { append_message("Error: " + errorURI)},
+            function(id,details,errorURI,progress,progressKw) { append_message("Progress: " + JSON.stringify(progress)) }
+        );
+}
+
+
+function list_topics()
+{
+    clear_messages();
+    wgsclient.call("wamp.reflection.topic.list", [], {}, {"runon": "any", "runmode": "gather", "disclose_me": 1})
+        .then(
+            function(id,details,errorURI,result,resultKw) { append_message("Result: " + JSON.stringify(result))} ,
+            function(id,details,errorURI,result,resultKw) { append_message("Error: " + errorURI)},
+            function(id,details,errorURI,progress,progressKw) { append_message("Progress: " + JSON.stringify(progress)) }
+        );
+}
 
 function on_mytopic_events(publicationId, details, errorURI, payload, payloadKw, topicURI)
 {
@@ -1389,7 +1411,9 @@ function append_message(text)
         <button onclick="test_unsubscribe();">Unsubscribe</button>          
         <button onclick="test_publish();">Publish</button>
         <br>          
-        <button onclick="clear_messages();">Clear messages</button>
+        <button onclick="list_topics()">List topics</button>
+        <button onclick="list_rpcs()">List RPCs</button>
+        <button onclick="clear_messages();">Clear messages</button>        
         <br>          
     </fieldset>
   </div>

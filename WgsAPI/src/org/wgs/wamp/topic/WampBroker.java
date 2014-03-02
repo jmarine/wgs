@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.wgs.util.Storage;
 
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
@@ -35,6 +36,7 @@ public class WampBroker
         WampTopic topic = topics.get(topicFQname);
         if(topic == null) {
             topic = new WampTopic(topicFQname, options);
+            topic = Storage.saveEntity(topic);
             topics.put(topicFQname, topic);
 
             for(WampSubscription subscription : topicPatterns.values()) {
@@ -50,7 +52,7 @@ public class WampBroker
                             exactTopicOpt.setMetaTopics(subscription.getOptions().getMetaTopics());
                             
                             JmsServices.subscribeMessageListener(topic);                            
-                            WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+                            WampModule module = app.getWampModule(topic.getTopicName(), app.getDefaultWampModule());
                             module.onSubscribe(socket, topic, subscription, exactTopicOpt);
                         }
                     } catch(Exception ex) {
@@ -67,10 +69,8 @@ public class WampBroker
     
     public static WampTopic removeTopic(WampApplication app, String topicFQname)
     {
-        WampTopic topic = topics.get(topicFQname);
+        WampTopic topic = topics.remove(topicFQname);
         if(topic != null) {
-            topics.remove(topicFQname);
-            
             for(WampSubscription subscription : topic.getSubscriptions()) {
                 for(Long sid : subscription.getSessionIds()) {
                     WampSocket client = subscription.getSocket(sid);
@@ -86,7 +86,9 @@ public class WampBroker
                 }                
             }
             
-        } 
+            Storage.removeEntity(topic);
+        }
+        
         return topic;
     }
     
@@ -152,7 +154,7 @@ public class WampBroker
         if(topic == null) topic = WampBroker.createTopic(app, topicName, null);
         
         try {
-            WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+            WampModule module = app.getWampModule(topic.getTopicName(), app.getDefaultWampModule());
             module.onPublish(clientSocket, topic, request);
         } catch(Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
@@ -204,7 +206,7 @@ public class WampBroker
             WampProtocol.sendSubscribed(clientSocket, requestId, subscription.getId());
         
             for(WampTopic topic : subscription.getTopics()) {
-                WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+                WampModule module = app.getWampModule(topic.getTopicName(), app.getDefaultWampModule());
 
                 try { 
                     module.onSubscribe(clientSocket, topic, subscription, options);
@@ -232,7 +234,7 @@ public class WampBroker
             matchingTopics = subscription.getTopics();
             for(WampTopic topic : matchingTopics) {
                 try { 
-                    WampModule module = app.getWampModule(topic.getBaseURI(), app.getDefaultWampModule());
+                    WampModule module = app.getWampModule(topic.getTopicName(), app.getDefaultWampModule());
                     module.onUnsubscribe(clientSocket, subscriptionId, topic);
                 } catch(Exception ex) {
                     logger.log(Level.FINE, "Error in unsubscription to topic", ex);

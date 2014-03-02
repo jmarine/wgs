@@ -7,12 +7,26 @@ import javax.jms.JMSException;
 import javax.jms.TemporaryTopic;
 
 import javax.jms.Topic;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
+import javax.persistence.Table;
 import javax.persistence.Transient;
+import org.wgs.util.Storage;
 
 
+@Entity(name="Topic")
+@Table(name="TOPIC")
+@NamedQueries({
+    @NamedQuery(name="wgs.findAllTopics",query="SELECT OBJECT(t) FROM Topic t")
+})
 public class WampTopic implements Topic, TemporaryTopic
 {
+    @Id
     private String topicName;
+    
+    @Transient
     private WampTopicOptions options;
 
     @Transient
@@ -35,7 +49,7 @@ public class WampTopic implements Topic, TemporaryTopic
     
     @Override
     public void delete() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        WampBroker.removeTopic(null, topicName);
     }    
     
     /**
@@ -51,14 +65,7 @@ public class WampTopic implements Topic, TemporaryTopic
     public void setTopicName(String uri) {
         this.topicName = uri;
     }
-    
-    public String getBaseURI() {
-        int pos = topicName.lastIndexOf("#");
-        if(pos == -1)  return topicName;
-        else return topicName.substring(0, pos+1);
-    }
 
-    
     
     /**
      * @return the sockets
