@@ -919,6 +919,7 @@ public class Module extends WampModule
                 boolean userUpdated = false;
                 boolean connected = (member.getClient() != null);
                 if(!spectator && !connected && !joined && (!reserved || index == reservedSlot)) {
+                    response.put("slotJoinedByClient", member.getSlot());
                     member.setClient(client);
                     member.setState(MemberState.JOINED);
                     member.setUser(client.getUser());

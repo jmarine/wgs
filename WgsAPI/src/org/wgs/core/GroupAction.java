@@ -30,12 +30,12 @@ public class GroupAction implements java.io.Serializable
     private Group applicationGroup;
 
     @Id
+    @Column(name="actionOrder", nullable=true)
+    private int actionOrder;
+    
     @javax.persistence.Temporal(TemporalType.TIMESTAMP)
     @Column(name="actionTime")
     private java.util.Calendar actionTime; 
-    
-    @Column(name="actionOrder", nullable=true)
-    private int actionOrder;
 
     @Column(name="actionName")
     private String actionName;

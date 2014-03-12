@@ -41,7 +41,7 @@ public class Group implements java.io.Serializable
     @Column(name="description")
     private String description;
     
-    @Lob()
+    //@Lob()
     @Column(name="data")
     private String data;
     

@@ -57,7 +57,7 @@ public class GroupFilter
     
     public List<Group> getGroups()
     {
-        String ejbql = "SELECT OBJECT(g) FROM AppGroup g";
+        String ejbql = "SELECT DISTINCT OBJECT(g) FROM AppGroup g";
         StringBuilder where = new StringBuilder();
         HashMap<String,Object> params = new HashMap<String,Object>();        
         
