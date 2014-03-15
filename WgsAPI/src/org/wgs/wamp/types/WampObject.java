@@ -42,6 +42,8 @@ public class WampObject
 
     public static WampSerializer getSerializer(WampEncoding encoding) throws WampException
     {
+        if(encoding == null) encoding = WampEncoding.JSon;
+            
         switch(encoding) {
             case JSon:
                 return new WampSerializerJSON();

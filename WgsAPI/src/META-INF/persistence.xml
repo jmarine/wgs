@@ -2,7 +2,7 @@
 <persistence version="2.0" xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
   <persistence-unit name="WgsPU" transaction-type="JTA">
     <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
-    <jta-data-source>jdbc/WgsDS</jta-data-source>
+    <jta-data-source>java:/jdbc/WgsDS</jta-data-source>
     <class>org.wgs.core.GroupAction</class>
     <class>org.wgs.core.Application</class>
     <class>org.wgs.core.Role</class>

@@ -85,7 +85,11 @@ public class WssServerContainer extends GrizzlyServerContainer
                     ServerConfiguration config = server.getServerConfiguration();
                     config.addHttpHandler(new CustomHttpHandler(rootPath), "/");
                 }
-                NetworkListener listener = new NetworkListener("grizzly", NetworkListener.DEFAULT_NETWORK_HOST, new PortRange(port));
+                
+                String hostIP = System.getenv("OPENSHIFT_DIY_IP");
+                if(hostIP == null) hostIP = NetworkListener.DEFAULT_NETWORK_HOST;
+                
+                NetworkListener listener = new NetworkListener("grizzly", hostIP, new PortRange(port));
                 server.addListener(listener);
                 
                 server.getListener("grizzly").getKeepAlive().setIdleTimeoutInSeconds(-1);  // forever
@@ -101,7 +105,7 @@ public class WssServerContainer extends GrizzlyServerContainer
                     sslContextConfig.setTrustStorePass(serverProperties.getProperty("wss-trust-store-password", "changeit"));
                     sslContextConfig.setKeyManagerFactoryAlgorithm("SunX509");
 
-                    NetworkListener networkListener = new NetworkListener("wss", server.getListener("grizzly").getHost(), Integer.parseInt(wssPort));
+                    NetworkListener networkListener = new NetworkListener("wss", hostIP, Integer.parseInt(wssPort));
                     networkListener.setSecure(true); 
                     networkListener.setSSLEngineConfig(new SSLEngineConfigurator(sslContextConfig, false, false, false));
                     networkListener.getKeepAlive().setIdleTimeoutInSeconds(-1);  // forever

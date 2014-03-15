@@ -162,6 +162,8 @@ public class Server
         ctx.createSubcontext("concurrent");
         ctx.createSubcontext("jms");
         ctx.createSubcontext("jdbc");
+        ctx.createSubcontext("java:");
+        ctx.createSubcontext("java:/jdbc");
         
         try {
             // Configure JNDI factories:
