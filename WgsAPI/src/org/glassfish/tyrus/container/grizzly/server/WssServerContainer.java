@@ -56,7 +56,7 @@ public class WssServerContainer extends GrizzlyServerContainer
         // TODO
         return new TyrusServerContainer((Set<Class<?>>) null) {
 
-            private final WebSocketEngine engine = new TyrusWebSocketEngine(this, incommingBufferSize);
+            private final WebSocketEngine engine = new TyrusWebSocketEngine(this, incommingBufferSize, null);
 
             private HttpServer server;
             private String contextPath = "";
