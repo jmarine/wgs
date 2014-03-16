@@ -199,18 +199,20 @@ public class Server
             server = setupWampContexts(serverConfig);        
 
             // Wait manual termination:
-            System.out.println("Press any key to quit server");
-            Thread wait = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try { 
-                        System.in.read(); 
-                        shuttingDown = true;
-                    } catch(IOException ex) { }
-                }
-            });
-            wait.setDaemon(true);
-            wait.start();
+            if(System.getenv("OPENSHIFT_APP_NAME") == null) {
+                System.out.println("Press any key to quit server");
+                Thread wait = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try { 
+                            System.in.read(); 
+                            shuttingDown = true;
+                        } catch(IOException ex) { }
+                    }
+                });
+                wait.setDaemon(true);
+                wait.start();
+            }
             
             
             while(!shuttingDown) {
@@ -271,6 +273,8 @@ public class Server
                     }
                 }
             }
+            
+            System.out.println("WGS server stopped.");
             
         }
     }
