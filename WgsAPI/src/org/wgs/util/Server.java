@@ -16,6 +16,7 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -30,6 +31,8 @@ import org.wgs.wamp.WampModule;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.transport.http.websocket.WampEndpoint;
 import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
 
 
 public class Server 
@@ -147,12 +150,14 @@ public class Server
 
         return server;
     }
-    
+
+    static volatile boolean shuttingDown = false;
     
     public static void main(String[] args) throws Exception 
     {
         TyrusServerContainer server = null;
         ExecutorService execService = null;
+        ScheduledExecutorService scheduledExecService = null;
         Properties serverConfig = getServerConfig(args);
         
         System.setProperty(Context.INITIAL_CONTEXT_FACTORY, serverConfig.getProperty("java.naming.factory.initial", "org.apache.naming.java.javaURLContextFactory"));
@@ -164,11 +169,27 @@ public class Server
         ctx.createSubcontext("jdbc");
         ctx.createSubcontext("java:");
         ctx.createSubcontext("java:/jdbc");
+        ctx.createSubcontext("java:comp");
+        ctx.createSubcontext("java:comp/env");
+        
+        
+        sun.misc.Signal.handle(new sun.misc.Signal("TERM"), new sun.misc.SignalHandler() {
+            @Override
+            public void handle(Signal signal) {
+                shuttingDown = true;
+                System.out.println("Signal received...");
+            }
+        });
+        
+        
         
         try {
             // Configure JNDI factories:
             execService = Executors.newCachedThreadPool();
+            scheduledExecService = Executors.newScheduledThreadPool(100);
             ctx.bind("concurrent/WampRpcExecutorService", execService);
+            ctx.bind("java:comp/DefaultManagedExecutorService", execService);
+            ctx.bind("java:comp/DefaultManagedScheduledExecutorService", scheduledExecService);
             
             JmsServices.start(serverConfig);
 
@@ -178,10 +199,29 @@ public class Server
             server = setupWampContexts(serverConfig);        
 
             // Wait manual termination:
-            System.out.println("Press any key to stop the server...");
-            System.in.read();
+            System.out.println("Press any key to quit server");
+            Thread wait = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try { 
+                        System.in.read(); 
+                        shuttingDown = true;
+                    } catch(IOException ex) { }
+                }
+            });
+            wait.setDaemon(true);
+            wait.start();
+            
+            
+            while(!shuttingDown) {
+                try { Thread.sleep(1000); }
+                catch(Exception ex) { }
+            }
             
         } finally {
+            
+            System.out.println("Shutting down...");
+            
 
             try {
                 JmsServices.stop();
@@ -199,6 +239,16 @@ public class Server
                 }
             }
             
+            if(scheduledExecService != null) {
+                try { 
+                    execService.shutdown();
+                } catch (Exception ex) {
+                    System.err.println("Scheduled Executor service shutdown error: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+            }
+                        
+            
             if(server != null) {
                 try { 
                     server.stop();
@@ -209,7 +259,7 @@ public class Server
             }
             
             // stop embedded derby database
-            if(ctx.list("jdbc").hasMore()) {
+            if(ctx.list("jdbc").hasMore() || ctx.list("java:/jdbc").hasMore()) {
                 try { 
                     DriverManager.getConnection("jdbc:derby:;shutdown=true");
                 } catch (SQLException se) {
