@@ -1,9 +1,12 @@
 package org.wgs.wamp;
 
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -13,6 +16,7 @@ import java.util.logging.Logger;
 
 import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
+import org.wgs.entity.User;
 import org.wgs.wamp.api.WampAPI;
 
 import org.wgs.wamp.api.WampCRA;
@@ -25,6 +29,7 @@ import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
+import org.wgs.wamp.types.WampConnectionState;
 import org.wgs.wamp.types.WampMatchType;
 import org.wgs.wamp.types.WampDict;
 import org.wgs.wamp.types.WampList;
@@ -49,6 +54,7 @@ public class WampApplication
     private ConcurrentHashMap<String,WampCalleeRegistration> calleePatterns;
     private ConcurrentHashMap<Long,WampCalleeRegistration>   calleeRegistrationById;
     private ConcurrentHashMap<String,WampCalleeRegistration> calleeRegistrationByUri;
+    private Map<String,Set<Long>> sessionsByUserId = new ConcurrentHashMap<String,Set<Long>>();
     
     
     public WampApplication(int version, String path)
@@ -219,8 +225,6 @@ public class WampApplication
     public void onWampClose(WampSocket clientSocket, CloseReason reason) 
     {
         if(clientSocket != null) {
-
-            clientSocket.close(reason);
             
             for(WampModule module : modules.values()) {
                 try { 
@@ -229,6 +233,12 @@ public class WampApplication
                     logger.log(Level.SEVERE, "Error disconnecting client:", ex);
                 }
             }
+            
+            onUserLogout(clientSocket);
+
+            clientSocket.close(reason);
+            clientSocket.setState(WampConnectionState.OFFLINE);
+
 
             // First remove subscriptions to topic patterns:
             for(WampSubscription subscription : clientSocket.getSubscriptions()) {
@@ -250,6 +260,8 @@ public class WampApplication
                 } catch(Exception ex) { }
             }
             
+            
+            
             logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
         }
         
@@ -270,6 +282,42 @@ public class WampApplication
         } catch(Exception ex) {
             logger.log(Level.SEVERE, "WgsEndpoint: Error registering WGS module", ex);
         }        
+    }
+    
+    
+    public void onUserLogon(WampSocket socket, User user, WampConnectionState state)
+    {
+        socket.setUserPrincipal(user);
+        socket.setState(state);
+        if(user != null) {
+            Set<Long> sessions = sessionsByUserId.get(user.getUid());
+            if(sessions == null) {
+                sessions = new HashSet<Long>();
+                sessionsByUserId.put(user.getUid(), sessions);
+            }
+            sessions.add(socket.getSessionId());
+        }
+    }
+    
+    public void onUserLogout(WampSocket socket)
+    {
+        Principal principal = socket.getUserPrincipal();
+        socket.setUserPrincipal(null);
+        socket.setState(WampConnectionState.ANONYMOUS);
+        
+        if(principal != null && principal instanceof User) {
+            User user = (User)principal;
+            Set<Long> sessions = sessionsByUserId.get(user.getUid());
+            sessions.remove(socket.getSessionId());
+            if(sessions.size() == 0) {
+                sessionsByUserId.remove(user);
+            }
+        }
+    }    
+    
+    public Set<Long> getSessionsByUser(User user)
+    {
+        return sessionsByUserId.get(user.getUid());
     }
     
     

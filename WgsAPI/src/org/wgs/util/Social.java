@@ -7,20 +7,20 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Calendar;
 import java.util.List;
+import java.util.UUID;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
 import org.wgs.entity.User;
-import org.wgs.entity.UserId;
 
 
 public class Social 
 {
     public static List<User> getFriends(User usr) throws Exception
     {
-        String domain = usr.getId().getProviderDomain();
+        String domain = usr.getDomain();
         if(domain.endsWith("facebook.com")) {
             return getFacebookFriends(usr);
         } else if(domain.endsWith("google.com")) {
@@ -32,7 +32,7 @@ public class Social
     
     public static List<User> getGoogleFriends(User usr) throws Exception
     {
-        String domain = usr.getId().getProviderDomain();
+        String domain = usr.getDomain();
         List<User> friends = usr.getFriends();
 
         // Google Plus
@@ -42,7 +42,7 @@ public class Social
         }
 
         StringBuffer data = new StringBuffer();
-        URL url = new URL("https://www.googleapis.com/plus/v1/people/"+URLEncoder.encode(usr.getId().getUid(),"utf8")+"/people/visible");
+        URL url = new URL("https://www.googleapis.com/plus/v1/people/"+URLEncoder.encode(usr.getLogin(),"utf8")+"/people/visible");
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setRequestProperty("Authorization", "Bearer " + accessToken);
         connection.setDoOutput(false);
@@ -63,11 +63,14 @@ public class Social
         ArrayNode items = (ArrayNode)dataNode.get("items");
         for(int index = 0; index < items.size(); index++) {
             ObjectNode item = (ObjectNode)items.get(index);
-            UserId friendId = new UserId(domain, item.get("id").asText());
-            User friend = Storage.findEntity(User.class, friendId);
+            String login = item.get("id").asText();
+            List<User> found = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", login, domain);
+            User friend = (found != null && found.size() > 0)? found.get(0) : null;
             if(friend == null) {
                 friend = new User();
-                friend.setId(friendId);
+                friend.setUid(UUID.randomUUID().toString());
+                friend.setLogin(login);
+                friend.setDomain(domain);
                 friend.setName(item.get("displayName").asText());
                 friend.setAdministrator(false);
                 friend.setPicture(item.get("image").get("url").asText());
@@ -87,7 +90,7 @@ public class Social
     
     public static List<User> getFacebookFriends(User usr) throws Exception
     {
-        String domain = usr.getId().getProviderDomain();
+        String domain = usr.getDomain();
         List<User> friends = usr.getFriends();
 
         // Google Plus
@@ -97,7 +100,7 @@ public class Social
         }
 
         StringBuffer data = new StringBuffer();
-        URL url = new URL("https://graph.facebook.com/" + usr.getId().getUid() + "/friends?access_token="+URLEncoder.encode(accessToken,"utf8"));
+        URL url = new URL("https://graph.facebook.com/" + usr.getLogin() + "/friends?access_token="+URLEncoder.encode(accessToken,"utf8"));
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setDoOutput(false);
 
@@ -117,15 +120,17 @@ public class Social
         ArrayNode items = (ArrayNode)dataNode.get("data");
         for(int index = 0; index < items.size(); index++) {
             ObjectNode item = (ObjectNode)items.get(index);
-            String id = item.get("id").asText();
-            UserId friendId = new UserId(domain, id);
-            User friend = Storage.findEntity(User.class, friendId);
+            String login = item.get("id").asText();
+            List<User> found = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", login, domain);
+            User friend = (found != null && found.size() > 0)? found.get(0) : null;
             if(friend == null) {
                 friend = new User();
-                friend.setId(friendId);
+                friend.setUid(UUID.randomUUID().toString());
+                friend.setLogin(login);
+                friend.setDomain(domain);
                 friend.setName(item.get("name").asText());
                 friend.setAdministrator(false);
-                friend.setPicture("https://graph.facebook.com/"+id+"/picture");
+                friend.setPicture("https://graph.facebook.com/"+login+"/picture");
                 friend = Storage.saveEntity(friend);
             }
             if(!friends.contains(friend)) {

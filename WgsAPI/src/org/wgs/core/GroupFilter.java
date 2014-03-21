@@ -8,7 +8,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 
 import org.wgs.entity.User;
-import org.wgs.entity.UserId;
 import org.wgs.util.Storage;
 import org.wgs.wamp.types.WampDict;
 import org.wgs.wamp.types.WampList;
@@ -57,6 +56,8 @@ public class GroupFilter
     
     public List<Group> getGroups()
     {
+        if(user == null) return new ArrayList<Group>();
+        
         String ejbql = "SELECT DISTINCT OBJECT(g) FROM AppGroup g";
         StringBuilder where = new StringBuilder();
         HashMap<String,Object> params = new HashMap<String,Object>();        
@@ -73,7 +74,7 @@ public class GroupFilter
             params.put("state", state);
         }      
         
-        if(user != null && (scope == null || scope == Scope.mine) ) {
+        if(scope == null || scope == Scope.mine) {
             ejbql = ejbql + ", IN(g.members) m";
             if(where.length() > 0) where.append(" AND ");
             where.append("m.user = :user");

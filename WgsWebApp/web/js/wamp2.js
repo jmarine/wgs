@@ -259,7 +259,6 @@ Wamp2.prototype = {
             onstatechange(state, msg);
             if(state == ConnectionState.WELCOMED) {
                 if(user == null || user.length == 0) {
-                    client.user = "#anonymous-" + client.sid;
                     client.state = ConnectionState.ANONYMOUS;
                     onstatechange(ConnectionState.ANONYMOUS);              
                 } else {
@@ -267,6 +266,7 @@ Wamp2.prototype = {
                     client.authreq(user, authExtra, function(id,details,errorURI,result,resultKw) {
                         if(result && result.length > 0 && typeof(result[0]) == "string") {
                             var challenge = JSON.parse(result[0]);
+                            client.authid = challenge.authkey;                            
                             password = CryptoJS.MD5(password).toString();
                             if(challenge.extra && challenge.extra.salt) {
                                 var key = CryptoJS.PBKDF2(password, challenge.extra.salt, { keySize: challenge.extra.keylen / 4, iterations: challenge.extra.iterations, hasher: CryptoJS.algo.SHA256 });
@@ -275,7 +275,6 @@ Wamp2.prototype = {
                             var signature = CryptoJS.HmacSHA256(result[0], password).toString(CryptoJS.enc.Base64);
                             client.auth(signature, function(id,details,errorURI,result,resultKw) {
                                 if(!errorURI) {
-                                    client.user = user;
                                     client.state = ConnectionState.AUTHENTICATED;
                                     onstatechange(ConnectionState.AUTHENTICATED, resultKw);
                                 } else {

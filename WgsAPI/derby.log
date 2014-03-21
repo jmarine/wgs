@@ -1,0 +1,16 @@
+----------------------------------------------------------------
+Fri Mar 21 19:54:44 CET 2014:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.8.1.2 - (1095077): instance a816c00e-0144-e5fe-cbf1-00000bf2cde0 
+on database directory /home/jordi/Desktop/projects/tests/wgs/WgsDB  with class loader sun.misc.Launcher$AppClassLoader@591ce4fe 
+Loaded from file:/home/jordi/Desktop/projects/tests/wgs/WgsAPI/lib/JAVADB_DRIVER_LABEL/derby.jar
+java.vendor=Oracle Corporation
+java.runtime.version=1.7.0_45-b18
+user.dir=/home/jordi/Desktop/projects/tests/wgs/WgsAPI
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''
+----------------------------------------------------------------
+Fri Mar 21 20:12:06 CET 2014: Shutting down Derby engine
+----------------------------------------------------------------
+Fri Mar 21 20:12:07 CET 2014:
+Shutting down instance a816c00e-0144-e5fe-cbf1-00000bf2cde0 on database directory /home/jordi/Desktop/projects/tests/wgs/WgsDB with class loader sun.misc.Launcher$AppClassLoader@591ce4fe 
+----------------------------------------------------------------

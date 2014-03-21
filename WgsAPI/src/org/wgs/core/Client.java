@@ -1,12 +1,12 @@
 package org.wgs.core;
 
 import java.security.Principal;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.persistence.EntityManager;
 
 import org.wgs.entity.User;
-import org.wgs.entity.UserId;
 import org.wgs.util.Storage;
 import org.wgs.wamp.WampSocket;
 
@@ -47,8 +47,12 @@ public class Client
             } else {
                 String principalName = principal.getName();
                 if(this.user == null) {
-                    UserId userId = new UserId(socket.getRealm(), principalName);
-                    this.user = Storage.findEntity(User.class, userId);
+                    //UserId userId = new UserId(socket.getRealm(), principalName);
+                    //this.user = Storage.findEntity(User.class, userId);
+                    List<User> users = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", principalName, socket.getRealm());
+                    if(users != null) {
+                        this.user = users.get(0);
+                    }
                 }
                 user = this.user;
             }

@@ -7,6 +7,7 @@ import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.Lob;
@@ -24,12 +25,20 @@ import org.wgs.wamp.types.WampList;
 @Entity
 @Table(name="USR")
 @NamedQueries({
-    @NamedQuery(name="wgs.findUsersByEmail",query="SELECT OBJECT(u) FROM User u WHERE u.email = :email")
+    @NamedQuery(name="wgs.findUsersByLoginAndDomain",query="SELECT OBJECT(u) FROM User u WHERE u.login = ?1 and u.domain = ?2"),
+    @NamedQuery(name="wgs.findUsersByEmail",query="SELECT OBJECT(u) FROM User u WHERE u.email = ?1")
 })
 public class User implements Serializable, Principal
 {
-    @EmbeddedId
-    private UserId id;
+    @Id
+    @Column(name="uid", nullable = false, length=36)
+    private String uid;
+
+    @Column(name="domain", nullable = false)    
+    private String domain; 
+    
+    @Column(name="login", nullable = false)    
+    private String login;
     
     @Column(name="name",nullable=false)
     private String name;   
@@ -73,31 +82,53 @@ public class User implements Serializable, Principal
     @ManyToMany(fetch = FetchType.LAZY)
     @OrderBy(value = "name")
     @JoinTable(name="USR_FRIEND", 
-            joinColumns={@JoinColumn(name="user_id", referencedColumnName = "uid"), @JoinColumn(name="user_provider", referencedColumnName="oidc_provider")}, 
-            inverseJoinColumns={@JoinColumn(name="friend_id", referencedColumnName = "uid"), @JoinColumn(name="friend_provider", referencedColumnName="oidc_provider")})
+            joinColumns={@JoinColumn(name="uid", referencedColumnName = "uid")}, 
+            inverseJoinColumns={@JoinColumn(name="friend_uid", referencedColumnName = "uid")})
     private List<User> friends;
     
     /**
-     * @return the UserPK
+     * @return the uid
      */
-    public UserId getId() {
-        return id;
+    public String getUid() {
+        return uid;
     }
 
     /**
-     * @param id the userId to set
+     * @param uid the uid to set
      */
-    public void setId(UserId id) {
-        this.id = id;
-    }    
+    public void setUid(String uid) {
+        this.uid = uid;
+    }  
     
     /**
-     * @return the UserPK
+     * @return the domain
      */
-    public String getFQid() {
-        return id.toString();
-    }    
+    public String getDomain() {
+        return domain;
+    }
+
+    /**
+     * @param domain the domain to set
+     */
+    public void setDomain(String domain) {
+        this.domain = domain;
+    }  
     
+    
+    /**
+     * @return the login
+     */
+    public String getLogin() {
+        return login;
+    }
+
+    /**
+     * @param login the login to set
+     */
+    public void setLogin(String login) {
+        this.login = login;
+    }      
+        
     /**
      * @return the name
      */
@@ -276,7 +307,7 @@ public class User implements Serializable, Principal
     { 
         if( (o != null) && (o instanceof User) ) {
             User u = (User)o;
-            return id.equals(u.getId());
+            return uid.equals(u.getUid());
         } else {
             return false;
         }
@@ -285,19 +316,19 @@ public class User implements Serializable, Principal
     @Override
     public String toString()
     {   
-        return id.toString();
+        return uid.toString();
     }
     
     @Override
     public int hashCode()
     {
-        return id.hashCode();
+        return uid.hashCode();
     }
 
     public WampDict toWampObject(boolean includeFriends) 
     {
         WampDict retval = new WampDict();
-        retval.put("user", id.toString());
+        retval.put("user", uid.toString());
         retval.put("name", getName());
         retval.put("picture", getPicture());    
 

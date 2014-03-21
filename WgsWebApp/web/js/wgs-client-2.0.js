@@ -26,6 +26,7 @@ WgsClient.prototype.login = function(realm, user, password, onstatechange) {
               if(errorURI) {
                   onstatechange(ConnectionState.ERROR, errorURI);
               } else {
+                  client.user = resultKw.user;
                   onstatechange(state, resultKw);
               }
           });
@@ -227,7 +228,7 @@ WgsClient.prototype.openGroup = function(appId, gid, options, callback) {
     args[2] = options;
 
     this.call("wgs.open_group", args).then(function(id,details,errorURI,result,resultKw) {
-        client.subscribe("wgs.group_event:" + resultKw.gid, client._update_group_users, null, {} );
+        client.subscribe("wgs.group_event." + resultKw.gid, client._update_group_users, null, {} );
         client._update_group_users(id,details,errorURI,result,resultKw, null, callback, true);
     }, callback);
 }
@@ -235,7 +236,7 @@ WgsClient.prototype.openGroup = function(appId, gid, options, callback) {
 WgsClient.prototype.exitGroup = function(gid, callback) {
     var client = this;
     this.call("wgs.exit_group", gid).then(callback, callback);
-    this.unsubscribe("wgs.group_event:" + gid, client._update_group_users, null, {});
+    this.unsubscribe("wgs.group_event." + gid, client._update_group_users, null, {});
     delete this.groups[gid];
 }
 

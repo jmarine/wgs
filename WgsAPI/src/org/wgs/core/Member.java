@@ -35,10 +35,9 @@ public class Member implements java.io.Serializable
     
     @ManyToOne(fetch= FetchType.EAGER, cascade = { CascadeType.DETACH })
     @JoinColumns({
-        @JoinColumn(name="uid", referencedColumnName = "uid"),
-        @JoinColumn(name="oidc_provider", referencedColumnName = "oidc_provider")
+        @JoinColumn(name="uid", referencedColumnName = "uid")
     })      
-    private User   user;
+    private User user;
     
     @ManyToOne(fetch=FetchType.EAGER)
     @JoinColumns({
@@ -182,7 +181,7 @@ public class Member implements java.io.Serializable
         
         WampDict obj = new WampDict();
         obj.put("sid",  (client != null)? client.getSessionId() : null);
-        obj.put("user", ((user!=null)? user.getFQid() : ((client != null) ? "#anonymous-" + client.getSessionId() : "") ) );
+        obj.put("user", ((user!=null)? user.getUid() : ((client != null) ? "#anonymous-" + client.getSessionId() : "") ) );
         obj.put("name", ((user!=null)? user.getName() : ((client != null) ? "Anonymous" : "") ) );
         obj.put("picture", ((user!=null)? user.getPicture() : ((client != null) ? "images/anonymous.png": "") ) );
         obj.put("type", userType);

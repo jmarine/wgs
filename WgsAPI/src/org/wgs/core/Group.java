@@ -2,17 +2,14 @@ package org.wgs.core;
 
 import java.util.ArrayList;
 import java.util.List;
-import javax.persistence.AttributeOverride;
-import javax.persistence.AttributeOverrides;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
-import javax.persistence.Lob;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
@@ -21,7 +18,7 @@ import javax.persistence.OrderBy;
 import javax.persistence.Table;
 import javax.persistence.Version;
 
-import org.wgs.entity.UserId;
+import org.wgs.entity.User;
 import org.wgs.wamp.types.WampDict;
 import org.wgs.wamp.types.WampList;
 
@@ -36,6 +33,7 @@ import org.wgs.wamp.types.WampList;
 public class Group implements java.io.Serializable
 {
     @Id
+    @Column(name="gid", nullable = false, length=36)
     private String gid;
     
     @Column(name="description")
@@ -63,12 +61,9 @@ public class Group implements java.io.Serializable
     @Column(name="deltaMembers")
     private int  deltaMembers;
     
-    @AttributeOverrides({
-        @AttributeOverride(name="uid", column=@Column(name = "admin_uid")),
-        @AttributeOverride(name="providerDomain", column=@Column(name = "admin_oidc_provider"))}
-    )    
-    @Embedded
-    private UserId adminUserId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="admin_uid")    
+    private User admin;
     
 
     @Column(name="automatchEnabled")
@@ -162,15 +157,15 @@ public class Group implements java.io.Serializable
     /**
      * @return the admin_user
      */
-    public UserId getAdminUserId() {
-        return adminUserId;
+    public User getAdmin() {
+        return admin;
     }
 
     /**
-     * @param admin_user the admin_user to set
+     * @param admin the admin to set
      */
-    public void setAdminUserId(UserId adminUserId) {
-        this.adminUserId = adminUserId;
+    public void setAdmin(User admin) {
+        this.admin = admin;
     }
 
     
@@ -452,7 +447,7 @@ public class Group implements java.io.Serializable
         obj.put("gid", getGid());
         obj.put("appId", getApplication().getAppId());
         obj.put("appName", getApplication().getName());
-        obj.put("admin", (adminUserId != null) ? adminUserId.toString() : "" );
+        obj.put("admin", (admin != null) ? admin.toString() : "" );
         obj.put("automatch", isAutoMatchEnabled());
         obj.put("hidden", isHidden());
         obj.put("num", getNumMembers());

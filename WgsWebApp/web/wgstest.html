@@ -282,7 +282,7 @@ function authentication(state, msg) {
         $("#register").attr("disabled", "disabled");
         $("#oic_connect").attr("disabled", "disabled");
         
-        wgsclient.heartbeat(5000, "*****DISCARDED HEARTBEAT PAYLOAD*******");
+        // wgsclient.heartbeat(5000, "*****DISCARDED HEARTBEAT PAYLOAD*******");
         
     } else if(state == ConnectionState.ANONYMOUS || state == ConnectionState.AUTHENTICATED) {
         $("#toggle_connect").html("Disconnect");
@@ -493,7 +493,7 @@ function hide_group_list() {
     var appId = $("#apps").val();
     $("#group_list").hide();
     $("#app_list").slideDown(500);
-    wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, {});
+    wgsclient.unsubscribe("wgs.app_event." + appId, update_groups, app_metaevent, {});
 }
 
 function list_groups(scope) {
@@ -508,7 +508,7 @@ function list_groups(scope) {
             $("#app_list").hide();
             $("#group_list").slideDown(500);
             $("#group_list fieldset legend").html("Groups: " + resultKw.app.name);
-            wgsclient.subscribe("wgs.app_event:" + currentApp.appId, update_groups, app_metaevent, { "match": "exact", "metatopics": ["wamp.metatopic.subscriber.add", "wamp.metatopic.subscriber.remove"]} );
+            wgsclient.subscribe("wgs.app_event." + currentApp.appId, update_groups, app_metaevent, { "match": "exact", "metatopics": ["wamp.metatopic.subscriber.add", "wamp.metatopic.subscriber.remove"]} );
         }
     });
 }
@@ -603,9 +603,12 @@ function open_group(gid, options) {
     wgsclient.openGroup(appId, gid, options, function(id,details,errorURI,result,resultKw) {
        if(!errorURI) {
             //wgsclient.setSubscriptionStatus("wgs.app_event:" + appId, "busy", null );
-            currentApp = resultKw.app;
-            wgsclient.subscribe("wgs.group_event:" + resultKw.gid, update_group_callback, null, {} );
-            show_group(resultKw); 
+            if(!currentGroup) {
+                currentApp = resultKw.app;
+                currentGroup = resultKw;
+                wgsclient.subscribe("wgs.group_event:" + resultKw.gid, update_group_callback, null, {} );
+                show_group(resultKw); 
+            }
        } else if(errorURI == "wgs.incorrectpassword") {
             var password = prompt("Introduce the password to access the group:");
             if(password) {
@@ -621,7 +624,6 @@ function show_group(group) {
     var tbody = $("#group_params table[id='members'] tbody");
     tbody.find("tr").remove();
     
-    currentGroup = group;
     $("#group_gid").attr("value", group.gid);
     $("#group_admin").attr("value", group.admin);
     if(group.observable) $("#grp_observable").attr('checked','yes');
@@ -923,8 +925,9 @@ function exit_group(toOfflineMode) {
     var gid = $("#group_gid").val();
     if(gid.length > 0) {
         wgsclient.exitGroup(gid, function(id,details,errorURI,result,resultKw) {
-            wgsclient.unsubscribe("wgs.group_event:" + gid, update_group_callback, null, {});
-            //wgsclient.setSubscriptionStatus("wgs.app_event:" + $("#apps").val(), null, null );        
+            currentGroup = null;
+            wgsclient.unsubscribe("wgs.group_event." + gid, update_group_callback, null, {});
+            //wgsclient.setSubscriptionStatus("wgs.app_event." + $("#apps").val(), null, null );        
             
             if(!toOfflineMode) {
                 $("#group_params").hide();
@@ -1016,8 +1019,8 @@ function get_openid_connect_callback_url() {
 
 function clear_openid_connect_params(url,clearProvider) {
     // Clear OpenId Connect's parameters
-    var oicParams = ["code","state","error","error_description","authuser","prompt","session_state"];
-    if(clearProvider) oicParams = ["provider", "code","state","error","error_description","authuser","prompt","session_state","gcmChannelId"];
+    var oicParams = ["code","state","error","error_description","authuser","prompt","session_state","num_sessions"];
+    if(clearProvider) oicParams = ["provider", "code","state","error","error_description","authuser","prompt","session_state","gcmChannelId","num_sessions"];
     oicParams.forEach(function(param) {
         var paramPos = url.indexOf("&"+param+"=");
         if(paramPos == -1) paramPos = url.indexOf("?"+param+"=");

@@ -9,13 +9,13 @@ import org.wgs.wamp.annotation.WampModuleName;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityManager;
 
 import org.wgs.entity.User;
-import org.wgs.entity.UserId;
 import org.wgs.util.Base64;
 import org.wgs.util.PBKDF2;
 import org.wgs.util.Storage;
@@ -34,6 +34,16 @@ public class WampCRA extends WampModule
         super(app);
     }
     
+    
+    public static User findUserByLoginAndDomain(String login, String domain) 
+    {
+        User usr = null;
+        if(login != null) {
+            List<User> found = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", login, domain);
+            usr = (found != null && found.size() > 0)? found.get(0) : null;                        
+        }
+        return usr;
+    }
 
     @WampRPC(name="request")
     public String authRequest(WampSocket socket, String authKey, WampDict extra) throws Exception
@@ -44,6 +54,13 @@ public class WampCRA extends WampModule
         if(socket.getSessionData().containsKey("_clientPendingAuthInfo")) {
             throw new WampException(null, "wamp.cra.error.authentication_already_requested", null, null);
         }
+        
+        User usr = findUserByLoginAndDomain(authKey, socket.getRealm());
+        if(authKey != null && usr == null) {
+            System.out.println("wamp.cra.error.no_such_authkey:  authKey doesn't exists" + authKey);
+            throw new WampException(null, "wamp.cra.error.no_such_authkey", null, null);
+        }
+        
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS");
         WampDict res = getAuthPermissions(authKey);
@@ -57,7 +74,7 @@ public class WampCRA extends WampModule
         if(res.has("authextra")) info.put("authextra", res.get("authextra"));
         
         String infoser = WampObject.getSerializer(WampEncoding.JSon).serialize(info).toString();
-        String authSecret = this.getAuthSecret(socket.getRealm(), authKey);
+        String authSecret = this.getAuthSecret(usr);
         String sig = "";
         if(authKey != null && authKey.length() > 0) {
             sig = this.authSignature(infoser, authSecret, extra);
@@ -90,8 +107,7 @@ public class WampCRA extends WampModule
         if(clientPendingAuthSig == null) clientPendingAuthSig = "";
         
         if(signature == null) {
-            socket.setUserPrincipal(null);
-            socket.setState(WampConnectionState.ANONYMOUS);
+            this.getWampApplication().onUserLogon(socket, null, WampConnectionState.ANONYMOUS);
         } else {
             if(!signature.equals(clientPendingAuthSig)) {
                 System.out.println("wamp.cra.error.authentication_failed: signature for authentication request is invalid");
@@ -99,14 +115,11 @@ public class WampCRA extends WampModule
             }
 
             String authKey = info.getText("authkey");
-
-            UserId userId = new UserId(socket.getRealm(), authKey);
-            User usr = Storage.findEntity(User.class, userId);
+            User usr = findUserByLoginAndDomain(authKey, socket.getRealm());
             usr.setLastLoginTime(Calendar.getInstance());
             usr = Storage.saveEntity(usr);
 
-            socket.setUserPrincipal(usr);
-            socket.setState(WampConnectionState.AUTHENTICATED);
+            this.getWampApplication().onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
         }
 
         return perms;
@@ -126,17 +139,9 @@ public class WampCRA extends WampModule
     }
     
     
-    private String getAuthSecret(String realm, String authKey) throws WampException
+    private String getAuthSecret(User usr) throws WampException
     {
-        if(authKey != null) {
-            EntityManager manager = Storage.getEntityManager();
-            UserId userId = new UserId(realm, authKey);
-            User usr = manager.find(User.class, userId);
-            manager.close();
-            if(usr == null) {
-                System.out.println("wamp.cra.error.no_such_authkey:  authKey doesn't exists" + authKey);
-                throw new WampException(null, "wamp.cra.error.no_such_authkey", null, null);
-            }
+        if(usr != null) {
             return usr.getPassword();
         } else {
             return "";

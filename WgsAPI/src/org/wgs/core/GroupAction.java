@@ -43,19 +43,12 @@ public class GroupAction implements java.io.Serializable
     @Column(name="actionValue")
     private String actionValue;
     
-    @ManyToOne(fetch= FetchType.EAGER)
-    @JoinColumns({
-        @JoinColumn(name="member_gid", referencedColumnName = "gid"),
-        @JoinColumn(name="member_slot", referencedColumnName = "slot")
-    })      
-    private Member member;    
+    @Column(name="slot")
+    private int slot;
     
     @ManyToOne(fetch= FetchType.EAGER, cascade = { CascadeType.DETACH } )
-    @JoinColumns({
-        @JoinColumn(name="uid", referencedColumnName = "uid"),
-        @JoinColumn(name="oidc_provider", referencedColumnName = "oidc_provider")
-    })      
-    private User user;   
+    @JoinColumns({@JoinColumn(name="uid", referencedColumnName = "uid")})      
+    private User user;
 
     
     /**
@@ -139,13 +132,6 @@ public class GroupAction implements java.io.Serializable
     }
 
 
-    /**
-     * @param member the member to set
-     */
-    public void setMember(Member member) {
-        this.member = member;
-    }    
-    
     
     /**
      * @param user the user to set
@@ -154,22 +140,32 @@ public class GroupAction implements java.io.Serializable
         this.user = user;
     }
 
+    
     /**
-     * @return the member
+     * @param slot the slot to set
      */
-    public Member getMember() {
-        return member;
+    public void setSlot(int slot) {
+        this.slot = slot;
+    }    
+    
+    
+    /**
+     * @return the slot
+     */
+    public int getSlot() {
+        return slot;
     }
     
 
     public WampDict toWampObject() 
     {
         WampDict event = new WampDict();
-        if(member != null) event.put("slot", member.getSlot());
 
-        event.put("order", actionOrder);
+        //event.put("order", actionOrder);
         event.put("type",  actionName);
         event.put("value", actionValue);
+        event.put("time",  actionTime);
+        if(slot >= 0) event.put("slot",  slot);
         
         return event;
     }

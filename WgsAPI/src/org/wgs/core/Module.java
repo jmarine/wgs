@@ -29,7 +29,6 @@ import org.codehaus.jackson.node.ObjectNode;
 import org.glassfish.grizzly.http.util.URLDecoder;
 import org.wgs.util.Storage;
 import org.wgs.entity.User;
-import org.wgs.entity.UserId;
 import org.wgs.entity.OpenIdConnectClient;
 import org.wgs.entity.OpenIdConnectClientPK;
 import org.wgs.entity.OpenIdConnectProvider;
@@ -47,6 +46,7 @@ import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.api.WampCRA;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampTopic;
@@ -101,7 +101,6 @@ public class Module extends WampModule
     }
 
 
-
     @Override
     public void onConnect(WampSocket socket) throws Exception 
     {
@@ -110,12 +109,8 @@ public class Module extends WampModule
         client.setSocket(socket);
         socket.setState(WampConnectionState.ANONYMOUS);
         if(socket.getUserPrincipal() != null) {
-            EntityManager manager = Storage.getEntityManager();
-            UserId userId = new UserId(socket.getRealm(), socket.getUserPrincipal().getName());
-            User usr = manager.find(User.class, userId);
-            manager.close();
-            socket.setUserPrincipal(usr);
-            socket.setState(WampConnectionState.AUTHENTICATED);
+            User usr = WampCRA.findUserByLoginAndDomain(socket.getUserPrincipal().getName(), socket.getRealm());
+            wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
         }
         clients.put(socket.getSessionId(), client);
     }
@@ -123,7 +118,6 @@ public class Module extends WampModule
     @Override
     public void onDisconnect(WampSocket socket) throws Exception 
     {
-        socket.setState(WampConnectionState.OFFLINE);
         Client client = clients.get(socket.getSessionId());
         if(client != null) {
             for(String gid : client.getGroups().keySet()) {
@@ -134,37 +128,36 @@ public class Module extends WampModule
         super.onDisconnect(socket);
     }
     
+
+    
+
     
     @WampRPC(name="register")
     public WampDict registerUser(WampSocket socket, WampDict data) throws Exception
     {
         boolean user_valid = false;
-        User usr = null;
         
         Client client = clients.get(socket.getSessionId());
 
-        String user = data.getText("user");
-        UserId userId = new UserId(socket.getRealm(), user);
-        
-        EntityManager manager = Storage.getEntityManager();
-        usr = manager.find(User.class, userId);
-        manager.close();
-        
+        String login = data.getText("user");
+        User usr = WampCRA.findUserByLoginAndDomain(login, socket.getRealm());
         if(usr != null) throw new WampException(null, WGS_MODULE_NAME + ".user_already_exists", null, null);
         
         usr = new User();
         usr.setProfileCaducity(null);
-        usr.setId(userId);
-        if(user.length() == 0) usr.setName("");
-        else usr.setName(Character.toUpperCase(user.charAt(0)) + user.substring(1));
+        usr.setUid(UUID.randomUUID().toString());
+        usr.setDomain(socket.getRealm());        
+        usr.setLogin(login);
+        
+        if(login.length() == 0) usr.setName("");
+        else usr.setName(Character.toUpperCase(login.charAt(0)) + login.substring(1));
         usr.setPassword(data.getText("password"));
         usr.setEmail(data.getText("email"));
         usr.setAdministrator(false);
         usr.setLastLoginTime(Calendar.getInstance());
         usr = Storage.saveEntity(usr);
 
-        socket.setUserPrincipal(usr);
-        socket.setState(WampConnectionState.AUTHENTICATED);
+        wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
         
         return usr.toWampObject(true);
     }
@@ -179,7 +172,9 @@ public class Module extends WampModule
         User usr = client.getUser();
         if(usr == null) {
             usr = new User();
-            usr.setId(new UserId("#anonymous-" + socket.getSessionId()));
+            usr.setUid(UUID.randomUUID().toString());
+            usr.setDomain(socket.getRealm());
+            usr.setLogin("#anonymous-" + socket.getSessionId());
             usr.setName("Anonymous");
             usr.setPicture("images/anonymous.png");
         }
@@ -402,11 +397,13 @@ public class Module extends WampModule
                 ObjectNode   userInfoNode = (ObjectNode)mapper.readTree(userInfo);
                 
                 String id = userInfoNode.get("id").asText();
-                UserId userId = new UserId(providerDomain, id);
-                usr = manager.find(User.class, userId);
+                
+                usr = WampCRA.findUserByLoginAndDomain(id, providerDomain);
                 if(usr == null) {
                     usr = new User();
-                    usr.setId(userId);
+                    usr.setUid(UUID.randomUUID().toString());
+                    usr.setDomain(providerDomain);
+                    usr.setLogin(id);
                     usr.setName(userInfoNode.get("name").asText());
                     usr.setAdministrator(false);
 
@@ -420,8 +417,7 @@ public class Module extends WampModule
                 usr.setAccessToken(accessToken);
                 usr = Storage.saveEntity(usr);
                 
-                socket.setUserPrincipal(usr);
-                socket.setState(WampConnectionState.AUTHENTICATED);                           
+                wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);                           
                 
             } else {
                 // OpenID Connect
@@ -444,15 +440,14 @@ public class Module extends WampModule
 
 
                     String issuer = idTokenNode.get("iss").asText();
-                    UserId userId = new UserId(providerDomain, idTokenNode.get("sub").asText());
-                    usr = manager.find(User.class, userId);
+                    String login = idTokenNode.get("sub").asText();
+                    usr = WampCRA.findUserByLoginAndDomain(login, providerDomain);
 
                     Calendar now = Calendar.getInstance();
                     if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
                         // Use cached UserInfo from local database
                         logger.fine("Cached OIC User: " + usr);
-                        socket.setUserPrincipal(usr);
-                        socket.setState(WampConnectionState.AUTHENTICATED);
+                        wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
 
                     } else if(response.has("access_token")) {
                         // Get UserInfo from OpenId Connect Provider
@@ -465,7 +460,9 @@ public class Module extends WampModule
                         ObjectNode userInfoNode = (ObjectNode)mapper.readTree(userInfo);
 
                         usr = new User();
-                        usr.setId(userId);
+                        usr.setUid(UUID.randomUUID().toString());
+                        usr.setDomain(providerDomain);
+                        usr.setLogin(login);
                         usr.setName(userInfoNode.get("name").asText());
                         usr.setAdministrator(false);
 
@@ -479,8 +476,7 @@ public class Module extends WampModule
 
                         usr = Storage.saveEntity(usr);
 
-                        socket.setUserPrincipal(usr);
-                        socket.setState(WampConnectionState.AUTHENTICATED);
+                        wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
                     } 
 
 
@@ -550,12 +546,12 @@ public class Module extends WampModule
     
     
     private void registerApplication(Application app) {
-        WampBroker.createTopic(wampApp, getFQtopicURI("app_event:"+app.getAppId()), null);
+        WampBroker.createTopic(wampApp, getFQtopicURI("app_event."+app.getAppId()), null);
         applications.put(app.getAppId(), app);
     }
     
     private void unregisterApplication(Application app) {
-        WampBroker.removeTopic(wampApp, getFQtopicURI("app_event:"+app.getAppId()));
+        WampBroker.removeTopic(wampApp, getFQtopicURI("app_event."+app.getAppId()));
         applications.remove(app.getAppId());
     }
     
@@ -770,7 +766,7 @@ public class Module extends WampModule
                 g.setMaxMembers(app.getMaxMembers());
                 g.setMinMembers(app.getMinMembers());
                 g.setDeltaMembers(app.getDeltaMembers());
-                g.setAdminUserId( (client.getUser() != null) ? client.getUser().getId() : new UserId("#anonymous-" + client.getSessionId()) );
+                g.setAdmin(client.getUser());
                 g.setAutoMatchEnabled(autoMatchMode);
                 g.setAutoMatchCompleted(false);
                 if(options != null) {
@@ -821,7 +817,7 @@ public class Module extends WampModule
             response.put("created", created);
             response.put("app", app.toWampObject());
 
-            String topicName = getFQtopicURI("group_event:" + g.getGid());
+            String topicName = getFQtopicURI("group_event." + g.getGid());
             WampTopic topic = WampBroker.getTopic(topicName);
             if(topic == null) {
                 WampTopicOptions topicOptions = new WampTopicOptions();
@@ -837,7 +833,7 @@ public class Module extends WampModule
                 for(Long sid : subscription.getSessionIds()) {
                     Client c = clients.get(sid);
                     User u = ((c!=null)? c.getUser() : null);
-                    String user = ((u == null) ? "" : u.getFQid());
+                    String user = ((u == null) ? "" : u.getUid());
                     String name = ((u == null) ? "" : u.getName());
                     String picture = ((u == null) ? null : u.getPicture());
 
@@ -868,8 +864,8 @@ public class Module extends WampModule
                     Member member = null;
                     member = g.getMember(index);
                     boolean connected = (member != null) && (member.getClient() != null);
-                    String user = ((member == null || member.getUser() == null) ? "" : member.getUser().getFQid() );
-                    if(!connected && currentUser!=null && user.equals(currentUser.getFQid())) {
+                    String user = ((member == null || member.getUser() == null) ? "" : member.getUser().getUid() );
+                    if(!connected && currentUser!=null && user.equals(currentUser.getUid())) {
                         reserved = true;
                         reservedSlot = index;
                         break;
@@ -943,20 +939,12 @@ public class Module extends WampModule
                 if(u != null) {
                     for(int i = opponents.size()-1; i >= 0; i--) {
                         WampDict opponent = (WampDict)opponents.get(i);
-                        if(opponent.getText("user").equals(u.getFQid())) opponents.remove(i);
+                        if(opponent.getText("user").equals(u.getUid())) opponents.remove(i);
                     }
                 } else if(opponents.size() > 0) {
                     WampDict opponent = (WampDict)opponents.remove(0);
-                    String domain = socket.getRealm();
                     String user = opponent.getText("user");
-                    int pos = user.indexOf("@");
-                    if(pos != -1) {
-                        domain = user.substring(pos+1);
-                        user = user.substring(0, pos);
-                    }
-                    
-                    UserId userId = new UserId(domain, user);
-                    u = Storage.findEntity(User.class, userId);
+                    u = Storage.findEntity(User.class, user);
                     member.setUser(u);
                     userUpdated = true;
                 }           
@@ -971,7 +959,7 @@ public class Module extends WampModule
                     event.put("gid", g.getGid());
                     event.put("valid", true);
 
-                    socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, true, false);  // exclude Me
+                    socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, true, false);  // exclude Me
                 }
 
             }
@@ -988,7 +976,7 @@ public class Module extends WampModule
         if(valid && !created && !joined) {
             User u = client.getUser();
             Long sid = client.getSessionId();
-            String user = ( (u == null) ? "" : u.getFQid() );
+            String user = ( (u == null) ? "" : u.getUid() );
 
             WampDict event = new WampDict();
             event.put("cmd", "user_joined");
@@ -1000,7 +988,7 @@ public class Module extends WampModule
             event.put("type", "user");
             event.put("valid", valid);
                     
-            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, true, false);  // exclude Me
+            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, true, false);  // exclude Me
         }
         
         
@@ -1098,7 +1086,7 @@ public class Module extends WampModule
         response.put("valid", valid);
 
         if(broadcastAppInfo)    broadcastAppEventInfo(socket, g, "group_updated");
-        if(broadcastGroupInfo)  socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, response, true, false);  // exclude Me
+        if(broadcastGroupInfo)  socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, response, true, false);  // exclude Me
         return response;
     }
     
@@ -1180,15 +1168,13 @@ public class Module extends WampModule
                         if(c!=null) {
                             // when it's not a reservation of a member slot
                             User u = c.getUser();
-                            if(u!=null) userId = u.getFQid();
+                            if(u!=null) userId = u.getUid();
                         }
 
                         Role r = g.getApplication().getRoleByName(role);
 
                         // TODO: check "slot" is valid
-                        EntityManager manager = Storage.getEntityManager();
-                        User user = manager.find(User.class, new UserId(userId));
-                        manager.close();
+                        User user = Storage.findEntity(User.class, userId);
 
                         Member member = g.getMember(slot);
                         if(member == null) {
@@ -1254,7 +1240,7 @@ public class Module extends WampModule
             if(valid) {
                 //response.putAll(g.toJSON());
                 broadcastAppEventInfo(socket, g, "group_updated");
-                socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, response, false, false);
+                socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, response, false, false);
                 g.setVersion(Storage.saveEntity(g).getVersion());
             }  
             return response;
@@ -1269,7 +1255,7 @@ public class Module extends WampModule
             WampDict event = new WampDict();
             event.put("cmd", "group_message");
             event.put("message", data);
-            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+gid)), null, event, false, true); // don't exclude Me
+            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+gid)), null, event, false, true); // don't exclude Me
         }
     }
     
@@ -1311,7 +1297,7 @@ public class Module extends WampModule
                     WampPublishOptions options = new WampPublishOptions();
                     options.setEligible(eligibleSet);
                     options.setDiscloseMe(true);
-                    socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, false, true);
+                    socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, false, true);
                 }
             }
         }
@@ -1366,11 +1352,11 @@ public class Module extends WampModule
                 }
                 response.put("members", membersArray);
 
-                socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+gid)), null, response, true, false); // exclude Me
+                socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+gid)), null, response, true, false); // exclude Me
 
                 client.removeGroup(g);
                 
-                String topicName = getFQtopicURI("group_event:" + g.getGid());
+                String topicName = getFQtopicURI("group_event." + g.getGid());
 
                 WampTopic topic = WampBroker.getTopic(topicName);
                 for(WampSubscription subscription : topic.getSubscriptions()) {
@@ -1394,16 +1380,15 @@ public class Module extends WampModule
         HashSet<Long> eligible = new HashSet<Long>();
         eligible.add(socket.getSessionId());
         for(Member m : g.getMembers()) {
-            Client client = m.getClient();
-            if(client != null) {
-                Long sid = client.getSessionId();
-                eligible.add(sid);  // TODO: addAll(client.getUser().getSessionIds());
+            if(m.getUser() != null) {
+                Set<Long> sessions = wampApp.getSessionsByUser(m.getUser());
+                if(sessions != null) eligible.addAll(sessions);
             }
         }
         
-        WampBroker.publishEvent(WampProtocol.newId(), WampBroker.getTopic(getFQtopicURI("apps_event")), null, event, eligible, null, null);  // only broadcasts to caller and group memebers
+        WampBroker.publishEvent(WampProtocol.newId(), WampBroker.getTopic(getFQtopicURI("apps_event")), null, event, eligible, null, null);  
         
-        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("app_event:" + g.getApplication().getAppId())), null, event, false, false);     // broadcasts to all application subscribers
+        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("app_event." + g.getApplication().getAppId())), null, event, false, false);     // broadcasts to all application subscribers
     }
     
     private void broadcastGroupEventInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
@@ -1411,7 +1396,7 @@ public class Module extends WampModule
         WampDict event = g.toWampObject(true);
         event.put("cmd", cmd);
         event.put("members", getMembers(g,0));
-        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, excludeMe, false);
+        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, excludeMe, false);
     }    
     
     
@@ -1482,7 +1467,7 @@ public class Module extends WampModule
             action.setActionName(actionName);
             action.setActionValue(actionValue);
             action.setActionTime(Calendar.getInstance());
-            action.setMember(member);
+            action.setSlot(member.getSlot());
             action.setUser(member.getUser());
             g.getActions().add(action);
             action = Storage.saveEntity(action);
@@ -1491,7 +1476,7 @@ public class Module extends WampModule
             WampDict event = new WampDict();
             event.put("gid", g.getGid());
             event.put("action", action.toWampObject());
-            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event:"+g.getGid())), null, event, excludeMe, false);
+            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, excludeMe, false);
         }
     }
     

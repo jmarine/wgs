@@ -34,11 +34,8 @@ public class Score implements java.io.Serializable
 
     
     @ManyToOne(fetch= FetchType.EAGER)
-    @JoinColumns({
-        @JoinColumn(name="uid", referencedColumnName = "uid"),
-        @JoinColumn(name="oidc_provider", referencedColumnName = "oidc_provider")
-    })      
-    private User   user;
+    @JoinColumns({@JoinColumn(name="uid", referencedColumnName = "uid")})
+    private User user;
     
     
     @Column(name="score_value", scale = 3, precision = 13)    

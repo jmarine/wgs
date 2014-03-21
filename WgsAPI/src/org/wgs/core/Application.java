@@ -33,7 +33,7 @@ import org.wgs.wamp.types.WampList;
 public class Application implements Serializable {
     
     @Id
-    @Column(name="id", length=50)
+    @Column(name="id", length=36)
     private String  id;
 
     @Column(name="name", length=50)
@@ -46,10 +46,7 @@ public class Application implements Serializable {
     private int     version;
     
     @ManyToOne(fetch= FetchType.EAGER)
-    @JoinColumns({
-        @JoinColumn(name="admin_uid", referencedColumnName = "uid"),
-        @JoinColumn(name="admin_oidc_provider", referencedColumnName = "oidc_provider")
-    })    
+    @JoinColumns({@JoinColumn(name="admin_uid", referencedColumnName = "uid")})    
     private User  adminUser;
     
     @Column(name="description", length=100)
