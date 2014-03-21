@@ -1369,6 +1369,25 @@ public class Module extends WampModule
 
             return response;
     }
+    
+    
+    @WampRPC(name="delete_finished_groups")
+    public void deleteFinishedGroups(WampSocket socket) throws Exception
+    {   
+        WampList gids = new WampList();
+        
+        EntityManager manager = Storage.getEntityManager();
+        TypedQuery<Group> query = manager.createNamedQuery("wgs.findFinishedGroupsFromUser", Group.class);
+        query.setParameter(1, socket.getUserPrincipal());
+        
+        for(Group g : query.getResultList()) {
+            gids.add(g.getGid());
+            Storage.removeEntity(g);
+            broadcastAppEventInfo(socket, g, "group_deleted");
+        }
+        
+        manager.close();
+    }
 
     
     private void broadcastAppEventInfo(WampSocket socket, Group g, String cmd) throws Exception

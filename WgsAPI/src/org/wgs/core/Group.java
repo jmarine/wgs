@@ -27,7 +27,7 @@ import org.wgs.wamp.types.WampList;
 @Table(name="APP_GROUP")
 @NamedQueries({
     @NamedQuery(name="wgs.findAllGroups",query="SELECT OBJECT(g) FROM AppGroup g"),
-    @NamedQuery(name="wgs.findGroupsByUser",query="SELECT DISTINCT OBJECT(g) FROM AppGroup g JOIN g.members m WHERE m.user = :user")
+    @NamedQuery(name="wgs.findFinishedGroupsFromUser",query="SELECT DISTINCT OBJECT(g) FROM AppGroup g, IN(g.members) m WHERE g.state = org.wgs.core.GroupState.FINISHED AND m.user = ?1")
 })
 // @org.eclipse.persistence.annotations.Index(name="APP_GROUP_STATE_IDX", columnNames={"STATE"})
 public class Group implements java.io.Serializable

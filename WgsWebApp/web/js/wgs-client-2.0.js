@@ -314,6 +314,12 @@ WgsClient.prototype.updateMember = function(appId, gid, state, slot, sid, userty
         } );
 }
 
+WgsClient.prototype.deleteFinishedGroups = function() {
+    var client = this;
+    var args = [];
+    return this.call("wgs.delete_finished_groups", args);    
+}
+
 WgsClient.prototype.addAction = function(gid, slot, type, value) {
     var client = this;
     var args = [];
