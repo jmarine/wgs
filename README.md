@@ -11,8 +11,8 @@ This repository implements the following services in Java for multi-player onlin
     
 * local user registration/authentication.
 * authentication with Google+, Facebook, and OpenID Connect providers.
-* lobby services (to list/join or create new groups), and manager for turn-based games.
-* presence service and communication between users of each group (including broadcast to all group members, and multicast to members of the same team).
+* lobby services (create/list/join/automatch games).
+* player presence and communication services.
 
 
 This services are provided via WebSockets with the [WebSocket Application Messaging Protocol](http://wamp.ws) (WAMP v2) specification.
