@@ -719,12 +719,29 @@ public class Module extends WampModule
                     for(Group tmp : groupList) {
                         manager.lock(tmp, LockModeType.PESSIMISTIC_WRITE);
                         valid = (tmp != null) && (tmp.isAutoMatchEnabled() && !tmp.isAutoMatchCompleted() && tmp.getState()==GroupState.OPEN);
+
                         if(valid) {
                             g = groups.get(tmp.getGid());
                             if(g != null) g.setVersion(tmp.getVersion());
                             else g = tmp;
+                            
+                            String role = "";
+                            if(options.has("role")) role = options.getText("role");
+                            if(role.length() > 0) {
+                                for(Member m : g.getMembers()) {
+                                    if(!m.getRole().isMultiple() && role.equals(m.getRole().getName()) && m.getUser() != null) {
+                                        valid = false;
+                                        g = null;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if(valid) {
                             break;
                         } else {
+                            g = null;
                             manager.lock(tmp, LockModeType.NONE);  // FIXME: MySQL holds lock
                         }
                     } 
@@ -865,7 +882,7 @@ public class Module extends WampModule
                     member = g.getMember(index);
                     boolean connected = (member != null) && (member.getClient() != null);
                     String user = ((member == null || member.getUser() == null) ? "" : member.getUser().getUid() );
-                    if(!connected && currentUser!=null && user.equals(currentUser.getUid())) {
+                    if(!connected && (options.has("slot") || (currentUser!=null && user.equals(currentUser.getUid()))) ) {
                         reserved = true;
                         reservedSlot = index;
                         break;
@@ -887,11 +904,11 @@ public class Module extends WampModule
 
             WampList opponents = new WampList();
             if(options.has("opponents")) opponents = (WampList)options.get("opponents");
+            if(options.has("role")) requiredRoles.remove(options.getText("role"));
             
-            int requiredSlot = (options != null && options.has("slot"))? options.getLong("slot").intValue() : -1;
-            for(int index = (requiredSlot >= 0)? requiredSlot : 0;
-                    ((index < Math.max(num_slots, g.getMinMembers())) || (requiredRoles.size() > 0))
-                    && (requiredSlot < 0 || index==requiredSlot);
+            // int requiredSlot = (options != null && options.has("slot"))? options.getLong("slot").intValue() : -1;
+            for(int index = 0;
+                    ((index < Math.max(num_slots, g.getMinMembers())) || (requiredRoles.size() > 0));
                     index++) {
 
                 Member member = g.getMember(index);
@@ -919,7 +936,7 @@ public class Module extends WampModule
                     member.setClient(client);
                     member.setState(MemberState.JOINED);
                     member.setUser(client.getUser());
-                    if(options != null && options.has("role")) {
+                    if(options != null && options.has("role") && options.getText("role").length() > 0) {
                         Role oldRole = member.getRole();
                         String roleName = options.getText("role");
                         role = g.getApplication().getRoleByName(roleName);
@@ -1406,7 +1423,7 @@ public class Module extends WampModule
         HashSet<Long> eligible = new HashSet<Long>();
         eligible.add(socket.getSessionId());
         for(Member m : g.getMembers()) {
-            if(m.getUser() != null) {
+            if(m != null && m.getUser() != null) {
                 Set<Long> sessions = wampApp.getSessionsByUser(m.getUser());
                 if(sessions != null) eligible.addAll(sessions);
             }
