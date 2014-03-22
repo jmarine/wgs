@@ -195,7 +195,7 @@ public class OpenIdConnectProvider implements Serializable
 
         
         if(webfingerResponse.has("links")) {
-            StringBuffer oicConfig = new StringBuffer();
+            StringBuffer oidcConfig = new StringBuffer();
             ArrayNode links = (ArrayNode)webfingerResponse.get("links");
             for(int index = 0; index < links.size(); index++) {
                 ObjectNode link = (ObjectNode)links.get(index);
@@ -207,12 +207,12 @@ public class OpenIdConnectProvider implements Serializable
 
                     in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                     while ((decodedString = in.readLine()) != null) {
-                        oicConfig.append(decodedString);
+                        oidcConfig.append(decodedString);
                     }
                     in.close();
                     connection.disconnect();
 
-                    retval = (ObjectNode) mapper.readTree(oicConfig.toString());
+                    retval = (ObjectNode) mapper.readTree(oidcConfig.toString());
                     break;
                 }
             }

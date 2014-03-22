@@ -77,7 +77,7 @@ public class GroupFilter
         if(scope == null || scope == Scope.mine) {
             ejbql = ejbql + ", IN(g.members) m";
             if(where.length() > 0) where.append(" AND ");
-            where.append("m.user = :user");
+            where.append("m.user = :user and m.state <> org.wgs.core.MemberState.DELETED");
             params.put("user", user);
         }
         

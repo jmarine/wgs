@@ -200,28 +200,28 @@ public class Module extends WampModule
 
             TypedQuery<OpenIdConnectClient> queryClients = manager.createNamedQuery("OpenIdConnectClient.findByRedirectUri", OpenIdConnectClient.class);
             queryClients.setParameter("uri", redirectUri);
-            for(OpenIdConnectClient oic : queryClients.getResultList()) {
-                String providerDomain = oic.getProvider().getDomain();
+            for(OpenIdConnectClient oidcClient : queryClients.getResultList()) {
+                String providerDomain = oidcClient.getProvider().getDomain();
                 if(!domains.contains(providerDomain) && !"defaultProvider".equals(providerDomain)) {
                     
-                    if(oic.getClientExpiration() != null && now.after(oic.getClientExpiration())) {
+                    if(oidcClient.getClientExpiration() != null && now.after(oidcClient.getClientExpiration())) {
                         try {
-                            oic.updateClientCredentials();
+                            oidcClient.updateClientCredentials();
                         } catch(Exception ex) {
                             System.out.println("Error updating client credentials: " + ex.getMessage());
                             
-                            Storage.removeEntity(oic);
+                            Storage.removeEntity(oidcClient);
 
                             OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
-                            ObjectNode oicClientRegistrationResponse = provider.registerClient("wgs", oic.getRedirectUri());
-                            oic.load(oicClientRegistrationResponse);
+                            ObjectNode oidcClientRegistrationResponse = provider.registerClient("wgs", oidcClient.getRedirectUri());
+                            oidcClient.load(oidcClientRegistrationResponse);
                         }
-                        oic = Storage.saveEntity(oic);
+                        oidcClient = Storage.saveEntity(oidcClient);
                     }                    
                     
-                    String clientId = oic.getClientId();
-                    String oicAuthEndpointUrl = oic.getProvider().getAuthEndpointUrl();
-                    String uri = oicAuthEndpointUrl + "?response_type=code&access_type=offline&scope=" + URLEncoder.encode(oic.getProvider().getScopes(),"utf8") + "&client_id=" + URLEncoder.encode(clientId,"utf8") + "&approval_prompt=force&redirect_uri=" + URLEncoder.encode(oic.getRedirectUri(),"utf8");
+                    String clientId = oidcClient.getClientId();
+                    String oidcAuthEndpointUrl = oidcClient.getProvider().getAuthEndpointUrl();
+                    String uri = oidcAuthEndpointUrl + "?response_type=code&access_type=offline&scope=" + URLEncoder.encode(oidcClient.getProvider().getScopes(),"utf8") + "&client_id=" + URLEncoder.encode(clientId,"utf8") + "&approval_prompt=force&redirect_uri=" + URLEncoder.encode(oidcClient.getRedirectUri(),"utf8");
 
                     WampDict node = new WampDict();
                     node.put("name", providerDomain);
@@ -248,7 +248,7 @@ public class Module extends WampModule
         } catch(Exception ex) {
             
             System.out.println("OpenID Connect provider error: " + ex.getMessage());
-            throw new WampException(null, WGS_MODULE_NAME + ".oic_error", null, null);
+            throw new WampException(null, WGS_MODULE_NAME + ".oidc_error", null, null);
         
         } finally {
             if(manager != null) {
@@ -280,7 +280,7 @@ public class Module extends WampModule
             } finally {
                 if(providerDomain == null) {
                     System.err.println("Unsupported OpenID Connect principal format");
-                    throw new WampException(null, WGS_MODULE_NAME + ".oic_error", null, null);
+                    throw new WampException(null, WGS_MODULE_NAME + ".oidc_error", null, null);
                 }
             }
         }
@@ -293,53 +293,53 @@ public class Module extends WampModule
         EntityManager manager = null;
         try {
             manager = Storage.getEntityManager();
-            OpenIdConnectClientPK oicId = new OpenIdConnectClientPK(providerDomain, redirectUri);
-            OpenIdConnectClient oic = manager.find(OpenIdConnectClient.class, oicId);
-            if(oic == null && !providerDomain.equals("defaultProvider")) {
+            OpenIdConnectClientPK oidcId = new OpenIdConnectClientPK(providerDomain, redirectUri);
+            OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcId);
+            if(oidcClient == null && !providerDomain.equals("defaultProvider")) {
                 
                 OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
                 if(provider == null) {
-                    ObjectNode oicConfig = OpenIdConnectProvider.discover(principal);
+                    ObjectNode oidcConfig = OpenIdConnectProvider.discover(principal);
                     provider = new OpenIdConnectProvider();
                     provider.setDomain(providerDomain);
-                    provider.setRegistrationEndpointUrl(oicConfig.get("registration_endpoint").asText());
-                    provider.setAuthEndpointUrl(oicConfig.get("authorization_endpoint").asText());
-                    provider.setAccessTokenEndpointUrl(oicConfig.get("token_endpoint").asText());
-                    provider.setUserInfoEndpointUrl(oicConfig.get("userinfo_endpoint").asText());
+                    provider.setRegistrationEndpointUrl(oidcConfig.get("registration_endpoint").asText());
+                    provider.setAuthEndpointUrl(oidcConfig.get("authorization_endpoint").asText());
+                    provider.setAccessTokenEndpointUrl(oidcConfig.get("token_endpoint").asText());
+                    provider.setUserInfoEndpointUrl(oidcConfig.get("userinfo_endpoint").asText());
                     provider = Storage.saveEntity(provider);
                 }
 
-                ObjectNode oicClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
+                ObjectNode oidcClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
                 if(!provider.getDynamic()) {
                     provider.setDynamic(true);
                     provider = Storage.saveEntity(provider);
                 }
                 
-                oic = new OpenIdConnectClient();
-                oic.setProvider(provider);
-                oic.setRedirectUri(redirectUri);
-                oic.load(oicClientRegistrationResponse);
-                oic = Storage.saveEntity(oic);
+                oidcClient = new OpenIdConnectClient();
+                oidcClient.setProvider(provider);
+                oidcClient.setRedirectUri(redirectUri);
+                oidcClient.load(oidcClientRegistrationResponse);
+                oidcClient = Storage.saveEntity(oidcClient);
             }
             
-            if(oic != null) {
+            if(oidcClient != null) {
                 Calendar now = Calendar.getInstance();
-                if(oic.getClientExpiration() != null && now.after(oic.getClientExpiration())) {
+                if(oidcClient.getClientExpiration() != null && now.after(oidcClient.getClientExpiration())) {
                     try {
-                        oic.updateClientCredentials();
+                        oidcClient.updateClientCredentials();
                     } catch(Exception ex) {
-                        Storage.removeEntity(oic);
+                        Storage.removeEntity(oidcClient);
                         
                         OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
-                        ObjectNode oicClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
-                        oic.load(oicClientRegistrationResponse);
+                        ObjectNode oidcClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
+                        oidcClient.load(oidcClientRegistrationResponse);
                     }
-                    oic = Storage.saveEntity(oic);
+                    oidcClient = Storage.saveEntity(oidcClient);
                 }
                 
-                String oicAuthEndpointUrl = oic.getProvider().getAuthEndpointUrl();
-                String clientId = oic.getClientId();
-                retval = oicAuthEndpointUrl + "?response_type=code&access_type=offline&scope=" + URLEncoder.encode(oic.getProvider().getScopes(),"utf8") + "&client_id=" + URLEncoder.encode(clientId,"utf8") + "&approval_prompt=force&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8");
+                String oidcAuthEndpointUrl = oidcClient.getProvider().getAuthEndpointUrl();
+                String clientId = oidcClient.getClientId();
+                retval = oidcAuthEndpointUrl + "?response_type=code&access_type=offline&scope=" + URLEncoder.encode(oidcClient.getProvider().getScopes(),"utf8") + "&client_id=" + URLEncoder.encode(clientId,"utf8") + "&approval_prompt=force&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8");
             }
             
             if(retval == null) {
@@ -348,7 +348,7 @@ public class Module extends WampModule
             
         } catch(Exception ex) {
             System.err.println("OpenID Connect provider error: " + ex.getMessage());
-            throw new WampException(null, WGS_MODULE_NAME + ".oic_error", null, null);
+            throw new WampException(null, WGS_MODULE_NAME + ".oidc_error", null, null);
         
         } finally {
             if(manager != null) {
@@ -374,14 +374,14 @@ public class Module extends WampModule
             String redirectUri = data.getText("redirect_uri");
             
             manager = Storage.getEntityManager();
-            OpenIdConnectClientPK oicId = new OpenIdConnectClientPK(providerDomain, redirectUri);
-            OpenIdConnectClient oic = manager.find(OpenIdConnectClient.class, oicId);
-            if(oic == null) {
+            OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(providerDomain, redirectUri);
+            OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
+            if(oidcClient == null) {
                 System.err.println("Unknown OpenId Connect provider domain");
                 throw new WampException(null, WGS_MODULE_NAME + ".unknown_oidc_provider", null, null);
             }
 
-            String accessTokenResponse = oic.getAccessTokenResponse(code);
+            String accessTokenResponse = oidcClient.getAccessTokenResponse(code);
             logger.fine("AccessToken endpoint response: " + accessTokenResponse);
             
             if(providerDomain.endsWith("facebook.com")) {
@@ -390,7 +390,7 @@ public class Module extends WampModule
                 String accessToken = URLDecoder.decode(accessTokenResponse.substring("access_token=".length(), pos));
                 String expires = accessTokenResponse.substring(pos + "&expires=".length());
                 
-                String userInfo = oic.getProvider().getUserInfo(accessToken);
+                String userInfo = oidcClient.getProvider().getUserInfo(accessToken);
                 System.out.println("user info: " + userInfo);
 
                 ObjectMapper mapper = new ObjectMapper();
@@ -446,7 +446,7 @@ public class Module extends WampModule
                     Calendar now = Calendar.getInstance();
                     if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
                         // Use cached UserInfo from local database
-                        logger.fine("Cached OIC User: " + usr);
+                        logger.fine("Cached OIDC User: " + usr);
                         wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
 
                     } else if(response.has("access_token")) {
@@ -454,8 +454,8 @@ public class Module extends WampModule
                         String accessToken = response.get("access_token").asText();
                         System.out.println("Access token: " + accessToken);
 
-                        String userInfo = oic.getProvider().getUserInfo(accessToken);
-                        logger.fine("OIC UserInfo: " + userInfo);
+                        String userInfo = oidcClient.getProvider().getUserInfo(accessToken);
+                        logger.fine("OIDC UserInfo: " + userInfo);
 
                         ObjectNode userInfoNode = (ObjectNode)mapper.readTree(userInfo);
 
@@ -523,7 +523,7 @@ public class Module extends WampModule
 
         if(usr == null) {
             System.err.println("OpenID Connect protocol error");
-            throw new WampException(null, WGS_MODULE_NAME + ".oic_error", null, null);
+            throw new WampException(null, WGS_MODULE_NAME + ".oidc_error", null, null);
         }
         return usr.toWampObject(true);
     }    
@@ -1374,16 +1374,23 @@ public class Module extends WampModule
     @WampRPC(name="delete_finished_groups")
     public void deleteFinishedGroups(WampSocket socket) throws Exception
     {   
-        WampList gids = new WampList();
-        
         EntityManager manager = Storage.getEntityManager();
         TypedQuery<Group> query = manager.createNamedQuery("wgs.findFinishedGroupsFromUser", Group.class);
         query.setParameter(1, socket.getUserPrincipal());
         
         for(Group g : query.getResultList()) {
-            gids.add(g.getGid());
-            Storage.removeEntity(g);
-            broadcastAppEventInfo(socket, g, "group_deleted");
+            int refCount = 0;
+            for(Member m : g.getMembers()) {
+                if(m.getUser().equals(socket.getUserPrincipal())) {
+                    m.setState(MemberState.DELETED);
+                    Storage.saveEntity(m);
+                } 
+                if(m.getState() != MemberState.DELETED) {
+                    refCount++;
+                }
+            }
+            if(refCount == 0) Storage.removeEntity(g);
+            broadcastAppEventInfo(socket, g, (refCount == 0)? "group_deleted" : "group_updated");
         }
         
         manager.close();

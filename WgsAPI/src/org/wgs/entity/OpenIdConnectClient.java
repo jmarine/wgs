@@ -160,16 +160,16 @@ public class OpenIdConnectClient implements Serializable
     }
     
     
-    public void load(ObjectNode oicClientRegistrationResponse) {
+    public void load(ObjectNode oidcClientRegistrationResponse) {
         this.setRedirectUri(redirectUri);
-        this.setClientId(oicClientRegistrationResponse.get("client_id").asText());
-        this.setClientSecret(oicClientRegistrationResponse.get("client_secret").asText());
-        this.setRegistrationClientUri(oicClientRegistrationResponse.get("registration_client_uri").asText());
-        this.setRegistrationAccessToken(oicClientRegistrationResponse.get("registration_access_token").asText());                        
+        this.setClientId(oidcClientRegistrationResponse.get("client_id").asText());
+        this.setClientSecret(oidcClientRegistrationResponse.get("client_secret").asText());
+        this.setRegistrationClientUri(oidcClientRegistrationResponse.get("registration_client_uri").asText());
+        this.setRegistrationAccessToken(oidcClientRegistrationResponse.get("registration_access_token").asText());                        
 
         Calendar expiration = null;
-        if(oicClientRegistrationResponse.has("expires_at")) {
-            long expires_at = oicClientRegistrationResponse.get("expires_at").asLong();
+        if(oidcClientRegistrationResponse.has("expires_at")) {
+            long expires_at = oidcClientRegistrationResponse.get("expires_at").asLong();
             if(expires_at != 0l) {
                 expiration = Calendar.getInstance();
                 expiration.setTimeInMillis(expires_at*1000);
@@ -222,20 +222,20 @@ public class OpenIdConnectClient implements Serializable
         in.close();
         connection.disconnect();
 
-        ObjectNode oicClient = (ObjectNode) mapper.readTree(data.toString());
+        ObjectNode oidcClient = (ObjectNode) mapper.readTree(data.toString());
         Calendar expiration = null;
-        if(oicClient.has("expires_at")) {
-            long expires_at = oicClient.get("expires_at").asLong();
+        if(oidcClient.has("expires_at")) {
+            long expires_at = oidcClient.get("expires_at").asLong();
             if(expires_at != 0l) {
                 expiration = Calendar.getInstance();
-                expiration.setTimeInMillis(oicClient.get("expires_at").asLong()*1000);
+                expiration.setTimeInMillis(oidcClient.get("expires_at").asLong()*1000);
             }
         }
         
-        setClientId(oicClient.get("client_id").asText());
-        if(oicClient.has("client_secret")) setClientSecret(oicClient.get("client_secret").asText());
-        if(oicClient.has("registration_client_uri")) setRegistrationClientUri(oicClient.get("registration_client_uri").asText());
-        if(oicClient.has("registration_access_token")) setRegistrationAccessToken(oicClient.get("registration_access_token").asText());
+        setClientId(oidcClient.get("client_id").asText());
+        if(oidcClient.has("client_secret")) setClientSecret(oidcClient.get("client_secret").asText());
+        if(oidcClient.has("registration_client_uri")) setRegistrationClientUri(oidcClient.get("registration_client_uri").asText());
+        if(oidcClient.has("registration_access_token")) setRegistrationAccessToken(oidcClient.get("registration_access_token").asText());
         setClientExpiration(expiration);
     }
     
