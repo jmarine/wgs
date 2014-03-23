@@ -16,7 +16,7 @@ This project implements the following services:
 * notifications (... well, this is not yet implemented).
 
 The server-side is developed in Java language, but there are also Javascript libraries for browser applications.
-The services are provided using the [WAMP v2: Basic Profile](http://wamp.ws) specification.
+The services are provided using the [WAMP v2](http://wamp.ws) specification.
 
 
 Demo sites
