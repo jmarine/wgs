@@ -7,16 +7,20 @@ Version: 2.0-alpha1
 About
 -----
 
-This repository implements the following services in Java for multi-player online games:
+This project implements the following services:
     
 * local user registration/authentication.
 * authentication with Google+, Facebook, and OpenID Connect providers.
-* lobby services (create/list/join/automatch games).
-* player presence and communication services.
+* lobby services (to create/list/join/automatch multi-player online games).
+* real-time presence and communications.
+* notifications (... well, this is not yet implemented).
+
+They are provided using the [WebSocket Application Messaging Protocol](http://wamp.ws) (WAMP v2) specification.
 
 
-This services are provided via WebSockets with the [WebSocket Application Messaging Protocol](http://wamp.ws) (WAMP v2) specification.
-
+Demo sites
+----------
+* [WebGL 8x8 board games](http://wgs-jmarine.rhcloud.com/webgl8x8boardgames/).
 
 
 Documentation
