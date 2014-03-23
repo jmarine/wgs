@@ -15,7 +15,8 @@ This project implements the following services:
 * real-time presence and communications.
 * notifications (... well, this is not yet implemented).
 
-They are provided using the [WebSocket Application Messaging Protocol](http://wamp.ws) (WAMP v2) specification.
+The server-side is developed in Java language, but there are also Javascript libraries for browser applications.
+The services are provided using the [WAMP v2: Basic Profile](http://wamp.ws) specification.
 
 
 Demo sites
