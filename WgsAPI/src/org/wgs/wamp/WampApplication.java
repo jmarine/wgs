@@ -148,6 +148,7 @@ public class WampApplication
 
         switch(requestType.intValue()) {
             case WampProtocol.HELLO:
+                clientSocket.setGoodbyeRequested(false);
                 clientSocket.setVersionSupport(WampApplication.WAMPv2);
                 clientSocket.setRealm(request.getText(1));
                 clientSocket.setHelloDetails((WampDict)request.get(2));
@@ -157,11 +158,11 @@ public class WampApplication
                 // processWelcomeMessage(clientSocket, request);
                 break;                
             case WampProtocol.ABORT:
-                clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.abort"));
+                //clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.abort"));
                 break;
             case WampProtocol.GOODBYE:
                 WampProtocol.sendGoodBye(clientSocket, "wamp.close.normal", null);
-                clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
+                //clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
                 break;
             case WampProtocol.HEARTBEAT:
                 processHeartbeatMessage(clientSocket, request);

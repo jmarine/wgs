@@ -10,25 +10,19 @@ import java.util.logging.Logger;
 import javax.websocket.DeploymentException;
 import javax.websocket.server.ServerEndpointConfig;
 import org.glassfish.grizzly.PortRange;
-import org.glassfish.grizzly.http.Method;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.http.server.NetworkListener;
 import org.glassfish.grizzly.http.server.Request;
 import org.glassfish.grizzly.http.server.Response;
 import org.glassfish.grizzly.http.server.ServerConfiguration;
 import org.glassfish.grizzly.http.server.StaticHttpHandler;
-import static org.glassfish.grizzly.http.server.StaticHttpHandlerBase.sendFile;
-import org.glassfish.grizzly.http.util.Header;
-import org.glassfish.grizzly.http.util.HttpStatus;
 import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
+
 import org.glassfish.tyrus.core.TyrusWebSocketEngine;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.ServerContainer;
 import org.glassfish.tyrus.spi.WebSocketEngine;
-import org.wgs.core.Module;
-import org.wgs.wamp.WampApplication;
-
 
 
 public class WssServerContainer extends GrizzlyServerContainer
@@ -197,7 +191,7 @@ class CustomHttpHandler extends StaticHttpHandler
         pickupContentType(response, resource.getPath());
         
         addToFileCache(request, response, resource);
-        sendFile(response, resource);
+        StaticHttpHandler.sendFile(response, resource);
 
         return true;
     }    
