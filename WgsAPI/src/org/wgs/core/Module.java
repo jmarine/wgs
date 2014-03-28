@@ -787,6 +787,9 @@ public class Module extends WampModule
                 g.setAutoMatchEnabled(autoMatchMode);
                 g.setAutoMatchCompleted(false);
                 if(options != null) {
+                    if(options.has("data")) {
+                        g.setData(options.getText("data"));
+                    }
                     if(options.has("automatch")) {
                         autoMatchMode = options.getBoolean("automatch");
                         g.setAutoMatchEnabled(autoMatchMode);
