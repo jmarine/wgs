@@ -261,9 +261,12 @@ public class Server
             }
             
             // stop embedded derby database
-            if(ctx.list("jdbc").hasMore() || ctx.list("java:/jdbc").hasMore()) {
+            String wgsDbPath = serverConfig.getProperty("database.WgsDB.path");
+            if(wgsDbPath != null) {
                 try { 
-                    DriverManager.getConnection("jdbc:derby:;shutdown=true");
+                    int paramsOffset = wgsDbPath.indexOf(";");
+                    String params = (paramsOffset != -1) ? wgsDbPath.substring(paramsOffset) : "";
+                    DriverManager.getConnection("jdbc:derby:" + params + ";shutdown=true");
                 } catch (SQLException se) {
                     if (( (se.getErrorCode() == 50000) && ("XJ015".equals(se.getSQLState()) ))) {
                         System.out.println("Derby has been shut down normally");
