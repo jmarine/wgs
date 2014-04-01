@@ -1,8 +1,8 @@
 package org.wgs.wamp.encoding;
 
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampObject;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampObject;
+import org.wgs.wamp.type.WampList;
 import java.io.ByteArrayInputStream;
 import java.util.Iterator;
 

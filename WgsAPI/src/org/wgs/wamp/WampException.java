@@ -1,7 +1,7 @@
 package org.wgs.wamp;
 
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
 
 
 public class WampException extends Exception

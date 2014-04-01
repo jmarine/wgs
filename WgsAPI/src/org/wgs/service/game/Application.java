@@ -1,4 +1,4 @@
-package org.wgs.core;
+package org.wgs.service.game;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -18,8 +18,8 @@ import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.wgs.entity.User;
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
 
 
 

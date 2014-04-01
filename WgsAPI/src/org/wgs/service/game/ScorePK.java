@@ -1,4 +1,4 @@
-package org.wgs.core;
+package org.wgs.service.game;
 
 
 public class ScorePK implements java.io.Serializable

@@ -1,6 +1,6 @@
 package org.wgs.wamp.rpc;
 
-import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.type.WampDict;
 
 
 public class WampCallOptions 

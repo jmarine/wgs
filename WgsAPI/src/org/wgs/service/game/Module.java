@@ -4,7 +4,7 @@
  * @author Jordi Marine Fort 
  */
 
-package org.wgs.core;
+package org.wgs.service.game;
 
 import java.math.BigDecimal;
 import java.net.URL;
@@ -35,13 +35,13 @@ import org.wgs.entity.OpenIdConnectProvider;
 import org.wgs.util.Base64;
 import org.wgs.util.Social;
 import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.types.WampConnectionState;
-import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.type.WampConnectionState;
+import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.WampException;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
-import org.wgs.wamp.types.WampObject;
+import org.wgs.wamp.type.WampObject;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
@@ -711,7 +711,7 @@ public class Module extends WampModule
                 if(app != null) {
                     autoMatchMode = true;
                     
-                    String jpaQuery = "SELECT DISTINCT OBJECT(g) FROM AppGroup g WHERE g.state = org.wgs.core.GroupState.OPEN AND g.autoMatchEnabled = TRUE AND g.autoMatchCompleted = FALSE AND g.application = :application";
+                    String jpaQuery = "SELECT DISTINCT OBJECT(g) FROM AppGroup g WHERE g.state = org.wgs.service.game.GroupState.OPEN AND g.autoMatchEnabled = TRUE AND g.autoMatchCompleted = FALSE AND g.application = :application";
                     // TODO: automatch criteria (opponents, role, ELO range, game variant, time criteria,...)                    
                     TypedQuery<Group> groupQuery = manager.createQuery(jpaQuery, Group.class);
                     groupQuery.setParameter("application", app);

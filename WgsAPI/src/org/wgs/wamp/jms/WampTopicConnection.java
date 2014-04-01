@@ -23,8 +23,8 @@ import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
-import org.wgs.wamp.types.WampList;
-import org.wgs.wamp.types.WampObject;
+import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampObject;
 
 
 public class WampTopicConnection extends Endpoint implements TopicConnection

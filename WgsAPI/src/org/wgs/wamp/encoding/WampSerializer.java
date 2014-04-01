@@ -1,6 +1,6 @@
 package org.wgs.wamp.encoding;
 
-import org.wgs.wamp.types.WampObject;
+import org.wgs.wamp.type.WampObject;
 
 
 public interface WampSerializer 

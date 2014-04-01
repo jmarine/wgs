@@ -1,4 +1,4 @@
-package org.wgs.core;
+package org.wgs.service.game;
 
 import org.wgs.entity.User;
 import java.util.Calendar;

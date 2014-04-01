@@ -1,4 +1,4 @@
-package org.wgs.core;
+package org.wgs.service.game;
 
 import javax.persistence.CascadeType;
 import org.wgs.entity.User;
@@ -13,7 +13,7 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import javax.persistence.TemporalType;
-import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.type.WampDict;
 
 
 @Entity

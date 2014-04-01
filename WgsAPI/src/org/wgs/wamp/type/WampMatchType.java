@@ -1,4 +1,4 @@
-package org.wgs.wamp.types;
+package org.wgs.wamp.type;
 
 
 public enum WampMatchType 

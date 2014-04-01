@@ -1,4 +1,4 @@
-package org.wgs.core;
+package org.wgs.service.game;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,9 +9,9 @@ import javax.persistence.TypedQuery;
 
 import org.wgs.entity.User;
 import org.wgs.util.Storage;
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampList;
-import org.wgs.wamp.types.WampObject;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampObject;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 
@@ -77,7 +77,7 @@ public class GroupFilter
         if(scope == null || scope == Scope.mine) {
             ejbql = ejbql + ", IN(g.members) m";
             if(where.length() > 0) where.append(" AND ");
-            where.append("m.user = :user and m.state <> org.wgs.core.MemberState.DELETED");
+            where.append("m.user = :user and m.state <> org.wgs.service.game.MemberState.DELETED");
             params.put("user", user);
         }
         

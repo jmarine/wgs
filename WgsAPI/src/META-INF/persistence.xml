@@ -3,21 +3,21 @@
   <persistence-unit name="WgsPU" transaction-type="JTA">
     <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
     <jta-data-source>java:/jdbc/WgsDS</jta-data-source>
-    <class>org.wgs.core.GroupAction</class>
-    <class>org.wgs.core.Application</class>
-    <class>org.wgs.core.Role</class>
-    <class>org.wgs.core.Group</class>
-    <class>org.wgs.core.Member</class>
-    <class>org.wgs.core.LeaderBoard</class>
-    <class>org.wgs.core.Score</class>
     <class>org.wgs.entity.User</class>
     <class>org.wgs.entity.OpenIdConnectProvider</class>
     <class>org.wgs.entity.OpenIdConnectClient</class>
     <class>org.wgs.wamp.topic.WampTopic</class>
+    <class>org.wgs.service.game.Application</class>
+    <class>org.wgs.service.game.GroupAction</class>
+    <class>org.wgs.service.game.LeaderBoard</class>
+    <class>org.wgs.service.game.Group</class>
+    <class>org.wgs.service.game.Member</class>
+    <class>org.wgs.service.game.Role</class>
+    <class>org.wgs.service.game.Score</class>
     <properties>
       <property name="eclipselink.ddl-generation" value="create-tables"/>
       <property name="eclipselink.logging.level.sql" value="FINE"/>
-      <property name="eclipselink.logging.parameters" value="true"/>      
+      <property name="eclipselink.logging.parameters" value="true"/>
     </properties>
   </persistence-unit>
 </persistence>

@@ -10,7 +10,7 @@ import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampTopic;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampList;
 
 
 @WampModuleName("wamp")

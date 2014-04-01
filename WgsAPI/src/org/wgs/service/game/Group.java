@@ -1,4 +1,4 @@
-package org.wgs.core;
+package org.wgs.service.game;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,15 +19,15 @@ import javax.persistence.Table;
 import javax.persistence.Version;
 
 import org.wgs.entity.User;
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
 
 
 @Entity(name="AppGroup")
 @Table(name="APP_GROUP")
 @NamedQueries({
     @NamedQuery(name="wgs.findAllGroups",query="SELECT OBJECT(g) FROM AppGroup g"),
-    @NamedQuery(name="wgs.findFinishedGroupsFromUser",query="SELECT DISTINCT OBJECT(g) FROM AppGroup g, IN(g.members) m WHERE g.state = org.wgs.core.GroupState.FINISHED AND m.user = ?1")
+    @NamedQuery(name="wgs.findFinishedGroupsFromUser",query="SELECT DISTINCT OBJECT(g) FROM AppGroup g, IN(g.members) m WHERE g.state = org.wgs.service.game.GroupState.FINISHED AND m.user = ?1")
 })
 // @org.eclipse.persistence.annotations.Index(name="APP_GROUP_STATE_IDX", columnNames={"STATE"})
 public class Group implements java.io.Serializable

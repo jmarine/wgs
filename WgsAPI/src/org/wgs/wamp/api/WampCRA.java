@@ -1,9 +1,9 @@
 package org.wgs.wamp.api;
 
 import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampObject;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampObject;
+import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.annotation.WampRPC;
 import org.wgs.wamp.annotation.WampModuleName;
 import java.text.SimpleDateFormat;
@@ -20,7 +20,7 @@ import org.wgs.util.Base64;
 import org.wgs.util.PBKDF2;
 import org.wgs.util.Storage;
 import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.types.WampConnectionState;
+import org.wgs.wamp.type.WampConnectionState;
 import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;

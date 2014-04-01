@@ -1,8 +1,8 @@
 package org.wgs.wamp;
 
-import org.wgs.wamp.types.WampMatchType;
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampMatchType;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampRemoteMethod;

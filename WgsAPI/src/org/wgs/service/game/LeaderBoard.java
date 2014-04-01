@@ -1,4 +1,4 @@
-package org.wgs.core;
+package org.wgs.service.game;
 
 import java.util.ArrayList;
 import java.util.List;

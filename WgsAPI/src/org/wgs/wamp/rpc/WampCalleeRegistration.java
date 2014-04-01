@@ -2,7 +2,7 @@ package org.wgs.wamp.rpc;
 
 import java.util.Collection;
 import java.util.HashMap;
-import org.wgs.wamp.types.WampMatchType;
+import org.wgs.wamp.type.WampMatchType;
 import org.wgs.wamp.topic.WampBroker;
 
 

@@ -13,9 +13,9 @@ import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampList;
-import org.wgs.wamp.types.WampMatchType;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampMatchType;
 
 
 public class WampBroker 

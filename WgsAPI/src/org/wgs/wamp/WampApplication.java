@@ -29,10 +29,10 @@ import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
-import org.wgs.wamp.types.WampConnectionState;
-import org.wgs.wamp.types.WampMatchType;
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampConnectionState;
+import org.wgs.wamp.type.WampMatchType;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
 
 
 public class WampApplication 

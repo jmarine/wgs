@@ -1,4 +1,4 @@
-package org.wgs.core;
+package org.wgs.service.game;
 
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
@@ -15,7 +15,7 @@ import javax.persistence.Table;
 import javax.persistence.TemporalType;
 
 import org.wgs.entity.User;
-import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.type.WampDict;
 
 
 @Entity(name="Score")

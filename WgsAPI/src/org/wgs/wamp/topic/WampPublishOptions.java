@@ -2,8 +2,8 @@ package org.wgs.wamp.topic;
 
 import java.util.HashSet;
 import java.util.Set;
-import org.wgs.wamp.types.WampList;
-import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampDict;
 
 
 public class WampPublishOptions 

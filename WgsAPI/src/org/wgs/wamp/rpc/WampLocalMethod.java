@@ -3,8 +3,8 @@ package org.wgs.wamp.rpc;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
 

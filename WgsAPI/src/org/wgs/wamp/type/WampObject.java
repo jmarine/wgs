@@ -1,4 +1,4 @@
-package org.wgs.wamp.types;
+package org.wgs.wamp.type;
 
 import java.util.Collection;
 import java.util.Map;

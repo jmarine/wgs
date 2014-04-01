@@ -37,7 +37,7 @@ public class WgsApplicationConfig implements ServerApplicationConfig
         @Override
         public void onApplicationStart(WampApplication app) { 
             super.onApplicationStart(app);
-            app.registerWampModule(new org.wgs.core.Module(app)); 
+            app.registerWampModule(new org.wgs.service.game.Module(app)); 
         }
     }
 

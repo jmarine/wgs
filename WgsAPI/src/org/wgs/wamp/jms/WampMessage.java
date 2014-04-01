@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import javax.jms.Destination;
 import javax.jms.JMSException;
-import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.type.WampDict;
 
 
 public class WampMessage implements javax.jms.TextMessage

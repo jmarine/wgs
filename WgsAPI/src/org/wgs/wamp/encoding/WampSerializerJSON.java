@@ -3,9 +3,9 @@ package org.wgs.wamp.encoding;
 import java.util.Iterator;
 
 import org.wgs.util.Base64;
-import org.wgs.wamp.types.WampDict;
-import org.wgs.wamp.types.WampObject;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampObject;
+import org.wgs.wamp.type.WampList;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;

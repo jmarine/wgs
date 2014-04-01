@@ -6,9 +6,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.WampException;
-import org.wgs.wamp.types.WampList;
+import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;

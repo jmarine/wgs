@@ -1,7 +1,7 @@
 package org.wgs.wamp.rpc;
 
 import java.util.concurrent.Callable;
-import org.wgs.wamp.types.WampDict;
+import org.wgs.wamp.type.WampDict;
 
 
 public abstract class WampAsyncCall implements Callable<Void>
