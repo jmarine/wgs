@@ -24,20 +24,9 @@ import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.naming.InitialContext;
 
-import com.sun.messaging.AdminConnectionFactory;
-import com.sun.messaging.ConnectionConfiguration;
-import com.sun.messaging.jmq.jmsclient.runtime.BrokerInstance;
-import com.sun.messaging.jmq.jmsclient.runtime.ClientRuntime;
-import com.sun.messaging.jmq.jmsservice.BrokerEvent;
-import com.sun.messaging.jmq.jmsservice.BrokerEventListener;
-import com.sun.messaging.jms.management.server.DestinationOperations;
-import com.sun.messaging.jms.management.server.DestinationType;
-import com.sun.messaging.jms.management.server.MQObjectName;
 
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.topic.WampSubscription;
-import org.wgs.wamp.topic.WampTopic;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampObject;
@@ -48,9 +37,9 @@ public class JmsServices
 {
     private static final Logger logger = Logger.getLogger(JmsServices.class.getName());
     
+    private static String           imqEnabled = null;
     private static boolean          brokerTested = false;
     private static boolean          brokerAvailable = false;
-    private static BrokerInstance   brokerInstance = null;
     private static String           brokerId = "wgs-" + UUID.randomUUID().toString();
     
     private static TopicConnection  reusableTopicConnection = null;
@@ -59,39 +48,11 @@ public class JmsServices
     
     public static void start(Properties serverConfig) throws Exception
     {
-        String imqEnabled = serverConfig.getProperty("imq.enabled");
-        if(imqEnabled != null && imqEnabled.equalsIgnoreCase("true")) {
-            
-            String imqHome = serverConfig.getProperty("imq.home");
-            if(imqHome != null) {
-                String instanceName = serverConfig.getProperty("imq.instancename", "wgs");
-                System.out.println("Starting OpenMQ broker...");
-
-                String[] args = { 
-                    "-imqhome", serverConfig.getProperty("imq.home"), 
-                    "-varhome", serverConfig.getProperty("imq.varhome"), 
-                    "-name",    instanceName
-                };
-
-                ClientRuntime clientRuntime = ClientRuntime.getRuntime();
-                brokerInstance = clientRuntime.createBrokerInstance();
-
-                Properties props = brokerInstance.parseArgs(args);
-                props.put("imq."+instanceName+".max_threads", serverConfig.getProperty("imq."+instanceName+".max_threads", "10000"));
-                BrokerEventListener listener = new EmbeddedBrokerEventListener();
-                brokerInstance.init(props, listener);
-                brokerInstance.start();
-            }
-
-            com.sun.messaging.TopicConnectionFactory tcf = null;
-            tcf = new com.sun.messaging.TopicConnectionFactory();
-            tcf.setProperty(ConnectionConfiguration.imqAddressList, serverConfig.getProperty("imq.tcf.imqAddressList", "mq://localhost/direct"));
-        
-            InitialContext jndi = new InitialContext();
-            jndi.bind("jms/CentralTopicConnectionFactory", tcf);
+        imqEnabled = serverConfig.getProperty("imq.enabled");
+        if(imqEnabled != null && imqEnabled.equalsIgnoreCase("true")) {        
+            EmbeddedOpenMQ.start(serverConfig);
         }
     }
-    
 
     public static void stop() 
     {
@@ -102,13 +63,10 @@ public class JmsServices
             } catch(Exception ex) { }
         }
         
-        if(brokerInstance != null) {
-            System.out.println("Stoping OpenMQ broker...");
-            brokerInstance.stop();
-            brokerInstance.shutdown();
+        if(imqEnabled != null && imqEnabled.equalsIgnoreCase("true")) {        
+            EmbeddedOpenMQ.stop();
         }
     }
-    
     
     public synchronized static boolean isJmsBrokerAvailable()
     {
@@ -143,23 +101,10 @@ public class JmsServices
     }
     
     
-    public static void destroyTopic(String topicName) throws Exception
-    {
-        AdminConnectionFactory acf = new AdminConnectionFactory();
-        JMXConnector jmxc = acf.createConnection("admin", "admin");
-        MBeanServerConnection mbsc = jmxc.getMBeanServerConnection();
 
-        ObjectName destMgrMonitorName = new ObjectName(MQObjectName.DESTINATION_MANAGER_CONFIG_MBEAN_NAME);
-
-        Object opParams[] = { DestinationType.TOPIC, normalizeTopicName(topicName) };
-        String opSig[] = { String.class.getName(), String.class.getName() };
-
-        mbsc.invoke(destMgrMonitorName, DestinationOperations.DESTROY, opParams, opSig);
-        jmxc.close();
-    }
     
 
-    private static String normalizeTopicName(String topicName) 
+    public static String normalizeTopicName(String topicName) 
     {
         int index = topicName.indexOf("://");
         if(index != -1) topicName = topicName.substring(index+3);
@@ -341,30 +286,6 @@ public class JmsServices
             }
         }
         
-        
     }
     
 }
-
-
-
-
-class EmbeddedBrokerEventListener implements BrokerEventListener 
-{
-    @Override
-    public void brokerEvent(BrokerEvent brokerEvent) 
-    {
-        System.out.println ("Received broker event: "+brokerEvent);
-    }
-
-    @Override
-    public boolean exitRequested(BrokerEvent event, Throwable thr) 
-    {
-        System.out.println ("Broker is requesting a shutdown because of: "+event+" with "+thr);
-        // return true to allow the broker to shutdown
-        return true;
-    }
-
-}
-
-
