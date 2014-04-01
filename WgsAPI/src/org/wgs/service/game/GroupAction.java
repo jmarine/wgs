@@ -1,7 +1,7 @@
 package org.wgs.service.game;
 
 import javax.persistence.CascadeType;
-import org.wgs.entity.User;
+import org.wgs.security.User;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;

@@ -3,9 +3,6 @@
   <persistence-unit name="WgsPU" transaction-type="JTA">
     <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
     <jta-data-source>java:/jdbc/WgsDS</jta-data-source>
-    <class>org.wgs.entity.User</class>
-    <class>org.wgs.entity.OpenIdConnectProvider</class>
-    <class>org.wgs.entity.OpenIdConnectClient</class>
     <class>org.wgs.wamp.topic.WampTopic</class>
     <class>org.wgs.service.game.Application</class>
     <class>org.wgs.service.game.GroupAction</class>
@@ -14,6 +11,9 @@
     <class>org.wgs.service.game.Member</class>
     <class>org.wgs.service.game.Role</class>
     <class>org.wgs.service.game.Score</class>
+    <class>org.wgs.security.OpenIdConnectProvider</class>
+    <class>org.wgs.security.OpenIdConnectClient</class>
+    <class>org.wgs.security.User</class>
     <properties>
       <property name="eclipselink.ddl-generation" value="create-tables"/>
       <property name="eclipselink.logging.level.sql" value="FINE"/>

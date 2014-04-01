@@ -17,7 +17,7 @@ import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
-import org.wgs.entity.User;
+import org.wgs.security.User;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 

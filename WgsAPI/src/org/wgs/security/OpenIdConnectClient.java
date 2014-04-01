@@ -1,4 +1,4 @@
-package org.wgs.entity;
+package org.wgs.security;
 
 import java.io.*;
 import java.net.*;

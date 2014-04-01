@@ -15,7 +15,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityManager;
 
-import org.wgs.entity.User;
+import org.wgs.security.User;
 import org.wgs.util.Base64;
 import org.wgs.util.PBKDF2;
 import org.wgs.util.Storage;

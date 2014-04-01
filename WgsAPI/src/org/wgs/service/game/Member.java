@@ -13,7 +13,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
-import org.wgs.entity.User;
+import org.wgs.security.User;
 import org.wgs.wamp.type.WampDict;
 
 

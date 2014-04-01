@@ -18,7 +18,7 @@ import javax.persistence.OrderBy;
 import javax.persistence.Table;
 import javax.persistence.Version;
 
-import org.wgs.entity.User;
+import org.wgs.security.User;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 

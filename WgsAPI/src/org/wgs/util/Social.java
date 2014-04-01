@@ -13,7 +13,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
-import org.wgs.entity.User;
+import org.wgs.security.User;
 
 
 public class Social 

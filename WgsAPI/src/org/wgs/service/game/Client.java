@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.persistence.EntityManager;
 
-import org.wgs.entity.User;
+import org.wgs.security.User;
 import org.wgs.util.Storage;
 import org.wgs.wamp.WampSocket;
 

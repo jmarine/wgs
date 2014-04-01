@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 
 import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
-import org.wgs.entity.User;
+import org.wgs.security.User;
 import org.wgs.wamp.api.WampAPI;
 
 import org.wgs.wamp.api.WampCRA;

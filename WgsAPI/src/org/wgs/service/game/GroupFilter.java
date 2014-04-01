@@ -7,7 +7,7 @@ import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 
-import org.wgs.entity.User;
+import org.wgs.security.User;
 import org.wgs.util.Storage;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
