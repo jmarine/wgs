@@ -73,20 +73,29 @@ public class WampSocket
         rpcRegistrations = new java.util.concurrent.ConcurrentHashMap<Long,WampCalleeRegistration>();
         
         String subprotocol = session.getNegotiatedSubprotocol();
+        System.out.println("DEBUG: WampSocket: negotiated subprotocol: " + subprotocol);
         if(subprotocol != null) {
             switch(subprotocol) {
                 case "wamp":
                     setVersionSupport(WampApplication.WAMPv1);
                     setEncoding(WampEncoding.JSon);
                     break;
+                    
+                case "wamp.2.msgpack":
+                    setVersionSupport(WampApplication.WAMPv2);
+                    setEncoding(WampEncoding.MsgPack);
+                    break;                    
+                    
                 case "wamp.2.json":
                     setVersionSupport(WampApplication.WAMPv2);
                     setEncoding(WampEncoding.JSon);
                     break;
-                case "wamp.2.msgpack":
+
+                default:    // FIXME: negotiated subprotocol doesn't work in WildFly 8.0.0.
                     setVersionSupport(WampApplication.WAMPv2);
-                    setEncoding(WampEncoding.MsgPack);
+                    setEncoding(WampEncoding.JSon);
                     break;
+                    
             }        
         }
     }
