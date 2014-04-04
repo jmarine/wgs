@@ -28,8 +28,11 @@ public class WampEndpointConfig
     extends javax.websocket.server.ServerEndpointConfig.Configurator
     implements javax.websocket.server.ServerEndpointConfig
 {
-    private static final Logger logger = Logger.getLogger(WampEndpointConfig.class.getName());
+    public  static final String WAMP_APPLICATION_PROPERTY_NAME = "__wamp_application";
+    public  static final String WAMP_ENDPOINTCONFIG_PROPERTY_NAME = "__wamp_endpointconfig";
 
+    private static final Logger logger = Logger.getLogger(WampEndpointConfig.class.getName());
+    
     private Class endpointClass;
     private WampApplication application;
     private ConcurrentHashMap<String,WampSocket> sockets;    
@@ -161,6 +164,8 @@ public class WampEndpointConfig
     @Override
     public Map<String, Object> getUserProperties() {
         Map<String, Object> userProperties = new HashMap<String, Object>();
+        userProperties.put(WAMP_ENDPOINTCONFIG_PROPERTY_NAME, this);
+        userProperties.put(WAMP_APPLICATION_PROPERTY_NAME, application);
         return userProperties;
     }
     

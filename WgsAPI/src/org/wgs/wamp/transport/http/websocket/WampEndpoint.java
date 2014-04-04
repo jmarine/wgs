@@ -43,10 +43,11 @@ public class WampEndpoint extends Endpoint
         logger.fine("##################### Session opened");
 
         this.session = session;
-        this.wampEndpointConfig = (WampEndpointConfig)endpointConfig;
+        this.wampEndpointConfig = (WampEndpointConfig)endpointConfig.getUserProperties().get(WampEndpointConfig.WAMP_ENDPOINTCONFIG_PROPERTY_NAME);
         
         wampEndpointConfig.onWampOpen(session, this);
     }
+    
     
    
     @Override
