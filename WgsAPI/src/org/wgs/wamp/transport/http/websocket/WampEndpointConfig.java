@@ -1,10 +1,9 @@
 package org.wgs.wamp.transport.http.websocket;
 
+import java.io.ByteArrayInputStream;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import org.wgs.wamp.*;
-import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.type.WampObject;
-import org.wgs.wamp.type.WampList;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -12,16 +11,21 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import javax.websocket.CloseReason;
 import javax.websocket.Decoder;
+import javax.websocket.EncodeException;
 import javax.websocket.Encoder;
+import javax.websocket.EndpointConfig;
 import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
 import javax.websocket.PongMessage;
 import javax.websocket.Session;
+import org.wgs.wamp.*;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
+import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampObject;
 
 
 public class WampEndpointConfig 
@@ -151,7 +155,9 @@ public class WampEndpointConfig
 
     @Override
     public List<Class<? extends Encoder>> getEncoders() {
-        List<Class<? extends Encoder>> encoders = Collections.emptyList();
+        List<Class<? extends Encoder>> encoders = new ArrayList<Class<? extends Encoder>>();
+        encoders.add(StringEncoder.class);  
+        encoders.add(ByteArrayEncoder.class);
         return encoders;
     }
 
@@ -188,4 +194,53 @@ public class WampEndpointConfig
         return subprotocol;
     }
     
+    
+    
+    public static class StringEncoder implements Encoder.Text<Object> 
+    {
+
+        @Override
+        public void init(EndpointConfig config) {
+        }
+        
+        @Override
+        public String encode(Object object) throws EncodeException {
+            return object.toString();
+        }
+
+        @Override
+        public void destroy() {
+        }
+        
+    }
+    
+    
+    public static class ByteArrayEncoder implements Encoder.Binary<Object> {
+
+        @Override
+        public void init(EndpointConfig config) {
+        }
+
+
+        @Override
+        public void destroy() {
+        }
+
+        @Override
+        public ByteBuffer encode(Object object) throws EncodeException {
+
+            if(object instanceof String) {
+                try {
+                    String str = (String)object;
+                    object = str.getBytes("UTF-8");
+                } catch (UnsupportedEncodingException ex) {
+                    throw new EncodeException(object, "Error converting to UTF-8");
+                }
+            }
+
+            return ByteBuffer.wrap((byte[])object);
+        }
+    }    
+
 }
+
