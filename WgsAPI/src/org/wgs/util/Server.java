@@ -168,9 +168,10 @@ public class Server
         ctx.createSubcontext("jms");
         ctx.createSubcontext("jdbc");
         ctx.createSubcontext("java:");
-        ctx.createSubcontext("java:/jdbc");
         ctx.createSubcontext("java:comp");
-        ctx.createSubcontext("java:comp/env");
+        ctx.createSubcontext("java:/comp");
+        ctx.createSubcontext("java:/comp/env");
+        ctx.createSubcontext("java:/comp/env/jdbc");
         
         
         sun.misc.Signal.handle(new sun.misc.Signal("TERM"), new sun.misc.SignalHandler() {

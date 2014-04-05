@@ -1,6 +1,6 @@
 <jboss-web>  
      <resource-ref>  
      <res-ref-name>jdbc/WgsDS</res-ref-name>  
-     <jndi-name>java:/jdbc/WgsDS</jndi-name>  
+     <jndi-name>java:/comp/env/jdbc/WgsDS</jndi-name>  
      </resource-ref>  
 </jboss-web>  
