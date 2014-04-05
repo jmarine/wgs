@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Context antiJARLocking="true">
-    
-    <ResourceLink name="jdbc/WgsDS" 
-          global="jdbc/WgsDS" 
-          type="javax.sql.DataSource"/>
-
+<Context antiJARLocking="true" path="/WgsWebApp">
+  <ResourceLink global="jdbc/WgsDS" name="jdbc/WgsDS" type="javax.sql.DataSource"/>
 </Context>

@@ -21,4 +21,9 @@
         <res-auth>Container</res-auth>
         <res-sharing-scope>Shareable</res-sharing-scope>
     </resource-ref>
+    
+    <persistence-unit-ref>
+        <persistence-unit-name>WgsPU</persistence-unit-name>
+    </persistence-unit-ref>
+
 </web-app>
