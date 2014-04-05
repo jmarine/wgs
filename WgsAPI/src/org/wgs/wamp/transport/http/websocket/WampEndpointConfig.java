@@ -72,7 +72,7 @@ public class WampEndpointConfig
         final WampSocket clientSocket = getWampSocket(session);
 
 
-        session.setMaxIdleTimeout(0L);  // forever
+        session.setMaxIdleTimeout(0L);  // forever (but fails on Jetty)
         
         String subproto = (session.getNegotiatedSubprotocol());
         
