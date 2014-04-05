@@ -1,5 +1,6 @@
 package org.wgs.wamp;
 
+import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.util.Map;
 import java.util.logging.Level;
@@ -266,7 +267,16 @@ public class WampSocket
     synchronized void sendObject(Object msg) {
         try {
             if(isOpen()) {
-                session.getBasicRemote().sendObject(msg);
+                switch(getEncoding()) {
+                    case JSon:
+                        session.getBasicRemote().sendText(msg.toString());
+                        break;
+                    case MsgPack:
+                        session.getBasicRemote().sendBinary(ByteBuffer.wrap((byte[])msg));
+                        break;
+                    default:
+                        session.getBasicRemote().sendObject(msg);
+                }
             }
         } catch(Exception e) {
             logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);

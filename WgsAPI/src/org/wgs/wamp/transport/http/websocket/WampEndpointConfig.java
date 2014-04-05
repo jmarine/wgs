@@ -155,9 +155,7 @@ public class WampEndpointConfig
 
     @Override
     public List<Class<? extends Encoder>> getEncoders() {
-        List<Class<? extends Encoder>> encoders = new ArrayList<Class<? extends Encoder>>();
-        encoders.add(StringEncoder.class);  
-        encoders.add(ByteArrayEncoder.class);
+        List<Class<? extends Encoder>> encoders = Collections.emptyList();
         return encoders;
     }
 
@@ -194,53 +192,4 @@ public class WampEndpointConfig
         return subprotocol;
     }
     
-    
-    
-    public static class StringEncoder implements Encoder.Text<Object> 
-    {
-
-        @Override
-        public void init(EndpointConfig config) {
-        }
-        
-        @Override
-        public String encode(Object object) throws EncodeException {
-            return object.toString();
-        }
-
-        @Override
-        public void destroy() {
-        }
-        
-    }
-    
-    
-    public static class ByteArrayEncoder implements Encoder.Binary<Object> {
-
-        @Override
-        public void init(EndpointConfig config) {
-        }
-
-
-        @Override
-        public void destroy() {
-        }
-
-        @Override
-        public ByteBuffer encode(Object object) throws EncodeException {
-
-            if(object instanceof String) {
-                try {
-                    String str = (String)object;
-                    object = str.getBytes("UTF-8");
-                } catch (UnsupportedEncodingException ex) {
-                    throw new EncodeException(object, "Error converting to UTF-8");
-                }
-            }
-
-            return ByteBuffer.wrap((byte[])object);
-        }
-    }    
-
 }
-
