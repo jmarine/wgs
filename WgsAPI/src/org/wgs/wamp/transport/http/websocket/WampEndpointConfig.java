@@ -1,9 +1,5 @@
 package org.wgs.wamp.transport.http.websocket;
 
-import java.io.ByteArrayInputStream;
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -13,15 +9,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.websocket.CloseReason;
 import javax.websocket.Decoder;
-import javax.websocket.EncodeException;
 import javax.websocket.Encoder;
-import javax.websocket.EndpointConfig;
 import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
-import javax.websocket.PongMessage;
 import javax.websocket.Session;
 import org.wgs.wamp.*;
-import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.type.WampList;
@@ -54,6 +46,7 @@ public class WampEndpointConfig
     {
         return this.application;
     }
+    
     
     public WampSocket getWampSocket(Session session) 
     {
