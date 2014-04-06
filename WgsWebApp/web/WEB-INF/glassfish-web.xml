@@ -8,4 +8,8 @@
       <description>Keep a copy of the generated servlet class' java code.</description>
     </property>
   </jsp-config>
+  <resource-ref>
+    <res-ref-name>jdbc/WgsDS</res-ref-name>
+    <jndi-name>jdbc/WgsDS</jndi-name>
+  </resource-ref>  
 </glassfish-web-app>
