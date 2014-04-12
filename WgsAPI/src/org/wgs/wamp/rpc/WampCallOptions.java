@@ -43,7 +43,7 @@ public class WampCallOptions
             }
             
             if(options.has("disclose_me")) {
-                setDiscloseMe(options.getLong("disclose_me") != 0L);
+                setDiscloseMe(options.getBoolean("disclose_me"));
             }            
             
         }
