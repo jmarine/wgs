@@ -42,7 +42,7 @@ public class WampProtocol
     public static final int CANCEL_CALL = 49;
     public static final int CALL_RESULT = 50;
     public static final int INVOCATION = 68;
-    public static final int INTERRUPT = 69;     // INVOCATION CANCELLATION
+    public static final int INTERRUPT = 69;     // CANCEL INVOCATION
     public static final int YIELD = 70;         // INVOCATION RESULT
     
     
