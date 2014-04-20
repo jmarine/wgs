@@ -603,10 +603,9 @@ function open_group(gid, options) {
     $("#group_list").show();          
     adjustScrollTable("groups");
         
-    wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, {});
+    wgsclient.unsubscribe("wgs.app_event." + appId, update_groups, app_metaevent, {});
     wgsclient.openGroup(appId, gid, options, function(id,details,errorURI,result,resultKw) {
        if(!errorURI) {
-            //wgsclient.setSubscriptionStatus("wgs.app_event:" + appId, "busy", null );
             if(!currentGroup) {
                 currentApp = resultKw.app;
                 currentGroup = resultKw;
