@@ -213,9 +213,9 @@ public class WampProtocol
             response.add(subscription.getId());
             response.add(publicationId);
             response.add(eventDetails);
-            if(payload != null || payloadKw != null) {
+            if( (payload != null && payload.size() > 0) || (payloadKw != null && payloadKw.size() > 0) ) {
                 response.add((payload!=null) ? payload : new WampList());
-                if(payloadKw != null) response.add(payloadKw);
+                if(payloadKw != null && payloadKw.size() > 0) response.add(payloadKw);
             }
                                     
             Set<Long> eligible = (eligibleParam != null) ? new HashSet<Long>(eligibleParam) : null;
