@@ -27,7 +27,7 @@ public class WampLocalMethod extends WampMethod
     
     @Override
     @SuppressWarnings("unchecked")
-    public Object invoke(WampCallController task, WampSocket clientSocket, WampList args, WampDict argsKw, WampCallOptions options) throws Exception
+    public Object invoke(WampCallController task, WampSocket clientSocket, WampList args, WampDict argsKw, WampCallOptions options, WampAsyncCallback callback) throws Exception
     {
         int argCount = 0;
         

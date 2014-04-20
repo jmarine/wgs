@@ -69,7 +69,7 @@ public class WampSocket
         sessionData = new ConcurrentHashMap<String,Object>();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
-        rpcAsyncCallbacks = new HashMap<Long,WampAsyncCallback>();
+        rpcAsyncCallbacks = new ConcurrentHashMap<Long,WampAsyncCallback>();
         rpcController = new HashMap<Long,WampCallController>();
         rpcRegistrations = new java.util.concurrent.ConcurrentHashMap<Long,WampCalleeRegistration>();
         

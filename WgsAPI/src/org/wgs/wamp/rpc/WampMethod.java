@@ -18,7 +18,7 @@ public abstract class WampMethod
         return uri;
     }
     
-    public abstract Object invoke(WampCallController task, WampSocket clientSocket, WampList args, WampDict argsKw, WampCallOptions options)
+    public abstract Object invoke(WampCallController task, WampSocket clientSocket, WampList args, WampDict argsKw, WampCallOptions options, WampAsyncCallback callback)
         throws Exception;
     
 }

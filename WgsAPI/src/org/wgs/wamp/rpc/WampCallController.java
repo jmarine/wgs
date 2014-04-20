@@ -105,68 +105,8 @@ public class WampCallController implements Runnable
             }
 
             Object response = module.onCall(this, clientSocket, procedureURI, arguments, argumentsKw, callOptions);
-            if(response != null && response instanceof WampAsyncCall) {
-                asyncCall = (WampAsyncCall)response;
-                if(!asyncCall.hasAsyncCallback()) asyncCall.setAsyncCallback(new WampAsyncCallback() {
-                    @Override
-                    public void resolve(Object... results) {
-                        Long id = (Long)results[0];
-                        WampDict details = (WampDict)results[1];
-                        WampList result = (WampList)results[2];
-                        WampDict resultKw = (WampDict)results[3];
-                        if(getClientSocket().supportsProgressiveCallResults() && callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
-                            setResult(result);
-                            setResultKw(resultKw);
-                            //setDetails(details);
-                            sendCallResults();                            
-                        } else {
-                            getResult().add(result);
-                            getResultKw().putAll(resultKw);
-                            sendCallResults();     
-                        }
-                    }
-
-                    @Override
-                    public void progress(Object... progressParams) {
-                        Long id = (Long)progressParams[0];
-                        WampDict details = (WampDict)progressParams[1];
-                        WampList progress = (WampList)progressParams[2];
-                        WampDict progressKw = (WampDict)progressParams[3];
-                        if(getClientSocket().supportsProgressiveCallResults() && callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
-                            if(details==null) details = new WampDict();
-                            details.put("progress", true);
-                            WampProtocol.sendResult(getClientSocket(), getCallID(), details, progress, progressKw);
-                        } else {
-                            getResult().add(progress);
-                            getResultKw().putAll(progressKw);
-                        }
-                    }
-
-                    @Override
-                    public void reject(Object... errors) {
-                        Long invocationId = (Long)errors[0];
-                        WampDict details  = (WampDict)errors[1];
-                        String errorURI   = (String)errors[2];
-                        WampList args     = (errors.length > 3) ? (WampList)errors[3] : null;
-                        WampDict argsKw   = (errors.length > 4) ? (WampDict)errors[4] : null;
-                        WampProtocol.sendError(clientSocket, WampProtocol.CALL, callID, details, "wamp.error.invocation_error", args, argsKw);
-                    }
-                });
-                asyncCall.call();
-            } else {
-                if(response != null) {
-                    if (response instanceof WampDict) {
-                        setResultKw((WampDict)response);
-
-                    } else if (response instanceof WampList) {
-                        setResult((WampList)response);
-
-                    } else {
-                        getResult().add(response);
-                    }
-                }
-                sendCallResults();
-            }
+            logger.log(Level.FINE, "Module: onCall " + procedureURI + " result = " + response);
+            
         } catch (Throwable ex) {
             
             if (ex instanceof java.lang.reflect.InvocationTargetException) {

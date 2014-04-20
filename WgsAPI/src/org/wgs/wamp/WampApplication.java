@@ -141,6 +141,63 @@ public class WampApplication
         }                
     }
     
+    public void onWampSessionStart(WampSocket clientSocket, String realm, WampDict helloDetails)
+    {
+        clientSocket.setGoodbyeRequested(false);
+        clientSocket.setVersionSupport(WampApplication.WAMPv2);
+        clientSocket.setRealm(realm);
+        clientSocket.setHelloDetails(helloDetails);
+        WampProtocol.sendWelcomeMessage(this, clientSocket);
+        
+        // Notify modules:
+        for(WampModule module : modules.values()) {
+            try { 
+                module.onSessionStart(clientSocket, realm, helloDetails); 
+            } catch(Exception ex) {
+                logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
+            }
+        }         
+    }
+    
+    public void onWampSessionEnd(WampSocket clientSocket) 
+    {
+        if(clientSocket.getRealm() != null) {
+
+            // Notify modules:
+            for(WampModule module : modules.values()) {
+                try { 
+                    module.onSessionEnd(clientSocket); 
+                } catch(Exception ex) {
+                    logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
+                }
+            }         
+        
+            // First remove subscriptions to topic patterns:
+            for(WampSubscription subscription : clientSocket.getSubscriptions()) {
+                if(subscription.getOptions().getMatchType() != WampMatchType.exact) {  // prefix or wildcards
+                    WampBroker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
+                }
+            }
+
+            // Then, remove remaining subscriptions to single topics:
+            for(WampSubscription subscription : clientSocket.getSubscriptions()) {
+                WampBroker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
+            }      
+
+            // Remove RPC registrations
+            WampModule module = getDefaultWampModule();            
+            for(WampCalleeRegistration registration : clientSocket.getRpcRegistrations()) {
+                try {
+                    module.onUnregister(clientSocket, registration.getId());
+                } catch(Exception ex) { }
+            }        
+
+        }
+        
+        // Clear session realm
+        clientSocket.setRealm(null);
+    }
+    
     public void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
     {
         Long requestType = request.getLong(0);
@@ -148,20 +205,20 @@ public class WampApplication
 
         switch(requestType.intValue()) {
             case WampProtocol.HELLO:
-                clientSocket.setGoodbyeRequested(false);
-                clientSocket.setVersionSupport(WampApplication.WAMPv2);
-                clientSocket.setRealm(request.getText(1));
-                clientSocket.setHelloDetails((WampDict)request.get(2));
-                WampProtocol.sendWelcomeMessage(this, clientSocket);
+                String realm = request.getText(1);
+                WampDict helloDetails = (WampDict)request.get(2);
+                onWampSessionStart(clientSocket, realm, helloDetails);
                 break;
             case WampProtocol.WELCOME:
                 // processWelcomeMessage(clientSocket, request);
                 break;                
             case WampProtocol.ABORT:
+                onWampSessionEnd(clientSocket);
                 //clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.abort"));
                 break;
             case WampProtocol.GOODBYE:
                 WampProtocol.sendGoodBye(clientSocket, "wamp.close.normal", null);
+                onWampSessionEnd(clientSocket);
                 //clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
                 break;
             case WampProtocol.HEARTBEAT:
@@ -226,6 +283,13 @@ public class WampApplication
     public void onWampClose(WampSocket clientSocket, CloseReason reason) 
     {
         if(clientSocket != null) {
+
+            clientSocket.close(reason);
+            clientSocket.setState(WampConnectionState.OFFLINE);
+
+            onWampSessionEnd(clientSocket);
+
+            onUserLogout(clientSocket);
             
             for(WampModule module : modules.values()) {
                 try { 
@@ -234,34 +298,6 @@ public class WampApplication
                     logger.log(Level.SEVERE, "Error disconnecting client:", ex);
                 }
             }
-            
-            onUserLogout(clientSocket);
-
-            clientSocket.close(reason);
-            clientSocket.setState(WampConnectionState.OFFLINE);
-
-
-            // First remove subscriptions to topic patterns:
-            for(WampSubscription subscription : clientSocket.getSubscriptions()) {
-                if(subscription.getOptions().getMatchType() != WampMatchType.exact) {  // prefix or wildcards
-                    WampBroker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
-                }
-            }
-
-            // Then, remove remaining subscriptions to single topics:
-            for(WampSubscription subscription : clientSocket.getSubscriptions()) {
-                WampBroker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
-            }      
-            
-            // Remove RPC registrations
-            WampModule module = getDefaultWampModule();            
-            for(WampCalleeRegistration registration : clientSocket.getRpcRegistrations()) {
-                try {
-                    module.onUnregister(clientSocket, registration.getId());
-                } catch(Exception ex) { }
-            }
-            
-            
             
             logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
         }
@@ -419,7 +455,6 @@ public class WampApplication
         WampMatchType matchType = WampMatchType.exact;
         if(options != null && options.has("match")) {
             matchType = WampMatchType.valueOf(options.getText("match").toLowerCase());
-            
         }
         
         if(rpcsByName.get(methodUriOrPattern) != null) {  // Don't override system functions
@@ -521,8 +556,12 @@ public class WampApplication
         if(details != null && details.has("progress") && details.getBoolean("progress")) {
             callback.progress(invocationId,details,result, resultKw);
         } else {
-            callback.resolve(invocationId,details,result,resultKw);
-            providerSocket.removeAsyncCallback(invocationId);
+            try {
+                callback.resolve(invocationId,details,result,resultKw);
+                providerSocket.removeAsyncCallback(invocationId);
+            } catch(Exception ex) {
+                throw ex;
+            }
         }
     }
     

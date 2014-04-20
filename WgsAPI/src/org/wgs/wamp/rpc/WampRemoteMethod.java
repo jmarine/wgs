@@ -49,16 +49,16 @@ public class WampRemoteMethod extends WampMethod
     
     
     @Override
-    public Object invoke(final WampCallController task, final WampSocket clientSocket, final WampList args, final WampDict argsKw, final WampCallOptions callOptions) throws Exception
+    public Object invoke(final WampCallController task, final WampSocket clientSocket, final WampList args, final WampDict argsKw, final WampCallOptions callOptions, final WampAsyncCallback callback) throws Exception
     {
         final Long invocationId = WampProtocol.newId();
 
-        return new WampAsyncCall(null) {
+        return new WampAsyncCall(callback) {
             
             @Override
             public Void call() throws Exception {
                 remotePeer.addRpcController(invocationId, task);
-                remotePeer.addAsyncCallback(invocationId, getAsyncCallback());
+                remotePeer.addAsyncCallback(invocationId, callback);
 
                 WampDict invocationOptions = new WampDict();
                 if(matchType != WampMatchType.exact) invocationOptions.put("procedure", task.getProcedureURI());

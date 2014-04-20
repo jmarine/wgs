@@ -157,7 +157,7 @@ public class WampProtocol
         response.add((details != null)? details : new WampDict());
         if(args != null || argsKw != null) {
             response.add((args != null)? args : new WampList());
-            if(argsKw != null) response.add(argsKw);
+            if(argsKw != null && argsKw.size() > 0) response.add(argsKw);
         }
         sendWampMessage(clientSocket, response);
     }    
