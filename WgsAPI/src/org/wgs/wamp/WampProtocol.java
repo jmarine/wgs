@@ -16,7 +16,6 @@ import org.wgs.wamp.type.WampMatchType;
 import org.wgs.wamp.type.WampObject;
 
 
-
 public class WampProtocol 
 {
     private static final Logger logger = Logger.getLogger(WampProtocol.class.toString());    
