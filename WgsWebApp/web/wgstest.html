@@ -476,7 +476,6 @@ function update_groups(id,details,errorURI,payload,payloadKw) {
         
     } 
     
-    $("#group_list").show();
     adjustScrollTable("groups");
 }
 
@@ -500,13 +499,15 @@ function list_groups(scope) {
     var appId = $("#apps").val();
     if(!scope) scope = $("input[name=group_scope]:checked").val();
     $("#groupsTable>table>tbody>tr").remove();
+    
+    $("#group_list").show();          
+    adjustScrollTable("groups");
 
     wgsclient.listGroups(appId, scope, null, function(id,details,errorURI,result,resultKw) {
         if(!errorURI) {
             currentApp = resultKw.app;
             update_groups(id,details,errorURI,result,resultKw);
             $("#app_list").hide();
-            $("#group_list").slideDown(500);
             $("#group_list fieldset legend").html("Groups: " + resultKw.app.name);
             wgsclient.subscribe("wgs.app_event." + currentApp.appId, update_groups, app_metaevent, { "match": "exact", "metatopics": ["wamp.metatopic.subscriber.add", "wamp.metatopic.subscriber.remove"]} );
         }
@@ -598,7 +599,10 @@ function reserve_group_slot(gid,slot) {
 
 function open_group(gid, options) {
     var appId = $("#apps").val();
-    
+
+    $("#group_list").show();          
+    adjustScrollTable("groups");
+        
     wgsclient.unsubscribe("wgs.app_event:" + appId, update_groups, app_metaevent, {});
     wgsclient.openGroup(appId, gid, options, function(id,details,errorURI,result,resultKw) {
        if(!errorURI) {
@@ -606,9 +610,10 @@ function open_group(gid, options) {
             if(!currentGroup) {
                 currentApp = resultKw.app;
                 currentGroup = resultKw;
-                wgsclient.subscribe("wgs.group_event:" + resultKw.gid, update_group_callback, null, {} );
-                show_group(resultKw); 
-            }
+                wgsclient.subscribe("wgs.group_event." + resultKw.gid, update_group_callback, null, {} );
+                show_group(resultKw);                 
+            }                
+
        } else if(errorURI == "wgs.incorrectpassword") {
             var password = prompt("Introduce the password to access the group:");
             if(password) {
@@ -637,7 +642,9 @@ function show_group(group) {
     if(group.automatch) $("#grp_automatch").attr('checked','yes');
     else $("#grp_automatch").removeAttr("checked");
     
-    $("#group_params fieldset legend").html("Group members: " + group.app.name);
+    if(group.app) {
+        $("#group_params fieldset legend").html("Group members: " + group.app.name);
+    }
     
     if(group.members) {
         var currentUser = wgsclient.user;

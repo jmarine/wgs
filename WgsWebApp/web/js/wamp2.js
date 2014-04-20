@@ -31,10 +31,6 @@ Wamp2.prototype = {
     eventHandlers: new Array(),
     metaeventHandlers: new Array(),
 
-    debug: function(str) {
-      console.log(str);
-    },
-
     setState: function(state) {
         this.state = state;
     },
@@ -293,7 +289,7 @@ Wamp2.prototype = {
 
     send: function(msg) {
         if(!this.ws || this.ws.readyState != 1) {
-           this.debug("Websocket is not available for writing");
+           console.log("Websocket is not available for writing");
         } else {
            this.ws.send(msg);
         }
@@ -314,7 +310,7 @@ Wamp2.prototype = {
     connect: function(realm, onstatechange) {
         var client = this;
         this.user = null;
-        this.debug("Connecting to url: " + this.url);
+        console.log("Connecting to url: " + this.url);
 
         if(this.state >= ConnectionState.WELCOMED) {
             // REAUTHENTICATION
@@ -330,13 +326,13 @@ Wamp2.prototype = {
             } else if ("MozWebSocket" in window) {
                 ws = new MozWebSocket(this.url, "wamp.2.json");
             } else {
-                this.debug("This Browser does not support WebSockets");
+                console.log("This Browser does not support WebSockets");
                 onstatechange(ConnectionState.ERROR, "browser.websockets_not_supported");
                 return;
             }
 
             ws.onopen = function(e) {
-                client.debug("A connection to "+this.url+" has been opened.");
+                console.log("A connection to "+this.url+" has been opened.");
                 client.ws = ws;
                 this.state = ConnectionState.CONNECTED;
                 onstatechange(ConnectionState.CONNECTED);
@@ -344,19 +340,19 @@ Wamp2.prototype = {
             };
 
             ws.onclose = function(e) {
-                client.debug("The connection to "+this.url+" was closed.");
+                console.log("The connection to "+this.url+" was closed.");
                 onstatechange(ConnectionState.DISCONNECTED);    
                 client.close();
             };
 
             ws.onerror = function(e) {
-                client.debug("WebSocket error: " + e);
+                console.log("WebSocket error: " + e);
                 onstatechange(ConnectionState.ERROR, "wgs.websocket.error");
                 client.close();
             };
 
             ws.onmessage = function(e) {
-                client.debug("ws.onmessage: " + e.data);
+                console.log("ws.onmessage: " + e.data);
                 var arr = JSON.parse(e.data);
 
                 if (arr[0] == 2) {  // WELCOME
@@ -406,7 +402,7 @@ Wamp2.prototype = {
                             delete client.pendingRequests[requestId];
                         }
                     } else {
-                        client.debug("call not found: " + requestId);
+                        console.log("call not found: " + requestId);
                     }
 
                 } else if(arr[0] == 33) {  // SUBSCRIBED
@@ -562,7 +558,7 @@ Wamp2.prototype = {
                     }
 
                 } else {
-                    client.debug("Server message not recognized: " + e.data);
+                    console.log("Server message not recognized: " + e.data);
                 }
 
             };
