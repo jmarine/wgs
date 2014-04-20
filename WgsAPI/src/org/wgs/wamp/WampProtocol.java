@@ -331,9 +331,9 @@ public class WampProtocol
         msg.add(invocationId);
         msg.add(registrationId);
         msg.add(details);
-        if(args != null || argsKw != null) {
+        if( (args != null && args.size() > 0) || (argsKw != null && argsKw.size() > 0) ) {
             msg.add((args!=null)? args : new WampList());
-            if(argsKw != null) msg.add(argsKw); 
+            if(argsKw != null && argsKw.size() > 0) msg.add(argsKw); 
         }
         sendWampMessage(remotePeer, msg);        
     }
