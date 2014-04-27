@@ -535,10 +535,11 @@ public class WampApplication
     {
         WampCallController call = new WampCallController(this, clientSocket, request);
         
-        if(executorService == null) {
+        if(executorService == null || call.isRemoteMethod()) {  
+            // Ordering guarantees (RPC).
             call.run();
-        }
-        else {
+            
+        } else {
             Future<?> future = executorService.submit(call);
             call.setFuture(future);
         }

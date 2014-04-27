@@ -41,6 +41,7 @@ public class WampCallController implements Runnable
         this.clientSocket = clientSocket;
         this.request = request;
         this.procedureURI = clientSocket.normalizeURI(request.getText(3));
+        this.callOptions = new WampCallOptions((WampDict)request.get(2));
     }
     
     
@@ -51,6 +52,12 @@ public class WampCallController implements Runnable
     
     public void setFuture(Future<?> future) {
         this.future = future;
+    }
+    
+    public boolean isRemoteMethod()
+    {
+        WampMethod method = app.getLocalRPCs(procedureURI, callOptions);        
+        return (method == null);
     }
     
     public boolean isCancelled() {
@@ -99,11 +106,6 @@ public class WampCallController implements Runnable
                 argumentsKw = (WampDict)request.get(5);
             }
             
-            callOptions = new WampCallOptions((WampDict)request.get(2));
-            if (callOptions == null) {
-                callOptions = new WampCallOptions(null);
-            }
-
             Object response = module.onCall(this, clientSocket, procedureURI, arguments, argumentsKw, callOptions);
             logger.log(Level.FINE, "Module: onCall " + procedureURI + " result = " + response);
             

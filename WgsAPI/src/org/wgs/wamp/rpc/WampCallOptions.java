@@ -14,6 +14,7 @@ public class WampCallOptions
     private RunModeEnum runMode;
     private boolean discloseMe;
     
+    
     public WampCallOptions(WampDict options) 
     {
         this.timeout = 0;
