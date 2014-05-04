@@ -1500,30 +1500,45 @@ public class Module extends WampModule
     }
     
     @WampRPC(name = "add_action")
-    public void addAction(WampSocket socket, String gid, Long playerSlot, String actionName, String actionValue) throws Exception
+    public boolean addAction(WampSocket socket, String gid, Long playerSlot, String actionName, String actionValue) throws Exception
     {
         Group g = groups.get(gid);
         if(g != null) {
             Member member = g.getMember(playerSlot.intValue());
             if(!member.getUser().equals(socket.getUserPrincipal())) throw new WampException(null, "wgs.incorrect_user_member", null, null);
             
-            GroupAction action = new GroupAction();
-            action.setApplicationGroup(g);
-            action.setActionOrder(g.getActions().size()+1);
-            action.setActionName(actionName);
-            action.setActionValue(actionValue);
-            action.setActionTime(Calendar.getInstance());
-            action.setSlot(member.getSlot());
-            action.setUser(member.getUser());
-            g.getActions().add(action);
-            action = Storage.saveEntity(action);
+            String state = g.getData();
+
+            GroupActionValidator validator = null;
+            String validatorClassName = g.getApplication().getActionValidator();
+            if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).newInstance();
             
-            boolean excludeMe = false;
-            WampDict event = new WampDict();
-            event.put("gid", g.getGid());
-            event.put("action", action.toWampObject());
-            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, excludeMe, false);
+            if(validator == null || validator.validAction(this.applications.values(), g, actionName, actionValue, playerSlot)) {
+                GroupAction action = new GroupAction();
+                action.setApplicationGroup(g);
+                action.setActionOrder(g.getActions().size()+1);
+                action.setActionName(actionName);
+                action.setActionValue(actionValue);
+                action.setActionTime(Calendar.getInstance());
+                action.setSlot(member.getSlot());
+                action.setUser(member.getUser());
+                action = Storage.saveEntity(action);
+                
+                g.getActions().add(action);
+                g = Storage.saveEntity(g);
+                groups.put(g.getGid(), g);
+
+                boolean excludeMe = false;
+                WampDict event = new WampDict();
+                event.put("gid", g.getGid());
+                event.put("action", action.toWampObject());
+                socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, excludeMe, false);
+                
+                return true;
+                
+            }
         }
+        return false;
     }
     
     @WampRPC(name = "add_score")

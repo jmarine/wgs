@@ -52,6 +52,9 @@ public class Application implements Serializable {
     @Column(name="description", length=100)
     private String  description;
     
+    @Column(name="action_validator", length=255)
+    private String  actionValidator;    
+    
     @Column(name="ai")
     private boolean aiAvailable;
    
@@ -169,6 +172,20 @@ public class Application implements Serializable {
         this.description = description;
     }
 
+    /**
+     * @return the actionValidator
+     */
+    public String getActionValidator() {
+        return actionValidator;
+    }
+
+    /**
+     * @param actionValidator the actionValidator to set
+     */
+    public void setActionValidator(String actionValidator) {
+        this.actionValidator = actionValidator;
+    }    
+    
     /**
      * @return the aiAvailable
      */
@@ -408,5 +425,6 @@ public class Application implements Serializable {
         }
         return array;
     }    
+
     
 }

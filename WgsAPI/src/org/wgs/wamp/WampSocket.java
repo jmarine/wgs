@@ -100,7 +100,7 @@ public class WampSocket
             }        
         }
     }
-
+    
     /**
      * Get the session ID
      * @return the user name
