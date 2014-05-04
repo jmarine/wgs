@@ -64,7 +64,7 @@ public class TurnValidator implements GroupActionValidator
             if(actionName.equalsIgnoreCase("MOVE")) {
                 if(!actionValue.matches("[a-z|0-9]+")) throw new Exception("Invalid move syntax");
                 
-                int turn = ((Double)engine.eval("game.getTurn()")).intValue();
+                int turn = ((Number)engine.eval("game.getTurn()")).intValue();
                 if(actionSlot < 0 || turn != actionSlot+1) {
                     System.err.println("ActionValidator: MOVE action, but incorrect turn.");
                 } else {
