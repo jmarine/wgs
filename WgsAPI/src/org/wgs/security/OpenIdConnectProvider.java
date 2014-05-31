@@ -16,6 +16,7 @@ import org.codehaus.jackson.node.ObjectNode;
 @Entity
 @Table(name="OIDC_PROVIDER")
 @NamedQueries({
+  @NamedQuery(name="OpenIdConnectProvider.findAll", query="SELECT OBJECT(p) FROM OpenIdConnectProvider p"),
   @NamedQuery(name="OpenIdConnectProvider.findDynamic", query="SELECT OBJECT(p) FROM OpenIdConnectProvider p WHERE p.dynamic = true")
 })
 public class OpenIdConnectProvider implements Serializable
@@ -157,43 +158,45 @@ public class OpenIdConnectProvider implements Serializable
     public static ObjectNode discover(String principal) throws Exception
     {
         ObjectNode retval = null;
+        HttpURLConnection connection = null;
         if(principal.indexOf("#") != -1) principal = principal.substring(0, principal.indexOf("#"));
         if(principal.indexOf("?") != -1) principal = principal.substring(0, principal.indexOf("?"));
+        int endSchemaPos = principal.indexOf("://");
+        if(endSchemaPos!=-1 && principal.indexOf("/", endSchemaPos+3) == -1) {
+            // Append slash to HOSTNAME[:PORT] resources
+            principal = principal + "/";
+        }
         
         String principalUrl = principal;
-        if(principalUrl.indexOf("://") == -1) principalUrl = "https://" + principal;
-        URL url = new URL(principalUrl);
-        
-        String webfingerRequestUrl = url.getProtocol() + "://" + url.getHost();
-        if(url.getPort() != -1) webfingerRequestUrl += ":" + url.getPort();
-        webfingerRequestUrl += "/.well-known/webfinger";
+        if(principal.indexOf("://") == -1) {
+            if(principal.indexOf("@") == -1) {
+                principalUrl = "https://" + principal;
+            } else {
+                principal = "acct:" + principal;
+                principalUrl = "https://" + principal.substring(1+principal.indexOf("@"));
+            }
+        }
 
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode webfingerResponse = null;
+        String webfingerPath = "/.well-known/webfinger";
+        webfingerPath += "?resource=" + URLEncoder.encode(principal,"utf8");
+        webfingerPath += "&rel=" + URLEncoder.encode("http://openid.net/specs/connect/1.0/issuer","utf8");
 
-        StringBuffer response = new StringBuffer();
-        String paramSeparator = ((webfingerRequestUrl.indexOf("?") == -1)? "?":"&");
-        webfingerRequestUrl += paramSeparator + "resource=" + URLEncoder.encode(principal,"utf8");
-        webfingerRequestUrl += "&rel=" + URLEncoder.encode("http://openid.net/specs/connect/1.0/issuer","utf8");
-        url = new URL(webfingerRequestUrl);
-
-        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        URL webfingerUrl = new URL(new URL(principalUrl), webfingerPath);
+        connection = (HttpURLConnection)webfingerUrl.openConnection();
         connection.setInstanceFollowRedirects(true);
         connection.setDoOutput(false);
 
-        BufferedReader in = new BufferedReader(
-                                    new InputStreamReader(
-                                    connection.getInputStream()));
-        String decodedString;
+        StringBuffer response = new StringBuffer();
+        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        String decodedString = null;
         while ((decodedString = in.readLine()) != null) {
             response.append(decodedString);
         }
         in.close();
         connection.disconnect();
 
-        webfingerResponse = (ObjectNode) mapper.readTree(response.toString());
-
-        
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode webfingerResponse = (ObjectNode) mapper.readTree(response.toString());
         if(webfingerResponse.has("links")) {
             StringBuffer oidcConfig = new StringBuffer();
             ArrayNode links = (ArrayNode)webfingerResponse.get("links");
@@ -201,8 +204,9 @@ public class OpenIdConnectProvider implements Serializable
                 ObjectNode link = (ObjectNode)links.get(index);
                 String rel = link.get("rel").asText();
                 if(rel.equals("http://openid.net/specs/connect/1.0/issuer")) {
-                    url = new URL(link.get("href").asText() + "/.well-known/openid-configuration");
-                    connection = (HttpURLConnection)url.openConnection();
+                    webfingerUrl = new URL(link.get("href").asText());
+                    webfingerUrl = new URL(webfingerUrl, "/.well-known/openid-configuration");
+                    connection = (HttpURLConnection)webfingerUrl.openConnection();
                     connection.setDoOutput(false);
 
                     in = new BufferedReader(new InputStreamReader(connection.getInputStream()));

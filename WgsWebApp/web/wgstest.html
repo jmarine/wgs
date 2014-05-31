@@ -259,7 +259,7 @@ function onUserChange(user) {
     //var old = $("#toggle_connect").html();
     if(user.length > 0) {
         $("#toggle_connect").html("Log in");  
-    } else if(wgsclient!=null && wgsclient.getState() == ConnectionState.ANONYMOUS) {
+    } else if(wgsclient!=null && wgsclient.getState() != ConnectionState.AUTHENTICATED) {
         $("#toggle_connect").html("Disconnect");  
     } else {
         $("#toggle_connect").html("Connect");
@@ -270,7 +270,7 @@ function authentication(state, msg) {
     console.log("authentication state: " + state);
 
     if(state == ConnectionState.ERROR) {
-        if(wgsclient.getState() == ConnectionState.ANONYMOUS) {
+        if(wgsclient != null && wgsclient.getState() != ConnectionState.AUTHENTICATED) {
             $("#toggle_connect").html("Disconnect");  
         } else {
             $("#toggle_connect").html("Connect");
@@ -279,14 +279,58 @@ function authentication(state, msg) {
         
     } else if(state == ConnectionState.CONNECTED) {
         $("#server_url").attr("disabled", "disabled");
+        
+    } else if(state == ConnectionState.CHALLENGED) {        
+        console.log("Challenge: " + msg);
+        
+        if(msg._oauth2_provider_url) {
+            window.open(msg._oauth2_provider_url + "&state=" + escape(notificationChannel), '_blank');
+            
+        } else if(msg._oauth2_providers) {  
+            // OAuth 2.0 / OpenID Connect selector
+            var providers = $("#openid_providers_menu");
+            providers.find("li:gt(0)").each(function(){
+                $(this).remove();
+            });
+            
+            msg._oauth2_providers.forEach(function(provider) {
+                var link = $("<a>");
+                link.text(provider.name);
+                link.attr("class", "ui-corner-all")
+                if(provider.url) link.attr("onclick", "javascript:window.open('" + provider.url + "&state=" + escape(notificationChannel) + "','_blank')");
+                // else link.attr("onclick", "javascript:wgsclient.openIdConnectFromSubject('"+realm+"','"+provider.registrationEndpoint+"', get_openid_connect_callback_url(), notificationChannel, authentication);");
+
+                var item = $("<li>");
+                item.attr("class", "ui-menu-item").append(link)
+                providers.append(item);
+            });
+
+        
+            var menu = $( "#oic_connect" ).parent().next().show().position({
+                            my: "left top",
+                            at: "left bottom",
+                            offset: "0 2",
+                            of: "#toggle_connect"
+                        });
+            $( document ).one( "click", function() {
+                menu.hide();
+                //wgsclient.close();
+                //wgsclient = null;
+            });
+        }
+
+
+    } else if(state == ConnectionState.WELCOMED || state == ConnectionState.AUTHENTICATED) {
         $("#register").attr("disabled", "disabled");
         $("#oic_connect").attr("disabled", "disabled");
-        
-        // wgsclient.heartbeat(5000, "*****DISCARDED HEARTBEAT PAYLOAD*******");
-        
-    } else if(state == ConnectionState.ANONYMOUS || state == ConnectionState.AUTHENTICATED) {
         $("#toggle_connect").html("Disconnect");
-        
+
+        if(msg && msg.picture) {
+            $("#user_picture").attr("src", msg.picture).width(48).height(48);
+        } else {
+            $("#user_picture").attr("src", "images/anonymous.png").width(48).height(48);
+        }
+            
         if(state == ConnectionState.AUTHENTICATED) {
             $("#user").attr("disabled", "disabled");
             $("#password").attr("disabled", "disabled");
@@ -294,19 +338,13 @@ function authentication(state, msg) {
             if(msg.name) $("#user").val(msg.name);
             $("#lbl_password").hide();
             $("#password").hide();            
-        }
-
-        if(msg && msg.picture) {
-            $("#user_picture").attr("src", msg.picture).width(48).height(48);
-        } else if(state == ConnectionState.ANONYMOUS) {
-            $("#user_picture").attr("src", "images/anonymous.png").width(48).height(48);
+            
         } else {
-            $("#user_picture").width(0).height(0);
+            list_apps();
         }
-        
-        list_apps();
 
-    } else if(state == ConnectionState.DISCONNECTED) {
+
+    } else if(state == ConnectionState.DISCONNECTED || state == ConnectionState.CLOSED) {
         disconnect();
     }
         
@@ -979,6 +1017,7 @@ function getWgsClient() {
 
 function openid_connect(redirectUri) {
     
+    if(!wgsclient) wgsclient = getWgsClient();
     var realm = wgsclient.getDefaultRealm();
     if(!redirectUri) {
         redirectUri = get_openid_connect_callback_url();
@@ -987,7 +1026,7 @@ function openid_connect(redirectUri) {
             alert("User name is empty");
         } else {
             wgsclient = getWgsClient();
-            wgsclient.openIdConnectLoginUrl(realm, user, redirectUri, notificationChannel, authentication);
+            wgsclient.openIdConnectFromSubject(realm, user, redirectUri, notificationChannel, authentication);
         }
         
     } else {
@@ -997,7 +1036,7 @@ function openid_connect(redirectUri) {
             var provider = get_url_param(redirectUri, "provider");
             redirectUri = clear_openid_connect_params(redirectUri, false);
             
-            wgsclient = new WgsClient(url);
+            if(!wgsclient) wgsclient = new WgsClient(url);
             wgsclient.openIdConnectAuthCode(realm, provider, redirectUri, code, notificationChannel, authentication);
         } else {
             var error = get_url_param(redirectUri, "error");
@@ -1019,7 +1058,7 @@ function get_url_param(url, param) {
 }
 
 function get_openid_connect_callback_url() {
-    var url = "http://localhost:8080/oauth2callback.html";
+    var url = "http://localhost:8080/webgl8x8boardgames/oauth2callback.html";
     return url;
 }
 
@@ -1044,9 +1083,11 @@ function clear_openid_connect_params(url,clearProvider) {
 
 
 function disconnect() {
-    exit_group(true);
-    wgsclient.close();
-    wgsclient = null;
+    if(wgsclient != null) {
+        //if(wgsclient.getState() >= ConnectionState.WELCOMED) exit_group(true);
+        wgsclient.close();
+        wgsclient = null;
+    }
     
     $("#server_url").removeAttr("disabled");
     $("#user").removeAttr("disabled");
@@ -1067,7 +1108,7 @@ function disconnect() {
     $("#new_group_params").hide();
     $("#group_list").hide(500);
     
-    $("#group_params").slideDown(500);  
+    $("#group_params").hide();
     
     enable_network();
 }
@@ -1102,40 +1143,7 @@ function openid_connect_menu(self) {
     wgsclient = getWgsClient();
     var realm = wgsclient.getDefaultRealm();
     
-    wgsclient.openIdConnectProviders(realm, redirectUri, function(id,details,errorURI,result,resultKw) { 
-
-        var providers = $("#openid_providers_menu");
-        providers.find("li:gt(0)").each(function(){
-            $(this).remove();
-        });
-
-        if(!errorURI) {
-            resultKw.providers.forEach(function(provider) {
-                var link = $("<a>");
-                link.text(provider.name);
-                link.attr("class", "ui-corner-all")
-                if(provider.authEndpoint) link.attr("onclick", "javascript:window.open('" + provider.authEndpoint + "&state=" + escape(notificationChannel) + "','_blank')");
-                else link.attr("onclick", "javascript:wgsclient.openIdConnectLoginUrl('"+realm+"','"+provider.registrationEndpoint+"', get_openid_connect_callback_url(), notificationChannel, authentication);");
-
-                var item = $("<li>");
-                item.attr("class", "ui-menu-item").append(link)
-                providers.append(item);
-            });
-        }
-        
-        var menu = $( self ).parent().next().show().position({
-                        my: "left top",
-                        at: "left bottom",
-                        offset: "0 2",
-                        of: "#toggle_connect"
-                    });
-        $( document ).one( "click", function() {
-            menu.hide();
-            //wgsclient.close();
-            //wgsclient = null;
-        });
-
-    });
+    wgsclient.openIdConnectProviders(realm, redirectUri, authentication);
 }
 
 
@@ -1265,7 +1273,7 @@ function append_message(text)
     </div>
     
     <ul id="openid_providers_menu" style="display: none">
-        <li><a href="javascript:openid_connect(true);">OpenID Connect provider</a></li>
+        <li><a href="javascript:openid_connect(false);">OpenID Connect provider</a></li>
     </ul>    
     
     </fieldset>

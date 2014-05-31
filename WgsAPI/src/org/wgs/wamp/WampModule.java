@@ -69,7 +69,7 @@ public class WampModule
     
     public void onConnect(WampSocket clientSocket) throws Exception { }
     
-    public void onSessionStart(WampSocket clientSocket, String realm, WampDict helloDetails) { }
+    public void onSessionEstablished(WampSocket clientSocket, String realm, WampDict helloDetails) { }
     
     public void onSessionEnd(WampSocket clientSocket) { }
     

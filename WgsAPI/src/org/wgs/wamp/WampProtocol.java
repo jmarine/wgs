@@ -1,11 +1,13 @@
 package org.wgs.wamp;
 
+import org.wgs.security.OpenIdConnectUtils;
+import java.security.Principal;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import org.wgs.security.User;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
@@ -24,6 +26,8 @@ public class WampProtocol
     public static final int HELLO = 1;
     public static final int WELCOME = 2;
     public static final int ABORT = 3;
+    public static final int CHALLENGE = 4;
+    public static final int AUTHENTICATE = 5;
     public static final int GOODBYE = 6;
     public static final int HEARTBEAT = 7;    
     public static final int ERROR = 8;
@@ -105,12 +109,41 @@ public class WampProtocol
         WampDict roles = new WampDict();
         roles.put("broker", broker);
         roles.put("dealer", dealerFeatures);
-
-        WampDict helloDetails = new WampDict();
-        helloDetails.put("agent", app.getServerId());
-        helloDetails.put("roles", roles);
-        response.add(helloDetails);  
         
+        WampDict details = new WampDict();
+        details.put("agent", app.getServerId());
+        details.put("roles", roles);
+        
+        Principal principal = clientSocket.getUserPrincipal();
+        if(principal != null && principal instanceof User) {
+            User usr = (User)principal;
+            details.put("authid", usr.getUid());
+            details.put("authmethod", clientSocket.getAuthMethod());
+            if(clientSocket.getAuthProvider() != null) details.put("authprovider", clientSocket.getAuthProvider());
+            details.put("authrole", usr.isAdministrator()? "admin" : "user");
+        } else {
+            details.put("authid", clientSocket.getSessionData().get(OpenIdConnectUtils.WAMP_AUTH_ID_PROPERTY_NAME));
+            details.put("authmethod", clientSocket.getAuthMethod());
+            details.put("authrole", "user");
+        }
+        
+        if(clientSocket.getAuthProvider() != null) details.put("authprovider", clientSocket.getAuthProvider());
+        
+        response.add(details);  
+        
+        sendWampMessage(clientSocket, response);
+    }
+    
+    public static void sendChallengeMessage(WampSocket clientSocket, String authMethod, WampDict extra)
+    {
+        if(extra == null) extra = new WampDict();
+        
+        clientSocket.setAuthMethod(authMethod);
+        
+        WampList response = new WampList();
+        response.add(CHALLENGE);
+        response.add(authMethod);
+        response.add(extra);
         sendWampMessage(clientSocket, response);
     }
 

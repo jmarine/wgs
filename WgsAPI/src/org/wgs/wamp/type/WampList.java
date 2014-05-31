@@ -66,6 +66,11 @@ public class WampList extends WampObject
     {
         return array.remove(index);
     }
+    
+    public boolean contains(Object obj) 
+    {
+        return array.contains(obj);
+    }
 
     public int size()
     {

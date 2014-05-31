@@ -52,10 +52,13 @@ public class WampSocket
     private WampDict helloDetails;
     private String realm;
     private boolean goodbyeRequested;
+    private String authMethod;
+    private String authProvider;
     
 
     public WampSocket(WampApplication app, Session session) 
     {
+        this.authMethod = "anonymous";
         this.incomingHeartbeatSeq = 0L;
         this.outgoingHeartbeatSeq = new AtomicLong(0L);
         this.versionSupport = 1;
@@ -159,6 +162,33 @@ public class WampSocket
     {
         this.helloDetails = helloDetails;
     }
+    
+    public WampDict getHelloDetails()
+    {
+        return helloDetails;
+    }    
+    
+    public void setAuthMethod(String authMethod)
+    {
+        this.authMethod = authMethod;
+    }
+    
+    public String getAuthMethod()
+    {
+        return this.authMethod;
+    }
+    
+    
+    public void setAuthProvider(String authProvider)
+    {
+        this.authProvider = authProvider;
+    }
+    
+    public String getAuthProvider()
+    {
+        return this.authProvider;
+    }
+    
     
     public boolean supportsProgressiveCallResults()
     {

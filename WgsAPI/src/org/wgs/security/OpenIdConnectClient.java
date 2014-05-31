@@ -203,6 +203,7 @@ public class OpenIdConnectClient implements Serializable
 
         return data.toString();
     }
+    
 
     public void updateClientCredentials() throws Exception
     {

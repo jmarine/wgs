@@ -1,5 +1,6 @@
 package org.wgs.wamp;
 
+import org.wgs.security.OpenIdConnectUtils;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,7 +20,7 @@ import javax.websocket.CloseReason;
 import org.wgs.security.User;
 import org.wgs.wamp.api.WampAPI;
 
-import org.wgs.wamp.api.WampCRA;
+import org.wgs.security.WampCRA;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampRemoteMethod;
@@ -75,7 +76,6 @@ public class WampApplication
         this.calleePatterns = new ConcurrentHashMap<String,WampCalleeRegistration>();
 
         this.registerWampModule(new WampAPI(this));
-        this.registerWampModule(new WampCRA(this));        
         
         this.defaultModule = new WampModule(this);
         //WampServices.registerApplication(path, this);
@@ -147,16 +147,120 @@ public class WampApplication
         clientSocket.setVersionSupport(WampApplication.WAMPv2);
         clientSocket.setRealm(realm);
         clientSocket.setHelloDetails(helloDetails);
-        WampProtocol.sendWelcomeMessage(this, clientSocket);
         
+        WampList authMethods = new WampList();
+        if(helloDetails != null && helloDetails.has("authmethods")) {
+            Object methods = helloDetails.get("authmethods");
+            if(methods instanceof String) {
+                authMethods.add(methods);
+            } else if(methods instanceof WampList) {
+                authMethods = (WampList)methods;
+            }
+        }
+        
+        if(authMethods == null || authMethods.size() == 0) {
+            authMethods.add("anonymous");
+        } 
+        
+        for(int i = 0; i < authMethods.size(); i++) {
+            try { 
+                String authMethod = authMethods.getText(i);
+                if(authMethod.equalsIgnoreCase("anonymous")) {
+                    onWampSessionEstablished(clientSocket);
+                    break;
+                } else if(authMethod.equalsIgnoreCase("cookie")) {
+                    // TODO
+                } else if(authMethod.equalsIgnoreCase("wampcra") 
+                        && helloDetails.has("authkey") && helloDetails.getText("authkey") != null) {
+                    String authKey = helloDetails.getText("authkey");
+                    WampDict authDetails = new WampDict();
+                    if(helloDetails.has("salt")) authDetails.put("salt", helloDetails.getText("salt"));
+                    if(helloDetails.has("keylen")) authDetails.put("keylen", helloDetails.getLong("keylen"));
+                    if(helloDetails.has("iterations")) authDetails.put("iterations", helloDetails.getLong("iterations"));
+                    String authChallenge = WampCRA.getChallenge(clientSocket, authKey, authDetails);
+
+                    WampDict extra = new WampDict();
+                    extra.put("authchallenge", authChallenge);
+                    WampProtocol.sendChallengeMessage(clientSocket, authMethod, extra);
+                    break;
+                    
+                } else if(authMethod.equalsIgnoreCase("oauth2-providers-list")) {
+                    String redirectUrl = helloDetails.getText("_oauth2_redirect_uri");
+                    WampDict extra = OpenIdConnectUtils.getProviders(redirectUrl);
+                    WampProtocol.sendChallengeMessage(clientSocket, "oauth2", extra);
+                    break;
+                } else if(authMethod.startsWith("oauth2")) {
+                    String subject = helloDetails.getText("_oauth2_subject");
+                    String redirectUrl = helloDetails.getText("_oauth2_redirect_uri");
+                    String state = helloDetails.getText("_oauth2_state");
+                    String url = OpenIdConnectUtils.getAuthURL(redirectUrl, subject, state);
+
+                    WampDict extra = new WampDict();
+                    extra.put("_oauth2_provider_url", url);
+                    WampProtocol.sendChallengeMessage(clientSocket, authMethod, extra);
+                    break;
+                }
+                
+            } catch(WampException ex) {
+                WampProtocol.sendAbort(clientSocket, ex.getErrorURI(), null);
+                break;
+                
+            } catch(Exception ex) { 
+                WampProtocol.sendAbort(clientSocket, "wamp.error.authentication_failed", ex.getMessage());
+                break;
+            }
+        }
+        
+    }
+    
+    
+    private void processAuthenticationMessage(WampSocket clientSocket, String signature, WampDict extra)
+    {
+        boolean welcomed = false;
+        String authmethod = clientSocket.getAuthMethod();
+        
+        try {
+            if(authmethod.equals("anonymous")) {
+                onUserLogon(clientSocket, null, WampConnectionState.ANONYMOUS);
+                welcomed = true;
+            } else if(authmethod.equals("cookie")) {
+                // TODO
+            } else if(authmethod.equals("wampcra")) {
+                WampCRA.verifySignature(this, clientSocket, signature);
+                welcomed = true;
+            } else if(authmethod.startsWith("oauth2")) {
+                String code = signature;
+                clientSocket.setAuthMethod(authmethod);
+                clientSocket.setAuthProvider(extra.getText("authprovider"));
+                OpenIdConnectUtils.verifyCodeFlow(this, clientSocket, code, extra);
+                welcomed = true;
+            } 
+            
+        } catch(Exception ex) {
+            logger.warning("WampApplication.processAuthenticationMessage: challenge error: " + ex.getMessage());
+            welcomed = false;
+        }
+        
+        if(welcomed) {
+            onWampSessionEstablished(clientSocket);
+        } else {
+            WampProtocol.sendAbort(clientSocket, "wamp.error.authentication_failed", "error verifying authentication challege");
+        }
+    }
+    
+    
+    private void onWampSessionEstablished(WampSocket clientSocket) 
+    {
+        WampProtocol.sendWelcomeMessage(this, clientSocket);
+
         // Notify modules:
         for(WampModule module : modules.values()) {
             try { 
-                module.onSessionStart(clientSocket, realm, helloDetails); 
+                module.onSessionEstablished(clientSocket, clientSocket.getRealm(), clientSocket.getHelloDetails()); 
             } catch(Exception ex) {
                 logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
             }
-        }         
+        }                 
     }
     
     public void onWampSessionEnd(WampSocket clientSocket) 
@@ -214,12 +318,15 @@ public class WampApplication
                 break;                
             case WampProtocol.ABORT:
                 onWampSessionEnd(clientSocket);
-                //clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.abort"));
+                break;
+            case WampProtocol.AUTHENTICATE:
+                String signature = request.getText(1);
+                WampDict extra = (request.size() > 2) ? (WampDict)request.get(2) : null;
+                processAuthenticationMessage(clientSocket, signature, extra);
                 break;
             case WampProtocol.GOODBYE:
                 WampProtocol.sendGoodBye(clientSocket, "wamp.close.normal", null);
                 onWampSessionEnd(clientSocket);
-                //clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
                 break;
             case WampProtocol.HEARTBEAT:
                 processHeartbeatMessage(clientSocket, request);

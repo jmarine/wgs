@@ -1,18 +1,25 @@
 package org.wgs.wamp.transport.http.websocket;
 
+import org.wgs.security.OpenIdConnectUtils;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.servlet.http.HttpSession;
 import javax.websocket.CloseReason;
 import javax.websocket.Decoder;
 import javax.websocket.Encoder;
 import javax.websocket.Extension;
+import javax.websocket.HandshakeResponse;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
+import javax.websocket.server.HandshakeRequest;
+import javax.websocket.server.ServerEndpointConfig;
 import org.wgs.wamp.*;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
@@ -26,6 +33,8 @@ public class WampEndpointConfig
 {
     public  static final String WAMP_APPLICATION_PROPERTY_NAME = "__wamp_application";
     public  static final String WAMP_ENDPOINTCONFIG_PROPERTY_NAME = "__wamp_endpointconfig";
+    public  static final String WAMP_AUTH_COOKIE_NAME = "__wamp_authcookie";
+    
 
     private static final Logger logger = Logger.getLogger(WampEndpointConfig.class.getName());
     
@@ -184,5 +193,79 @@ public class WampEndpointConfig
         }
         return subprotocol;
     }
+    
+ 
+    @Override
+    public void modifyHandshake(ServerEndpointConfig config, 
+                                HandshakeRequest request, 
+                                HandshakeResponse response)
+    {
+        String wampCookieValue = null;
+        List<String> setCookieHeaders = request.getHeaders().get("Cookie");
+        if(setCookieHeaders != null) {
+            for(String cookies : setCookieHeaders) {
+                StringTokenizer st = new StringTokenizer(cookies, ";");
+                while(st.hasMoreTokens()) {
+                    String token  = st.nextToken();
+                    String name = token.substring(0, token.indexOf("="));
+                    String value = token.substring(token.indexOf("=")+1, token.length());
+                    System.out.println("Cookie received: " + name  + "=" + value);
+
+                    if(name.equalsIgnoreCase(WAMP_AUTH_COOKIE_NAME)) {
+                        if(verifyWampCookie(value)) {
+                            wampCookieValue = value;
+                            config.getUserProperties().put(OpenIdConnectUtils.WAMP_AUTH_ID_PROPERTY_NAME, extractAuthIdFromWampCookie(value));
+                        }
+                    }
+                }
+            }
+        }
+    
+        if(wampCookieValue == null) {
+            String authid = String.valueOf(WampProtocol.newId());
+            wampCookieValue = signWampCookie(authid);
+            config.getUserProperties().put(OpenIdConnectUtils.WAMP_AUTH_ID_PROPERTY_NAME, authid);
+            
+            List<String> cookies = response.getHeaders().get("Cookie");
+            if(cookies == null) cookies = new ArrayList<String>();
+            
+            cookies.add(WAMP_AUTH_COOKIE_NAME +"=" + wampCookieValue);
+            response.getHeaders().put("Set-Cookie", cookies);
+        }
+        
+    } 
+    
+    private String getSignatureKey()
+    {
+        // TODO: use configurable key
+        String configKey = "qksij,3kdi8987,xz<870+poiu9887fffqqqqw";
+        return configKey;
+    }
+    
+    private String signWampCookie(String value)
+    {
+        return value + ":" + String.valueOf(Math.abs((value + getSignatureKey()).hashCode()));
+    }
+    
+    private String extractAuthIdFromWampCookie(String cookieValue) 
+    {
+        int pos = cookieValue.indexOf(":");        
+        if(pos == -1) {
+            return null;
+        } else {
+            cookieValue = cookieValue.substring(0, pos);
+            return cookieValue;
+        }
+    }
+    
+    private boolean verifyWampCookie(String value)
+    {
+        if(value == null) {
+            return false;
+        } else {
+            return value.equals(signWampCookie(extractAuthIdFromWampCookie(value)));
+        }
+    }
+
     
 }

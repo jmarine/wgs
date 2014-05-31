@@ -1,6 +1,6 @@
 package org.wgs.wamp.api;
 
-import java.util.Collection;
+import org.wgs.security.WampCRA;
 import org.wgs.util.Storage;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
@@ -10,6 +10,7 @@ import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampTopic;
+import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 
 
@@ -20,6 +21,23 @@ public class WampAPI extends WampModule
     {
         super(app);
     }
+    
+    
+    @WampRPC(name="cra.request")
+    public String authRequest(WampSocket socket, String authKey, WampDict extra) throws Exception
+    {
+        return WampCRA.getChallenge(socket, authKey, extra);
+    }
+    
+    @WampRPC(name="cra.authenticate")
+    public WampDict auth(WampSocket socket, String signature) throws Exception
+    {
+        return WampCRA.verifySignature(this.getWampApplication(), socket, signature);
+    }   
+    
+    
+
+    
 
     //TODO:
     
