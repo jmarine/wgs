@@ -275,7 +275,7 @@ Wamp2.prototype = {
                     password = key.toString(CryptoJS.enc.Base64);                        
                 }
                 var signature = CryptoJS.HmacSHA256(challenge, password).toString(CryptoJS.enc.Base64);
-                wgsclient.authenticate(signature, {});
+                client.authenticate(signature, {});
                 
             } else if(state == ConnectionState.WELCOMED) {
                 client.authid = msg.authid;
