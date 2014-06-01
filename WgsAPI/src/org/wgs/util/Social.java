@@ -5,14 +5,13 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
-
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
-
 import org.wgs.security.User;
 
 
@@ -20,6 +19,12 @@ public class Social
 {
     public static List<User> getFriends(User usr) throws Exception
     {
+        List<User> friends = usr.getFriends();
+        if(friends == null) {
+            friends = new ArrayList<User>();
+            usr.setFriends(friends);
+        }
+
         String domain = usr.getDomain();
         if(domain.endsWith("facebook.com")) {
             return getFacebookFriends(usr);

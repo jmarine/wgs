@@ -189,6 +189,7 @@ public class OpenIdConnectUtils
     {
         User usr = null;
         EntityManager manager = null;
+        Calendar now = Calendar.getInstance();
 
         try {
             String providerDomain = data.getText("authprovider");
@@ -235,9 +236,6 @@ public class OpenIdConnectUtils
                 usr.setPicture("https://graph.facebook.com/"+id+"/picture");
                 usr.setTokenCaducity(expiration);                
                 usr.setAccessToken(accessToken);
-                usr = Storage.saveEntity(usr);
-                
-                wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);                           
                 
             } else {
                 // OpenID Connect
@@ -268,7 +266,6 @@ public class OpenIdConnectUtils
                         usr.setAdministrator(false);
                     }
                     
-                    Calendar now = Calendar.getInstance();
                     if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
                         // Use cached UserInfo from local database
                         logger.fine("Cached OIDC User: " + usr);
@@ -293,9 +290,6 @@ public class OpenIdConnectUtils
                             usr.setProfileCaducity(caducity);
                         }
 
-                        usr = Storage.saveEntity(usr);
-
-                        wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
                     } 
 
 
@@ -320,13 +314,16 @@ public class OpenIdConnectUtils
                         }
                     }
 
-                    usr.setLastLoginTime(now);
-                    usr = Storage.saveEntity(usr);
                 }
-                
             }
             
-            Social.getFriends(usr);
+            
+            if(usr != null) {
+                Social.getFriends(usr);
+                usr.setLastLoginTime(now);
+                usr = Storage.saveEntity(usr);
+                wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);                           
+            }
             
             
         } catch(Exception ex) {
@@ -344,6 +341,7 @@ public class OpenIdConnectUtils
             System.err.println("OpenID Connect protocol error");
             throw new WampException(null, "wgs.error.oidc_error", null, null);
         }
+        
         return usr.toWampObject(true);
     }        
 }
