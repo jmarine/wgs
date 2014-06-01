@@ -35,7 +35,7 @@ public class WampCRA
         
         User usr = UserRepository.findUserByLoginAndDomain(authKey, socket.getRealm());
         if(authKey != null && usr == null) {
-            System.out.println("wamp.cra.error.no_such_authkey:  authKey doesn't exists" + authKey);
+            System.out.println("wamp.cra.error.no_such_authkey: authKey doesn't exists: " + authKey);
             throw new WampException(null, "wamp.cra.error.no_such_authkey", null, null);
         }
         
