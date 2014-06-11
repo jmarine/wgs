@@ -61,7 +61,9 @@ public class TurnValidator implements GroupActionValidator
                 }
             }            
             
-            if(actionName.equalsIgnoreCase("MOVE")) {
+            if(actionName.equalsIgnoreCase("INIT")) {
+                isValid = true;
+            } else if(actionName.equalsIgnoreCase("MOVE")) {
                 if(!actionValue.matches("[a-z|0-9]+")) throw new Exception("Invalid move syntax");
                 
                 int turn = ((Number)engine.eval("game.getTurn()")).intValue();
@@ -70,8 +72,8 @@ public class TurnValidator implements GroupActionValidator
                 } else {
                     isValid = (boolean)engine.eval("game.isValidMove('" + actionValue + "')");
                     if(isValid) {
-                        //String newState = (String)engine.eval("game.makeMove(game.parseMoveString('" + actionValue + "')); game.toString()");
-                        //System.out.println("ActionValidator: new state = " + newState);
+                        String newState = (String)engine.eval("game.makeMove(game.parseMoveString('" + actionValue + "')); game.toString()");
+                        System.out.println("ActionValidator: new state = " + newState);
                         //g.setData(newState);  // WARN: group's data contains initial state for chess960
                     }
                     
@@ -81,8 +83,9 @@ public class TurnValidator implements GroupActionValidator
                     && actionSlot >= 0 && actionSlot != lastAction.getSlot()
                     && actionName.equalsIgnoreCase("RETRACT_ACCEPTED")) {
                 
-                String requestedGameState = lastAction.getActionValue();
-                if(requestedGameState.equals(actionValue)) {
+                String gameState = lastAction.getActionValue();
+                if(gameState.equals(actionValue)) {
+                    engine.eval("game.initFromStateStr('"+gameState+"');");
                     isValid = true;
                 }
 
@@ -92,11 +95,18 @@ public class TurnValidator implements GroupActionValidator
                 
                 String gameState = (String)engine.eval("game.toString();");
                 if(gameState.equals(actionValue)) {
+                    engine.eval("game.initFromStateStr('"+gameState+"');");
                     isValid = true;
                 }
             }
             
+            
             System.out.println("ActionValidator: " + actionName + ": valid = " + isValid);
+            if(isValid) {
+                int turn = ((Number)engine.eval("game.getTurn()")).intValue();
+                g.setTurn(turn-1);
+                System.out.println("ActionValidator: " + actionName + ": new turn = " + turn);
+            }
             
             return isValid;
             

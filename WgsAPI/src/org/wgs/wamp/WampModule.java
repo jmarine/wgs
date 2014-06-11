@@ -20,14 +20,10 @@ import org.wgs.wamp.annotation.WampRPC;
 import org.wgs.wamp.annotation.WampModuleName;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.wgs.wamp.topic.WampBroker;
-import org.wgs.wamp.topic.JmsServices;
 
 
 public class WampModule 

@@ -7,8 +7,6 @@
 package org.wgs.service.game;
 
 import java.math.BigDecimal;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
@@ -24,19 +22,10 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.LockModeType;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
-import org.glassfish.grizzly.http.util.URLDecoder;
 import org.wgs.util.Storage;
 import org.wgs.security.User;
-import org.wgs.security.OpenIdConnectClient;
-import org.wgs.security.OpenIdConnectClientPK;
-import org.wgs.security.OpenIdConnectProvider;
 import org.wgs.security.OpenIdConnectUtils;
-import static org.wgs.security.OpenIdConnectUtils.getAuthURL;
 import org.wgs.security.UserRepository;
-import org.wgs.util.Base64;
-import org.wgs.util.Social;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.type.WampConnectionState;
 import org.wgs.wamp.type.WampDict;
@@ -510,13 +499,19 @@ public class Module extends WampModule
                     }
                 }
                 
-                app.addGroup(g);
-                groups.put(g.getGid(), g);
 
                 //updateAppInfo(socket, app, "app_updated", false);
 
-                valid = true;
-                created = true;
+                GroupActionValidator validator = null;
+                String validatorClassName = g.getApplication().getActionValidator();
+                if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).newInstance();
+            
+                if(validator == null || validator.validAction(this.applications.values(), g, "INIT", g.getData(), -1L)) {
+                    app.addGroup(g);
+                    groups.put(g.getGid(), g);
+                    created = true;
+                    valid = true;
+                }
 
             } catch(Exception err) {
                 // valid = false;
@@ -590,7 +585,7 @@ public class Module extends WampModule
                         reserved = true;
                         reservedSlot = index;
                         break;
-                    } else if(!connected) {
+                    } else if(member == null || member.getUser() == null) {
                         avail_slots++;
                     }
                 }
@@ -635,7 +630,7 @@ public class Module extends WampModule
                 
                 boolean userUpdated = false;
                 boolean connected = (member.getClient() != null);
-                if(!spectator && !connected && !joined && (!reserved || index == reservedSlot)) {
+                if(!spectator && !joined && (member.getUser() == null || (reserved && index == reservedSlot)) ) {
                     response.put("slotJoinedByClient", member.getSlot());
                     member.setClient(client);
                     member.setState(MemberState.JOINED);
@@ -1056,11 +1051,7 @@ public class Module extends WampModule
                             member.setClient(null);
                             member.setState(MemberState.DETACHED);
                             g.setMember(slot, member);
-                            
-                            if(g.isAutoMatchEnabled() && g.isAutoMatchCompleted()) {
-                                g.setAutoMatchCompleted(false);
-                            }                            
-                            
+                           
                             WampDict obj = member.toWampObject();
                             membersArray.add(obj);
                             
@@ -1233,7 +1224,9 @@ public class Module extends WampModule
                 WampDict event = new WampDict();
                 event.put("gid", g.getGid());
                 event.put("action", action.toWampObject());
+                
                 socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, excludeMe, false);
+                broadcastAppEventInfo(socket, g, "group_updated"); // i.e: turn change
                 
                 return true;
                 

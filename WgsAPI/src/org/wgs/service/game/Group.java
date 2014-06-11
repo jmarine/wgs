@@ -50,7 +50,7 @@ public class Group implements java.io.Serializable
     private GroupState state;
     
     @Column(name="turn")
-    private int  turn;
+    private Integer turn;
     
     @Column(name="minMembers")
     private int  minMembers;
@@ -411,14 +411,14 @@ public class Group implements java.io.Serializable
     /**
      * @return the turn
      */
-    public int getTurn() {
+    public Integer getTurn() {
         return turn;
     }
 
     /**
      * @param turn the turn to set
      */
-    public void setTurn(int turn) {
+    public void setTurn(Integer turn) {
         this.turn = turn;
     }
     
