@@ -1051,7 +1051,7 @@ public class Module extends WampModule
                             member.setClient(null);
                             member.setState(MemberState.DETACHED);
                             g.setMember(slot, member);
-                           
+                            
                             WampDict obj = member.toWampObject();
                             membersArray.add(obj);
                             
