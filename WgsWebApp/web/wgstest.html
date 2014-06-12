@@ -766,7 +766,7 @@ function update_member(field, as_previous_client)
     var slot = parseInt(field.substring(6));
     var role = $("#role" + slot + " option:selected").val();
     var team = parseInt($("#team" + slot).val());
-    wgsclient.updateMember(appId, gid, "JOINED", slot, (sid? parseLong(sid) : null), usertype, user, role, team, update_group_callback);
+    wgsclient.updateMember(appId, gid, "JOINED", slot, (sid? parseFloat(sid) : null), usertype, user, role, team, update_group_callback);
     
 }
 
