@@ -49,9 +49,9 @@ public class WampAPI extends WampModule
     //wamp.reflection.error.describe
     
     @WampRPC(name="reflection.procedure.list")
-    public WampList getProcedureList() throws Exception
+    public WampList getProcedureList(WampSocket socket) throws Exception
     {
-        return this.getWampApplication().getAllRpcNames();
+        return this.getWampApplication().getAllRpcNames(socket.getRealm());
     }
     
     @WampRPC(name="reflection.topic.list")
@@ -71,7 +71,7 @@ public class WampAPI extends WampModule
         WampList retval = new WampList();
         WampSubscription subscription = WampBroker.getSubscriptionById(subscriptionId);
         if(subscription != null) {
-            for(Long sid : subscription.getSessionIds()) {
+            for(Long sid : subscription.getSessionIds(socket.getRealm())) {
                 retval.add(sid);
             }
         }

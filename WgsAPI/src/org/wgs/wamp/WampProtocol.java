@@ -226,7 +226,7 @@ public class WampProtocol
     }    
     
     
-    public static void sendEvents(Long publicationId, WampTopic topic, Set<Long> eligibleParam, Set<Long> excluded, Long publisherId, WampList payload, WampDict payloadKw) throws Exception 
+    public static void sendEvents(String realm, Long publicationId, WampTopic topic, Set<Long> eligibleParam, Set<Long> excluded, Long publisherId, WampList payload, WampDict payloadKw) throws Exception 
     {
         // EVENT data
         WampDict eventDetails = new WampDict();
@@ -253,8 +253,8 @@ public class WampProtocol
             }
                                     
             Set<Long> eligible = (eligibleParam != null) ? new HashSet<Long>(eligibleParam) : null;
-            if(eligible == null) eligible = subscription.getSessionIds();
-            else eligible.retainAll(subscription.getSessionIds());
+            if(eligible == null) eligible = subscription.getSessionIds(realm);
+            else eligible.retainAll(subscription.getSessionIds(realm));
 
             if(excluded == null) excluded = new HashSet<Long>();        
             //if(excludeMe()) excluded.add(publisherId);
@@ -265,7 +265,7 @@ public class WampProtocol
                     if(subOptions != null && subOptions.hasEventsEnabled() && subOptions.isEligibleForEvent(sid, subscription, payload, payloadKw)) {
                         WampSocket socket = subscription.getSocket(sid);
                         synchronized(socket) {
-                            if(socket != null && socket.isOpen() && !excluded.contains(sid)) {
+                            if(socket != null && socket.isOpen() && !excluded.contains(sid) && realm.equals(socket.getRealm()) ) {
                                 WampEncoding enc = socket.getEncoding();
                                 if(msg[enc.ordinal()] == null) {
                                     msg[enc.ordinal()] = WampObject.getSerializer(enc).serialize(response);
@@ -280,7 +280,7 @@ public class WampProtocol
     }
 
     
-    public static void sendMetaEvents(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, WampDict metaEvent) throws Exception 
+    public static void sendMetaEvents(String realm, Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, WampDict metaEvent) throws Exception 
     {
         // METAEVENT data (only in WAMP v2)
         metaEvent.put("metatopic", metaTopic);
@@ -302,15 +302,15 @@ public class WampProtocol
             
             if(toClient != null) {
                 WampSocket remoteSocket = subscription.getSocket(toClient);
-                if(remoteSocket != null) {
+                if(remoteSocket != null && realm.equals(remoteSocket.getRealm())) {
                     sendWampMessage(remoteSocket, response);
                 }
             } else {
                 if(subscription.getOptions() != null && subscription.getOptions().hasMetaTopic(metaTopic)) {
                     Object[] msg = new Object[WampEncoding.values().length];
-                    for(Long sid : subscription.getSessionIds()) {  // FIXME: concurrent modification exceptions
+                    for(Long sid : subscription.getSessionIds(realm)) {  // FIXME: concurrent modification exceptions
                         WampSocket remoteSocket = subscription.getSocket(sid);
-                        if(remoteSocket.supportVersion(WampApplication.WAMPv2)) {
+                        if(realm.equals(remoteSocket.getRealm()) && remoteSocket.supportVersion(WampApplication.WAMPv2)) {
                             WampEncoding enc = remoteSocket.getEncoding();
                             if(msg[enc.ordinal()] == null) {
                                 msg[enc.ordinal()] = WampObject.getSerializer(enc).serialize(response);

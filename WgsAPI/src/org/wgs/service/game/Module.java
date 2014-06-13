@@ -546,7 +546,7 @@ public class Module extends WampModule
             client.addGroup(g);
             WampList conArray = new WampList();
             for(WampSubscription subscription : topic.getSubscriptions()) {
-                for(Long sid : subscription.getSessionIds()) {
+                for(Long sid : subscription.getSessionIds(socket.getRealm())) {
                     Client c = clients.get(sid);
                     User u = ((c!=null)? c.getUser() : null);
                     String user = ((u == null) ? "" : u.getUid());
@@ -1124,7 +1124,7 @@ public class Module extends WampModule
             }
         }
         
-        WampBroker.publishEvent(WampProtocol.newId(), WampBroker.getTopic(getFQtopicURI("apps_event")), null, event, eligible, null, null);  
+        WampBroker.publishEvent(socket.getRealm(), WampProtocol.newId(), WampBroker.getTopic(getFQtopicURI("apps_event")), null, event, eligible, null, null);  
         
         socket.publishEvent(WampBroker.getTopic(getFQtopicURI("app_event." + g.getApplication().getAppId())), null, event, false, false);     // broadcasts to all application subscribers
     }

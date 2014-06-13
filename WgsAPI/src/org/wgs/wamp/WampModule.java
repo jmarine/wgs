@@ -151,7 +151,7 @@ public class WampModule
             return retval;
             
         } else {
-            final ArrayList<WampRemoteMethod> remoteMethods = app.getRemoteRPCs(methodName, options);
+            final ArrayList<WampRemoteMethod> remoteMethods = app.getRemoteRPCs(clientSocket.getRealm(), methodName, options);
             final ArrayList<WampAsyncCall> remoteInvocations = new ArrayList<WampAsyncCall>();
             
             if(!remoteMethods.isEmpty()) {
@@ -253,7 +253,7 @@ public class WampModule
             if(options.hasEventsEnabled()) {
                 WampDict metaEvent = new WampDict();
                 metaEvent.put("session", clientSocket.getSessionId());
-                WampBroker.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
+                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
             }
         }
     }
@@ -265,7 +265,7 @@ public class WampModule
             if(options!=null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_REMOVED)) {
                 WampDict metaEvent = new WampDict();
                 metaEvent.put("session", clientSocket.getSessionId());                
-                WampBroker.publishMetaEvent(WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
+                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
             }
 
             clientSocket.removeSubscription(subscription.getId());
@@ -322,7 +322,7 @@ public class WampModule
                 WampProtocol.sendPublished(clientSocket, requestId, publicationId);
             }
         
-            WampBroker.publishEvent(publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? clientSocket.getSessionId() : null));
+            WampBroker.publishEvent(clientSocket.getRealm(), publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? clientSocket.getSessionId() : null));
         }
     }
     

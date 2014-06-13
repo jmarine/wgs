@@ -44,7 +44,7 @@ public class WampBroker
                     subscription.getTopics().add(topic);
 
                     try { 
-                        for(Long sid : subscription.getSessionIds()) {
+                        for(Long sid : subscription.getSessionIds(null)) {
                             WampSocket socket = subscription.getSocket(sid);
                             WampSubscriptionOptions exactTopicOpt = new WampSubscriptionOptions(null);
                             exactTopicOpt.setMatchType(WampMatchType.exact);
@@ -72,7 +72,7 @@ public class WampBroker
         WampTopic topic = topics.remove(topicFQname);
         if(topic != null) {
             for(WampSubscription subscription : topic.getSubscriptions()) {
-                for(Long sid : subscription.getSessionIds()) {
+                for(Long sid : subscription.getSessionIds(null)) {
                     WampSocket client = subscription.getSocket(sid);
                     try { 
                         unsubscribeClientFromTopic(app, client, null, subscription.getId());
@@ -161,14 +161,14 @@ public class WampBroker
         }  
     }
     
-    public static void publishEvent(Long id, WampTopic wampTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
+    public static void publishEvent(String realm, Long id, WampTopic wampTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
     {
-        JmsServices.publishEvent(id, wampTopic, null, payload, payloadKw, eligible, exclude, publisherId);
+        JmsServices.publishEvent(realm, id, wampTopic, null, payload, payloadKw, eligible, exclude, publisherId);
     }
 
-    public static void publishMetaEvent(Long id, WampTopic wampTopic, String metatopic, WampDict metaEventDetails, Long toClient) throws Exception
+    public static void publishMetaEvent(String realm, Long id, WampTopic wampTopic, String metatopic, WampDict metaEventDetails, Long toClient) throws Exception
     {
-        JmsServices.publishMetaEvent(id, wampTopic, metatopic, metaEventDetails, toClient);
+        JmsServices.publishMetaEvent(realm, id, wampTopic, metatopic, metaEventDetails, toClient);
     }
     
     

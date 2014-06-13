@@ -475,14 +475,20 @@ public class WampApplication
         this.rpcsByName.remove(name);
     }
     
-    public WampList getAllRpcNames()
+    public WampList getAllRpcNames(String realm)
     {
         WampList names = new WampList();
         for(String name : rpcsByName.keySet()) {
             names.add(name);
         }
         for(String name : calleeRegistrationByUri.keySet()) {
-            names.add(name);
+            WampCalleeRegistration registration = calleeRegistrationByUri.get(name);
+            for(WampRemoteMethod method : registration.getRemoteMethods()) {
+                if(realm.equals(method.getRemotePeer().getRealm())) {
+                    names.add(name);
+                    break;
+                }
+            }
         }
         return names;
     }
@@ -493,7 +499,7 @@ public class WampApplication
         return rpcsByName.get(name);
     }
     
-    public ArrayList<WampRemoteMethod> getRemoteRPCs(String name, WampCallOptions options)
+    public ArrayList<WampRemoteMethod> getRemoteRPCs(String realm, String name, WampCallOptions options)
     {
         ArrayList<WampRemoteMethod> retval = new ArrayList<WampRemoteMethod>();
 
@@ -503,7 +509,7 @@ public class WampApplication
         WampCalleeRegistration reg = calleeRegistrationByUri.get(name);
         if(reg != null) {
             for(WampRemoteMethod remoteMethod : reg.getRemoteMethods()) {
-                if(remoteMethod.hasPartition(partition)) {
+                if(remoteMethod.hasPartition(partition) && realm.equals(remoteMethod.getRemotePeer().getRealm())) {
                     retval.add(remoteMethod);
                 }
             }
@@ -512,7 +518,7 @@ public class WampApplication
         for(WampCalleeRegistration registration : calleePatterns.values()) {
             if(WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
                 for(WampRemoteMethod remoteMethod : registration.getRemoteMethods()) {
-                    if(remoteMethod.hasPartition(partition)) {
+                    if(remoteMethod.hasPartition(partition) && realm.equals(remoteMethod.getRemotePeer().getRealm())) {
                         retval.add(remoteMethod);
                     }
                 }

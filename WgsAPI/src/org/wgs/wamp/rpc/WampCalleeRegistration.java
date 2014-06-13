@@ -25,6 +25,7 @@ public class WampCalleeRegistration
         this.methodRegExp = WampBroker.getPatternRegExp(matchType, methodUriOrPattern);
     }
     
+    
     public Long getId()
     {
         return this.registrationId;

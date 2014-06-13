@@ -419,7 +419,7 @@ public class WampSocket
         options.setExcluded(excludedSet);
         options.setDiscloseMe(identifyMe);
 
-        WampBroker.publishEvent(WampProtocol.newId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? this.getSessionId() : null));
+        WampBroker.publishEvent(this.getRealm(), WampProtocol.newId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? this.getSessionId() : null));
     }
 
     

@@ -2,11 +2,12 @@
 package org.wgs.wamp.topic;
 
 import java.util.Collection;
-import java.util.Set;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import org.wgs.util.RefCount;
-import org.wgs.wamp.type.WampMatchType;
 import org.wgs.wamp.WampSocket;
+import org.wgs.wamp.type.WampMatchType;
 
 
 public class WampSubscription 
@@ -80,9 +81,18 @@ public class WampSubscription
         return sockets.size();
     }
     
-    public Set<Long> getSessionIds()
+    public Set<Long> getSessionIds(String realm)
     {
-        return sockets.keySet();
+        if(realm == null) {
+            return sockets.keySet();
+        } else {
+            HashSet<Long> sids = new HashSet<Long>();
+            for(RefCount<WampSocket> refSocket : sockets.values()) {
+                WampSocket socket = refSocket.getObject();
+                if(realm.equals(socket.getRealm())) sids.add(socket.getSessionId());
+            }
+            return sids;
+        }
     }
     
     public String getTopicRegExp() 

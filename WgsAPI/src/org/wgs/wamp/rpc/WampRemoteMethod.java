@@ -31,6 +31,7 @@ public class WampRemoteMethod extends WampMethod
         this.options = options;
     }
     
+    
     public boolean hasPartition(String partition)
     {
         if(options != null && options.has("partition")) {

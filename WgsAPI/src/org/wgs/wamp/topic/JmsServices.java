@@ -163,9 +163,9 @@ public class JmsServices
     }
     
     
-    static void publishEvent(Long id, WampTopic wampTopic, String metaTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
+    static void publishEvent(String realm, Long id, WampTopic wampTopic, String metaTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
     {
-        broadcastClusterEventToLocalNodeClients(id, wampTopic,metaTopic,eligible,exclude,publisherId, payload, payloadKw);  
+        broadcastClusterEventToLocalNodeClients(realm, id, wampTopic,metaTopic,eligible,exclude,publisherId, payload, payloadKw);  
         
         if(isJmsBrokerAvailable()) {
             String topicName = wampTopic.getTopicName();
@@ -187,6 +187,7 @@ public class JmsServices
             if(publisherId != null) msg.setLongProperty("publisherId", publisherId);
 
             msg.setStringProperty("topic", topicName);
+            if(realm != null)       msg.setStringProperty("realm", realm);
             if(metaTopic != null)   msg.setStringProperty("metaTopic", metaTopic);
             if(eligible != null)    msg.setStringProperty("eligible", serializeSessionIDs(eligible));
             if(exclude != null)     msg.setStringProperty("exclude", serializeSessionIDs(exclude));
@@ -203,7 +204,7 @@ public class JmsServices
     }
 
     
-    static void publishMetaEvent(Long publicationId, WampTopic topic, String metatopic, WampDict metaEventDetails, Long toClient) throws Exception
+    static void publishMetaEvent(String realm, Long publicationId, WampTopic topic, String metatopic, WampDict metaEventDetails, Long toClient) throws Exception
     {
         if(metaEventDetails == null) metaEventDetails = new WampDict();
         metaEventDetails.put("metatopic", metatopic);
@@ -214,19 +215,19 @@ public class JmsServices
             eligible.add(toClient);
         }
         
-        publishEvent(publicationId, topic, metatopic, null, metaEventDetails, eligible, null, null);
+        publishEvent(realm, publicationId, topic, metatopic, null, metaEventDetails, eligible, null, null);
     } 
     
     
-    private static void broadcastClusterEventToLocalNodeClients(Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, Set<Long> excluded, Long publisherId, WampList payload, WampDict payloadKw) throws Exception 
+    private static void broadcastClusterEventToLocalNodeClients(String realm, Long publicationId, WampTopic topic, String metaTopic, Set<Long> eligible, Set<Long> excluded, Long publisherId, WampList payload, WampDict payloadKw) throws Exception 
     {
         if(metaTopic == null) {
             // EVENT data
-            WampProtocol.sendEvents(publicationId, topic, eligible, excluded, publisherId, payload, payloadKw);
+            WampProtocol.sendEvents(realm, publicationId, topic, eligible, excluded, publisherId, payload, payloadKw);
         } else {
             // METAEVENT data (WAMP v2)
             WampDict metaEventDetails = payloadKw;
-            WampProtocol.sendMetaEvents(publicationId, topic, metaTopic, eligible, metaEventDetails);
+            WampProtocol.sendMetaEvents(realm, publicationId, topic, metaTopic, eligible, metaEventDetails);
         }
     }       
     
@@ -263,7 +264,8 @@ public class JmsServices
                 if(excludeBroker != null && excludeBroker.equals(brokerId)) return;
                 
                 String topicName = receivedMessageFromBroker.getStringProperty("topic");
-                String metaTopic = receivedMessageFromBroker.getStringProperty("metaTopic");
+                String realm     = receivedMessageFromBroker.propertyExists("realm") ? receivedMessageFromBroker.getStringProperty("realm") : null;
+                String metaTopic = receivedMessageFromBroker.propertyExists("metaTopic") ? receivedMessageFromBroker.getStringProperty("metaTopic") : null;
                 Long publisherId = receivedMessageFromBroker.propertyExists("publisherId") ? receivedMessageFromBroker.getLongProperty("publisherId") : null;
 
                 String eventData = ((TextMessage)receivedMessageFromBroker).getText();
@@ -277,7 +279,7 @@ public class JmsServices
 
                 for(WampSubscription subscription : WampBroker.getTopic(topicName).getSubscriptions()) {
                     for(WampTopic topic : subscription.getTopics()) {
-                        broadcastClusterEventToLocalNodeClients(subscription.getId(), topic, metaTopic, eligible, exclude, publisherId, payload, payloadKw);
+                        broadcastClusterEventToLocalNodeClients(realm, subscription.getId(), topic, metaTopic, eligible, exclude, publisherId, payload, payloadKw);
                     }
                 }
                 
