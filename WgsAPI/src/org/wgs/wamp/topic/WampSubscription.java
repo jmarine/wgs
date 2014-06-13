@@ -81,7 +81,7 @@ public class WampSubscription
         return sockets.size();
     }
     
-    public Set<Long> getSessionIds(String realm)
+    public synchronized Set<Long> getSessionIds(String realm)
     {
         if(realm == null) {
             return sockets.keySet();
