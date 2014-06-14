@@ -20,6 +20,7 @@ import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
 
 import org.glassfish.tyrus.core.TyrusWebSocketEngine;
+import org.glassfish.tyrus.core.TyrusWebSocketEngine.TyrusWebSocketEngineBuilder;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.ServerContainer;
 import org.glassfish.tyrus.spi.WebSocketEngine;
@@ -47,10 +48,9 @@ public class WssServerContainer extends GrizzlyServerContainer
             incommingBufferSize = null;
         }
 
-        // TODO
         return new TyrusServerContainer((Set<Class<?>>) null) {
 
-            private final WebSocketEngine engine = new TyrusWebSocketEngine(this, incommingBufferSize, null);
+            private final WebSocketEngine engine = TyrusWebSocketEngine.builder(this).incomingBufferSize(incommingBufferSize).build();
 
             private HttpServer server;
             private String contextPath = "";
