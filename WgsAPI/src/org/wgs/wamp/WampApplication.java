@@ -483,11 +483,8 @@ public class WampApplication
         }
         for(String name : calleeRegistrationByUri.keySet()) {
             WampCalleeRegistration registration = calleeRegistrationByUri.get(name);
-            for(WampRemoteMethod method : registration.getRemoteMethods()) {
-                if(realm.equals(method.getRemotePeer().getRealm())) {
-                    names.add(name);
-                    break;
-                }
+            if(registration.getRemoteMethods(realm).size() > 0) {
+                names.add(name);
             }
         }
         return names;
@@ -508,8 +505,8 @@ public class WampApplication
 
         WampCalleeRegistration reg = calleeRegistrationByUri.get(name);
         if(reg != null) {
-            for(WampRemoteMethod remoteMethod : reg.getRemoteMethods()) {
-                if(remoteMethod.hasPartition(partition) && realm.equals(remoteMethod.getRemotePeer().getRealm())) {
+            for(WampRemoteMethod remoteMethod : reg.getRemoteMethods(realm)) {
+                if(remoteMethod.hasPartition(partition)) {
                     retval.add(remoteMethod);
                 }
             }
@@ -517,8 +514,8 @@ public class WampApplication
         
         for(WampCalleeRegistration registration : calleePatterns.values()) {
             if(WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
-                for(WampRemoteMethod remoteMethod : registration.getRemoteMethods()) {
-                    if(remoteMethod.hasPartition(partition) && realm.equals(remoteMethod.getRemotePeer().getRealm())) {
+                for(WampRemoteMethod remoteMethod : registration.getRemoteMethods(realm)) {
+                    if(remoteMethod.hasPartition(partition)) {
                         retval.add(remoteMethod);
                     }
                 }
@@ -613,7 +610,7 @@ public class WampApplication
             WampModule module = app.getDefaultWampModule();
             module.onUnregister(clientSocket, registrationId);
             
-            if(registration.getRemoteMethods().size() == 0) {
+            if(registration.getRemoteMethodsCount() == 0) {
                 for(String name : calleeRegistrationByUri.keySet()) {
                     if(WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
                         calleeRegistrationByUri.remove(name);

@@ -298,7 +298,7 @@ public class WampModule
             throw new WampException(null, "wamp.error.registration_not_found", null, null);
         } else {
             clientSocket.removeRpcRegistration(registrationId);
-            registration.removeRemoteMethod(clientSocket.getSessionId());
+            registration.removeRemoteMethod(clientSocket);
             //rpcsByName.remove(method.getProcedureURI());
         }
     }    

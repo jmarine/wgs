@@ -19,6 +19,7 @@ public class WampSubscription
     private WampSubscriptionOptions options;
 
     private HashMap<Long, RefCount<WampSocket>> sockets = new HashMap<Long, RefCount<WampSocket>>();
+    private HashMap<String, HashSet<Long>> sessionIdsByRealm = new HashMap<String, HashSet<Long>>();
     
     private Collection<WampTopic> topics = null;
     
@@ -45,10 +46,18 @@ public class WampSubscription
     
     public synchronized boolean addSocket(WampSocket socket)
     {
+        String realm = socket.getRealm();
+        HashSet<Long> realmSessions = sessionIdsByRealm.get(realm);
+        if(realmSessions == null) {
+            realmSessions = new HashSet<Long>();
+            sessionIdsByRealm.put(realm, realmSessions);
+        }
+        
         RefCount<WampSocket> ref = sockets.get(socket.getSessionId());
         if(ref == null) {
             ref = new RefCount<WampSocket>(socket, 1);
             sockets.put(socket.getSessionId(), ref);
+            realmSessions.add(socket.getSessionId());
             return true;
         } else {
             ref.refCount(+1);
@@ -63,7 +72,8 @@ public class WampSubscription
             return null;
         } else {
             if(ref.refCount(-1) == 0) {
-                sockets.remove(sessionId);
+                WampSocket socket = ref.getObject();
+                sessionIdsByRealm.get(socket.getRealm()).remove(socket);
             }
             return ref.getObject();
         }
@@ -86,12 +96,7 @@ public class WampSubscription
         if(realm == null) {
             return sockets.keySet();
         } else {
-            HashSet<Long> sids = new HashSet<Long>();
-            for(RefCount<WampSocket> refSocket : sockets.values()) {
-                WampSocket socket = refSocket.getObject();
-                if(realm.equals(socket.getRealm())) sids.add(socket.getSessionId());
-            }
-            return sids;
+            return new HashSet<Long>(sessionIdsByRealm.get(realm));
         }
     }
     
