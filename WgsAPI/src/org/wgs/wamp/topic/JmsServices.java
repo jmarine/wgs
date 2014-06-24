@@ -162,9 +162,9 @@ public class JmsServices
     
     static void publishEvent(String realm, Long id, WampTopic wampTopic, String metaTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, Long publisherId) throws Exception
     {
-        broadcastClusterEventToLocalNodeClients(realm, id, wampTopic,metaTopic,eligible,exclude,publisherId, payload, payloadKw);  
-        
-        if(isJmsBrokerAvailable()) {
+        if(!isJmsBrokerAvailable()) {
+            broadcastClusterEventToLocalNodeClients(realm, id, wampTopic,metaTopic,eligible,exclude,publisherId, payload, payloadKw);  
+        } else {
             String topicName = wampTopic.getTopicName();
             TopicConnection connection = getTopicConnectionFromPool();
 
@@ -189,7 +189,8 @@ public class JmsServices
             if(eligible != null)    msg.setStringProperty("eligible", serializeSessionIDs(eligible));
             if(exclude != null)     msg.setStringProperty("exclude", serializeSessionIDs(exclude));
 
-            msg.setStringProperty("excludeBroker", brokerId);
+            // msg.setStringProperty("excludeBroker", brokerId);
+            
             publisher.send(msg);
 
             publisher.close();
@@ -257,8 +258,8 @@ public class JmsServices
         public void onMessage(Message receivedMessageFromBroker) {
             try {
                 System.out.println ("Received message from broker.");
-                String excludeBroker = receivedMessageFromBroker.getStringProperty("excludeBroker");
-                if(excludeBroker != null && excludeBroker.equals(brokerId)) return;
+                //String excludeBroker = receivedMessageFromBroker.getStringProperty("excludeBroker");
+                //if(excludeBroker != null && excludeBroker.equals(brokerId)) return;
                 
                 String topicName = receivedMessageFromBroker.getStringProperty("topic");
                 String realm     = receivedMessageFromBroker.propertyExists("realm") ? receivedMessageFromBroker.getStringProperty("realm") : null;
