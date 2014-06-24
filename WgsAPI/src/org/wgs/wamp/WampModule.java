@@ -127,7 +127,7 @@ public class WampModule
         };
         
 
-        WampMethod method = app.getLocalRPCs(methodName, options);
+        WampMethod method = app.getLocalRPC(methodName);
         if(method != null) {
             Object retval = method.invoke(task,clientSocket,args,argsKw,options, completeCallback);
             if(retval != null && retval instanceof WampAsyncCall) {
@@ -151,7 +151,8 @@ public class WampModule
             return retval;
             
         } else {
-            final ArrayList<WampRemoteMethod> remoteMethods = app.getRemoteRPCs(clientSocket.getRealm(), methodName, options);
+            final WampRealm realm = WampRealm.getRealm(clientSocket.getRealm());
+            final ArrayList<WampRemoteMethod> remoteMethods = realm.getRemoteRPCs(clientSocket.getRealm(), methodName, options);
             final ArrayList<WampAsyncCall> remoteInvocations = new ArrayList<WampAsyncCall>();
             
             if(!remoteMethods.isEmpty()) {
@@ -293,7 +294,8 @@ public class WampModule
     
     public void onUnregister(WampSocket clientSocket, Long registrationId) throws Exception
     {
-        WampCalleeRegistration registration = app.getRegistration(registrationId);
+        WampRealm realm = WampRealm.getRealm(clientSocket.getRealm());
+        WampCalleeRegistration registration = realm.getRegistration(registrationId);
         if(registration == null) {
             throw new WampException(null, "wamp.error.registration_not_found", null, null);
         } else {

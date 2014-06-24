@@ -56,7 +56,7 @@ public class WampCallController implements Runnable
     
     public boolean isRemoteMethod()
     {
-        WampMethod method = app.getLocalRPCs(procedureURI, callOptions);        
+        WampMethod method = app.getLocalRPC(procedureURI);        
         return (method == null);
     }
     
