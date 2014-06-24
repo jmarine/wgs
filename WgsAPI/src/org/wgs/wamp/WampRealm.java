@@ -53,7 +53,7 @@ public class WampRealm
 
         WampCalleeRegistration reg = calleeRegistrationByUri.get(name);
         if(reg != null) {
-            for(WampRemoteMethod remoteMethod : reg.getRemoteMethods(realm)) {
+            for(WampRemoteMethod remoteMethod : reg.getRemoteMethods()) {
                 if(remoteMethod.hasPartition(partition)) {
                     retval.add(remoteMethod);
                 }
@@ -62,7 +62,7 @@ public class WampRealm
         
         for(WampCalleeRegistration registration : calleePatterns.values()) {
             if(WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
-                for(WampRemoteMethod remoteMethod : registration.getRemoteMethods(realm)) {
+                for(WampRemoteMethod remoteMethod : registration.getRemoteMethods()) {
                     if(remoteMethod.hasPartition(partition)) {
                         retval.add(remoteMethod);
                     }
@@ -83,7 +83,7 @@ public class WampRealm
         WampList names = new WampList();
         for(String name : calleeRegistrationByUri.keySet()) {
             WampCalleeRegistration registration = calleeRegistrationByUri.get(name);
-            if(registration.getRemoteMethods(realmName).size() > 0) {
+            if(registration.getRemoteMethodsCount() > 0) {
                 names.add(name);
             }
         }
