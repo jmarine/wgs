@@ -19,9 +19,6 @@ import javax.jms.Topic;
 import javax.jms.TopicSession;
 import javax.jms.TopicPublisher;
 import javax.jms.TopicSubscriber;
-import javax.management.MBeanServerConnection;
-import javax.management.ObjectName;
-import javax.management.remote.JMXConnector;
 import javax.naming.InitialContext;
 
 

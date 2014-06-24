@@ -29,8 +29,6 @@ public class WampBroker
     private static TreeMap<String,WampSubscription> topicPatterns = new TreeMap<String,WampSubscription>();
     
 
-    
-
     public static WampTopic createTopic(WampApplication app, String topicFQname, WampTopicOptions options)
     {
         WampTopic topic = topics.get(topicFQname);

@@ -2,6 +2,7 @@ package org.wgs.wamp;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -9,6 +10,7 @@ import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampRemoteMethod;
 import org.wgs.wamp.topic.WampBroker;
+import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampMatchType;
@@ -20,6 +22,7 @@ public class WampRealm
     private static HashMap<String,WampRealm> realms = new HashMap<String,WampRealm>();
     
     private String realmName;
+    
     private ConcurrentHashMap<String,WampCalleeRegistration> calleePatterns;
     private ConcurrentHashMap<Long,WampCalleeRegistration>   calleeRegistrationById;
     private ConcurrentHashMap<String,WampCalleeRegistration> calleeRegistrationByUri;

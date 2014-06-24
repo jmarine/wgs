@@ -95,7 +95,7 @@ public class WampSocket
                     setEncoding(WampEncoding.JSon);
                     break;
 
-                default:    // FIXME: negotiated subprotocol doesn't work in WildFly 8.0.0.
+                default:  // use "wamp.2.json" by default (fix for WildFly 8.0.0)
                     setVersionSupport(WampApplication.WAMPv2);
                     setEncoding(WampEncoding.JSon);
                     break;
