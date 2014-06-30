@@ -2,7 +2,6 @@ package org.wgs.wamp;
 
 import org.wgs.security.OpenIdConnectUtils;
 import java.security.Principal;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,8 +21,6 @@ import org.wgs.wamp.api.WampAPI;
 
 import org.wgs.security.WampCRA;
 import org.wgs.wamp.rpc.WampCallController;
-import org.wgs.wamp.rpc.WampCallOptions;
-import org.wgs.wamp.rpc.WampRemoteMethod;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampAsyncCallback;
 import org.wgs.wamp.rpc.WampMethod;
@@ -135,6 +132,7 @@ public class WampApplication
         }                
     }
     
+    
     public void onWampSessionStart(WampSocket clientSocket, String realm, WampDict helloDetails)
     {
         clientSocket.setGoodbyeRequested(false);
@@ -160,7 +158,7 @@ public class WampApplication
             try { 
                 String authMethod = authMethods.getText(i);
                 if(authMethod.equalsIgnoreCase("anonymous")) {
-                    onWampSessionEstablished(clientSocket);
+                    onWampSessionEstablished(clientSocket, clientSocket.getHelloDetails());
                     break;
                 } else if(authMethod.equalsIgnoreCase("cookie")) {
                     // TODO
@@ -236,21 +234,21 @@ public class WampApplication
         }
         
         if(welcomed) {
-            onWampSessionEstablished(clientSocket);
+            onWampSessionEstablished(clientSocket, clientSocket.getHelloDetails());
         } else {
             WampProtocol.sendAbort(clientSocket, "wamp.error.authentication_failed", "error verifying authentication challege");
         }
     }
     
     
-    private void onWampSessionEstablished(WampSocket clientSocket) 
+    private void onWampSessionEstablished(WampSocket clientSocket, WampDict details) 
     {
         WampProtocol.sendWelcomeMessage(this, clientSocket);
 
         // Notify modules:
         for(WampModule module : modules.values()) {
             try { 
-                module.onSessionEstablished(clientSocket, clientSocket.getRealm(), clientSocket.getHelloDetails()); 
+                module.onSessionEstablished(clientSocket, details); 
             } catch(Exception ex) {
                 logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
             }
@@ -289,7 +287,9 @@ public class WampApplication
                     module.onUnregister(clientSocket, registration.getId());
                 } catch(Exception ex) { }
             }        
-
+            
+            clientSocket.setState(WampConnectionState.ANONYMOUS);
+            clientSocket.setUserPrincipal(null);
         }
         
         // Clear session realm
@@ -304,12 +304,9 @@ public class WampApplication
         switch(requestType.intValue()) {
             case WampProtocol.HELLO:
                 String realmName = request.getText(1);
-                WampDict helloDetails = (WampDict)request.get(2);
+                WampDict helloDetails = (request.size() > 2) ? (WampDict)request.get(2) : null;
                 onWampSessionStart(clientSocket, realmName, helloDetails);
                 break;
-            case WampProtocol.WELCOME:
-                // processWelcomeMessage(clientSocket, request);
-                break;                
             case WampProtocol.ABORT:
                 onWampSessionEnd(clientSocket);
                 break;

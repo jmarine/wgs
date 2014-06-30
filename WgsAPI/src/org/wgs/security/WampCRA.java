@@ -128,7 +128,7 @@ public class WampCRA
     }
     
     
-    private static String authSignature(String authChallenge, String authSecret, WampDict authExtra) throws Exception
+    public static String authSignature(String authChallenge, String authSecret, WampDict authExtra) throws Exception
     {
         if(authSecret == null) authSecret = "";
         byte[] derivedSecret = deriveKey(authSecret, authExtra);

@@ -72,6 +72,15 @@ public class WampProtocol
 
     }    
     
+    public static void sendHelloMessage(WampSocket clientSocket, String realm, WampDict options)
+    {
+        WampList response = new WampList();
+        response.add(HELLO);
+        response.add(realm);
+        if(options != null) response.add(options);
+        WampProtocol.sendWampMessage(clientSocket, response);
+    }
+    
     
     public static void sendWelcomeMessage(WampApplication app, WampSocket clientSocket)
     {
@@ -144,6 +153,15 @@ public class WampProtocol
         response.add(CHALLENGE);
         response.add(authMethod);
         response.add(extra);
+        sendWampMessage(clientSocket, response);
+    }
+    
+    public static void sendAuthenticationMessage(WampSocket clientSocket, String signature, WampDict extra) 
+    {
+        WampList response = new WampList();
+        response.add(AUTHENTICATE);
+        response.add(signature);
+        if(extra != null && extra.size() > 0) response.add(extra);
         sendWampMessage(clientSocket, response);
     }
 
@@ -339,6 +357,19 @@ public class WampProtocol
         }
         sendWampMessage(clientSocket, response);
     }    
+    
+    
+    public static void sendCallMessage(WampSocket clientSocket, Long requestId, WampDict options, String procedureURI, WampList args, WampDict argsKw)
+    {
+        WampList response = new WampList();
+        response.add(CALL);
+        response.add(requestId);
+        response.add((options != null)? options : new WampDict());
+        response.add(procedureURI);
+        if(args != null) response.add(args);
+        if(argsKw != null) response.add(argsKw);
+        sendWampMessage(clientSocket, response);
+    }
     
     public static void sendRegisteredMessage(WampSocket clientSocket, Long requestId, Long registrationId)
     {    

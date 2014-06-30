@@ -111,6 +111,11 @@ public class WampSocket
     public Long getSessionId() {
         return sessionId;
     }
+    
+    public void setSessionId(Long id) {
+        this.sessionId = id;
+    }
+    
 
     /**
      * Get the session data 

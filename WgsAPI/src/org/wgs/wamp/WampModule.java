@@ -65,7 +65,9 @@ public class WampModule
     
     public void onConnect(WampSocket clientSocket) throws Exception { }
     
-    public void onSessionEstablished(WampSocket clientSocket, String realm, WampDict helloDetails) { }
+    public void onChallenge(WampSocket clientSocket, String authMethod, WampDict details) throws Exception { }
+    
+    public void onSessionEstablished(WampSocket clientSocket, WampDict details) { }
     
     public void onSessionEnd(WampSocket clientSocket) { }
     
