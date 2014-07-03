@@ -10,11 +10,12 @@ public class WampList extends WampObject
     
     public WampList()
     {
-        array = new ArrayList<Object>();
+        this.array = new ArrayList<Object>();
     }
     
-    private WampList(List<Object> list) {
-        list = list;
+    private WampList(List<Object> list) 
+    {
+        this.array = list;
     }
     
     
