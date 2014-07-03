@@ -42,7 +42,8 @@ public class WampLocalMethod extends WampMethod
             } else if(WampCallOptions.class.isAssignableFrom(paramType)) {
                 params.add(options);
             } else if(WampList.class.isAssignableFrom(paramType)) {
-                params.add(args.subList(argCount, args.size()));    // Only a list with the rest of the received arguments
+                Object list = args.subList(argCount, args.size());
+                params.add(list);    // Only a list with the rest of the received arguments
                 argCount = args.size();                    
             } else if(WampDict.class.isAssignableFrom(paramType)) {
                 Object nextParam = (argCount < args.size())? args.get(argCount) : null;

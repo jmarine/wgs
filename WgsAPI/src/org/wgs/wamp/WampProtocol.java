@@ -367,8 +367,27 @@ public class WampProtocol
         response.add((options != null)? options : new WampDict());
         response.add(procedureURI);
         if(args != null) response.add(args);
-        if(argsKw != null) response.add(argsKw);
+        if(argsKw != null && argsKw.size() > 0) response.add(argsKw);
         sendWampMessage(clientSocket, response);
+    }
+    
+    public static void sendCancelCallMessage(WampSocket clientSocket, Long callId, WampDict options)
+    {
+        WampList response = new WampList();
+        response.add(CANCEL_CALL);
+        response.add(callId);
+        response.add((options != null)? options : new WampDict());
+        sendWampMessage(clientSocket, response);
+    }
+    
+    public static void sendRegisterMessage(WampSocket clientSocket, Long requestId, WampDict options, String procedureURI)
+    {
+        WampList response = new WampList();
+        response.add(REGISTER);
+        response.add(requestId);
+        response.add((options != null)? options : new WampDict());
+        response.add(procedureURI);
+        sendWampMessage(clientSocket, response);        
     }
     
     public static void sendRegisteredMessage(WampSocket clientSocket, Long requestId, Long registrationId)
@@ -379,6 +398,15 @@ public class WampProtocol
         response.add(registrationId);
         sendWampMessage(clientSocket, response);
     }      
+    
+    public static void sendUnregisterMessage(WampSocket clientSocket, Long requestId, Long registrationId)
+    {
+        WampList response = new WampList();
+        response.add(UNREGISTER);
+        response.add(requestId);
+        response.add(registrationId);
+        sendWampMessage(clientSocket, response);        
+    }    
         
     public static void sendUnregisteredMessage(WampSocket clientSocket, Long requestId)
     {    
@@ -403,6 +431,17 @@ public class WampProtocol
         sendWampMessage(remotePeer, msg);        
     }
     
+    
+    public static void sendInvocationResultMessage(WampSocket clientSocket, Long invocationRegistrationId, WampDict invocationResultOptions, WampList result, WampDict resultKw) 
+    {
+        WampList msg = new WampList();
+        msg.add(YIELD);
+        msg.add(invocationRegistrationId);
+        msg.add(invocationResultOptions);
+        msg.add(result);
+        if(resultKw != null && resultKw.size() > 0) msg.add(resultKw);
+        sendWampMessage(clientSocket, msg);        
+    }
     
     public static void sendInterruptMessage(WampSocket remotePeer, Long invocationId, WampDict cancelOptions) 
     {

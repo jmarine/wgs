@@ -66,10 +66,15 @@ public class WampApplication
         this.modules = new HashMap<String,WampModule>();
         this.rpcsByName = new TreeMap<String,WampMethod>();
 
-        this.registerWampModule(new WampAPI(this));
+        registerWampModules();
         
         this.defaultModule = new WampModule(this);
         //WampServices.registerApplication(path, this);
+    }
+    
+    public void registerWampModules()
+    {
+        this.registerWampModule(new WampAPI(this));
     }
     
     public int getWampVersion() {

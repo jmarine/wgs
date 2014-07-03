@@ -8,11 +8,14 @@ import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
+import org.wgs.wamp.annotation.WampModuleName;
+import org.wgs.wamp.annotation.WampRPC;
 import org.wgs.wamp.rpc.WampAsyncCallback;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 
 
+@WampModuleName("client")
 public class WampClientTest extends WampModule implements Runnable
 {
     private static String user = "magda";
@@ -28,6 +31,16 @@ public class WampClientTest extends WampModule implements Runnable
     }
     
     
+    @WampRPC(name = "reverse_list")
+    public WampList reverseList(WampList list) 
+    {
+        WampList retval = new WampList();
+        for(int i = list.size()-1; i >= 0; i--) {
+            retval.add(list.get(i));
+        }
+        return retval;
+    }
+    
     @Override
     public void run()
     {
@@ -39,18 +52,12 @@ public class WampClientTest extends WampModule implements Runnable
             
             client.goodbye("wamp.close.normal");
             
-            client.hello("localhost", null, null);
+            client.hello("localhost", null);
             client.waitPendingMessages();
             
         } catch(Exception ex) {
             System.err.println("Error: " + ex.getMessage());
         }
-    }
-
-    
-    @Override
-    public void onChallenge(WampSocket clientSocket, String authMethod, WampDict details) throws Exception { 
-        
     }
 
     
@@ -75,6 +82,28 @@ public class WampClientTest extends WampModule implements Runnable
                 System.out.println("Error: " + errors);
             }
         });
+        
+        WampList list = new WampList();
+        list.add(1);
+        list.add(2);
+        list.add(3);
+        client.call("client.reverse_list", list, null, null, new WampAsyncCallback() {
+            @Override
+            public void resolve(Object... results) {
+                WampList result = (WampList)results[2];
+                System.out.println(result.toString());
+            }
+
+            @Override
+            public void progress(Object... progress) {
+                System.out.println("Progress: " + progress);
+            }
+
+            @Override
+            public void reject(Object... errors) {
+                System.out.println("Error: " + errors);
+            }
+        });    
       
     }
         
