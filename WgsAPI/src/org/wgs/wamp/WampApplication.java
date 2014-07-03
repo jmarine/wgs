@@ -163,6 +163,7 @@ public class WampApplication
             try { 
                 String authMethod = authMethods.getText(i);
                 if(authMethod.equalsIgnoreCase("anonymous")) {
+                    clientSocket.setAuthMethod("anonymous");
                     onWampSessionEstablished(clientSocket, clientSocket.getHelloDetails());
                     break;
                 } else if(authMethod.equalsIgnoreCase("cookie")) {
