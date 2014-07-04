@@ -130,14 +130,15 @@ public class WampProtocol
             details.put("authid", usr.getUid());
             details.put("authmethod", clientSocket.getAuthMethod());
             details.put("authrole", usr.isAdministrator()? "admin" : "user");
-            if(clientSocket.getAuthProvider() != null) details.put("authprovider", clientSocket.getAuthProvider());
         } else {
             details.put("authid", clientSocket.getSessionData().get(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME));
             details.put("authmethod", clientSocket.getAuthMethod());
             details.put("authrole", "anonymous");
         }
-        
+
+        String realm = clientSocket.getRealm();
         if(clientSocket.getAuthProvider() != null) details.put("authprovider", clientSocket.getAuthProvider());
+        else details.put("authprovider", "wgs.realm." + ((realm != null && realm.length() > 0)? realm : "localhost") );
         
         response.add(details);  
         
