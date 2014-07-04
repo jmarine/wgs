@@ -23,6 +23,8 @@ import org.wgs.wamp.type.WampList;
 
 public class WampCRA 
 {
+    public  static final String WAMP_AUTH_ID_PROPERTY_NAME = "__wamp_authid";
+
     
     public static String getChallenge(WampSocket socket, String authKey, WampDict extra) throws Exception
     {

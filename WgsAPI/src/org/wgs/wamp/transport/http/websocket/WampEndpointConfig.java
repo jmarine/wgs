@@ -1,6 +1,5 @@
 package org.wgs.wamp.transport.http.websocket;
 
-import org.wgs.security.OpenIdConnectUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -10,7 +9,6 @@ import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.servlet.http.HttpSession;
 import javax.websocket.CloseReason;
 import javax.websocket.Decoder;
 import javax.websocket.Encoder;
@@ -20,6 +18,7 @@ import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 import javax.websocket.server.HandshakeRequest;
 import javax.websocket.server.ServerEndpointConfig;
+import org.wgs.security.WampCRA;
 import org.wgs.wamp.*;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
@@ -41,13 +40,15 @@ public class WampEndpointConfig
     private Class endpointClass;
     private WampApplication application;
     private ConcurrentHashMap<String,WampSocket> sockets;    
+    private Map<String, Object> userProperties;
     
 
     public WampEndpointConfig(Class endpointClass, WampApplication application)
     {
         this.application = application;
         this.endpointClass = endpointClass;
-        this.sockets = new ConcurrentHashMap<String,WampSocket>();        
+        this.sockets = new ConcurrentHashMap<String,WampSocket>();  
+        this.userProperties = new HashMap<String,Object>();
     }
     
     
@@ -169,9 +170,6 @@ public class WampEndpointConfig
 
     @Override
     public Map<String, Object> getUserProperties() {
-        Map<String, Object> userProperties = new HashMap<String, Object>();
-        userProperties.put(WAMP_ENDPOINTCONFIG_PROPERTY_NAME, this);
-        userProperties.put(WAMP_APPLICATION_PROPERTY_NAME, application);
         return userProperties;
     }
     
@@ -200,6 +198,7 @@ public class WampEndpointConfig
                                 HandshakeRequest request, 
                                 HandshakeResponse response)
     {
+        String wampAuthId = null;
         String wampCookieValue = null;
         List<String> setCookieHeaders = request.getHeaders().get("Cookie");
         if(setCookieHeaders != null) {
@@ -214,7 +213,7 @@ public class WampEndpointConfig
                     if(name.equalsIgnoreCase(WAMP_AUTH_COOKIE_NAME)) {
                         if(verifyWampCookie(value)) {
                             wampCookieValue = value;
-                            config.getUserProperties().put(OpenIdConnectUtils.WAMP_AUTH_ID_PROPERTY_NAME, extractAuthIdFromWampCookie(value));
+                            wampAuthId = extractAuthIdFromWampCookie(value);
                         }
                     }
                 }
@@ -222,9 +221,8 @@ public class WampEndpointConfig
         }
     
         if(wampCookieValue == null) {
-            String authid = String.valueOf(WampProtocol.newId());
-            wampCookieValue = signWampCookie(authid);
-            config.getUserProperties().put(OpenIdConnectUtils.WAMP_AUTH_ID_PROPERTY_NAME, authid);
+            wampAuthId = String.valueOf(WampProtocol.newId());
+            wampCookieValue = signWampCookie(wampAuthId);
             
             List<String> cookies = response.getHeaders().get("Cookie");
             if(cookies == null) cookies = new ArrayList<String>();
@@ -232,6 +230,12 @@ public class WampEndpointConfig
             cookies.add(WAMP_AUTH_COOKIE_NAME +"=" + wampCookieValue);
             response.getHeaders().put("Set-Cookie", cookies);
         }
+
+        
+        Map<String,Object> configProps = config.getUserProperties();
+        configProps.put(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME, wampAuthId);
+        configProps.put(WAMP_ENDPOINTCONFIG_PROPERTY_NAME, this);
+        configProps.put(WAMP_APPLICATION_PROPERTY_NAME, application);
         
     } 
     

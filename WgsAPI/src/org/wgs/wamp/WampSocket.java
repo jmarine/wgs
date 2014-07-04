@@ -37,7 +37,6 @@ public class WampSocket
     private boolean connected;
     private Session session;
     private Long    sessionId;
-    private Map<String,Object> sessionData;
     private Map<String,String> prefixes;
     private Map<Long,WampSubscription> subscriptions;
     private Map<Long,WampCallController> rpcController;
@@ -69,7 +68,6 @@ public class WampSocket
         this.state = (principal != null) ? WampConnectionState.AUTHENTICATED : WampConnectionState.ANONYMOUS;
         
         sessionId   = WampProtocol.newId();
-        sessionData = new ConcurrentHashMap<String,Object>();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
         rpcAsyncCallbacks = new ConcurrentHashMap<Long,WampAsyncCallback>();
@@ -122,7 +120,7 @@ public class WampSocket
      * @return the user name
      */
     public Map<String,Object> getSessionData() {
-        return sessionData;
+        return session.getUserProperties();
     }
 
     /**

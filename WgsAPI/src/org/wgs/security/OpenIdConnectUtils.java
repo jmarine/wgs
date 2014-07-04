@@ -7,19 +7,17 @@ import java.util.Calendar;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
+
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
 import org.glassfish.grizzly.http.util.URLDecoder;
-import org.wgs.security.OpenIdConnectClient;
-import org.wgs.security.OpenIdConnectClientPK;
-import org.wgs.security.OpenIdConnectProvider;
-import org.wgs.security.User;
+
 import org.wgs.util.Base64;
 import org.wgs.util.Social;
 import org.wgs.util.Storage;
-import org.wgs.security.WampCRA;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampSocket;
@@ -30,9 +28,6 @@ import org.wgs.wamp.type.WampList;
 
 public class OpenIdConnectUtils 
 {
-    public  static final String WAMP_AUTH_ID_PROPERTY_NAME = "__wamp_authid";
-
-    
     private static final Logger logger = Logger.getLogger(OpenIdConnectUtils.class.toString());
     
     

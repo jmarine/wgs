@@ -6,13 +6,15 @@
 
 package org.wgs.wamp.transport.http.websocket;
 
-import org.wgs.wamp.WampApplication;
+import java.util.Map;
 import java.util.logging.Logger;
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
 import javax.websocket.Session;
-import javax.websocket.server.ServerEndpointConfig;
+
+import org.wgs.security.WampCRA;
+import org.wgs.wamp.WampApplication;
 
 
 public class WampEndpoint extends Endpoint 
@@ -28,28 +30,23 @@ public class WampEndpoint extends Endpoint
     }
     
 
-
-    public Session getSession()
-    {
-        return session;
-    }
-    
-    
     
     public void onApplicationStart(WampApplication app) { }
    
     @Override
-    public void onOpen(Session session, EndpointConfig endpointConfig) {
+    public  void onOpen(Session session, EndpointConfig endpointConfig) {
         logger.fine("##################### Session opened");
-
-        this.session = session;
-        this.wampEndpointConfig = (WampEndpointConfig)endpointConfig.getUserProperties().get(WampEndpointConfig.WAMP_ENDPOINTCONFIG_PROPERTY_NAME);
         
-        wampEndpointConfig.onWampOpen(session, this);
+        Map<String,Object> configProps = endpointConfig.getUserProperties();
+        session.getUserProperties().put(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME,
+            configProps.get(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME) );
+        
+        this.session = session;
+        this.wampEndpointConfig = (WampEndpointConfig)configProps.get(WampEndpointConfig.WAMP_ENDPOINTCONFIG_PROPERTY_NAME);
+        this.wampEndpointConfig.onWampOpen(session, this);
     }
+
     
-    
-   
     @Override
     public void onClose(Session session, CloseReason reason) 
     {

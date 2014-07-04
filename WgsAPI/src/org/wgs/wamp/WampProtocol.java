@@ -1,13 +1,14 @@
 package org.wgs.wamp;
 
-import org.wgs.security.OpenIdConnectUtils;
 import java.security.Principal;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.wgs.security.OpenIdConnectUtils;
 import org.wgs.security.User;
+import org.wgs.security.WampCRA;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
@@ -131,7 +132,7 @@ public class WampProtocol
             if(clientSocket.getAuthProvider() != null) details.put("authprovider", clientSocket.getAuthProvider());
             details.put("authrole", usr.isAdministrator()? "admin" : "user");
         } else {
-            details.put("authid", clientSocket.getSessionData().get(OpenIdConnectUtils.WAMP_AUTH_ID_PROPERTY_NAME));
+            details.put("authid", clientSocket.getSessionData().get(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME));
             details.put("authmethod", clientSocket.getAuthMethod());
             details.put("authrole", "user");
         }
