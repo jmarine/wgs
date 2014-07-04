@@ -129,12 +129,12 @@ public class WampProtocol
             User usr = (User)principal;
             details.put("authid", usr.getUid());
             details.put("authmethod", clientSocket.getAuthMethod());
-            if(clientSocket.getAuthProvider() != null) details.put("authprovider", clientSocket.getAuthProvider());
             details.put("authrole", usr.isAdministrator()? "admin" : "user");
+            if(clientSocket.getAuthProvider() != null) details.put("authprovider", clientSocket.getAuthProvider());
         } else {
             details.put("authid", clientSocket.getSessionData().get(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME));
             details.put("authmethod", clientSocket.getAuthMethod());
-            details.put("authrole", "user");
+            details.put("authrole", "anonymous");
         }
         
         if(clientSocket.getAuthProvider() != null) details.put("authprovider", clientSocket.getAuthProvider());
