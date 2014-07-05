@@ -123,11 +123,14 @@ public class WampProtocol
         WampDict details = new WampDict();
         details.put("agent", app.getServerId());
         details.put("roles", roles);
+
+        String realm = clientSocket.getRealm();
+        if(realm == null || realm.length() == 0) realm = "localhost";
         
         Principal principal = clientSocket.getUserPrincipal();
         if(principal != null && principal instanceof User) {
             User usr = (User)principal;
-            details.put("authid", usr.getUid());
+            details.put("authid", usr.getLogin());
             details.put("authmethod", clientSocket.getAuthMethod());
             details.put("authrole", usr.isAdministrator()? "admin" : "user");
         } else {
@@ -136,9 +139,8 @@ public class WampProtocol
             details.put("authrole", "anonymous");
         }
 
-        String realm = clientSocket.getRealm();
         if(clientSocket.getAuthProvider() != null) details.put("authprovider", clientSocket.getAuthProvider());
-        else details.put("authprovider", "wgs.realm." + ((realm != null && realm.length() > 0)? realm : "localhost") );
+        else details.put("authprovider", "wgs.realms." + realm );
         
         response.add(details);  
         

@@ -6,18 +6,18 @@ import java.util.Date;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.wgs.util.Base64;
 import org.wgs.util.PBKDF2;
 import org.wgs.util.Storage;
 import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.type.WampConnectionState;
 import org.wgs.wamp.WampException;
+import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.type.WampConnectionState;
 import org.wgs.wamp.type.WampDict;
-import org.wgs.wamp.type.WampObject;
 import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampObject;
 
 
 
@@ -25,8 +25,7 @@ public class WampCRA
 {
     public  static final String WAMP_AUTH_ID_PROPERTY_NAME = "__wamp_authid";
 
-    
-    public static String getChallenge(WampSocket socket, String authId, WampDict extra) throws Exception
+    public static WampDict getChallenge(WampSocket socket, String authId) throws Exception
     {
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
             throw new WampException(null, "wamp.cra.error.already_authenticated", null, null);
@@ -41,23 +40,27 @@ public class WampCRA
             throw new WampException(null, "wamp.cra.error.no_such_authid", null, null);
         }
         
-
+        WampDict passwordSaltParams = WampCRA.getPasswordSaltParams(usr);
+        
+        String realm = socket.getRealm();
+        if(realm == null || realm.length() == 0) realm = "localhost";
+        
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS");
         WampDict res = getAuthPermissions(authId);
         WampDict info = new WampDict();
-        info.put("nonce", UUID.randomUUID().toString());
         info.put("authid", authId);
+        info.put("authrole", usr.isAdministrator()? "admin" : "user");
+        info.put("authmethod", "wampcra");
+        info.put("authprovider", "wgs.realms." + realm);
+        info.put("nonce", UUID.randomUUID().toString());
         info.put("timestamp", sdf.format(new Date()));
-        info.put("sessionid", socket.getSessionId());
-        info.put("permissions", res.get("permissions"));
-        if(extra != null) info.put("extra", extra);
-        if(res.has("authextra")) info.put("authextra", res.get("authextra"));
+        info.put("session", socket.getSessionId());
         
         String infoser = WampObject.getSerializer(WampEncoding.JSon).serialize(info).toString();
         String authSecret = getAuthSecret(usr);
         String sig = "";
         if(authId != null && authId.length() > 0) {
-            sig = authSignature(infoser, authSecret, extra);
+            sig = authSignature(infoser, authSecret, passwordSaltParams);
         } else {
             infoser = "";
         }
@@ -66,11 +69,12 @@ public class WampCRA
         socket.getSessionData().put("_clientPendingAuthSig", sig);
         socket.getSessionData().put("_clientPendingAuthPerms", res);
         
-        return infoser;
+        WampDict challenge = new WampDict();
+        challenge.put("authchallenge", infoser);
+        if(passwordSaltParams != null) challenge.putAll(passwordSaltParams);
+        return challenge;
     }
     
-    
-
     
     public static WampDict verifySignature(WampApplication app, WampSocket socket, String signature) throws Exception
     {
@@ -82,7 +86,7 @@ public class WampCRA
             throw new WampException(null, "wamp.cra.error.authentication_failed", null, null);
         }
 
-        WampDict info = (WampDict)socket.getSessionData().remove("_clientPendingAuthInfo");;
+        WampDict info = (WampDict)socket.getSessionData().remove("_clientPendingAuthInfo");
         WampDict perms = (WampDict)socket.getSessionData().remove("_clientPendingAuthPerms");            
         String clientPendingAuthSig = (String)socket.getSessionData().remove("_clientPendingAuthSig");
         if(clientPendingAuthSig == null) clientPendingAuthSig = "";
@@ -105,6 +109,17 @@ public class WampCRA
 
         return perms;
     }
+    
+    
+    private static WampDict getPasswordSaltParams(User usr) 
+    {
+        // simulate password salt
+        WampDict saltParams = new WampDict();
+        saltParams.put("salt", String.valueOf(WampProtocol.newId()));
+        saltParams.put("keylen", 32);
+        saltParams.put("iterations", 1000);
+        return saltParams;
+    }    
     
 
     private static WampDict getAuthPermissions(String authId) 
@@ -130,10 +145,10 @@ public class WampCRA
     }
     
     
-    public static String authSignature(String authChallenge, String authSecret, WampDict authExtra) throws Exception
+    public static String authSignature(String authChallenge, String authSecret, WampDict extra) throws Exception
     {
         if(authSecret == null) authSecret = "";
-        byte[] derivedSecret = deriveKey(authSecret, authExtra);
+        byte[] derivedSecret = deriveKey(authSecret, extra);
         
         SecretKeySpec keyspec = new SecretKeySpec(derivedSecret, "HmacSHA256");
         Mac hmac = Mac.getInstance("HmacSHA256");
