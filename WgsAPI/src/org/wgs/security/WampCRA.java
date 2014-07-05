@@ -26,7 +26,7 @@ public class WampCRA
     public  static final String WAMP_AUTH_ID_PROPERTY_NAME = "__wamp_authid";
 
     
-    public static String getChallenge(WampSocket socket, String authKey, WampDict extra) throws Exception
+    public static String getChallenge(WampSocket socket, String authId, WampDict extra) throws Exception
     {
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
             throw new WampException(null, "wamp.cra.error.already_authenticated", null, null);
@@ -35,18 +35,18 @@ public class WampCRA
             throw new WampException(null, "wamp.cra.error.authentication_already_requested", null, null);
         }
         
-        User usr = UserRepository.findUserByLoginAndDomain(authKey, socket.getRealm());
-        if(authKey != null && usr == null) {
-            System.out.println("wamp.cra.error.no_such_authkey: authKey doesn't exists: " + authKey);
-            throw new WampException(null, "wamp.cra.error.no_such_authkey", null, null);
+        User usr = UserRepository.findUserByLoginAndDomain(authId, socket.getRealm());
+        if(authId != null && usr == null) {
+            System.out.println("wamp.cra.error.no_such_authid: authid doesn't exists: " + authId);
+            throw new WampException(null, "wamp.cra.error.no_such_authid", null, null);
         }
         
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS");
-        WampDict res = getAuthPermissions(authKey);
+        WampDict res = getAuthPermissions(authId);
         WampDict info = new WampDict();
-        info.put("authid", UUID.randomUUID().toString());
-        info.put("authkey", authKey);
+        info.put("nonce", UUID.randomUUID().toString());
+        info.put("authid", authId);
         info.put("timestamp", sdf.format(new Date()));
         info.put("sessionid", socket.getSessionId());
         info.put("permissions", res.get("permissions"));
@@ -56,7 +56,7 @@ public class WampCRA
         String infoser = WampObject.getSerializer(WampEncoding.JSon).serialize(info).toString();
         String authSecret = getAuthSecret(usr);
         String sig = "";
-        if(authKey != null && authKey.length() > 0) {
+        if(authId != null && authId.length() > 0) {
             sig = authSignature(infoser, authSecret, extra);
         } else {
             infoser = "";
@@ -95,8 +95,8 @@ public class WampCRA
                 throw new WampException(null, "wamp.cra.error.authentication_failed", null, null);
             }
 
-            String authKey = info.getText("authkey");
-            User usr = UserRepository.findUserByLoginAndDomain(authKey, socket.getRealm());
+            String authId = info.getText("authid");
+            User usr = UserRepository.findUserByLoginAndDomain(authId, socket.getRealm());
             usr.setLastLoginTime(Calendar.getInstance());
             usr = Storage.saveEntity(usr);
 
@@ -107,7 +107,7 @@ public class WampCRA
     }
     
 
-    private static WampDict getAuthPermissions(String authKey) 
+    private static WampDict getAuthPermissions(String authId) 
     {
         WampDict res = new WampDict();
         WampDict perms = new WampDict();

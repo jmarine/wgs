@@ -23,22 +23,6 @@ public class WampAPI extends WampModule
     }
     
     
-    @WampRPC(name="cra.request")
-    public String authRequest(WampSocket socket, String authKey, WampDict extra) throws Exception
-    {
-        return WampCRA.getChallenge(socket, authKey, extra);
-    }
-    
-    @WampRPC(name="cra.authenticate")
-    public WampDict auth(WampSocket socket, String signature) throws Exception
-    {
-        return WampCRA.verifySignature(this.getWampApplication(), socket, signature);
-    }   
-    
-    
-
-    
-
     //TODO:
     
     //wamp.reflection.procedure.list

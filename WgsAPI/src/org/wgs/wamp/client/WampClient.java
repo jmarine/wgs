@@ -313,7 +313,7 @@ public class WampClient extends Endpoint
         WampList authMethods = new WampList();
         
         if(user != null) {
-            authDetails.put("authkey", user);
+            authDetails.put("authid", user);
             authMethods.add("wampcra");
         }
         authMethods.add("anonymous");

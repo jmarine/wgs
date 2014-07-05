@@ -169,13 +169,13 @@ public class WampApplication
                 } else if(authMethod.equalsIgnoreCase("cookie")) {
                     // TODO
                 } else if(authMethod.equalsIgnoreCase("wampcra") 
-                        && helloDetails.has("authkey") && helloDetails.getText("authkey") != null) {
-                    String authKey = helloDetails.getText("authkey");
+                        && helloDetails.has("authid") && helloDetails.getText("authid") != null) {
+                    String authId = helloDetails.getText("authid");
                     WampDict authDetails = new WampDict();
                     if(helloDetails.has("salt")) authDetails.put("salt", helloDetails.getText("salt"));
                     if(helloDetails.has("keylen")) authDetails.put("keylen", helloDetails.getLong("keylen"));
                     if(helloDetails.has("iterations")) authDetails.put("iterations", helloDetails.getLong("iterations"));
-                    String authChallenge = WampCRA.getChallenge(clientSocket, authKey, authDetails);
+                    String authChallenge = WampCRA.getChallenge(clientSocket, authId, authDetails);
 
                     WampDict extra = new WampDict();
                     extra.put("authchallenge", authChallenge);
