@@ -3,6 +3,7 @@ package org.wgs.security;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -45,13 +46,13 @@ public class WampCRA
         String realm = socket.getRealm();
         if(realm == null || realm.length() == 0) realm = "localhost";
         
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS");
-        WampDict res = getAuthPermissions(authId);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss:SSSX");
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
         WampDict info = new WampDict();
         info.put("authid", authId);
         info.put("authrole", usr.isAdministrator()? "admin" : "user");
         info.put("authmethod", "wampcra");
-        info.put("authprovider", "wgs.realms." + realm);
+        info.put("authprovider", "realm:" + realm);
         info.put("nonce", UUID.randomUUID().toString());
         info.put("timestamp", sdf.format(new Date()));
         info.put("session", socket.getSessionId());
@@ -67,7 +68,6 @@ public class WampCRA
         
         socket.getSessionData().put("_clientPendingAuthInfo", info);
         socket.getSessionData().put("_clientPendingAuthSig", sig);
-        socket.getSessionData().put("_clientPendingAuthPerms", res);
         
         WampDict challenge = new WampDict();
         challenge.put("authchallenge", infoser);
@@ -76,7 +76,7 @@ public class WampCRA
     }
     
     
-    public static WampDict verifySignature(WampApplication app, WampSocket socket, String signature) throws Exception
+    public static void verifySignature(WampApplication app, WampSocket socket, String signature) throws Exception
     {
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
             throw new WampException(null, "wamp.cra.error.already_authenticated", null, null);
@@ -87,7 +87,7 @@ public class WampCRA
         }
 
         WampDict info = (WampDict)socket.getSessionData().remove("_clientPendingAuthInfo");
-        WampDict perms = (WampDict)socket.getSessionData().remove("_clientPendingAuthPerms");            
+
         String clientPendingAuthSig = (String)socket.getSessionData().remove("_clientPendingAuthSig");
         if(clientPendingAuthSig == null) clientPendingAuthSig = "";
         
@@ -107,7 +107,6 @@ public class WampCRA
             app.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
         }
 
-        return perms;
     }
     
     
@@ -122,19 +121,6 @@ public class WampCRA
     }    
     
 
-    private static WampDict getAuthPermissions(String authId) 
-    {
-        WampDict res = new WampDict();
-        WampDict perms = new WampDict();
-        WampList pubsub = new WampList();
-        WampList rpcs = new WampList();
-        perms.put("pubsub", pubsub);
-        perms.put("rpcs", rpcs);
-        res.put("permissions", perms);
-        return res;
-    }
-    
-    
     private static String getAuthSecret(User usr) throws WampException
     {
         if(usr != null) {

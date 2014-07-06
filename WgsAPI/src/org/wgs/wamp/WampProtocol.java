@@ -140,7 +140,7 @@ public class WampProtocol
         }
 
         if(clientSocket.getAuthProvider() != null) details.put("authprovider", clientSocket.getAuthProvider());
-        else details.put("authprovider", "wgs.realms." + realm );
+        else details.put("authprovider", "realm:" + realm );
         
         response.add(details);  
         
