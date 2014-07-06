@@ -169,7 +169,7 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }
 
-    public static void sendAbort(WampSocket clientSocket, String reason, String message)
+    public static void sendAbortMessage(WampSocket clientSocket, String reason, String message)
     {
         WampDict details = new WampDict();
         if(message != null) details.put("message", message);
@@ -180,7 +180,7 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }
     
-    public static void sendGoodBye(WampSocket clientSocket, String reason, String message)
+    public static void sendGoodbyeMessage(WampSocket clientSocket, String reason, String message)
     {
         if(!clientSocket.isGoodbyeRequested()) {
             clientSocket.setGoodbyeRequested(true);
@@ -205,7 +205,7 @@ public class WampProtocol
     }
     
     
-    public static void sendResult(WampSocket clientSocket, Long requestId, WampDict details, WampList args, WampDict argsKw)
+    public static void sendResultMessage(WampSocket clientSocket, Long requestId, WampDict details, WampList args, WampDict argsKw)
     {
         WampList response = new WampList();
         response.add(CALL_RESULT);
@@ -219,7 +219,7 @@ public class WampProtocol
     }    
     
     
-    public static void sendSubscribed(WampSocket clientSocket, Long requestId, Long subscriptionId)
+    public static void sendSubscribedMessage(WampSocket clientSocket, Long requestId, Long subscriptionId)
     {    
         WampList response = new WampList();
         response.add(SUBSCRIBED);
@@ -229,7 +229,7 @@ public class WampProtocol
     }
     
     
-    public static void sendUnsubscribed(WampSocket clientSocket, Long requestId)
+    public static void sendUnsubscribedMessage(WampSocket clientSocket, Long requestId)
     {    
         WampList response = new WampList();
         response.add(UNSUBSCRIBED);
@@ -237,8 +237,21 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }
     
+
+    public static void sendPublishMessage(WampSocket clientSocket, Long requestId, String topic, WampList payload, WampDict payloadKw, WampDict options)
+    {
+        WampList request = new WampList();
+        request.add(PUBLISH);
+        request.add(requestId);
+        request.add( (options != null) ? options : new WampDict() );      
+        request.add(topic);
+        request.add(payload);
+        request.add(payloadKw);
+        sendWampMessage(clientSocket, request);
+    }
     
-    public static void sendPublished(WampSocket clientSocket, Long requestId, Long publicationId)
+    
+    public static void sendPublishedMessage(WampSocket clientSocket, Long requestId, Long publicationId)
     {    
         WampList response = new WampList();
         response.add(PUBLISHED);
@@ -347,7 +360,7 @@ public class WampProtocol
     }
 
     
-    public static void sendError(WampSocket clientSocket, int requestType, Long requestId, WampDict details, String errorUri, WampList args, WampDict argsKw)
+    public static void sendErrorMessage(WampSocket clientSocket, int requestType, Long requestId, WampDict details, String errorUri, WampList args, WampDict argsKw)
     {    
         WampList response = new WampList();
         response.add(ERROR);

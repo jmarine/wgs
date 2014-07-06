@@ -105,7 +105,7 @@ public class WampRealm
         
         if (app.getLocalRPC(methodUriOrPattern) != null) {
             if (requestId != null) {
-                WampProtocol.sendError(clientSocket, WampProtocol.REGISTER, requestId, null, "wamp.error.procedure_already_exists", null, null);
+                WampProtocol.sendErrorMessage(clientSocket, WampProtocol.REGISTER, requestId, null, "wamp.error.procedure_already_exists", null, null);
             }
             throw new WampException(null, "wamp.error.procedure_already_exists", null, null);
         }
@@ -132,7 +132,7 @@ public class WampRealm
         } catch (Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
             if (requestId != null) {
-                WampProtocol.sendError(clientSocket, WampProtocol.REGISTER, requestId, null, "wamp.error.not_authorized", null, null);
+                WampProtocol.sendErrorMessage(clientSocket, WampProtocol.REGISTER, requestId, null, "wamp.error.not_authorized", null, null);
             }
         }
     }
@@ -164,7 +164,7 @@ public class WampRealm
         } catch (Exception ex) {
             logger.log(Level.FINE, "Error in publishing to topic", ex);
             if (requestId != null) {
-                WampProtocol.sendError(clientSocket, WampProtocol.UNREGISTER, requestId, null, "wamp.error.not_authorized", null, null);
+                WampProtocol.sendErrorMessage(clientSocket, WampProtocol.UNREGISTER, requestId, null, "wamp.error.not_authorized", null, null);
             }
         }
     }

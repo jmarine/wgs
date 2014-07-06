@@ -201,7 +201,7 @@ public class WampBroker
                 JmsServices.subscribeMessageListener(topic);
             }
             
-            WampProtocol.sendSubscribed(clientSocket, requestId, subscription.getId());
+            WampProtocol.sendSubscribedMessage(clientSocket, requestId, subscription.getId());
         
             for(WampTopic topic : subscription.getTopics()) {
                 WampModule module = app.getWampModule(topic.getTopicName(), app.getDefaultWampModule());
@@ -215,7 +215,7 @@ public class WampBroker
             }
             
         } catch(Exception ex) {
-            WampProtocol.sendError(clientSocket, WampProtocol.SUBSCRIBE, requestId, null, "wamp.error.subscription_error", null, null);
+            WampProtocol.sendErrorMessage(clientSocket, WampProtocol.SUBSCRIBE, requestId, null, "wamp.error.subscription_error", null, null);
         }
 
         return subscription.getTopics();
@@ -227,7 +227,7 @@ public class WampBroker
         Collection<WampTopic> matchingTopics = null;
         WampSubscription subscription = clientSocket.getSubscription(subscriptionId);
         if(subscription == null) {
-            if(requestId != null) WampProtocol.sendError(clientSocket, WampProtocol.UNSUBSCRIBE, requestId, null, "wamp.error.no_such_subscription", null, null);            
+            if(requestId != null) WampProtocol.sendErrorMessage(clientSocket, WampProtocol.UNSUBSCRIBE, requestId, null, "wamp.error.no_such_subscription", null, null);            
         } else {
             matchingTopics = subscription.getTopics();
             for(WampTopic topic : matchingTopics) {
@@ -246,7 +246,7 @@ public class WampBroker
 
             clientSocket.removeSubscription(subscriptionId);
 
-            if(requestId != null) WampProtocol.sendUnsubscribed(clientSocket, requestId);
+            if(requestId != null) WampProtocol.sendUnsubscribedMessage(clientSocket, requestId);
         }
         
         return matchingTopics;

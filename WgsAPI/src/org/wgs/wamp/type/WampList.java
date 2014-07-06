@@ -1,6 +1,7 @@
 package org.wgs.wamp.type;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -12,6 +13,12 @@ public class WampList extends WampObject
     {
         this.array = new ArrayList<Object>();
     }
+    
+    public WampList(Object ... values) 
+    {
+        this();
+        addAll(values);
+    }    
     
     private WampList(List<Object> list) 
     {
@@ -57,6 +64,15 @@ public class WampList extends WampObject
     {
         array.add(castToWampObject(obj));
     }
+    
+    public void addAll(Object ... values) 
+    {
+        if(values != null) {
+            for(Object val : values) {
+                add(val);
+            }
+        }
+    }    
     
     public WampList subList(int fromIndex, int toIndex) 
     {

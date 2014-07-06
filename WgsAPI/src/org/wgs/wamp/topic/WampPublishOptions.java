@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampObject;
 
 
 public class WampPublishOptions 
@@ -150,6 +151,29 @@ public class WampPublishOptions
     public void setAck(boolean ack) {
         this.ack = ack;
     }    
+    
+    
+    public WampDict toWampObject()
+    {
+        WampDict options = new WampDict();
+        options.put("acknowledge", ack);
+        options.put("disclose_me", discloseMe);
+        options.put("exclude_me", excludeMe);
+ 
+        if(eligible != null) {
+            WampList eligibleList = new WampList();
+            eligibleList.addAll(eligible.toArray());
+            options.put("eligible", eligibleList);
+        }
+        
+        if(excluded != null) {
+            WampList excludedList = new WampList();
+            excludedList.addAll(excluded.toArray());
+            options.put("exclude", excludedList);
+        }    
+        
+        return options;
+    }
     
 }
 

@@ -23,10 +23,10 @@ import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.rpc.WampAsyncCall;
 import org.wgs.wamp.rpc.WampAsyncCallback;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampMethod;
+import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampObject;
@@ -170,8 +170,18 @@ public class WampClient extends Endpoint
 
                         } catch(Exception e) {
                             WampDict errorDetails = new WampDict();
-                            WampProtocol.sendError(clientSocket, WampProtocol.INVOCATION, invocationRequestId, errorDetails, "wamp.error.invalid_argument", new WampList(), new WampDict());
+                            WampProtocol.sendErrorMessage(clientSocket, WampProtocol.INVOCATION, invocationRequestId, errorDetails, "wamp.error.invalid_argument", new WampList(), new WampDict());
                         }                        
+                        break;
+                    case WampProtocol.PUBLISHED:
+                        Long publishedRequestId = response.getLong(1);
+                        Long publishedPublicationId = response.getLong(2);
+                        WampList publishedParams = WampClient.this.pendingRequests.get(publishedRequestId);
+                        if(publishedParams != null) {    
+                            WampAsyncCallback publishedPromise = (WampAsyncCallback)publishedParams.get(0);
+                            if(publishedPromise != null) publishedPromise.resolve(publishedRequestId, publishedPublicationId);
+                            removePendingMessage(publishedRequestId);
+                        }
                         break;
                     case WampProtocol.ERROR:
                         Long errorResponseId = response.getLong(1);
@@ -304,7 +314,7 @@ public class WampClient extends Endpoint
     
     public void goodbye(String reason)
     {
-        WampProtocol.sendGoodBye(clientSocket, reason, null);
+        WampProtocol.sendGoodbyeMessage(clientSocket, reason, null);
     }
     
     public void hello(String realm, String user, String password)    
@@ -365,6 +375,15 @@ public class WampClient extends Endpoint
         
         createPendingMessage(null, null);
         WampProtocol.sendHelloMessage(clientSocket, realm, authDetails);
+    }
+    
+    public void publish(String topic, WampList payload, WampDict payloadKw, WampPublishOptions options, WampAsyncCallback dfd)
+    {
+        Long requestId = WampProtocol.newId();
+        WampList list = new WampList();
+        list.add(dfd);
+        createPendingMessage(requestId, list);
+        WampProtocol.sendPublishMessage(clientSocket, requestId, topic, payload, payloadKw, options.toWampObject());
     }
 
     public void call(String procedureUri, WampList args, WampDict argsKw, WampDict options, WampAsyncCallback dfd)

@@ -101,7 +101,7 @@ public class WampModule
                     if(clientSocket.supportsProgressiveCallResults() && options.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
                         if(details == null) details = new WampDict();
                         details.put("progress", true);
-                        WampProtocol.sendResult(clientSocket, task.getCallID(), details, progress, progressKw);
+                        WampProtocol.sendResultMessage(clientSocket, task.getCallID(), details, progress, progressKw);
                     } else {
                         task.getResultKw().putAll(progressKw);
                         switch(progress.size()) {
@@ -124,7 +124,7 @@ public class WampModule
                 String   errorURI = (String)errors[2];
                 WampList args = (errors.length > 3) ? (WampList)errors[3] : null;
                 WampDict argsKw = (errors.length > 4) ? (WampDict)errors[4] : null;
-                WampProtocol.sendError(clientSocket, WampProtocol.CALL, task.getCallID(), details, errorURI, args, argsKw);
+                WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CALL, task.getCallID(), details, errorURI, args, argsKw);
             }                            
         };
         
@@ -214,7 +214,7 @@ public class WampModule
                                             String   errorURI = (String)errors[2];
                                             WampList args = (errors.length > 3) ? (WampList)errors[3] : null;
                                             WampDict argsKw = (errors.length > 4) ? (WampDict)errors[4] : null;
-                                            WampProtocol.sendError(clientSocket, WampProtocol.CALL, task.getCallID(), details, errorURI, args, argsKw);
+                                            WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CALL, task.getCallID(), details, errorURI, args, argsKw);
                                         }
                                     });
 
@@ -323,7 +323,7 @@ public class WampModule
             }
 
             if(options.hasAck()) {
-                WampProtocol.sendPublished(clientSocket, requestId, publicationId);
+                WampProtocol.sendPublishedMessage(clientSocket, requestId, publicationId);
             }
         
             WampBroker.publishEvent(clientSocket.getRealm(), publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? clientSocket.getSessionId() : null));

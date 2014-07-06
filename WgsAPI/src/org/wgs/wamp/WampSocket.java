@@ -321,7 +321,7 @@ public class WampSocket
     public void close(CloseReason reason)
     {
         if(isOpen()) {
-            WampProtocol.sendGoodBye(this, null, reason.getReasonPhrase());
+            WampProtocol.sendGoodbyeMessage(this, null, reason.getReasonPhrase());
 
             this.connected = false;
             

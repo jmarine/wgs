@@ -195,11 +195,11 @@ public class WampApplication
                 }
                 
             } catch(WampException ex) {
-                WampProtocol.sendAbort(clientSocket, ex.getErrorURI(), null);
+                WampProtocol.sendAbortMessage(clientSocket, ex.getErrorURI(), null);
                 break;
                 
             } catch(Exception ex) { 
-                WampProtocol.sendAbort(clientSocket, "wamp.error.authentication_failed", ex.getMessage());
+                WampProtocol.sendAbortMessage(clientSocket, "wamp.error.authentication_failed", ex.getMessage());
                 break;
             }
         }
@@ -237,7 +237,7 @@ public class WampApplication
         if(welcomed) {
             onWampSessionEstablished(clientSocket, clientSocket.getHelloDetails());
         } else {
-            WampProtocol.sendAbort(clientSocket, "wamp.error.authentication_failed", "error verifying authentication challege");
+            WampProtocol.sendAbortMessage(clientSocket, "wamp.error.authentication_failed", "error verifying authentication challege");
         }
     }
     
@@ -317,7 +317,7 @@ public class WampApplication
                 processAuthenticationMessage(clientSocket, signature, extra);
                 break;
             case WampProtocol.GOODBYE:
-                WampProtocol.sendGoodBye(clientSocket, "wamp.close.normal", null);
+                WampProtocol.sendGoodbyeMessage(clientSocket, "wamp.close.normal", null);
                 onWampSessionEnd(clientSocket);
                 break;
             case WampProtocol.HEARTBEAT:
@@ -338,7 +338,7 @@ public class WampApplication
                 Long requestId2 = (request.size() > 1) ? request.getLong(1) : null;
                 Long subscriptionId2 = (request.size() > 2) ? request.getLong(2) : null;
                 if(requestId2 == null || subscriptionId2 == null)  {
-                    WampProtocol.sendError(clientSocket, WampProtocol.UNSUBSCRIBE, requestId2, null, "wamp.error.protocol_violation", null, null);
+                    WampProtocol.sendErrorMessage(clientSocket, WampProtocol.UNSUBSCRIBE, requestId2, null, "wamp.error.protocol_violation", null, null);
                 } else {
                     WampBroker.unsubscribeClientFromTopic(this, clientSocket, requestId2, subscriptionId2);
                 }
