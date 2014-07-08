@@ -508,12 +508,17 @@ public class WampApplication
     }
 
     public void processEventMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception
-    {    
+    {
+        Long subscriptionId = request.getLong(1);        
+        Long publicationId = request.getLong(2);
+        WampDict details = (WampDict)request.get(3);
+        WampList payload = (request.size() > 4) ? (WampList)request.get(4) : new WampList();
+        WampDict payloadKw = (request.size() > 5)? (WampDict)request.get(5) : new WampDict();
+        
         for(WampModule module : this.modules.values()) {
-            module.onEvent(clientSocket, request);
+            module.onEvent(clientSocket, subscriptionId, publicationId, details, payload, payloadKw);
         }
     }
-    
 
     
     private void processCancelCallMessage(WampSocket clientSocket, WampList request) throws Exception

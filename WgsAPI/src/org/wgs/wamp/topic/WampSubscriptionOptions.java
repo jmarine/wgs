@@ -111,5 +111,17 @@ public class WampSubscriptionOptions
         this.metaTopics.addAll(opts.metaTopics);
     }
     
+    public WampDict toWampObject()
+    {
+        WampDict dict = new WampDict();
+        dict.put("match", getMatchType().toString());
+        if(!eventsEnabled) dict.put("metaonly", true);
+        if(metaTopics != null && metaTopics.size() > 0) {
+            WampList metas = new WampList(metaTopics);
+            dict.put("metatopics", metas);
+        }
+        return dict;
+    }
+    
 }
 

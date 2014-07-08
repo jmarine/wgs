@@ -27,8 +27,10 @@ import org.wgs.wamp.rpc.WampAsyncCallback;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.WampPublishOptions;
+import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampMatchType;
 import org.wgs.wamp.type.WampObject;
 
 
@@ -50,6 +52,8 @@ public class WampClient extends Endpoint
     private ConcurrentHashMap<Long, String> rpcRegistrationsById;
     private ConcurrentHashMap<String, Long> rpcRegistrationsByURI;
     private ConcurrentHashMap<Long, WampMethod> rpcHandlers;
+    private ConcurrentHashMap<Long, String> subscriptionsById;
+    private ConcurrentHashMap<String, Long> subscriptionsByTopicAndOptions;
     
     private ConcurrentHashMap<Long, WampList> pendingRequests;
     
@@ -62,6 +66,8 @@ public class WampClient extends Endpoint
         this.rpcRegistrationsById = new ConcurrentHashMap<Long, String>();
         this.rpcRegistrationsByURI = new ConcurrentHashMap<String, Long>();
         this.rpcHandlers = new ConcurrentHashMap<Long, WampMethod>();
+        this.subscriptionsById = new ConcurrentHashMap<Long, String>();
+        this.subscriptionsByTopicAndOptions = new ConcurrentHashMap<String, Long>();
         this.taskCount = new AtomicInteger(0);
         
         this.wampApp = new WampApplication(WampApplication.WAMPv2, null) {
@@ -78,6 +84,7 @@ public class WampClient extends Endpoint
                     case WampProtocol.ABORT:
                         removePendingMessage(null);
                         break;
+                        
                     case WampProtocol.CHALLENGE:
                         String authMethod = response.getText(1);
                         WampDict challengeDetails = (WampDict)response.get(2);
@@ -93,12 +100,14 @@ public class WampClient extends Endpoint
                         }
                         
                         break;
+                        
                     case WampProtocol.WELCOME:
                         WampDict welcomeDetails = (response.size() > 2) ? (WampDict)response.get(2) : null;
                         clientSocket.setSessionId(response.getLong(1));
                         onWampWelcome(clientSocket, welcomeDetails);
                         removePendingMessage(null);
-                        break;                
+                        break;     
+                        
                     case WampProtocol.CALL_RESULT:
                         Long callResponseId = response.getLong(1);
                         WampList callRequestList = WampClient.this.pendingRequests.get(callResponseId);
@@ -111,6 +120,7 @@ public class WampClient extends Endpoint
                             removePendingMessage(callResponseId);
                         }
                         break;
+                        
                     case WampProtocol.REGISTERED:
                         Long registeredRequestId = response.getLong(1);
                         Long registrationId = response.getLong(2);
@@ -125,8 +135,8 @@ public class WampClient extends Endpoint
                             if(registrationPromise != null) registrationPromise.resolve(registeredRequestId, registrationId);
                             removePendingMessage(registeredRequestId);
                         }
-                        
                         break;
+                        
                     case WampProtocol.UNREGISTERED:
                         Long unregisteredRequestId = response.getLong(1);
                         WampList unregistrationParams = WampClient.this.pendingRequests.get(unregisteredRequestId);
@@ -140,7 +150,8 @@ public class WampClient extends Endpoint
                             //delete client.rpcRegistrationsById[registrationId];
                             //delete client.rpcRegistrationsByURI[procedureURI];              
                         }                        
-                        break;                        
+                        break;       
+                        
                     case WampProtocol.INVOCATION:
                         Long invocationRequestId = response.getLong(1);
                         try {
@@ -173,6 +184,7 @@ public class WampClient extends Endpoint
                             WampProtocol.sendErrorMessage(clientSocket, WampProtocol.INVOCATION, invocationRequestId, errorDetails, "wamp.error.invalid_argument", new WampList(), new WampDict());
                         }                        
                         break;
+                        
                     case WampProtocol.PUBLISHED:
                         Long publishedRequestId = response.getLong(1);
                         Long publishedPublicationId = response.getLong(2);
@@ -183,6 +195,36 @@ public class WampClient extends Endpoint
                             removePendingMessage(publishedRequestId);
                         }
                         break;
+                        
+                    case WampProtocol.SUBSCRIBED:
+                        Long subscribedRequestId = response.getLong(1);
+                        WampList subscribedParams = WampClient.this.pendingRequests.get(subscribedRequestId);
+                        if(subscribedParams != null) {
+                            Long subscriptionId = response.getLong(2);
+                            WampAsyncCallback subscribedPromise = (WampAsyncCallback)subscribedParams.get(0);
+                            String topicURI = subscribedParams.getText(1);
+                            WampSubscriptionOptions options = (WampSubscriptionOptions)subscribedParams.get(2);
+                            String topicAndOptionsKey = getTopicAndOptionsKey(topicURI,options);
+                            WampClient.this.subscriptionsById.put(subscriptionId, topicURI); 
+                            WampClient.this.subscriptionsByTopicAndOptions.put(topicAndOptionsKey, subscriptionId);
+                            if(subscribedPromise != null) subscribedPromise.resolve(subscribedRequestId,subscriptionId);
+                            removePendingMessage(subscribedRequestId);
+                        }
+                        break;
+                        
+                    case WampProtocol.UNSUBSCRIBED:
+                        Long unsubscribedRequestId = response.getLong(1);
+                        WampList unsubscribedParams = WampClient.this.pendingRequests.get(unsubscribedRequestId);
+                        if(unsubscribedParams != null) {
+                            WampAsyncCallback unsubscribedPromise = (WampAsyncCallback)unsubscribedParams.get(0);
+                            Long subscriptionId = unsubscribedParams.getLong(1);
+                            if(unsubscribedPromise != null) unsubscribedPromise.resolve(unsubscribedRequestId,subscriptionId);
+                            removePendingMessage(unsubscribedRequestId);
+                            //delete client.subscriptionsById[subscriptionId];
+                            //delete client.subscriptionsByTopicAndOptions[topicAndOptionsKey];              
+                        }
+                        break;
+                        
                     case WampProtocol.ERROR:
                         Long errorResponseId = response.getLong(1);
                         removePendingMessage(errorResponseId);
@@ -260,9 +302,9 @@ public class WampClient extends Endpoint
                     @Override
                     public void onMessage(byte[] message) {
                         try {
-                            System.out.println("onWampMessage (binary)");
+                            logger.log(Level.FINEST, "onWampMessage (binary)");
                             WampList request = (WampList)WampObject.getSerializer(WampEncoding.MsgPack).deserialize(message);
-                            System.out.println("onWampMessage (deserialized request): " + request);
+                            logger.log(Level.FINEST, "onWampMessage (deserialized request): " + request);
                             wampApp.onWampMessage(clientSocket, request);
                         } catch(Exception ex) { 
                             logger.log(Level.SEVERE, "Error processing message: "+message, ex);
@@ -277,7 +319,7 @@ public class WampClient extends Endpoint
                     @Override
                     public void onMessage(String message) {
                         try {
-                            System.out.println("onWampMessage (text): " + message);
+                            logger.log(Level.FINEST, "onWampMessage (text): " + message);
                             WampList request = (WampList)WampObject.getSerializer(WampEncoding.JSon).deserialize(message);
                             wampApp.onWampMessage(clientSocket, request);
                         } catch(Exception ex) { 
@@ -401,16 +443,14 @@ public class WampClient extends Endpoint
     }
     
     // Callee API
-    public void registerAllRPCs() {
+    private void registerAllRPCs() {
         WampList names = wampApp.getAllRpcNames(clientSocket.getRealm());
         for(int i = 0; i < names.size(); i++) {
             registerRPC(null, names.getText(i), null);
         }
     }
     
-    
-    
-    public void registerRPC(WampDict options, String procedureURI, WampAsyncCallback dfd) {
+    private void registerRPC(WampDict options, String procedureURI, WampAsyncCallback dfd) {
         Long requestId = WampProtocol.newId();
         WampList list = new WampList();
         list.add(dfd);        
@@ -421,7 +461,7 @@ public class WampClient extends Endpoint
         WampProtocol.sendRegisterMessage(clientSocket, requestId, options, procedureURI);
     }
     
-    public void unregisterRPC(Long registrationId, WampAsyncCallback dfd) {    
+    private void unregisterRPC(Long registrationId, WampAsyncCallback dfd) {    
         String procedureURI = this.rpcRegistrationsById.get(registrationId);
         Long requestId = WampProtocol.newId();
         WampList list = new WampList();
@@ -432,10 +472,61 @@ public class WampClient extends Endpoint
         WampProtocol.sendUnregisterMessage(clientSocket, requestId, registrationId);
     }
 
-    public void unregisterRPC(WampDict options, String procedureURI, WampAsyncCallback dfd) {
+    private void unregisterRPC(WampDict options, String procedureURI, WampAsyncCallback dfd) {
         Long registrationId = this.rpcRegistrationsByURI.get(procedureURI);  // TODO: search with options
         unregisterRPC(registrationId, dfd);
     }
+    
+    private String getTopicAndOptionsKey(String topicPattern, WampSubscriptionOptions options)
+    {
+        if(options == null) options = new WampSubscriptionOptions(null);
+        if(options.getMatchType() == WampMatchType.prefix) topicPattern = topicPattern + "..";
+        return topicPattern;
+    }
+    
+    private Long getSubscriptionIdByTopicAndOptions(String topicPattern, WampSubscriptionOptions options) {
+        String topicAndOptionsKey = getTopicAndOptionsKey(topicPattern, options);
+        return subscriptionsByTopicAndOptions.get(topicAndOptionsKey);
+    }
+    
+    public void subscribe(String topicURI, WampSubscriptionOptions options, WampAsyncCallback dfd) 
+    {
+        if(options == null) options = new WampSubscriptionOptions(null);
+        if(topicURI.indexOf("..") != -1) {
+            options.setMatchType(WampMatchType.wildcard);
+        }
+        
+        String topicAndOptionsKey = getTopicAndOptionsKey(topicURI,options);        
+        
+        Long requestId = WampProtocol.newId();
+        WampList list = new WampList();
+        list.add(dfd);        
+        list.add(topicAndOptionsKey);
+        list.add(options);
+        createPendingMessage(requestId, list);
+        
+        WampProtocol.sendSubscribeMessage(clientSocket, requestId, topicURI, options);
+    }
+    
+    public void unsubscribe(String topic, WampSubscriptionOptions options, WampAsyncCallback dfd) 
+    {
+        if(options == null) options = new WampSubscriptionOptions(null);
+        if(topic.indexOf("..") != -1) {
+            options.setMatchType(WampMatchType.wildcard);
+        }
+
+        Long requestId = WampProtocol.newId();
+        Long unsubscriptionId = getSubscriptionIdByTopicAndOptions(topic,options);
+        
+        WampList list = new WampList();
+        list.add(dfd);      
+        list.add(unsubscriptionId);
+        list.add(getTopicAndOptionsKey(topic,options));
+        
+        createPendingMessage(requestId, list);
+        WampProtocol.sendUnsubscribeMessage(clientSocket, requestId, unsubscriptionId);
+    }
+
    
     private void createPendingMessage(Long requestId, WampList requestData)
     {
@@ -452,17 +543,24 @@ public class WampClient extends Endpoint
         }
     }
     
-    public void waitPendingMessages() throws Exception
+    public void waitResponses() throws Exception
     {
         synchronized(taskCount) {
             taskCount.wait();
         }
     }
     
+    
+    public String getTopicFromEventData(Long subscriptionId, WampDict details) 
+    {
+        String topic = details.getText("topic");
+        if(topic == null) topic = this.subscriptionsById.get(subscriptionId);
+        return topic;
+    }
 
     public void close() throws Exception {
         open = false;
-        this.clientSocket.close(null);
+        this.clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
     }
     
     

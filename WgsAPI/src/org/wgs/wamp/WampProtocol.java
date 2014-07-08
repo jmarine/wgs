@@ -219,12 +219,32 @@ public class WampProtocol
     }    
     
     
+    public static void sendSubscribeMessage(WampSocket clientSocket, Long requestId, String topicURI, WampSubscriptionOptions options)
+    {
+        WampList response = new WampList();
+        response.add(SUBSCRIBE);
+        response.add(requestId);
+        response.add((options != null)? options.toWampObject() : new WampSubscriptionOptions(null));
+        response.add(topicURI);
+        sendWampMessage(clientSocket, response);
+    }
+    
     public static void sendSubscribedMessage(WampSocket clientSocket, Long requestId, Long subscriptionId)
     {    
         WampList response = new WampList();
         response.add(SUBSCRIBED);
         response.add(requestId);
         response.add(subscriptionId);
+        sendWampMessage(clientSocket, response);
+    }
+    
+    
+    public static void sendUnsubscribeMessage(WampSocket clientSocket, Long requestId, Long unsubscriptionId)
+    {
+        WampList response = new WampList();
+        response.add(UNSUBSCRIBE);
+        response.add(requestId);
+        response.add(unsubscriptionId);
         sendWampMessage(clientSocket, response);
     }
     

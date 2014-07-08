@@ -330,7 +330,7 @@ public class WampModule
         }
     }
     
-    public void onEvent(WampSocket serverSocket, WampList request) throws Exception     
+    public void onEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
         
     }

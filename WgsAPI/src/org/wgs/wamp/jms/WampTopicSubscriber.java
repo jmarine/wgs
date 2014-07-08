@@ -44,17 +44,14 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
     }
     
     @Override
-    public void onEvent(WampSocket serverSocket, WampList request) throws Exception     
+    public void onEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
         if(messageListener != null) {
-            Long subscriptionId = request.getLong(1);
             if(subscriptionId.equals(wampSubscription.getId())) {
-                Long publicationId = request.getLong(2);
-                WampDict details = (WampDict)request.get(3);
                 WampMessage msg = new WampMessage(publicationId, details);
                 WampList list = new WampList();
-                if(request.size() > 4) list.add(request.get(4));
-                if(request.size() > 5) list.add(request.get(5));
+                list.add(payload);
+                list.add(payloadKw);
                 msg.setText(WampObject.getSerializer(WampEncoding.JSon).serialize(list).toString());
                 messageListener.onMessage(msg);
             }

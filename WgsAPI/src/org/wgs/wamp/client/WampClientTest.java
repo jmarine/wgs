@@ -13,15 +13,17 @@ import org.wgs.wamp.annotation.WampRPC;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampAsyncCallback;
 import org.wgs.wamp.topic.WampPublishOptions;
+import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampMatchType;
 
 
 @WampModuleName("com.myapp")
 public class WampClientTest extends WampModule implements Runnable
 {
-    private static String user = "magda";
-    private static String password = "magda";
+    private static String user = null;      //"username";
+    private static String password = null;  //"secret";
 
     
     private WampClient client;
@@ -33,14 +35,14 @@ public class WampClientTest extends WampModule implements Runnable
     }
     
     
-    @WampRPC(name = "add2")
+    @WampRPC(name = "add2")  // implicit RPC registration
     public Long add2(Long p1, Long p2) 
     {
         return p1+p2;
     }   
     
     
-    @WampRPC(name = "reverse_list")
+    @WampRPC(name = "reverse_list")   // implicit RPC registration
     public WampList reverseList(WampList list) 
     {
         WampList retval = new WampList();
@@ -49,21 +51,28 @@ public class WampClientTest extends WampModule implements Runnable
         }
         return retval;
     }
+
+    @Override
+    public void onEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
+    {
+        String topic = client.getTopicFromEventData(subscriptionId, details);
+        System.out.println("OnEvent: topic=" + topic + ", publicationId=" + publicationId + ": payload=" + payload + ", payloadKw=" + payloadKw);
+    }
  
     
     @Override
     public void run()
     {
         try {
+            
             client.connect();
 
             client.hello("localhost", user, password);
-            client.waitPendingMessages();
+            client.waitResponses();
             client.goodbye("wamp.close.normal");
             
-            client.hello("localhost", null);
-            client.waitPendingMessages();
-            client.goodbye("wamp.close.normal");
+            client.close();
+
             
         } catch(Exception ex) {
             System.err.println("Error: " + ex.getMessage());
@@ -77,46 +86,55 @@ public class WampClientTest extends WampModule implements Runnable
       
         System.out.println("Hello " + details.getText("authid"));
         
-        doWork();
+        doWork(100);
     }
     
-    public void doWork()
+    public void doWork(int num)
     {
-        WampPublishOptions options = new WampPublishOptions();
-        options.setAck(true);
-        client.publish("myapp.topic1", new WampList("'Hello, world from Java!!!"), null, options, new WampAsyncCallback() {
-            @Override
-            public void resolve(Object... results) {
-                System.out.println("Event published with id: " + results[1]);
-            }
+        WampSubscriptionOptions subOpt = new WampSubscriptionOptions(null);
+        subOpt.setMatchType(WampMatchType.prefix);
+        client.subscribe("myapp", subOpt, null);
 
-            @Override
-            public void progress(Object... progress) {
-            }
-
-            @Override
-            public void reject(Object... errors) {
-                System.out.println("Error: " + errors);
-            }
-        });
+        WampPublishOptions pubOpt = new WampPublishOptions();
+        pubOpt.setAck(true);
+        pubOpt.setExcludeMe(false);
         
-        client.call("com.myapp.add2", new WampList(2,3), null, null, new WampAsyncCallback() {
-            @Override
-            public void resolve(Object... results) {
-                WampList result = (WampList)results[2];
-                System.out.println(result.getLong(0));
-            }
+        for(int i = 1; i < num; i++) {
+            client.publish("myapp.topic1", new WampList("'Hello, world from Java!!!"), null, pubOpt, new WampAsyncCallback() {
+                @Override
+                public void resolve(Object... results) {
+                    System.out.println("Event published with id: " + results[1]);
+                }
 
-            @Override
-            public void progress(Object... progress) {
-                System.out.println("Progress: " + progress);
-            }
+                @Override
+                public void progress(Object... progress) {
+                }
 
-            @Override
-            public void reject(Object... errors) {
-                System.out.println("Error: " + errors);
-            }
-        });      
+                @Override
+                public void reject(Object... errors) {
+                    System.out.println("Error: " + errors);
+                }
+            });
+
+            client.call("com.myapp.add2", new WampList(2,3), null, null, new WampAsyncCallback() {
+                @Override
+                public void resolve(Object... results) {
+                    WampList result = (WampList)results[2];
+                    System.out.println(result);
+                }
+
+                @Override
+                public void progress(Object... progress) {
+                    System.out.println("Progress: " + progress);
+                }
+
+                @Override
+                public void reject(Object... errors) {
+                    System.out.println("Error: " + errors);
+                }
+            }); 
+        
+        }
         
     }
         
