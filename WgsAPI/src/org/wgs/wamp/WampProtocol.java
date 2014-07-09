@@ -6,7 +6,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.wgs.security.OpenIdConnectUtils;
 import org.wgs.security.User;
 import org.wgs.security.WampCRA;
 import org.wgs.wamp.encoding.WampEncoding;
@@ -124,23 +123,10 @@ public class WampProtocol
         details.put("agent", app.getServerId());
         details.put("roles", roles);
 
-        String realm = clientSocket.getRealm();
-        if(realm == null || realm.length() == 0) realm = "localhost";
-        
-        Principal principal = clientSocket.getUserPrincipal();
-        if(principal != null && principal instanceof User) {
-            User usr = (User)principal;
-            details.put("authid", usr.getLogin());
-            details.put("authmethod", clientSocket.getAuthMethod());
-            details.put("authrole", usr.isAdministrator()? "admin" : "user");
-        } else {
-            details.put("authid", clientSocket.getSessionData().get(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME));
-            details.put("authmethod", clientSocket.getAuthMethod());
-            details.put("authrole", "anonymous");
-        }
-
-        if(clientSocket.getAuthProvider() != null) details.put("authprovider", clientSocket.getAuthProvider());
-        else details.put("authprovider", "realm:" + realm );
+        details.put("authid", clientSocket.getAuthId());
+        details.put("authmethod", clientSocket.getAuthMethod());
+        details.put("authrole", clientSocket.getAuthRole());
+        details.put("authprovider", clientSocket.getAuthProvider());
         
         response.add(details);  
         
@@ -281,11 +267,14 @@ public class WampProtocol
     }    
     
     
-    public static void sendEvents(String realm, Long publicationId, WampTopic topic, Set<Long> eligibleParam, Set<Long> excluded, Long publisherId, WampList payload, WampDict payloadKw) throws Exception 
+    public static void sendEvents(String realm, Long publicationId, WampTopic topic, WampList payload, WampDict payloadKw, Set<Long> eligibleParam, Set<Long> excluded, Long publisherId, String publisherAuthId, String publisherAuthProvider, String publisherAuthRole) throws Exception 
     {
         // EVENT data
         WampDict eventDetails = new WampDict();
         if(publisherId != null) eventDetails.put("publisher", publisherId);            
+        if(publisherAuthId != null) eventDetails.put("authid", publisherAuthId);
+        if(publisherAuthProvider != null) eventDetails.put("authprovider", publisherAuthProvider);
+        if(publisherAuthRole != null) eventDetails.put("authrole", publisherAuthRole);
         
         for(WampSubscription subscription : topic.getSubscriptions()) {
             

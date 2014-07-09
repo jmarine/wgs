@@ -43,16 +43,13 @@ public class WampCRA
         
         WampDict passwordSaltParams = WampCRA.getPasswordSaltParams(usr);
         
-        String realm = socket.getRealm();
-        if(realm == null || realm.length() == 0) realm = "localhost";
-        
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss:SSSX");
         sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
         WampDict info = new WampDict();
         info.put("authid", authId);
         info.put("authrole", usr.isAdministrator()? "admin" : "user");
         info.put("authmethod", "wampcra");
-        info.put("authprovider", "realm:" + realm);
+        info.put("authprovider", socket.getAuthProvider());
         info.put("nonce", UUID.randomUUID().toString());
         info.put("timestamp", sdf.format(new Date()));
         info.put("session", socket.getSessionId());

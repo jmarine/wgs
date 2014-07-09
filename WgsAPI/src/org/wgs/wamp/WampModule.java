@@ -326,7 +326,12 @@ public class WampModule
                 WampProtocol.sendPublishedMessage(clientSocket, requestId, publicationId);
             }
         
-            WampBroker.publishEvent(clientSocket.getRealm(), publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? clientSocket.getSessionId() : null));
+            WampBroker.publishEvent(clientSocket.getRealm(), publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), 
+                    (options.hasDiscloseMe()? clientSocket.getSessionId() : null),
+                    (options.hasDiscloseMe()? clientSocket.getAuthId() : null),
+                    (options.hasDiscloseMe()? clientSocket.getAuthProvider(): null),
+                    (options.hasDiscloseMe()? clientSocket.getAuthRole(): null)
+            );
         }
     }
     

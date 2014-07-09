@@ -2,27 +2,27 @@ package org.wgs.wamp;
 
 import java.nio.ByteBuffer;
 import java.security.Principal;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
-
+import org.wgs.security.User;
+import org.wgs.security.WampCRA;
 import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampAsyncCallback;
+import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
-import org.wgs.wamp.topic.WampTopic;
-import org.wgs.wamp.topic.WampSubscription;
-import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampBroker;
+import org.wgs.wamp.topic.WampPublishOptions;
+import org.wgs.wamp.topic.WampSubscription;
+import org.wgs.wamp.topic.WampTopic;
 import org.wgs.wamp.type.WampConnectionState;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
@@ -116,6 +116,29 @@ public class WampSocket
     
 
     /**
+     * Get the session ID
+     * @return the user name
+     */
+    public String getAuthId() {
+        if(principal != null && principal instanceof User) {
+            User usr = (User)principal;
+            return usr.getLogin();
+        } else {
+            return (String)this.getSessionData().get(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME);
+        }
+    }
+    
+    
+    public String getAuthRole() {
+        if(principal != null && principal instanceof User) {
+            User usr = (User)principal;
+            return (usr.isAdministrator()? "admin" : "user");
+        } else {
+            return "anonymous";
+        }
+    }
+    
+    /**
      * Get the session data 
      * @return the user name
      */
@@ -189,7 +212,13 @@ public class WampSocket
     
     public String getAuthProvider()
     {
-        return this.authProvider;
+        if(this.authProvider != null) {
+            return this.authProvider;
+        } else {
+            String realm = this.getRealm();
+            if(realm == null || realm.length() == 0) realm = "localhost";
+            return "realm:" + realm;
+        }
     }
     
     
@@ -422,7 +451,12 @@ public class WampSocket
         options.setExcluded(excludedSet);
         options.setDiscloseMe(identifyMe);
 
-        WampBroker.publishEvent(this.getRealm(), WampProtocol.newId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), (options.hasDiscloseMe()? this.getSessionId() : null));
+        WampBroker.publishEvent(this.getRealm(), WampProtocol.newId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), 
+                (options.hasDiscloseMe()? this.getSessionId() : null),
+                (options.hasDiscloseMe()? this.getAuthId() : null),
+                (options.hasDiscloseMe()? this.getAuthProvider() : null),
+                (options.hasDiscloseMe()? this.getAuthRole() : null)
+            );
     }
 
     

@@ -1,17 +1,12 @@
 package org.wgs.wamp.client;
 
-import java.security.MessageDigest;
-import java.util.concurrent.CountDownLatch;
-import org.wgs.security.WampCRA;
-import org.wgs.util.HexUtils;
-import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
-import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampAsyncCallback;
+import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.type.WampDict;
@@ -36,27 +31,18 @@ public class WampClientTest extends WampModule implements Runnable
     
     
     @WampRPC(name = "add2")  // implicit RPC registration
-    public Long add2(Long p1, Long p2) 
+    public Long add2(Long p1, Long p2, WampCallOptions options) 
     {
+        System.out.println("Received call from caller " + options.getCallerId() + ": authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole());
         return p1+p2;
     }   
     
-    
-    @WampRPC(name = "reverse_list")   // implicit RPC registration
-    public WampList reverseList(WampList list) 
-    {
-        WampList retval = new WampList();
-        for(int i = list.size()-1; i >= 0; i--) {
-            retval.add(list.get(i));
-        }
-        return retval;
-    }
 
     @Override
     public void onEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
         String topic = client.getTopicFromEventData(subscriptionId, details);
-        System.out.println("OnEvent: topic=" + topic + ", publicationId=" + publicationId + ": payload=" + payload + ", payloadKw=" + payloadKw);
+        System.out.println("OnEvent: topic=" + topic + ", publicationId=" + publicationId + ", payload=" + payload + ", payloadKw=" + payloadKw + ", " + details);
     }
  
     
@@ -74,6 +60,7 @@ public class WampClientTest extends WampModule implements Runnable
             doCalls(1000);
             client.waitResponses();
             
+
             System.out.println("Publication without subscription.");
             doPublications(1000);
             client.waitResponses();
@@ -87,6 +74,7 @@ public class WampClientTest extends WampModule implements Runnable
             System.out.println("Publication with subscription.");
             doPublications(1000);
             client.waitResponses();
+
             
             client.goodbye("wamp.close.normal");
             
@@ -112,6 +100,7 @@ public class WampClientTest extends WampModule implements Runnable
         WampPublishOptions pubOpt = new WampPublishOptions();
         pubOpt.setAck(true);
         pubOpt.setExcludeMe(false);
+        pubOpt.setDiscloseMe(true);
         
         for(int i = 0; i < num; i++) {
             client.publish("myapp.topic1", new WampList("'Hello, world from Java!!!"), null, pubOpt, new WampAsyncCallback() {
@@ -133,8 +122,11 @@ public class WampClientTest extends WampModule implements Runnable
     }
     
     public void doCalls(int num) {
+        WampDict callOptions = new WampDict();
+        callOptions.put("disclose_me", true);
+        
         for(int i = 0; i < num; i++) {
-            client.call("com.myapp.add2", new WampList(2,3), null, null, new WampAsyncCallback() {
+            client.call("com.myapp.add2", new WampList(2,3), null, callOptions, new WampAsyncCallback() {
                 @Override
                 public void resolve(Object... results) {
                     WampList result = (WampList)results[2];

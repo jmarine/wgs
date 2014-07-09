@@ -13,6 +13,11 @@ public class WampCallOptions
     private RunOnEnum runOn;
     private RunModeEnum runMode;
     private boolean discloseMe;
+
+    private Long   callerId;
+    private String authId;
+    private String authProvider;
+    private String authRole;
     
     
     public WampCallOptions(WampDict options) 
@@ -45,7 +50,23 @@ public class WampCallOptions
             
             if(options.has("disclose_me")) {
                 setDiscloseMe(options.getBoolean("disclose_me"));
-            }            
+            }     
+            
+            if(options.has("authid")) {
+                setAuthId(options.getText("authid"));
+            }                     
+
+            if(options.has("authprovider")) {
+                setAuthProvider(options.getText("authprovider"));
+            }         
+
+            if(options.has("authrole")) {
+                setAuthRole(options.getText("authrole"));
+            }     
+            
+            if(options.has("caller")) {
+                setCallerId(options.getLong("caller"));
+            }                        
             
         }
     }
@@ -117,5 +138,44 @@ public class WampCallOptions
         return discloseMe;
     }
         
+    public String getAuthId()
+    {
+        return authId;
+    }
     
+    private void setAuthId(String authId)
+    {
+        this.authId = authId;
+    }
+    
+    public String getAuthProvider()
+    {
+        return authProvider;
+    }
+    
+    private void setAuthProvider(String authProvider)
+    {
+        this.authProvider = authProvider;
+    }
+    
+    public String getAuthRole()
+    {
+        return authRole;
+    }
+    
+    private void setAuthRole(String authRole)
+    {
+        this.authRole = authRole;
+    }
+
+    public Long getCallerId()
+    {
+        return callerId;
+    }
+    
+    private void setCallerId(Long callerId)
+    {
+        this.callerId = callerId;
+    }
+        
 }
