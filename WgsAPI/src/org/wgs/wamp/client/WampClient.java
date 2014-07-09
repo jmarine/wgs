@@ -546,7 +546,9 @@ public class WampClient extends Endpoint
     public void waitResponses() throws Exception
     {
         synchronized(taskCount) {
-            taskCount.wait();
+            if(taskCount.get() > 0) {
+                taskCount.wait();
+            }
         }
     }
     

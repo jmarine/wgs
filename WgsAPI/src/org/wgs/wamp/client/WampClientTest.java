@@ -22,8 +22,8 @@ import org.wgs.wamp.type.WampMatchType;
 @WampModuleName("com.myapp")
 public class WampClientTest extends WampModule implements Runnable
 {
-    private static String user = null;      //"username";
-    private static String password = null;  //"secret";
+    private static String user = "magda";
+    private static String password = "magda";
 
     
     private WampClient client;
@@ -67,9 +67,29 @@ public class WampClientTest extends WampModule implements Runnable
             
             client.connect();
 
+            System.out.println("Login");
             client.hello("localhost", user, password);
             client.waitResponses();
+            
+            doCalls(1000);
+            client.waitResponses();
+            
+            System.out.println("Publication without subscription.");
+            doPublications(1000);
+            client.waitResponses();
+            
+            System.out.println("Subscription");
+            WampSubscriptionOptions subOpt = new WampSubscriptionOptions(null);
+            subOpt.setMatchType(WampMatchType.prefix);
+            client.subscribe("myapp", subOpt, null);
+            client.waitResponses();
+            
+            System.out.println("Publication with subscription.");
+            doPublications(1000);
+            client.waitResponses();
+            
             client.goodbye("wamp.close.normal");
+            
             
             client.close();
 
@@ -81,25 +101,19 @@ public class WampClientTest extends WampModule implements Runnable
 
     
     @Override
-    public void onSessionEstablished(WampSocket clientSocket, WampDict details) { 
-        System.out.println("WampClientModule: session established");
-      
+    public void onSessionEstablished(WampSocket clientSocket, WampDict details) 
+    { 
         System.out.println("Hello " + details.getText("authid"));
-        
-        doWork(100);
+        // doWork(10);
     }
     
-    public void doWork(int num)
+    public void doPublications(int num)
     {
-        WampSubscriptionOptions subOpt = new WampSubscriptionOptions(null);
-        subOpt.setMatchType(WampMatchType.prefix);
-        client.subscribe("myapp", subOpt, null);
-
         WampPublishOptions pubOpt = new WampPublishOptions();
         pubOpt.setAck(true);
         pubOpt.setExcludeMe(false);
         
-        for(int i = 1; i < num; i++) {
+        for(int i = 0; i < num; i++) {
             client.publish("myapp.topic1", new WampList("'Hello, world from Java!!!"), null, pubOpt, new WampAsyncCallback() {
                 @Override
                 public void resolve(Object... results) {
@@ -115,7 +129,11 @@ public class WampClientTest extends WampModule implements Runnable
                     System.out.println("Error: " + errors);
                 }
             });
-
+        }
+    }
+    
+    public void doCalls(int num) {
+        for(int i = 0; i < num; i++) {
             client.call("com.myapp.add2", new WampList(2,3), null, null, new WampAsyncCallback() {
                 @Override
                 public void resolve(Object... results) {
@@ -133,7 +151,7 @@ public class WampClientTest extends WampModule implements Runnable
                     System.out.println("Error: " + errors);
                 }
             }); 
-        
+            
         }
         
     }
@@ -146,7 +164,9 @@ public class WampClientTest extends WampModule implements Runnable
         client.setPreferredWampEncoding(WampEncoding.MsgPack);
         
         WampClientTest test = new WampClientTest(client);
-        test.run();
+        while(true) {
+            test.run();
+        }
     }
     
 
