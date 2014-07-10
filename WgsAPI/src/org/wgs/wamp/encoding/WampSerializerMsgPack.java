@@ -61,12 +61,12 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
         }
     }    
     
+    
     @Override
     public WampObject deserialize(Object obj) throws Exception 
     {
-        byte[] bytes = (byte[])obj;
         MessagePack msgpack = new MessagePack();
-        Unpacker unpacker = msgpack.createUnpacker(new ByteArrayInputStream(bytes));
+        Unpacker unpacker = msgpack.createUnpacker(new ByteArrayInputStream((byte[])obj));
         unpacker.resetReadByteCount();
         Value val = unpacker.readValue();
         return (WampObject)castToWampObject(val);
@@ -116,4 +116,5 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
         }
         return dict;
     }          
+    
 }
