@@ -202,10 +202,9 @@ public class WampClient extends Endpoint
                         if(subscribedParams != null) {
                             Long subscriptionId = response.getLong(2);
                             WampAsyncCallback subscribedPromise = (WampAsyncCallback)subscribedParams.get(0);
-                            String topicURI = subscribedParams.getText(1);
+                            String topicAndOptionsKey = subscribedParams.getText(1);
                             WampSubscriptionOptions options = (WampSubscriptionOptions)subscribedParams.get(2);
-                            String topicAndOptionsKey = getTopicAndOptionsKey(topicURI,options);
-                            WampClient.this.subscriptionsById.put(subscriptionId, topicURI); 
+                            WampClient.this.subscriptionsById.put(subscriptionId, topicAndOptionsKey); 
                             WampClient.this.subscriptionsByTopicAndOptions.put(topicAndOptionsKey, subscriptionId);
                             if(subscribedPromise != null) subscribedPromise.resolve(subscribedRequestId,subscriptionId);
                             removePendingMessage(subscribedRequestId);

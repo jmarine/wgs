@@ -73,7 +73,8 @@ public class WampSubscription
         } else {
             if(ref.refCount(-1) == 0) {
                 WampSocket socket = ref.getObject();
-                sessionIdsByRealm.get(socket.getRealm()).remove(socket);
+                sockets.remove(sessionId);
+                sessionIdsByRealm.get(socket.getRealm()).remove(sessionId);
             }
             return ref.getObject();
         }

@@ -31,7 +31,6 @@ public class WampModule
     private WampApplication app;
 
 
-
     public WampModule(WampApplication app) 
     {
         String moduleName = app.normalizeModuleName(getModuleName());
@@ -271,7 +270,6 @@ public class WampModule
                 WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
             }
 
-            clientSocket.removeSubscription(subscription.getId());
             subscription.removeSocket(clientSocket.getSessionId());
             if(subscription.getSocketsCount() == 0) {
                 topic.removeSubscription(subscription.getId());

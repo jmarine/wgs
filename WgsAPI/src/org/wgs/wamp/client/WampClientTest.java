@@ -50,6 +50,7 @@ public class WampClientTest extends WampModule implements Runnable
     public void run()
     {
         try {
+            int repeats = 1000;
             
             client.connect();
 
@@ -57,12 +58,12 @@ public class WampClientTest extends WampModule implements Runnable
             client.hello("localhost", user, password);
             client.waitResponses();
             
-            doCalls(1000);
+            doCalls(repeats);
             client.waitResponses();
             
 
             System.out.println("Publication without subscription.");
-            doPublications(1000);
+            doPublications(repeats);
             client.waitResponses();
             
             System.out.println("Subscription");
@@ -72,7 +73,13 @@ public class WampClientTest extends WampModule implements Runnable
             client.waitResponses();
             
             System.out.println("Publication with subscription.");
-            doPublications(1000);
+            doPublications(repeats);
+            client.waitResponses();
+            
+            client.unsubscribe("myapp", subOpt, null);
+            client.waitResponses();
+            System.out.println("Publication after unsubscription.");
+            doPublications(repeats);
             client.waitResponses();
 
             
