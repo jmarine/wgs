@@ -1,6 +1,9 @@
 package org.wgs.wamp.rpc;
 
+import java.util.HashSet;
+import java.util.Set;
 import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
 
 
 public class WampCallOptions 
@@ -13,6 +16,9 @@ public class WampCallOptions
     private RunOnEnum runOn;
     private RunModeEnum runMode;
     private boolean discloseMe;
+    private Set<Long> excluded;
+    private Set<Long> eligible;
+    private boolean   excludeMe;   
 
     private Long   callerId;
     private String authId;
@@ -26,6 +32,7 @@ public class WampCallOptions
         this.discloseMe = false;
         this.runOn = RunOnEnum.all;
         this.runMode = RunModeEnum.gather;
+        setExcludeMe(true); // a Caller of a procedure will never itself be forwarded the call issued
         
         if(options != null) {
             
@@ -66,7 +73,19 @@ public class WampCallOptions
             
             if(options.has("caller")) {
                 setCallerId(options.getLong("caller"));
-            }                        
+            }       
+            
+            if(options.has("exclude_me")) {
+                setExcludeMe(options.getBoolean("exclude_me"));
+            }     
+            
+            if(options.has("eligible")) {
+                setEligible((WampList)options.get("eligible"));
+            }                   
+            
+            if(options.has("exclude")) {
+                setExcluded((WampList)options.get("exclude"));
+            }            
             
         }
     }
@@ -177,5 +196,95 @@ public class WampCallOptions
     {
         this.callerId = callerId;
     }
+    
+    /**
+     * @return the excludeMe
+     */
+    public boolean hasExcludeMe() {
+        return excludeMe;
+    }
+
+    /**
+     * @param excludeMe the excludeMe to set
+     */
+    public void setExcludeMe(boolean excludeMe) {
+        this.excludeMe = excludeMe;
+    }
+
+    /**
+     * @return the excluded
+     */
+    public Set<Long> getExcluded() {
+        return excluded;
+    }
+
+    /**
+     * @param excluded the excluded to set
+     */
+    public void setExcluded(Set<Long> excluded) {
+        this.excluded = excluded;
+    }
+    
+    /**
+     * @param excluded the excluded to set
+     */
+    private void setExcluded(WampList excluded) {
+        this.excluded = new HashSet<Long>();
+        for(int i = 0; i < excluded.size(); i++) {
+            this.excluded.add(excluded.getLong(i));
+        }
+    }    
+
+    /**
+     * @return the eligible
+     */
+    public Set<Long> getEligible() {
+        return eligible;
+    }
+
+    /**
+     * @param eligible the eligible to set
+     */
+    public void setEligible(Set<Long> eligible) {
+        this.eligible = eligible;
+    }
+    
+    
+    /**
+     * @param eligible the eligible to set
+     */
+    private void setEligible(WampList eligible) {
+        this.eligible = new HashSet<Long>();
+        for(int i = 0; i < eligible.size(); i++) {
+            this.eligible.add(eligible.getLong(i));
+        }
+    }        
+    
+    
+    public WampDict toWampObject()
+    {
+        WampDict options = new WampDict();
+        if(discloseMe) options.put("disclose_me", discloseMe);
+        if(!excludeMe) options.put("exclude_me", excludeMe);
+        if(timeout > 0) options.put("timeout", timeout);
+        if(runOn != null) options.put("runOn", runOn.toString());
+        if(runMode != null && runMode != RunModeEnum.gather) options.put("runMode", runMode.toString());
+        if(rkey != null) options.put("rkey", rkey);
+ 
+        if(eligible != null) {
+            WampList eligibleList = new WampList();
+            eligibleList.addAll(eligible.toArray());
+            options.put("eligible", eligibleList);
+        }
+        
+        if(excluded != null) {
+            WampList excludedList = new WampList();
+            excludedList.addAll(excluded.toArray());
+            options.put("exclude", excludedList);
+        }    
+        
+        return options;
+    }    
+    
         
 }

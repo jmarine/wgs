@@ -128,12 +128,14 @@ public class WampModule
         };
         
 
+        WampAsyncCall asyncCall = null;
         WampMethod method = app.getLocalRPC(methodName);
         if(method != null) {
             Object retval = method.invoke(task,clientSocket,args,argsKw,options, completeCallback);
             if(retval != null && retval instanceof WampAsyncCall) {
-                WampAsyncCall remoteInvocation = (WampAsyncCall)retval;
-                remoteInvocation.setAsyncCallback(completeCallback);
+                asyncCall = (WampAsyncCall)retval;
+                asyncCall.setAsyncCallback(completeCallback);
+                asyncCall.call();
             } else {
                 Object response = retval;
                 if(response != null) {
@@ -153,11 +155,14 @@ public class WampModule
             
         } else {
             final WampRealm realm = WampRealm.getRealm(clientSocket.getRealm());
-            final ArrayList<WampRemoteMethod> remoteMethods = realm.getRemoteRPCs(clientSocket.getRealm(), methodName, options);
+            final ArrayList<WampRemoteMethod> remoteMethods = realm.getRemoteRPCs(clientSocket.getRealm(), methodName, options, clientSocket.getSessionId());
             final ArrayList<WampAsyncCall> remoteInvocations = new ArrayList<WampAsyncCall>();
             
-            if(!remoteMethods.isEmpty()) {
-                WampAsyncCall asyncCall = null;
+            if(remoteMethods.isEmpty()) {
+                System.out.println("No remote method: " + methodName);
+                throw new WampException(null, WampException.ERROR_PREFIX+".no_remote_method", null, null);
+                
+            } else {
                 
                 switch(options.getRunOn()) {
                     case any:
@@ -236,14 +241,15 @@ public class WampModule
                 
                 if(asyncCall != null) {
                     asyncCall.call();
-                    return asyncCall;
-                }
+                }                       
+                
+                return asyncCall;
             }
+            
         }
         
+
         
-        System.out.println("Method not implemented: " + methodName);
-        throw new WampException(null, WampException.ERROR_PREFIX+".method_unknown", null, null);
     }
     
     public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription, WampSubscriptionOptions options) throws Exception { 

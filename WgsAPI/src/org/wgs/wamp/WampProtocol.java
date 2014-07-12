@@ -101,8 +101,8 @@ public class WampProtocol
         //brokerFeatures.put("event_history", false);
 
         WampDict dealerFeatures = new WampDict();
-        //dealerFeatures.put("callee_blackwhite_listing", false);
-        //dealerFeatures.put("caller_exclusion", false);
+        dealerFeatures.put("callee_blackwhite_listing", true);
+        dealerFeatures.put("caller_exclusion", true);
         dealerFeatures.put("caller_identification", true);
         //dealerFeatures.put("call_trustlevels", false);
         dealerFeatures.put("pattern_based_registration", true);
@@ -302,16 +302,16 @@ public class WampProtocol
             if(eligible == null) eligible = subscription.getSessionIds(realm);
             else eligible.retainAll(subscription.getSessionIds(realm));
 
+            
             if(excluded == null) excluded = new HashSet<Long>();        
-            //if(excludeMe()) excluded.add(publisherId);
 
             for (Long sid : eligible) {
-                if((excluded==null) || (!excluded.contains(sid))) {
+                if(!excluded.contains(sid)) {
                     WampSubscriptionOptions subOptions = subscription.getOptions();
                     if(subOptions != null && subOptions.hasEventsEnabled() && subOptions.isEligibleForEvent(sid, subscription, payload, payloadKw)) {
                         WampSocket socket = subscription.getSocket(sid);
                         synchronized(socket) {
-                            if(socket != null && socket.isOpen() && !excluded.contains(sid) && realm.equals(socket.getRealm()) ) {
+                            if(socket != null && socket.isOpen() && realm.equals(socket.getRealm()) ) {
                                 WampEncoding enc = socket.getEncoding();
                                 if(msg[enc.ordinal()] == null) {
                                     msg[enc.ordinal()] = WampObject.getSerializer(enc).serialize(response);

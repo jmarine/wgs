@@ -156,9 +156,9 @@ public class WampPublishOptions
     public WampDict toWampObject()
     {
         WampDict options = new WampDict();
-        options.put("acknowledge", ack);
-        options.put("disclose_me", discloseMe);
-        options.put("exclude_me", excludeMe);
+        if(ack) options.put("acknowledge", ack);
+        if(discloseMe) options.put("disclose_me", discloseMe);
+        if(!excludeMe) options.put("exclude_me", excludeMe);
  
         if(eligible != null) {
             WampList eligibleList = new WampList();

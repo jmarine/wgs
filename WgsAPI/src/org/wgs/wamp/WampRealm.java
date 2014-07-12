@@ -47,8 +47,9 @@ public class WampRealm
     }
     
     
-    public ArrayList<WampRemoteMethod> getRemoteRPCs(String realm, String name, WampCallOptions options)
+    public ArrayList<WampRemoteMethod> getRemoteRPCs(String realm, String name, WampCallOptions options, Long callerId) throws WampException
     {
+        boolean found = false;
         ArrayList<WampRemoteMethod> retval = new ArrayList<WampRemoteMethod>();
 
         String partition = null;
@@ -56,7 +57,8 @@ public class WampRealm
 
         WampCalleeRegistration reg = calleeRegistrationByUri.get(name);
         if(reg != null) {
-            for(WampRemoteMethod remoteMethod : reg.getRemoteMethods()) {
+            found = true;
+            for(WampRemoteMethod remoteMethod : reg.getRemoteMethods(callerId, options)) {
                 if(remoteMethod.hasPartition(partition)) {
                     retval.add(remoteMethod);
                 }
@@ -65,12 +67,18 @@ public class WampRealm
         
         for(WampCalleeRegistration registration : calleePatterns.values()) {
             if(WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
-                for(WampRemoteMethod remoteMethod : registration.getRemoteMethods()) {
+                found = true;
+                for(WampRemoteMethod remoteMethod : registration.getRemoteMethods(callerId, options)) {
                     if(remoteMethod.hasPartition(partition)) {
                         retval.add(remoteMethod);
                     }
                 }
             }
+        }
+        
+        if(retval.size() == 0) {
+            if(found) throw new WampException(null, WampException.ERROR_PREFIX+".no_remote_method", null, null);
+            else throw new WampException(null, WampException.ERROR_PREFIX+".method_unknown", null, null);
         }
         
         return retval;
@@ -130,7 +138,7 @@ public class WampRealm
                 WampProtocol.sendRegisteredMessage(clientSocket, requestId, registration.getId());
             }
         } catch (Exception ex) {
-            logger.log(Level.FINE, "Error in publishing to topic", ex);
+            logger.log(Level.FINE, "Error registering method", ex);
             if (requestId != null) {
                 WampProtocol.sendErrorMessage(clientSocket, WampProtocol.REGISTER, requestId, null, "wamp.error.not_authorized", null, null);
             }
@@ -144,25 +152,31 @@ public class WampRealm
         Long registrationId = request.getLong(2);
         try {
             WampCalleeRegistration registration = calleeRegistrationById.get(registrationId);
-            WampModule module = app.getDefaultWampModule();
-            module.onUnregister(clientSocket, registrationId);
-            if (registration.getRemoteMethodsCount() == 0) {
-                for (String name : calleeRegistrationByUri.keySet()) {
-                    if (WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
-                        calleeRegistrationByUri.remove(name);
+            if(registration == null) {
+                throw new Exception("method registration id not found: " + registrationId);
+            } else {
+                WampModule module = app.getDefaultWampModule();
+                module.onUnregister(clientSocket, registrationId);
+                if (registration.getRemoteMethodsCount() == 0) {
+                    for (String name : calleeRegistrationByUri.keySet()) {
+                        if (WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
+                            calleeRegistrationByUri.remove(name);
+                        }
+                    }
+                    for (String name : calleePatterns.keySet()) {
+                        if (WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
+                            calleePatterns.remove(name);
+                        }
                     }
                 }
-                for (String name : calleePatterns.keySet()) {
-                    if (WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
-                        calleePatterns.remove(name);
-                    }
+                
+                calleeRegistrationById.remove(registrationId);
+                if (requestId != null) {
+                    WampProtocol.sendUnregisteredMessage(clientSocket, requestId);
                 }
-            }
-            if (requestId != null) {
-                WampProtocol.sendUnregisteredMessage(clientSocket, requestId);
             }
         } catch (Exception ex) {
-            logger.log(Level.FINE, "Error in publishing to topic", ex);
+            logger.log(Level.FINE, "Error unregistering method", ex);
             if (requestId != null) {
                 WampProtocol.sendErrorMessage(clientSocket, WampProtocol.UNREGISTER, requestId, null, "wamp.error.not_authorized", null, null);
             }

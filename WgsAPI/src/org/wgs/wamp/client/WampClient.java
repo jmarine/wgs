@@ -427,13 +427,13 @@ public class WampClient extends Endpoint
         WampProtocol.sendPublishMessage(clientSocket, requestId, topic, payload, payloadKw, options.toWampObject());
     }
 
-    public void call(String procedureUri, WampList args, WampDict argsKw, WampDict options, WampAsyncCallback dfd)
+    public void call(String procedureUri, WampList args, WampDict argsKw, WampCallOptions options, WampAsyncCallback dfd)
     {
         Long requestId = WampProtocol.newId();
         WampList list = new WampList();
         list.add(dfd);
         createPendingMessage(requestId, list);
-        WampProtocol.sendCallMessage(clientSocket, requestId, options, procedureUri, args, argsKw);
+        WampProtocol.sendCallMessage(clientSocket, requestId, options.toWampObject(), procedureUri, args, argsKw);
     }
     
     public void cancelCall(Long callID, WampDict options) 

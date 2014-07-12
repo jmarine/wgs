@@ -17,7 +17,7 @@ import org.wgs.wamp.type.WampMatchType;
 @WampModuleName("com.myapp")
 public class WampClientTest extends WampModule implements Runnable
 {
-    private static String user = "magda";
+    private static String user = null;
     private static String password = "magda";
 
     
@@ -33,7 +33,7 @@ public class WampClientTest extends WampModule implements Runnable
     @WampRPC(name = "add2")  // implicit RPC registration
     public Long add2(Long p1, Long p2, WampCallOptions options) 
     {
-        System.out.println("Received call from caller " + options.getCallerId() + ": authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole());
+        System.out.println("Received call: authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole() + ", caller session id=" + options.getCallerId());
         return p1+p2;
     }   
     
@@ -129,8 +129,9 @@ public class WampClientTest extends WampModule implements Runnable
     }
     
     public void doCalls(int num) {
-        WampDict callOptions = new WampDict();
-        callOptions.put("disclose_me", true);
+        WampCallOptions callOptions = new WampCallOptions(null);
+        callOptions.setDiscloseMe(true);
+        callOptions.setExcludeMe(false);
         
         for(int i = 0; i < num; i++) {
             client.call("com.myapp.add2", new WampList(2,3), null, callOptions, new WampAsyncCallback() {

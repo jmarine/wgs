@@ -30,7 +30,7 @@ import org.wgs.wamp.type.WampList;
 
 public class WampSocket 
 {
-    private static final String LOCAL_DOMAIN = "";
+    private static final String DEFAULT_REALM = "realm1";
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
 
     private WampApplication app;
@@ -175,12 +175,12 @@ public class WampSocket
     
     public String getRealm()
     {
-        return (realm == null || realm.equals("null") || realm.equals("localhost")) ? LOCAL_DOMAIN : realm;
+        return (realm == null || realm.equals("null")) ? DEFAULT_REALM : realm;
     }
     
     public void setRealm(String realm)
     {
-        this.realm = (realm == null || realm.equals("null") || realm.equals("localhost")) ? LOCAL_DOMAIN : realm;
+        this.realm = (realm == null || realm.equals("null")) ? DEFAULT_REALM : realm;
     }
     
     
@@ -216,7 +216,6 @@ public class WampSocket
             return this.authProvider;
         } else {
             String realm = this.getRealm();
-            if(realm == null || realm.length() == 0) realm = "localhost";
             return "realm:" + realm;
         }
     }
