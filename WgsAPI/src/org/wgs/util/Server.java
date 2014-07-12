@@ -31,8 +31,6 @@ import org.wgs.wamp.WampModule;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.transport.http.websocket.WampEndpoint;
 import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
-import sun.misc.Signal;
-import sun.misc.SignalHandler;
 
 
 public class Server 
@@ -174,14 +172,13 @@ public class Server
         ctx.createSubcontext("java:/comp/env/jdbc");
         
         
-        sun.misc.Signal.handle(new sun.misc.Signal("TERM"), new sun.misc.SignalHandler() {
-            @Override
-            public void handle(Signal signal) {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+           @Override
+           public void run() {
                 shuttingDown = true;
-                System.out.println("Signal received...");
-            }
-        });
-        
+                System.out.println("Signal received from shutdown hook...");
+           }
+          });        
         
         
         try {
