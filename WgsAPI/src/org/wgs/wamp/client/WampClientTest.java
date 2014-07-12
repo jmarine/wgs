@@ -18,7 +18,7 @@ import org.wgs.wamp.type.WampMatchType;
 public class WampClientTest extends WampModule implements Runnable
 {
     private static String user = null;
-    private static String password = "magda";
+    private static String password = null;
 
     
     private WampClient client;
