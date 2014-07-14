@@ -59,24 +59,13 @@ public class WampTopicConnection extends Endpoint implements TopicConnection
     @Override
     public void onOpen(javax.websocket.Session session, EndpointConfig config) {
         this.clientSocket = new WampSocket(wampApp, session);
-        session.addMessageHandler(new MessageHandler.Whole<String>() {
-                @Override
-                public void onMessage(String message) {
-                    try {
-                        System.out.println("onWampMessage (text): " + message);
-                        WampList request = (WampList)WampObject.getSerializer(WampEncoding.JSon).deserialize(message);
-                        wampApp.onWampMessage(clientSocket, request);
-                    } catch(Exception ex) { 
-                        
-                    }
-                }
-            });
+        WampEndpointConfig.addWampMessageHandlers(wampApp, session);
     }    
     
     @Override
     public void onClose(javax.websocket.Session session, CloseReason reason) 
     {
-        wampApp.onWampClose(clientSocket, reason);
+        WampEndpointConfig.removeWampMessageHandlers(wampApp, session, reason);
         super.onClose(session, reason);
     }
         

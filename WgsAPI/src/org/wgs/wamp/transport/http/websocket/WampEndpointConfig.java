@@ -22,6 +22,7 @@ import org.wgs.security.WampCRA;
 import org.wgs.wamp.*;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.encoding.WampSerializerBatchedJSON;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampObject;
 
@@ -33,21 +34,20 @@ public class WampEndpointConfig
     public  static final String WAMP_APPLICATION_PROPERTY_NAME = "__wamp_application";
     public  static final String WAMP_ENDPOINTCONFIG_PROPERTY_NAME = "__wamp_endpointconfig";
     public  static final String WAMP_AUTH_COOKIE_NAME = "__wamp_authcookie";
-    
 
     private static final Logger logger = Logger.getLogger(WampEndpointConfig.class.getName());
     
     private Class endpointClass;
     private WampApplication application;
-    private ConcurrentHashMap<String,WampSocket> sockets;    
     private Map<String, Object> userProperties;
+    
+    static private ConcurrentHashMap<String,WampSocket> sockets = new ConcurrentHashMap<String,WampSocket>();
     
 
     public WampEndpointConfig(Class endpointClass, WampApplication application)
     {
         this.application = application;
         this.endpointClass = endpointClass;
-        this.sockets = new ConcurrentHashMap<String,WampSocket>();  
         this.userProperties = new HashMap<String,Object>();
     }
     
@@ -58,7 +58,7 @@ public class WampEndpointConfig
     }
     
     
-    public WampSocket getWampSocket(Session session) 
+    public static WampSocket getWampSocket(WampApplication application, Session session) 
     {
         WampSocket clientSocket = sockets.get(session.getId());
         if(clientSocket == null) {
@@ -72,10 +72,19 @@ public class WampEndpointConfig
     public void onWampOpen(final Session session, WampEndpoint endpoint) {
         System.out.println("##################### Session opened");
 
-        final WampSocket clientSocket = getWampSocket(session);
-
-
+        WampSocket clientSocket = getWampSocket(application, session);
         session.setMaxIdleTimeout(0L);  // forever (but fails on Jetty)
+
+        addWampMessageHandlers(application, session);
+        
+        if(application.start()) endpoint.onApplicationStart(application);
+        application.onWampOpen(clientSocket);
+       
+    }   
+    
+    public static void addWampMessageHandlers(final WampApplication wampApp, final Session session)
+    {
+        final WampSocket clientSocket = getWampSocket(wampApp, session);
         
         String subproto = (session.getNegotiatedSubprotocol());
         
@@ -84,10 +93,10 @@ public class WampEndpointConfig
                 @Override
                 public void onMessage(byte[] message) {
                     try {
-                        System.out.println("onWampMessage (binary)");
-                        WampList request = (WampList)WampObject.getSerializer(WampEncoding.MsgPack).deserialize(message);
-                        System.out.println("onWampMessage (deserialized request): " + request);
-                        WampEndpointConfig.this.application.onWampMessage(clientSocket, request);
+                        if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "onWampMessage (binary msgpack)");
+                        WampList request = (WampList)WampEncoding.MsgPack.getSerializer().deserialize(message, 0, message.length);
+                        if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "onWampMessage (deserialized request): " + request);
+                        wampApp.onWampMessage(clientSocket, request);
                     } catch(Exception ex) { 
                         logger.log(Level.SEVERE, "Error processing message: "+message, ex);
                     }
@@ -95,15 +104,55 @@ public class WampEndpointConfig
 
             });
             
+        } else if(subproto != null && subproto.equalsIgnoreCase("wamp.2.msgpack.batched")) {
+            session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
+                @Override
+                public void onMessage(byte[] message) {
+                    try {
+                        int offset = 0;
+                        while(offset < message.length) {
+                            int partLen = java.nio.ByteBuffer.wrap(message, offset, 4).getInt();                            
+                            if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "onWampMessage (partial msgpack batched)");
+                            WampList request = (WampList)WampEncoding.MsgPack.getSerializer().deserialize(message, offset+4, partLen);
+                            if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "onWampMessage (deserialized request): " + request);
+                            wampApp.onWampMessage(clientSocket, request);
+                            offset = offset + 4 + partLen;
+                        }
+                    } catch(Exception ex) { 
+                        logger.log(Level.SEVERE, "Error processing message: "+message, ex);
+                    }
+                }
+
+            });            
+            
+        } else if(subproto != null && subproto.equalsIgnoreCase("wamp.2.json.batched")) {            
+            session.addMessageHandler(new MessageHandler.Whole<String>() {
+                @Override
+                public void onMessage(String message) {
+                    try {
+                        int offset = 0;
+                        while(offset < message.length()) {
+                            int partLen = message.indexOf(WampSerializerBatchedJSON.MESSAGE_PART_DELIMITER, offset) - offset;
+                            if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "onWampMessage (text): " + message);
+                            WampList request = (WampList)WampEncoding.JSON.getSerializer().deserialize(message, offset, partLen);
+                            wampApp.onWampMessage(clientSocket, request);
+                            offset = offset + partLen + 1;  // MESSAGE_PART_DELIMITER
+                        }
+                    } catch(Exception ex) { 
+                        logger.log(Level.SEVERE, "Error processing message: "+message, ex);
+                    }
+                }
+
+            });            
         } else {
             
             session.addMessageHandler(new MessageHandler.Whole<String>() {
                 @Override
                 public void onMessage(String message) {
                     try {
-                        System.out.println("onWampMessage (text): " + message);
-                        WampList request = (WampList)WampObject.getSerializer(WampEncoding.JSon).deserialize(message);
-                        WampEndpointConfig.this.application.onWampMessage(clientSocket, request);
+                        if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "onWampMessage (text): " + message);
+                        WampList request = (WampList)WampEncoding.JSON.getSerializer().deserialize(message, 0, message.length());
+                        wampApp.onWampMessage(clientSocket, request);
                     } catch(Exception ex) { 
                         logger.log(Level.SEVERE, "Error processing message: "+message, ex);
                     }
@@ -114,15 +163,15 @@ public class WampEndpointConfig
         }
         
         
-        if(application.start()) endpoint.onApplicationStart(application);
-        application.onWampOpen(clientSocket);
-
-       
-    }   
+    }
 
 
-    
     public void onWampClose(Session session, CloseReason reason) 
+    {
+        removeWampMessageHandlers(application, session, reason);
+    }
+    
+    public static void removeWampMessageHandlers(WampApplication application, Session session, CloseReason reason) 
     {
         WampSocket clientSocket = sockets.remove(session.getId());
         if(clientSocket != null) {
@@ -146,7 +195,7 @@ public class WampEndpointConfig
 
     @Override
     public List<String> getSubprotocols() {
-        List<String> subprotocols = java.util.Arrays.asList("wamp.2.json", "wamp.2.msgpack");
+        List<String> subprotocols = java.util.Arrays.asList("wamp.2.json", "wamp.2.msgpack", "wamp.2.json.batched", "wamp.2.msgpack.batched");
         return subprotocols;
     }
 

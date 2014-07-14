@@ -6,7 +6,9 @@ import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.WampException;
 import org.wgs.wamp.encoding.WampSerializer;
 import org.wgs.wamp.encoding.WampSerializerJSON;
+import org.wgs.wamp.encoding.WampSerializerBatchedJSON;
 import org.wgs.wamp.encoding.WampSerializerMsgPack;
+import org.wgs.wamp.encoding.WampSerializerBatchedMsgPack;
 
 
 public class WampObject 
@@ -40,18 +42,6 @@ public class WampObject
     }    
     
 
-    public static WampSerializer getSerializer(WampEncoding encoding) throws WampException
-    {
-        if(encoding == null) encoding = WampEncoding.JSon;
-            
-        switch(encoding) {
-            case JSon:
-                return new WampSerializerJSON();
-            case MsgPack:
-                return new WampSerializerMsgPack();
-            default:
-                throw new WampException(null, "wamp.error.unsupported_encoding", null, null);
-        }
-    }
+    
     
 }

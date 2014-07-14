@@ -161,7 +161,7 @@ public class WampClientTest extends WampModule implements Runnable
     public static final void main(String args[]) throws Exception
     {
         WampClient client = new WampClient("ws://localhost:8080/wgs");
-        client.setPreferredWampEncoding(WampEncoding.MsgPack);
+        client.setPreferredWampEncoding(WampEncoding.JSON);
         
         WampClientTest test = new WampClientTest(client);
         while(true) {

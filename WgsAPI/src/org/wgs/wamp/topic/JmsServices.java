@@ -26,7 +26,6 @@ import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
-import org.wgs.wamp.type.WampObject;
 
 
 
@@ -177,7 +176,7 @@ public class JmsServices
             WampList event = new WampList();
             event.add(payload);
             event.add(payloadKw);
-            String eventPayLoad = (event != null)? (String)WampObject.getSerializer(WampEncoding.JSon).serialize(event) : null;
+            String eventPayLoad = (event != null)? (String)WampEncoding.JSON.getSerializer().serialize(event) : null;
             TextMessage msg = pubSession.createTextMessage(eventPayLoad);
             
             msg.setLongProperty("id", id);
@@ -275,7 +274,7 @@ public class JmsServices
                 String eventData = ((TextMessage)receivedMessageFromBroker).getText();
                 //System.out.println ("Received message from topic " + topicName + ": " + eventData);
                 
-                WampList event = (eventData!=null)? (WampList)WampObject.getSerializer(WampEncoding.JSon).deserialize(eventData) : null;
+                WampList event = (eventData!=null)? (WampList)WampEncoding.JSON.getSerializer().deserialize(eventData, 0, eventData.length()) : null;
                 WampList payload = (WampList)event.get(0);  // EVENT.payload|list or METAEVENT.MetaEvent|any
                 WampDict payloadKw = (WampDict)event.get(1);
                 Set<Long> eligible = receivedMessageFromBroker.propertyExists("eligible")? parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible")) : null;

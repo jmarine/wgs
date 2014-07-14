@@ -54,7 +54,7 @@ public class WampCRA
         info.put("timestamp", sdf.format(new Date()));
         info.put("session", socket.getSessionId());
         
-        String infoser = WampObject.getSerializer(WampEncoding.JSon).serialize(info).toString();
+        String infoser = WampEncoding.JSON.getSerializer().serialize(info).toString();
         String authSecret = getAuthSecret(usr);
         String sig = "";
         if(authId != null && authId.length() > 0) {

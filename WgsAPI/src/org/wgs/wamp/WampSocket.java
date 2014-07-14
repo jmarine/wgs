@@ -80,7 +80,7 @@ public class WampSocket
             switch(subprotocol) {
                 case "wamp":
                     setVersionSupport(WampApplication.WAMPv1);
-                    setEncoding(WampEncoding.JSon);
+                    setEncoding(WampEncoding.JSON);
                     break;
                     
                 case "wamp.2.msgpack":
@@ -88,14 +88,24 @@ public class WampSocket
                     setEncoding(WampEncoding.MsgPack);
                     break;                    
                     
+                case "wamp.2.msgpack.batched":
+                    setVersionSupport(WampApplication.WAMPv2);
+                    setEncoding(WampEncoding.BatchedMsgPack);
+                    break;                    
+                    
                 case "wamp.2.json":
                     setVersionSupport(WampApplication.WAMPv2);
-                    setEncoding(WampEncoding.JSon);
+                    setEncoding(WampEncoding.JSON);
+                    break;
+                    
+                case "wamp.2.json.batched":
+                    setVersionSupport(WampApplication.WAMPv2);
+                    setEncoding(WampEncoding.BatchedJSON);
                     break;
 
                 default:  // use "wamp.2.json" by default (fix for WildFly 8.0.0)
                     setVersionSupport(WampApplication.WAMPv2);
-                    setEncoding(WampEncoding.JSon);
+                    setEncoding(WampEncoding.JSON);
                     break;
                     
             }        
@@ -329,7 +339,7 @@ public class WampSocket
         try {
             if(isOpen()) {
                 switch(getEncoding()) {
-                    case JSon:
+                    case JSON:
                         session.getBasicRemote().sendText(msg.toString());
                         break;
                     case MsgPack:

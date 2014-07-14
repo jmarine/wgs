@@ -28,10 +28,15 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
     }
     
     @Override
-    public WampObject deserialize(Object obj) throws Exception 
+    public WampObject deserialize(Object obj, int offset, int len) throws Exception 
     {
+        String str = (String)obj;
         ObjectMapper mapper = new ObjectMapper();
-        return (WampObject)castToWampObject(mapper.readTree((String)obj));
+        if(offset == 0 && len == str.length()) {
+            return (WampObject)castToWampObject(mapper.readTree(str));
+        } else {
+            return (WampObject)castToWampObject(mapper.readTree(str.substring(offset, offset+len)));
+        }
     }
     
     

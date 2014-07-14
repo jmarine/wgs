@@ -62,7 +62,7 @@ public class WampProtocol
     private static void sendWampMessage(WampSocket socket, WampList args)
     {
         try {        
-            Object msg = WampObject.getSerializer(socket.getEncoding()).serialize(args);
+            Object msg = socket.getEncoding().getSerializer().serialize(args);
             socket.sendObject(msg);
 
         } catch(Exception ex) {
@@ -314,7 +314,7 @@ public class WampProtocol
                             if(socket != null && socket.isOpen() && realm.equals(socket.getRealm()) ) {
                                 WampEncoding enc = socket.getEncoding();
                                 if(msg[enc.ordinal()] == null) {
-                                    msg[enc.ordinal()] = WampObject.getSerializer(enc).serialize(response);
+                                    msg[enc.ordinal()] = enc.getSerializer().serialize(response);
                                 }
                                 socket.sendObject(msg[enc.ordinal()]);
                             }
@@ -359,7 +359,7 @@ public class WampProtocol
                         if(realm.equals(remoteSocket.getRealm()) && remoteSocket.supportVersion(WampApplication.WAMPv2)) {
                             WampEncoding enc = remoteSocket.getEncoding();
                             if(msg[enc.ordinal()] == null) {
-                                msg[enc.ordinal()] = WampObject.getSerializer(enc).serialize(response);
+                                msg[enc.ordinal()] = enc.getSerializer().serialize(response);
                             }
                             remoteSocket.sendObject(msg[enc.ordinal()]);
                         }

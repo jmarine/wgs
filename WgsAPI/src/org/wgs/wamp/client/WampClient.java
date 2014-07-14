@@ -28,6 +28,7 @@ import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
+import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampMatchType;
@@ -61,7 +62,7 @@ public class WampClient extends Endpoint
     public WampClient(String uri) throws Exception
     {
         this.uri = new URI(uri);
-        this.preferredEncoding = WampEncoding.JSon;
+        this.preferredEncoding = WampEncoding.JSON;
         this.pendingRequests = new ConcurrentHashMap<Long, WampList>();
         this.rpcRegistrationsById = new ConcurrentHashMap<Long, String>();
         this.rpcRegistrationsByURI = new ConcurrentHashMap<String, Long>();
@@ -273,18 +274,26 @@ public class WampClient extends Endpoint
     private List<String> getPreferredSubprotocolOrder()
     {
         if(preferredEncoding != null && preferredEncoding == WampEncoding.MsgPack) {
-            return java.util.Arrays.asList("wamp.2.msgpack", "wamp.2.json");
+            return java.util.Arrays.asList("wamp.2.msgpack", "wamp.2.msgpack.batched", "wamp.2.json", "wamp.2.json.batched");
+        } else if(preferredEncoding != null && preferredEncoding == WampEncoding.BatchedMsgPack) {
+            return java.util.Arrays.asList("wamp.2.msgpack.batched", "wamp.2.msgpack", "wamp.2.json.batched", "wamp.2.json");
+        } else if(preferredEncoding != null && preferredEncoding == WampEncoding.BatchedJSON) {
+            return java.util.Arrays.asList("wamp.2.json.batched", "wamp.2.json", "wamp.2.msgpack.batched", "wamp.2.msgpack");
         } else {
-            return java.util.Arrays.asList("wamp.2.json", "wamp.2.msgpack");
+            return java.util.Arrays.asList("wamp.2.json", "wamp.2.json.batched", "wamp.2.msgpack", "wamp.2.msgpack.batched");
         }
     }
     
     private WampEncoding getWampEncodingByName(String subprotocol)
     {
         if(subprotocol != null && subprotocol.equals("wamp.2.msgpack")) {
-            return WampEncoding.MsgPack;
+            return WampEncoding.MsgPack;        
+        } else if(subprotocol != null && subprotocol.equals("wamp.2.msgpack.batched")) {
+            return WampEncoding.BatchedMsgPack;
+        } else if(subprotocol != null && subprotocol.equals("wamp.2.json.batched")) {
+            return WampEncoding.BatchedJSON;
         } else {
-            return WampEncoding.JSon;
+            return WampEncoding.JSON;
         }
     }
    
@@ -296,44 +305,14 @@ public class WampClient extends Endpoint
         this.encoding = getWampEncodingByName(session.getNegotiatedSubprotocol());
         this.clientSocket = new WampSocket(wampApp, session);
 
-        if(encoding == WampEncoding.MsgPack) {
-            session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
-                    @Override
-                    public void onMessage(byte[] message) {
-                        try {
-                            logger.log(Level.FINEST, "onWampMessage (binary)");
-                            WampList request = (WampList)WampObject.getSerializer(WampEncoding.MsgPack).deserialize(message);
-                            logger.log(Level.FINEST, "onWampMessage (deserialized request): " + request);
-                            wampApp.onWampMessage(clientSocket, request);
-                        } catch(Exception ex) { 
-                            logger.log(Level.SEVERE, "Error processing message: "+message, ex);
-                        }
-                    }
-
-                });        
-            
-        } else {
-
-            session.addMessageHandler(new MessageHandler.Whole<String>() {
-                    @Override
-                    public void onMessage(String message) {
-                        try {
-                            logger.log(Level.FINEST, "onWampMessage (text): " + message);
-                            WampList request = (WampList)WampObject.getSerializer(WampEncoding.JSon).deserialize(message);
-                            wampApp.onWampMessage(clientSocket, request);
-                        } catch(Exception ex) { 
-                            logger.log(Level.SEVERE, "Error processing message: "+message, ex);
-                        }
-                    }
-                });
-        }
+        WampEndpointConfig.addWampMessageHandlers(wampApp, session);
         
     }    
     
     @Override
     public void onClose(javax.websocket.Session session, CloseReason reason) 
     {
-        wampApp.onWampClose(clientSocket, reason);
+        WampEndpointConfig.removeWampMessageHandlers(wampApp, session, reason);
         super.onClose(session, reason);
     }
         

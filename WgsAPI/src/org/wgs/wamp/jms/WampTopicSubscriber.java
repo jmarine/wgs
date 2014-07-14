@@ -52,7 +52,7 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
                 WampList list = new WampList();
                 list.add(payload);
                 list.add(payloadKw);
-                msg.setText(WampObject.getSerializer(WampEncoding.JSon).serialize(list).toString());
+                msg.setText(WampEncoding.JSON.getSerializer().serialize(list).toString());
                 messageListener.onMessage(msg);
             }
         }
