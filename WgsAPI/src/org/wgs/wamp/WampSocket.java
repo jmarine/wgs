@@ -75,7 +75,6 @@ public class WampSocket
         rpcRegistrations = new java.util.concurrent.ConcurrentHashMap<Long,WampCalleeRegistration>();
         
         String subprotocol = session.getNegotiatedSubprotocol();
-        System.out.println("DEBUG: WampSocket: negotiated subprotocol: " + subprotocol);
         if(subprotocol != null) {
             switch(subprotocol) {
                 case "wamp":

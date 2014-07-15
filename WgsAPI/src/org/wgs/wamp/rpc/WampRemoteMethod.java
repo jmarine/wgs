@@ -71,7 +71,7 @@ public class WampRemoteMethod extends WampMethod
                     invocationOptions.put("authrole", clientSocket.getAuthRole());
                 }
                 
-
+                //System.out.println("INVOCATION " + remotePeer.getSessionId() + " (" + invocationId + ")");
                 WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
                     
                 return null;

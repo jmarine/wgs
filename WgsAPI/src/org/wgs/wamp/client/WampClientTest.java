@@ -6,6 +6,7 @@ import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampAsyncCallback;
+import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
@@ -31,9 +32,9 @@ public class WampClientTest extends WampModule implements Runnable
     
     
     @WampRPC(name = "add2")  // implicit RPC registration
-    public Long add2(Long p1, Long p2, WampCallOptions options) 
+    public Long add2(Long p1, Long p2, WampCallOptions options, WampCallController task) 
     {
-        System.out.println("Received call: authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole() + ", caller session id=" + options.getCallerId());
+        System.out.println("Received call: " + task.getProcedureURI() + ": authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole() + ", caller session id=" + options.getCallerId());
         return p1+p2;
     }   
     
@@ -50,10 +51,11 @@ public class WampClientTest extends WampModule implements Runnable
     public void run()
     {
         try {
-            int repeats = 1000;
-            
-            client.connect();
+          int repeats = 1000;
+           
+          client.connect();
 
+          while(true) {
             System.out.println("Login");
             client.hello("localhost", user, password);
             client.waitResponses();
@@ -61,7 +63,6 @@ public class WampClientTest extends WampModule implements Runnable
             doCalls(repeats);
             client.waitResponses();
             
-
             System.out.println("Publication without subscription.");
             doPublications(repeats);
             client.waitResponses();
@@ -84,9 +85,11 @@ public class WampClientTest extends WampModule implements Runnable
 
             
             client.goodbye("wamp.close.normal");
+            client.waitResponses();
+          }
             
             
-            client.close();
+          // client.close();  // FIXME: decrease server-side BARRIERs of pending invocation results from this client RPCs.
 
             
         } catch(Exception ex) {
@@ -164,9 +167,7 @@ public class WampClientTest extends WampModule implements Runnable
         client.setPreferredWampEncoding(WampEncoding.JSON);
         
         WampClientTest test = new WampClientTest(client);
-        while(true) {
-            test.run();
-        }
+        test.run();
     }
     
 

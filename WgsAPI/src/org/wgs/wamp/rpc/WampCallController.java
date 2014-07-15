@@ -22,7 +22,6 @@ public class WampCallController implements Runnable
     private String procedureURI;
     private WampApplication app;
     private WampSocket clientSocket;
-    private WampList request;
     private Future<?> future;
     private WampAsyncCall asyncCall;
     private WampList  arguments;
@@ -35,13 +34,15 @@ public class WampCallController implements Runnable
     private boolean done;
     
 
-    public WampCallController(WampApplication app, WampSocket clientSocket, WampList request) 
+    public WampCallController(WampApplication app, WampSocket clientSocket, Long callID, String procedureURI, WampCallOptions options, WampList arguments, WampDict argumentsKw) 
     {
         this.app = app;
         this.clientSocket = clientSocket;
-        this.request = request;
-        this.procedureURI = clientSocket.normalizeURI(request.getText(3));
-        this.callOptions = new WampCallOptions((WampDict)request.get(2));
+        this.callID  = callID;
+        this.procedureURI = procedureURI;
+        this.callOptions = options;
+        this.arguments = arguments;
+        this.argumentsKw = argumentsKw;
     }
     
     
@@ -78,8 +79,6 @@ public class WampCallController implements Runnable
     public void run() 
     {
         WampModule module = app.getWampModule(procedureURI, app.getDefaultWampModule());
-
-        callID  = request.getLong(1);
         if(callID == null || callID == 0L) {
             WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CALL, callID, null, WampException.ERROR_PREFIX + ".requestid_unknown", null, null);
             return;
@@ -93,21 +92,8 @@ public class WampCallController implements Runnable
             setResult(new WampList());
             setResultKw(new WampDict());
             
-            arguments = new WampList();
-            argumentsKw = new WampDict();
-            if(request.size()>4) {
-                if (request.get(4) instanceof WampList) {
-                    arguments = (WampList) request.get(4);
-                } else {
-                    arguments.add(request.get(4));
-                }
-            }
-            if(request.size()>5) {
-                argumentsKw = (WampDict)request.get(5);
-            }
-            
             Object response = module.onCall(this, clientSocket, procedureURI, arguments, argumentsKw, callOptions);
-            logger.log(Level.FINE, "Module: onCall " + procedureURI + " result = " + response);
+            if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "WampCallController: " + procedureURI + ": result = " + response);
             
         } catch (Throwable ex) {
             
@@ -141,6 +127,7 @@ public class WampCallController implements Runnable
             done = true;
         }
         
+        clientSocket.removeRpcController(callID);
         clientSocket.removeAsyncCallback(callID);           
     }
     

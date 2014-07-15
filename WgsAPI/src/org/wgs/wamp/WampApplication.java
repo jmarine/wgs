@@ -23,6 +23,7 @@ import org.wgs.security.WampCRA;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampAsyncCallback;
+import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampSubscription;
@@ -71,7 +72,14 @@ public class WampApplication
         this.defaultModule = new WampModule(this);
         //WampServices.registerApplication(path, this);
     }
+
     
+    public String getPath() 
+    {
+        return path;
+    }
+    
+
     public void registerWampModules()
     {
         this.registerWampModule(new WampAPI(this));
@@ -526,13 +534,29 @@ public class WampApplication
         Long callID  = request.getLong(1);
         WampDict cancelOptions = (WampDict)request.get(2);
         WampCallController call = clientSocket.getRpcController(callID);
-        call.cancel(cancelOptions);
+        if(call != null) call.cancel(cancelOptions);
+        else WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CANCEL_CALL, callID, null, "wamp.error.unknown_call", null, null);
     }
     
     private void processCallMessage(WampSocket clientSocket, WampList request) throws Exception
     {
-        WampCallController call = new WampCallController(this, clientSocket, request);
+        Long callID = request.getLong(1);
+        WampCallOptions options = new WampCallOptions((WampDict)request.get(2));
+        String procedureURI = clientSocket.normalizeURI(request.getText(3));
+        WampList arguments = new WampList();
+        WampDict argumentsKw = new WampDict();
+        if(request.size()>4) {
+            if (request.get(4) instanceof WampList) {
+                arguments = (WampList) request.get(4);
+            } else {
+                arguments.add(request.get(4));
+            }
+        }
+        if(request.size()>5) {
+            argumentsKw = (WampDict)request.get(5);
+        }
         
+        WampCallController call = new WampCallController(this, clientSocket, callID, procedureURI, options, arguments, argumentsKw);
         if(executorService == null || call.isRemoteMethod()) {  
             // Ordering guarantees (RPC).
             call.run();
@@ -558,11 +582,13 @@ public class WampApplication
             try {
                 callback.resolve(invocationId,details,result,resultKw);
                 providerSocket.removeAsyncCallback(invocationId);
+                providerSocket.removeRpcController(invocationId);
             } catch(Exception ex) {
                 throw ex;
             }
         }
     }
+
     
     private void processInvocationError(WampSocket providerSocket, WampList request) throws Exception
     {
@@ -575,12 +601,8 @@ public class WampApplication
         WampAsyncCallback callback = providerSocket.getAsyncCallback(invocationId);
         callback.reject(invocationId, options, errorURI, args, argsKw);
         providerSocket.removeAsyncCallback(invocationId);
+        providerSocket.removeRpcController(invocationId);
     }
-    
     
 
-    public String getPath() {
-        return path;
-    }
-    
 }

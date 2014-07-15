@@ -7,6 +7,7 @@
 package org.wgs.wamp.transport.http.websocket;
 
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
@@ -26,7 +27,6 @@ public class WampEndpoint extends Endpoint
     
    
     public WampEndpoint() { 
-        logger.fine("##################### WAMP ENDPOINT CREATED");
     }
     
 
@@ -35,7 +35,7 @@ public class WampEndpoint extends Endpoint
    
     @Override
     public  void onOpen(Session session, EndpointConfig endpointConfig) {
-        logger.fine("##################### Session opened");
+        if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "Session opened ("+ session.getNegotiatedSubprotocol() +"): " + session.getId());
         
         Map<String,Object> configProps = endpointConfig.getUserProperties();
         session.getUserProperties().put(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME,

@@ -23,7 +23,9 @@ import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.rpc.WampAsyncCall;
 import org.wgs.wamp.rpc.WampAsyncCallback;
+import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.WampPublishOptions;
@@ -163,21 +165,33 @@ public class WampClient extends Endpoint
                             WampMethod invocationCall = WampClient.this.rpcHandlers.get(invocationRegistrationId);
                             if(invocationCall != null) {
                                 WampDict resultKw = new WampDict();
+                                Long callID = response.getLong(1);
                                 WampCallOptions options = new WampCallOptions(details);
-                                Object result = invocationCall.invoke(null, clientSocket, arguments, argumentsKw, options, null);
-                                if(result == null) {
-                                    result = new WampList();
-                                } else if(result instanceof WampDict) {
-                                    resultKw = (WampDict)result;
-                                    result = null;
-                                } else if(!(result instanceof WampList)) {
-                                    WampList list = new WampList();
-                                    list.add(result);
-                                    result = list;
+                                WampCallController task = new WampCallController(this, clientSocket, callID, invocationCall.getProcedureURI(), options, arguments, argumentsKw);
+
+                                Object result = invocationCall.invoke(task, clientSocket, arguments, argumentsKw, task.getOptions(), null);
+                                if(result != null && result instanceof WampAsyncCall) {
+                                    WampAsyncCall async = (WampAsyncCall)result;
+                                    //FIXME
+                                    //async.setAsyncCallback(completeCallBack);
+                                    //async.call();
+                                } else {
+                                    
+                                    if(result == null) {
+                                        result = new WampList();
+                                    } else if(result instanceof WampDict) {
+                                        resultKw = (WampDict)result;
+                                        result = null;
+                                    } else if(!(result instanceof WampList)) {
+                                        WampList list = new WampList();
+                                        list.add(result);
+                                        result = list;
+                                    }
+                                    
+                                    WampDict invocationResultOptions = new WampDict();
+                                    WampProtocol.sendInvocationResultMessage(clientSocket, invocationRequestId, invocationResultOptions, (WampList)result, resultKw);
                                 }
 
-                                WampDict invocationResultOptions = new WampDict();
-                                WampProtocol.sendInvocationResultMessage(clientSocket, invocationRequestId, invocationResultOptions, (WampList)result, resultKw);
                             }
 
                         } catch(Exception e) {
