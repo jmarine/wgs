@@ -2,10 +2,9 @@ package org.wgs.wamp.rpc;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.type.WampMatchType;
@@ -19,7 +18,7 @@ public class WampCalleeRegistration
     
     private String methodRegExp;
     
-    private HashMap<Long,WampRemoteMethod> remoteMethods = new HashMap<Long,WampRemoteMethod>();
+    private ConcurrentHashMap<Long,WampRemoteMethod> remoteMethods = new ConcurrentHashMap<Long,WampRemoteMethod>();
     
     
     

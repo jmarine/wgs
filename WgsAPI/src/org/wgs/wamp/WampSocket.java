@@ -71,7 +71,7 @@ public class WampSocket
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
         rpcAsyncCallbacks = new ConcurrentHashMap<Long,WampAsyncCallback>();
-        rpcController = new HashMap<Long,WampCallController>();
+        rpcController = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         rpcRegistrations = new java.util.concurrent.ConcurrentHashMap<Long,WampCalleeRegistration>();
         
         String subprotocol = session.getNegotiatedSubprotocol();
@@ -321,6 +321,11 @@ public class WampSocket
     {
         return rpcController.remove(callID);
     }    
+    
+    public Set<Long> getRpcControllerCallIDs()
+    {
+        return rpcController.keySet();
+    }
     
     
     public String normalizeURI(String curie) {

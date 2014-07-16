@@ -58,6 +58,8 @@ public class WampRemoteMethod extends WampMethod
             
             @Override
             public Void call() throws Exception {
+                
+                task.addRemoteInvocation(invocationId, this);
                 remotePeer.addRpcController(invocationId, task);
                 remotePeer.addAsyncCallback(invocationId, callback);
 

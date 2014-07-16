@@ -408,7 +408,7 @@ public class WampApplication
                 }
             }
             
-            logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
+            logger.log(Level.FINEST, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
         }
         
     }

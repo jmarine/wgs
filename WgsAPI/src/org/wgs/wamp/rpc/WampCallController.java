@@ -1,17 +1,20 @@
 package org.wgs.wamp.rpc;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.WampException;
-import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
 
 
 
@@ -28,10 +31,15 @@ public class WampCallController implements Runnable
     private WampDict argumentsKw;
     private WampCallOptions callOptions;
     private Long callID;
-    private WampList result = null;
-    private WampDict resultKw = null;
+    private WampList result;
+    private WampDict resultKw;
     private boolean cancelled;
     private boolean done;
+
+    private int remoteInvocationResults;
+    private ConcurrentHashMap<Long, WampAsyncCall> remoteInvocations;
+    private WampAsyncCallback remoteInvocationsCompletionCallback;
+    
     
 
     public WampCallController(WampApplication app, WampSocket clientSocket, Long callID, String procedureURI, WampCallOptions options, WampList arguments, WampDict argumentsKw) 
@@ -45,6 +53,49 @@ public class WampCallController implements Runnable
         this.argumentsKw = argumentsKw;
     }
     
+    public synchronized void incrementRemoteInvocationResults()
+    {
+        remoteInvocationResults++;
+    }
+    
+    public void setRemoteInvocationsCompletionCallback(WampAsyncCallback callback)
+    {
+        this.remoteInvocationsCompletionCallback = callback;
+    }
+    
+    public synchronized void addRemoteInvocation(Long remoteInvocationId, WampAsyncCall asyncCall)
+    {
+        if(remoteInvocations == null) { 
+            remoteInvocations = new ConcurrentHashMap<Long, WampAsyncCall>();
+        }
+       
+        remoteInvocations.put(remoteInvocationId, asyncCall);
+    }
+    
+    public synchronized WampAsyncCall removeRemoteInvocation(Long remoteInvocationId)    
+    {
+        if(remoteInvocations != null) { 
+            WampAsyncCall retval = remoteInvocations.remove(remoteInvocationId);
+            if(remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
+                if((result.size() == 1) && (remoteInvocationResults == 1) && (result.get(0) instanceof WampList)) {
+                    result = (WampList)result.get(0);
+                }   
+                remoteInvocationsCompletionCallback.resolve(callID, null, getResult(), getResultKw());
+            }             
+            return retval;
+        } else {
+            return null;
+        }
+    }
+    
+    public Set<Long> getRemoteInvocations()
+    {
+        if(remoteInvocations != null) {
+            return remoteInvocations.keySet();
+        } else {
+            return null;
+        }
+    }
     
     public WampSocket getClientSocket()
     {
@@ -141,9 +192,16 @@ public class WampCallController implements Runnable
                 boolean mayInterruptIfRunning = (cancelMode != null) && !cancelMode.equalsIgnoreCase("skip");
                 future.cancel(mayInterruptIfRunning);
             }
-
+            
             if(asyncCall != null) {
                 asyncCall.cancel(cancelOptions);
+            }
+
+            if(remoteInvocations != null) {
+                for(Long remoteInvocationId : getRemoteInvocations()) {
+                    WampAsyncCall invocation = removeRemoteInvocation(remoteInvocationId);
+                    invocation.cancel(cancelOptions);
+                }            
             }
         }
     }

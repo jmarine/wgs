@@ -174,9 +174,7 @@ public class WampEndpointConfig
         WampSocket clientSocket = sockets.remove(session.getId());
         if(clientSocket != null) {
             application.onWampClose(clientSocket, reason);
-            logger.log(Level.INFO, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
         }
-        
     }
     
 
