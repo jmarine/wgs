@@ -1,6 +1,5 @@
 package org.wgs.wamp.rpc;
 
-import java.util.HashMap;
 import org.wgs.wamp.type.WampMatchType;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
@@ -12,15 +11,10 @@ import org.wgs.wamp.WampSocket;
 public class WampRemoteMethod extends WampMethod
 {
     private Long registrationId;
-    
     private WampSocket remotePeer;
-    
     private WampMatchType matchType;
-    
     private WampDict options;
 
-    private HashMap<Long,WampSocket> pendingInvocations = new HashMap<Long,WampSocket>();
-    
     
     public WampRemoteMethod(Long registrationId, WampSocket remotePeer, WampMatchType matchType, WampDict options)
     {

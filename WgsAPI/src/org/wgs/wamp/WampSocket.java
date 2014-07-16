@@ -73,7 +73,7 @@ public class WampSocket
         rpcAsyncCallbacks = new ConcurrentHashMap<Long,WampAsyncCallback>();
         rpcController = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         rpcRegistrations = new java.util.concurrent.ConcurrentHashMap<Long,WampCalleeRegistration>();
-        
+
         String subprotocol = session.getNegotiatedSubprotocol();
         if(subprotocol != null) {
             switch(subprotocol) {

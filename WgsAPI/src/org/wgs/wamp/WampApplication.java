@@ -374,7 +374,6 @@ public class WampApplication
             case WampProtocol.YIELD:  // INVOCATION RESULT
                 processInvocationResult(clientSocket, request);
                 break;
-
             case WampProtocol.INVOCATION:
                 // TODO: this server implementation only implements the "dealear" role
                 // (it doesn't receive invocatoin messages)

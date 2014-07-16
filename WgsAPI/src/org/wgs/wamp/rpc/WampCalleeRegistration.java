@@ -35,6 +35,7 @@ public class WampCalleeRegistration
         return this.registrationId;
     }    
     
+    
     public String getRegExp()
     {
         return methodRegExp;

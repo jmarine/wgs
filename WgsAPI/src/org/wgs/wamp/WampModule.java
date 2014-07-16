@@ -154,6 +154,7 @@ public class WampModule
             return retval;
             
         } else {
+            
             final WampRealm realm = WampRealm.getRealm(clientSocket.getRealm());
             final ArrayList<WampRemoteMethod> remoteMethods = realm.getRemoteRPCs(clientSocket.getRealm(), methodName, options, clientSocket.getSessionId());
             
