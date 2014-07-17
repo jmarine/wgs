@@ -177,52 +177,54 @@ public class WampModule
                             @Override
                             public Void call() throws Exception {
                                 task.setRemoteInvocationsCompletionCallback(completeCallback);
-                                for(final WampRemoteMethod method : remoteMethods) {
-                                    WampAsyncCall remoteInvocation = (WampAsyncCall)method.invoke(task,clientSocket,args,argsKw,options, new WampAsyncCallback() {
-                                        @Override
-                                        public void resolve(Object... results) {
-                                            Long invocationId = (Long)results[0];
-                                            WampDict details = (WampDict)results[1];
-                                            WampList result = (WampList)results[2];
-                                            WampDict resultKw = (WampDict)results[3];
-                                            
-                                            if(!clientSocket.supportsProgressiveCallResults() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive) {
-                                                synchronized(task) {
-                                                    task.incrementRemoteInvocationResults();
-                                                    task.getResultKw().putAll(resultKw);
-                                                    task.getResult().add(result);
+                                synchronized(task) {
+                                    for(final WampRemoteMethod method : remoteMethods) {
+                                        WampAsyncCall remoteInvocation = (WampAsyncCall)method.invoke(task,clientSocket,args,argsKw,options, new WampAsyncCallback() {
+                                            @Override
+                                            public void resolve(Object... results) {
+                                                Long invocationId = (Long)results[0];
+                                                WampDict details = (WampDict)results[1];
+                                                WampList result = (WampList)results[2];
+                                                WampDict resultKw = (WampDict)results[3];
+
+                                                if(!clientSocket.supportsProgressiveCallResults() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive) {
+                                                    synchronized(task) {
+                                                        task.incrementRemoteInvocationResults();
+                                                        task.getResultKw().putAll(resultKw);
+                                                        task.getResult().add(result);
+                                                    }
+
+                                                } else if(remoteMethods.size() <= 1) {
+                                                    synchronized(task) {
+                                                        task.setResult(result);
+                                                        task.setResultKw(resultKw);
+                                                    }
+                                                } else {
+                                                    completeCallback.progress(invocationId, null, result, resultKw);
                                                 }
-                                                
-                                            } else if(remoteMethods.size() <= 1) {
-                                                synchronized(task) {
-                                                    task.setResult(result);
-                                                    task.setResultKw(resultKw);
-                                                }
-                                            } else {
-                                                completeCallback.progress(invocationId, null, result, resultKw);
+
+                                                task.removeRemoteInvocation(invocationId);
+
                                             }
-                                            
-                                            task.removeRemoteInvocation(invocationId);
 
-                                        }
+                                            @Override
+                                            public void progress(Object... progressParams) {
+                                                completeCallback.progress(progressParams);
+                                            }
 
-                                        @Override
-                                        public void progress(Object... progressParams) {
-                                            completeCallback.progress(progressParams);
-                                        }
+                                            @Override
+                                            public void reject(Object... errors) {
+                                                Long invocationId = (Long)errors[0];
+                                                WampDict details = (WampDict)errors[1];
+                                                String   errorURI = (String)errors[2];
+                                                WampList args = (errors.length > 3) ? (WampList)errors[3] : null;
+                                                WampDict argsKw = (errors.length > 4) ? (WampDict)errors[4] : null;
+                                                WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CALL, task.getCallID(), details, errorURI, args, argsKw);
+                                            }
+                                        });
 
-                                        @Override
-                                        public void reject(Object... errors) {
-                                            Long invocationId = (Long)errors[0];
-                                            WampDict details = (WampDict)errors[1];
-                                            String   errorURI = (String)errors[2];
-                                            WampList args = (errors.length > 3) ? (WampList)errors[3] : null;
-                                            WampDict argsKw = (errors.length > 4) ? (WampDict)errors[4] : null;
-                                            WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CALL, task.getCallID(), details, errorURI, args, argsKw);
-                                        }
-                                    });
-
-                                    remoteInvocation.call();
+                                        remoteInvocation.call();
+                                    }
                                 }
                                 return null;
                             }
