@@ -308,7 +308,7 @@ public class WampApplication
     public void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
     {
         Long requestType = request.getLong(0);
-        //logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
+        if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "RECEIVED MESSAGE TYPE: " + requestType);
 
         switch(requestType.intValue()) {
             case WampProtocol.HELLO:
@@ -532,7 +532,7 @@ public class WampApplication
     {
         Long callID  = request.getLong(1);
         WampDict cancelOptions = (WampDict)request.get(2);
-        WampCallController call = clientSocket.getRpcController(callID);
+        WampCallController call = clientSocket.getCallController(callID);
         if(call != null) call.cancel(cancelOptions);
         else WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CANCEL_CALL, callID, null, "wamp.error.unknown_call", null, null);
     }
@@ -556,6 +556,7 @@ public class WampApplication
         }
         
         WampCallController call = new WampCallController(this, clientSocket, callID, procedureURI, options, arguments, argumentsKw);
+        clientSocket.addCallController(callID, call);
         if(executorService == null || call.isRemoteMethod()) {  
             // Ordering guarantees (RPC).
             call.run();
@@ -571,7 +572,7 @@ public class WampApplication
     private void processInvocationResult(WampSocket providerSocket, WampList request) throws Exception
     {
         Long invocationId = request.getLong(1);
-        WampAsyncCallback callback = providerSocket.getAsyncCallback(invocationId);
+        WampAsyncCallback callback = providerSocket.getInvocationAsyncCallback(invocationId);
         WampDict details = (WampDict)request.get(2);
         WampList result = (request.size() > 3) ? (WampList)request.get(3) : null;
         WampDict resultKw = (request.size() > 4) ? (WampDict)request.get(4) : null;
@@ -580,8 +581,8 @@ public class WampApplication
         } else {
             try {
                 callback.resolve(invocationId,details,result,resultKw);
-                providerSocket.removeAsyncCallback(invocationId);
-                providerSocket.removeRpcController(invocationId);
+                providerSocket.removeInvocationAsyncCallback(invocationId);
+                providerSocket.removeInvocationController(invocationId);
             } catch(Exception ex) {
                 throw ex;
             }
@@ -597,10 +598,10 @@ public class WampApplication
         String errorURI = request.getText(4);
         WampList args = (request.size() > 5) ? (WampList)request.get(5) : null;
         WampDict argsKw = (request.size() > 6) ? (WampDict)request.get(6) : null;
-        WampAsyncCallback callback = providerSocket.getAsyncCallback(invocationId);
+        WampAsyncCallback callback = providerSocket.getInvocationAsyncCallback(invocationId);
         callback.reject(invocationId, options, errorURI, args, argsKw);
-        providerSocket.removeAsyncCallback(invocationId);
-        providerSocket.removeRpcController(invocationId);
+        providerSocket.removeInvocationAsyncCallback(invocationId);
+        providerSocket.removeInvocationController(invocationId);
     }
     
 

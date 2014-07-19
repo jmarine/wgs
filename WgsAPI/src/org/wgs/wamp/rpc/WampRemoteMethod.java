@@ -1,15 +1,19 @@
 package org.wgs.wamp.rpc;
 
-import org.wgs.wamp.type.WampMatchType;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.wgs.wamp.WampProtocol;
+import org.wgs.wamp.WampSocket;
+import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
-import org.wgs.wamp.WampProtocol;
-import org.wgs.wamp.topic.WampBroker;
-import org.wgs.wamp.WampSocket;
+import org.wgs.wamp.type.WampMatchType;
 
 
 public class WampRemoteMethod extends WampMethod
 {
+    private static final Logger logger = Logger.getLogger(WampRemoteMethod.class.getName());    
+    
     private Long registrationId;
     private WampSocket remotePeer;
     private WampMatchType matchType;
@@ -48,14 +52,10 @@ public class WampRemoteMethod extends WampMethod
     {
         final Long invocationId = WampProtocol.newId();
 
-        return new WampAsyncCall(callback) {
+        WampAsyncCall asyncCall = new WampAsyncCall(callback) {
             
             @Override
             public Void call() throws Exception {
-                
-                task.addRemoteInvocation(invocationId, this);
-                remotePeer.addRpcController(invocationId, task);
-                remotePeer.addAsyncCallback(invocationId, callback);
 
                 WampDict invocationOptions = new WampDict();
                 if(matchType != WampMatchType.exact) invocationOptions.put("procedure", task.getProcedureURI());
@@ -67,8 +67,13 @@ public class WampRemoteMethod extends WampMethod
                     invocationOptions.put("authrole", clientSocket.getAuthRole());
                 }
                 
-                //System.out.println("INVOCATION " + remotePeer.getSessionId() + " (" + invocationId + ")");
-                WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
+                if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "CALL " + task.getCallID() + ": SENDING INVOCATION ID: " + invocationId + " (" + clientSocket.getSessionId() + " --> " + remotePeer.getSessionId() + ")");
+                try {
+                    WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
+                    if(!remotePeer.isOpen()) task.removeRemoteInvocation(invocationId);
+                } catch(Exception ex) {
+                    task.removeRemoteInvocation(invocationId);
+                }
                     
                 return null;
             }
@@ -80,7 +85,10 @@ public class WampRemoteMethod extends WampMethod
             
         };
 
-
+        task.addRemoteInvocation(invocationId, asyncCall);
+        remotePeer.addInvocationController(invocationId, task);
+        remotePeer.addInvocationAsyncCallback(invocationId, callback);
+        return asyncCall;
     }    
     
 }

@@ -68,20 +68,35 @@ public class WampCallController implements Runnable
         remoteInvocations.put(remoteInvocationId, asyncCall);
     }
     
-    public synchronized WampAsyncCall removeRemoteInvocation(Long remoteInvocationId)    
+    public synchronized WampAsyncCall getRemoteInvocation(Long remoteInvocationId)    
     {
         if(remoteInvocations != null) { 
-            WampAsyncCall retval = remoteInvocations.remove(remoteInvocationId);
-            if(remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
-                if((result.size() == 1) && (remoteInvocationResults == 1) && (result.get(0) instanceof WampList)) {
-                    result = (WampList)result.get(0);
-                }   
-                remoteInvocationsCompletionCallback.resolve(callID, null, getResult(), getResultKw());
-            }             
+            WampAsyncCall retval = remoteInvocations.get(remoteInvocationId);
             return retval;
         } else {
             return null;
         }
+    }
+        
+    
+    public synchronized WampAsyncCall removeRemoteInvocation(Long remoteInvocationId)    
+    {
+        if(remoteInvocations != null) { 
+            WampAsyncCall retval = remoteInvocations.remove(remoteInvocationId);
+            return retval;
+        } else {
+            return null;
+        }
+    }
+    
+    public synchronized void checkPendingRemoteInvocations()
+    {
+        if(remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
+            if((result.size() == 1) && (remoteInvocationResults == 1) && (result.get(0) instanceof WampList)) {
+                result = (WampList)result.get(0);
+            }   
+            remoteInvocationsCompletionCallback.resolve(callID, null, getResult(), getResultKw());
+        }             
     }
     
     public Set<Long> getRemoteInvocations()
@@ -166,16 +181,19 @@ public class WampCallController implements Runnable
     
     public void sendCallResults()
     {
-        if (isCancelled()) {
-            System.out.println("RPC cancelled by caller: " + callID);
-            WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CALL, callID, null, WampException.ERROR_PREFIX + ".CanceledByCaller", null, null);
+        if(done) {
+            logger.severe("New result from completed CALL ID " + callID);
         } else {
-            WampProtocol.sendResultMessage(clientSocket, callID, null, getResult(), getResultKw());
-            done = true;
+            if (isCancelled()) {
+                System.out.println("RPC cancelled by caller: " + callID);
+                WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CALL, callID, null, WampException.ERROR_PREFIX + ".CanceledByCaller", null, null);
+            } else {
+                WampProtocol.sendResultMessage(clientSocket, callID, null, getResult(), getResultKw());
+                done = true;
+            }
+
+            clientSocket.removeCallController(callID);
         }
-        
-        clientSocket.removeRpcController(callID);
-        clientSocket.removeAsyncCallback(callID);           
     }
     
     
@@ -198,6 +216,7 @@ public class WampCallController implements Runnable
                     WampAsyncCall invocation = removeRemoteInvocation(remoteInvocationId);
                     invocation.cancel(cancelOptions);
                 }            
+                checkPendingRemoteInvocations();                
             }
         }
     }

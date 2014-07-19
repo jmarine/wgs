@@ -59,8 +59,12 @@ public class WampRealm
         if(reg != null) {
             found = true;
             for(WampRemoteMethod remoteMethod : reg.getRemoteMethods(callerId, options)) {
-                if(remoteMethod.hasPartition(partition)) {
-                    retval.add(remoteMethod);
+                if(remoteMethod == null) {
+                    logger.severe("Remote Method registration is null");
+                } else {
+                    if(remoteMethod.hasPartition(partition)) {
+                        retval.add(remoteMethod);
+                    }
                 }
             }
         }
@@ -101,7 +105,7 @@ public class WampRealm
         return names;
     }    
 
-    public void processRegisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
+    public synchronized void processRegisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
         Long requestId = request.getLong(1);
         WampDict options = (WampDict) request.get(2);
@@ -146,7 +150,7 @@ public class WampRealm
     }
 
     
-    public void processUnregisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
+    public synchronized void processUnregisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
         Long requestId = request.getLong(1);
         Long registrationId = request.getLong(2);
@@ -168,9 +172,9 @@ public class WampRealm
                             calleePatterns.remove(name);
                         }
                     }
+                    calleeRegistrationById.remove(registrationId);
                 }
                 
-                calleeRegistrationById.remove(registrationId);
                 if (requestId != null) {
                     WampProtocol.sendUnregisteredMessage(clientSocket, requestId);
                 }

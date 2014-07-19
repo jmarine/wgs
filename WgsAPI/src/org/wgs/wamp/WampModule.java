@@ -84,9 +84,12 @@ public class WampModule
                 WampList result   = (WampList)results[2];
                 WampDict resultKw = (WampDict)results[3];
                 
-                task.setResult(result);
-                task.setResultKw(resultKw);
-                task.sendCallResults();
+                //synchronized(task) 
+                {
+                    task.setResult(result);
+                    task.setResultKw(resultKw);
+                    task.sendCallResults();
+                }
             }
 
             @Override
@@ -102,15 +105,18 @@ public class WampModule
                         details.put("progress", true);
                         WampProtocol.sendResultMessage(clientSocket, task.getCallID(), details, progress, progressKw);
                     } else {
-                        task.getResultKw().putAll(progressKw);
-                        switch(progress.size()) {
-                            case 0: 
-                                break;
-                            case 1:
-                                task.getResult().add(progress.get(0));
-                                break;
-                            default:
-                                task.getResult().add(progress);
+                        //synchronized(task) 
+                        {
+                            task.getResultKw().putAll(progressKw);
+                            switch(progress.size()) {
+                                case 0: 
+                                    break;
+                                case 1:
+                                    task.getResult().add(progress.get(0));
+                                    break;
+                                default:
+                                    task.getResult().add(progress);
+                            }
                         }
                     }
                 }
@@ -177,7 +183,8 @@ public class WampModule
                             @Override
                             public Void call() throws Exception {
                                 task.setRemoteInvocationsCompletionCallback(completeCallback);
-                                synchronized(task) {
+                                //synchronized(task) 
+                                {
                                     for(final WampRemoteMethod method : remoteMethods) {
                                         WampAsyncCall remoteInvocation = (WampAsyncCall)method.invoke(task,clientSocket,args,argsKw,options, new WampAsyncCallback() {
                                             @Override
@@ -203,8 +210,10 @@ public class WampModule
                                                     completeCallback.progress(invocationId, null, result, resultKw);
                                                 }
 
-                                                task.removeRemoteInvocation(invocationId);
-
+                                                synchronized(task) {
+                                                    task.removeRemoteInvocation(invocationId);
+                                                    task.checkPendingRemoteInvocations();
+                                                }
                                             }
 
                                             @Override
@@ -223,8 +232,15 @@ public class WampModule
                                             }
                                         });
 
-                                        remoteInvocation.call();
+                                        //remoteInvocation.call();
                                     }
+                                    
+                                    for(Long invocationId : task.getRemoteInvocations()) {
+                                        WampAsyncCall remoteInvocation = task.getRemoteInvocation(invocationId);
+                                        if(remoteInvocation != null) remoteInvocation.call();
+                                    }
+                                    
+                                    task.checkPendingRemoteInvocations();
                                 }
                                 return null;
                             }
@@ -305,9 +321,14 @@ public class WampModule
             throw new WampException(null, "wamp.error.registration_not_found", null, null);
         } else {
             
-            for(Long callId : clientSocket.getRpcControllerCallIDs()) {
-                WampCallController rpc = clientSocket.removeRpcController(callId);
-                rpc.removeRemoteInvocation(callId);
+            for(Long invocationId : clientSocket.getInvocationIDs()) {
+                WampCallController task = clientSocket.removeInvocationController(invocationId);
+                // task.cancel();
+                //synchronized(task) 
+                {
+                    task.removeRemoteInvocation(invocationId);
+                    task.checkPendingRemoteInvocations();
+                }
             }
             
             clientSocket.removeRpcRegistration(registrationId);

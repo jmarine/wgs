@@ -35,7 +35,7 @@ public class WampEndpoint extends Endpoint
    
     @Override
     public  void onOpen(Session session, EndpointConfig endpointConfig) {
-        if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "Session opened ("+ session.getNegotiatedSubprotocol() +"): " + session.getId());
+        if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "Session opened ("+ session.getNegotiatedSubprotocol() +"): " + session.getId());
         
         Map<String,Object> configProps = endpointConfig.getUserProperties();
         session.getUserProperties().put(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME,
@@ -50,17 +50,17 @@ public class WampEndpoint extends Endpoint
     @Override
     public void onClose(Session session, CloseReason reason) 
     {
+        logger.log(Level.FINEST, "Session closed: " + session);
         super.onClose(session, reason);
         wampEndpointConfig.onWampClose(session, reason);
-        logger.fine("##################### Session closed: " + session);
     }
     
     
     @Override
     public void onError(Session session, Throwable thr) 
     {
+         logger.log(Level.FINEST, "Session error");
          super.onError(session, thr);        
-         logger.fine("##################### Session error");
          onClose(session, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "wamp.close.error"));
     }    
 

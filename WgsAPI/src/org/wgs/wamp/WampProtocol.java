@@ -176,9 +176,7 @@ public class WampProtocol
             response.add(GOODBYE);
             response.add(details);
             response.add(reason);
-            
-            try { sendWampMessage(clientSocket, response); } 
-            catch(Exception ex) { /* i.e: closed socket */ }
+            sendWampMessage(clientSocket, response);
         }
     }
     

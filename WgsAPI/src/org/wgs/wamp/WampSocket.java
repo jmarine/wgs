@@ -39,8 +39,9 @@ public class WampSocket
     private Long    sessionId;
     private Map<String,String> prefixes;
     private Map<Long,WampSubscription> subscriptions;
-    private Map<Long,WampCallController> rpcController;
-    private Map<Long,WampAsyncCallback> rpcAsyncCallbacks;
+    private Map<Long,WampCallController> callControllers;
+    private Map<Long,WampCallController> invocationControllers;
+    private Map<Long,WampAsyncCallback> invocationAsyncCallbacks;
     private Map<Long,WampCalleeRegistration> rpcRegistrations;
     private WampConnectionState state;
     private Principal principal;
@@ -70,8 +71,9 @@ public class WampSocket
         sessionId   = WampProtocol.newId();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
-        rpcAsyncCallbacks = new ConcurrentHashMap<Long,WampAsyncCallback>();
-        rpcController = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
+        invocationAsyncCallbacks = new ConcurrentHashMap<Long,WampAsyncCallback>();
+        callControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
+        invocationControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         rpcRegistrations = new java.util.concurrent.ConcurrentHashMap<Long,WampCalleeRegistration>();
 
         String subprotocol = session.getNegotiatedSubprotocol();
@@ -291,40 +293,56 @@ public class WampSocket
     }
 
     
-    public void addAsyncCallback(Long callID, WampAsyncCallback rpcAsyncCallback)
+    public void addInvocationAsyncCallback(Long callID, WampAsyncCallback rpcAsyncCallback)
     {
-        rpcAsyncCallbacks.put(callID, rpcAsyncCallback);
+        invocationAsyncCallbacks.put(callID, rpcAsyncCallback);
     }
     
-    public WampAsyncCallback getAsyncCallback(Long callID)
+    public WampAsyncCallback getInvocationAsyncCallback(Long callID)
     {
-        return rpcAsyncCallbacks.get(callID);
+        return invocationAsyncCallbacks.get(callID);
     }    
     
-    public WampAsyncCallback removeAsyncCallback(Long callID) 
+    public WampAsyncCallback removeInvocationAsyncCallback(Long callID) 
     {
-        return rpcAsyncCallbacks.remove(callID);
+        return invocationAsyncCallbacks.remove(callID);
     }
     
     
-    public void addRpcController(Long callID, WampCallController controller)
+    public void addCallController(Long callID, WampCallController controller)
     {
-        rpcController.put(callID, controller);
+        callControllers.put(callID, controller);
     }
     
-    public WampCallController getRpcController(Long callID)
+    public WampCallController getCallController(Long callID)
     {
-        return rpcController.get(callID);
+        return callControllers.get(callID);
     }    
     
-    public WampCallController removeRpcController(Long callID) 
+    public WampCallController removeCallController(Long callID) 
     {
-        return rpcController.remove(callID);
+        return callControllers.remove(callID);
     }    
     
-    public Set<Long> getRpcControllerCallIDs()
+
+    public void addInvocationController(Long callID, WampCallController controller)
     {
-        return rpcController.keySet();
+        invocationControllers.put(callID, controller);
+    }
+    
+    public WampCallController getInvocationController(Long callID)
+    {
+        return invocationControllers.get(callID);
+    }    
+    
+    public WampCallController removeInvocationController(Long callID) 
+    {
+        return invocationControllers.remove(callID);
+    }    
+    
+    public Set<Long> getInvocationIDs()
+    {
+        return invocationControllers.keySet();
     }
     
     
@@ -353,8 +371,8 @@ public class WampSocket
                         session.getBasicRemote().sendObject(msg);
                 }
             }
+
         } catch(Exception e) {
-            logger.log(Level.FINE, "Removing wamp client '" + sessionId + "': " + e.getMessage(), e);
             close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "wamp.close.error"));
         }
     }
@@ -368,7 +386,7 @@ public class WampSocket
             this.connected = false;
             
             try { session.close(reason); } 
-            catch(Exception ex) { }
+            catch(Exception ex) { }        
         }
         
     }

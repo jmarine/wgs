@@ -78,19 +78,19 @@ public class WampClient extends Endpoint
             public void registerWampModules() { }            
             
             @Override
-            public void onWampMessage(WampSocket clientSocket, WampList response) throws Exception
+            public void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
             {
-                Long responseType = response.getLong(0);
-                //logger.log(Level.INFO, "Request type = {0}", new Object[]{requestType});
+                Long requestType = request.getLong(0);
+                if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "RECEIVED MESSAGE TYPE: " + requestType);
 
-                switch(responseType.intValue()) {
+                switch(requestType.intValue()) {
                     case WampProtocol.ABORT:
                         removePendingMessage(null);
                         break;
                         
                     case WampProtocol.CHALLENGE:
-                        String authMethod = response.getText(1);
-                        WampDict challengeDetails = (WampDict)response.get(2);
+                        String authMethod = request.getText(1);
+                        WampDict challengeDetails = (WampDict)request.get(2);
                         
                         onWampChallenge(clientSocket, authMethod, challengeDetails);
                         
@@ -105,28 +105,32 @@ public class WampClient extends Endpoint
                         break;
                         
                     case WampProtocol.WELCOME:
-                        WampDict welcomeDetails = (response.size() > 2) ? (WampDict)response.get(2) : null;
-                        clientSocket.setSessionId(response.getLong(1));
+                        WampDict welcomeDetails = (request.size() > 2) ? (WampDict)request.get(2) : null;
+                        clientSocket.setSessionId(request.getLong(1));
                         onWampWelcome(clientSocket, welcomeDetails);
                         removePendingMessage(null);
                         break;     
                         
                     case WampProtocol.CALL_RESULT:
-                        Long callResponseId = response.getLong(1);
+                        Long callResponseId = request.getLong(1);
                         WampList callRequestList = WampClient.this.pendingRequests.get(callResponseId);
-                        WampAsyncCallback callback = (WampAsyncCallback)callRequestList.get(0);
-                        WampDict callResultDetails = (WampDict)response.get(2);
-                        WampList callResult = (response.size() > 3) ? (WampList)response.get(3) : null;
-                        WampDict callResultKw = (response.size() > 4) ? (WampDict)response.get(4) : null;
-                        if(callback != null) callback.resolve(callResponseId, callResultDetails, callResult, callResultKw);
-                        if(callResultDetails == null || !callResultDetails.has("receive_progress") || !callResultDetails.getBoolean("receive_progress") ) {
-                            removePendingMessage(callResponseId);
+                        if(callRequestList == null) {
+                            System.out.println("Unexpected CALL_RESULT");
+                        } else {
+                            WampAsyncCallback callback = (WampAsyncCallback)callRequestList.get(0);
+                            WampDict callResultDetails = (WampDict)request.get(2);
+                            WampList callResult = (request.size() > 3) ? (WampList)request.get(3) : null;
+                            WampDict callResultKw = (request.size() > 4) ? (WampDict)request.get(4) : null;
+                            if(callback != null) callback.resolve(callResponseId, callResultDetails, callResult, callResultKw);
+                            if(callResultDetails == null || !callResultDetails.has("receive_progress") || !callResultDetails.getBoolean("receive_progress") ) {
+                                removePendingMessage(callResponseId);
+                            }
                         }
                         break;
                         
                     case WampProtocol.REGISTERED:
-                        Long registeredRequestId = response.getLong(1);
-                        Long registrationId = response.getLong(2);
+                        Long registeredRequestId = request.getLong(1);
+                        Long registrationId = request.getLong(2);
                         WampList registrationParams = WampClient.this.pendingRequests.get(registeredRequestId);
                         if(registrationParams != null) {
                             WampAsyncCallback registrationPromise = (WampAsyncCallback)registrationParams.get(0);
@@ -141,10 +145,10 @@ public class WampClient extends Endpoint
                         break;
                         
                     case WampProtocol.UNREGISTERED:
-                        Long unregisteredRequestId = response.getLong(1);
+                        Long unregisteredRequestId = request.getLong(1);
                         WampList unregistrationParams = WampClient.this.pendingRequests.get(unregisteredRequestId);
                         if(unregistrationParams != null) {
-                            Long unregistrationId = response.getLong(2);
+                            Long unregistrationId = request.getLong(2);
                             WampAsyncCallback unregistrationPromise = (WampAsyncCallback)unregistrationParams.get(0);
                             String procedureURI = unregistrationParams.getText(1);
                             if(unregistrationPromise != null) unregistrationPromise.resolve(unregisteredRequestId,unregistrationId);
@@ -156,16 +160,17 @@ public class WampClient extends Endpoint
                         break;       
                         
                     case WampProtocol.INVOCATION:
-                        Long invocationRequestId = response.getLong(1);
+                        Long invocationRequestId = request.getLong(1);
+                        logger.log(Level.FINEST, "RECEIVED INVOCATION ID: " + invocationRequestId);
                         try {
-                            Long invocationRegistrationId = response.getLong(2);
-                            WampDict details = (WampDict)response.get(3);
-                            WampList arguments = (response.size() > 4) ? (WampList)response.get(4) : null;
-                            WampDict argumentsKw = (response.size() > 5) ? (WampDict)response.get(5) : null;
+                            Long invocationRegistrationId = request.getLong(2);
+                            WampDict details = (WampDict)request.get(3);
+                            WampList arguments = (request.size() > 4) ? (WampList)request.get(4) : null;
+                            WampDict argumentsKw = (request.size() > 5) ? (WampDict)request.get(5) : null;
                             WampMethod invocationCall = WampClient.this.rpcHandlers.get(invocationRegistrationId);
                             if(invocationCall != null) {
                                 WampDict resultKw = new WampDict();
-                                Long callID = response.getLong(1);
+                                Long callID = request.getLong(1);
                                 WampCallOptions options = new WampCallOptions(details);
                                 WampCallController task = new WampCallController(this, clientSocket, callID, invocationCall.getProcedureURI(), options, arguments, argumentsKw);
 
@@ -201,8 +206,8 @@ public class WampClient extends Endpoint
                         break;
                         
                     case WampProtocol.PUBLISHED:
-                        Long publishedRequestId = response.getLong(1);
-                        Long publishedPublicationId = response.getLong(2);
+                        Long publishedRequestId = request.getLong(1);
+                        Long publishedPublicationId = request.getLong(2);
                         WampList publishedParams = WampClient.this.pendingRequests.get(publishedRequestId);
                         if(publishedParams != null) {    
                             WampAsyncCallback publishedPromise = (WampAsyncCallback)publishedParams.get(0);
@@ -212,10 +217,10 @@ public class WampClient extends Endpoint
                         break;
                         
                     case WampProtocol.SUBSCRIBED:
-                        Long subscribedRequestId = response.getLong(1);
+                        Long subscribedRequestId = request.getLong(1);
                         WampList subscribedParams = WampClient.this.pendingRequests.get(subscribedRequestId);
                         if(subscribedParams != null) {
-                            Long subscriptionId = response.getLong(2);
+                            Long subscriptionId = request.getLong(2);
                             WampAsyncCallback subscribedPromise = (WampAsyncCallback)subscribedParams.get(0);
                             String topicAndOptionsKey = subscribedParams.getText(1);
                             WampSubscriptionOptions options = (WampSubscriptionOptions)subscribedParams.get(2);
@@ -227,7 +232,7 @@ public class WampClient extends Endpoint
                         break;
                         
                     case WampProtocol.UNSUBSCRIBED:
-                        Long unsubscribedRequestId = response.getLong(1);
+                        Long unsubscribedRequestId = request.getLong(1);
                         WampList unsubscribedParams = WampClient.this.pendingRequests.get(unsubscribedRequestId);
                         if(unsubscribedParams != null) {
                             WampAsyncCallback unsubscribedPromise = (WampAsyncCallback)unsubscribedParams.get(0);
@@ -240,11 +245,11 @@ public class WampClient extends Endpoint
                         break;
                         
                     case WampProtocol.ERROR:
-                        Long errorResponseId = response.getLong(1);
+                        Long errorResponseId = request.getLong(1);
                         removePendingMessage(errorResponseId);
                         break;
                     default:
-                        super.onWampMessage(clientSocket, response);
+                        super.onWampMessage(clientSocket, request);
                 }
                 
             }

@@ -75,7 +75,8 @@ public class WampCalleeRegistration
 
         for (Long sid : eligible) {
             if(!excluded.contains(sid)) {
-                retval.add(remoteMethods.get(sid));
+                WampRemoteMethod method = remoteMethods.get(sid);
+                if(method != null) retval.add(method);
             }
         }
         
