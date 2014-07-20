@@ -210,10 +210,7 @@ public class WampModule
                                                     completeCallback.progress(invocationId, null, result, resultKw);
                                                 }
 
-                                                synchronized(task) {
-                                                    task.removeRemoteInvocation(invocationId);
-                                                    task.checkPendingRemoteInvocations();
-                                                }
+                                                task.removeRemoteInvocation(invocationId);
                                             }
 
                                             @Override
@@ -239,8 +236,7 @@ public class WampModule
                                         WampAsyncCall remoteInvocation = task.getRemoteInvocation(invocationId);
                                         if(remoteInvocation != null) remoteInvocation.call();
                                     }
-                                    
-                                    task.checkPendingRemoteInvocations();
+
                                 }
                                 return null;
                             }
@@ -321,19 +317,18 @@ public class WampModule
             throw new WampException(null, "wamp.error.registration_not_found", null, null);
         } else {
             
-            for(Long invocationId : clientSocket.getInvocationIDs()) {
-                WampCallController task = clientSocket.removeInvocationController(invocationId);
-                // task.cancel();
-                //synchronized(task) 
-                {
+            synchronized(registration) {
+                clientSocket.removeRpcRegistration(registrationId);
+                registration.removeRemoteMethod(clientSocket);
+                //rpcsByName.remove(method.getProcedureURI());
+            
+                for(Long invocationId : clientSocket.getInvocationIDs()) {
+                    WampCallController task = clientSocket.removeInvocationController(invocationId);
+                    WampProtocol.sendErrorMessage(clientSocket, WampProtocol.INVOCATION, invocationId, null, null, null, null); 
                     task.removeRemoteInvocation(invocationId);
-                    task.checkPendingRemoteInvocations();
                 }
             }
             
-            clientSocket.removeRpcRegistration(registrationId);
-            registration.removeRemoteMethod(clientSocket);
-            //rpcsByName.remove(method.getProcedureURI());
         }
     }    
     

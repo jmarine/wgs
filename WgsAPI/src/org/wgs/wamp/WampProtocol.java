@@ -148,10 +148,11 @@ public class WampProtocol
     
     public static void sendAuthenticationMessage(WampSocket clientSocket, String signature, WampDict extra) 
     {
+        if(extra == null || extra.size() == 0) extra = new WampDict();
         WampList response = new WampList();
         response.add(AUTHENTICATE);
         response.add(signature);
-        if(extra != null && extra.size() > 0) response.add(extra);
+        response.add(extra);
         sendWampMessage(clientSocket, response);
     }
 

@@ -1,5 +1,7 @@
 package org.wgs.wamp.client;
 
+import java.security.MessageDigest;
+import org.wgs.util.HexUtils;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
@@ -18,8 +20,11 @@ import org.wgs.wamp.type.WampMatchType;
 @WampModuleName("com.myapp")
 public class WampClientTest extends WampModule implements Runnable
 {
-    private static String user = null;
-    private static String password = null;
+    private static String  url = "ws://localhost:8080/wgs"; 
+    private static String  realm = "localhost";
+    private static String  user = null;
+    private static String  password = null;
+    private static boolean digestPasswordMD5 = true;
 
     
     private WampClient client;
@@ -34,7 +39,7 @@ public class WampClientTest extends WampModule implements Runnable
     @WampRPC(name = "add2")  // implicit RPC registration
     public Long add2(Long p1, Long p2, WampCallOptions options, WampCallController task) 
     {
-        System.out.println("Received call: " + task.getProcedureURI() + ": authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole() + ", caller session id=" + options.getCallerId());
+        System.out.println("Received invocation: " + task.getProcedureURI() + ": authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole() + ", caller session id=" + options.getCallerId() + ", invocation id=" + task.getCallID());
         return p1+p2;
     }   
     
@@ -51,48 +56,47 @@ public class WampClientTest extends WampModule implements Runnable
     public void run()
     {
         try {
-          int repeats = 1000;
+            int repeats = 1000;
            
-          client.connect();
+            client.connect();
 
-          while(true) {
             System.out.println("Login");
-            client.hello("localhost", user, password);
-            client.waitResponses();
             
+            client.hello(realm, user, password, digestPasswordMD5);
+            client.waitResponses();
+
             doCalls(repeats);
             client.waitResponses();
-            
+
             System.out.println("Publication without subscription.");
             doPublications(repeats);
             client.waitResponses();
-            
+
             System.out.println("Subscription");
             WampSubscriptionOptions subOpt = new WampSubscriptionOptions(null);
             subOpt.setMatchType(WampMatchType.prefix);
             client.subscribe("myapp", subOpt, null);
             client.waitResponses();
-            
+
             System.out.println("Publication with subscription.");
             doPublications(repeats);
             client.waitResponses();
-            
+
             client.unsubscribe("myapp", subOpt, null);
             client.waitResponses();
             System.out.println("Publication after unsubscription.");
             doPublications(repeats);
             client.waitResponses();
-
-            
+             
+            System.out.println("Closing session");
             client.goodbye("wamp.close.normal");
             client.waitResponses();
-          }
-            
-            
-          // client.close();  // FIXME: decrease server-side BARRIERs of pending invocation results from this client RPCs.
 
+            System.out.println("Disconnection");
+            client.close();
             
         } catch(Exception ex) {
+
             System.err.println("Error: " + ex.getMessage());
         }
     }
@@ -159,17 +163,16 @@ public class WampClientTest extends WampModule implements Runnable
         
     }
         
-
     
     public static final void main(String args[]) throws Exception
     {
-        WampClient client = new WampClient("ws://localhost:8080/wgs");
+        WampClient client = new WampClient(url);
         client.setPreferredWampEncoding(WampEncoding.JSON);
         
         WampClientTest test = new WampClientTest(client);
-        test.run();
+        while(true) test.run();
     }
-    
 
+    
     
 }

@@ -67,7 +67,7 @@ public class WampCRA
         socket.getSessionData().put("_clientPendingAuthSig", sig);
         
         WampDict challenge = new WampDict();
-        challenge.put("authchallenge", infoser);
+        challenge.put("challenge", infoser);
         if(passwordSaltParams != null) challenge.putAll(passwordSaltParams);
         return challenge;
     }

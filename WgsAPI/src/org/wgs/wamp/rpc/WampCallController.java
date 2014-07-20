@@ -83,21 +83,18 @@ public class WampCallController implements Runnable
     {
         if(remoteInvocations != null) { 
             WampAsyncCall retval = remoteInvocations.remove(remoteInvocationId);
+            if(!done && remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
+                if((result.size() == 1) && (remoteInvocationResults == 1) && (result.get(0) instanceof WampList)) {
+                    result = (WampList)result.get(0);
+                }   
+                remoteInvocationsCompletionCallback.resolve(callID, null, getResult(), getResultKw());
+            }              
             return retval;
         } else {
             return null;
         }
     }
     
-    public synchronized void checkPendingRemoteInvocations()
-    {
-        if(remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
-            if((result.size() == 1) && (remoteInvocationResults == 1) && (result.get(0) instanceof WampList)) {
-                result = (WampList)result.get(0);
-            }   
-            remoteInvocationsCompletionCallback.resolve(callID, null, getResult(), getResultKw());
-        }             
-    }
     
     public Set<Long> getRemoteInvocations()
     {
@@ -216,7 +213,6 @@ public class WampCallController implements Runnable
                     WampAsyncCall invocation = removeRemoteInvocation(remoteInvocationId);
                     invocation.cancel(cancelOptions);
                 }            
-                checkPendingRemoteInvocations();                
             }
         }
     }

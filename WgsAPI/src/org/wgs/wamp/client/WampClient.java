@@ -3,7 +3,6 @@ package org.wgs.wamp.client;
 
 import java.net.URI;
 import java.security.MessageDigest;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -14,7 +13,6 @@ import javax.websocket.CloseReason;
 import javax.websocket.ContainerProvider;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
 import javax.websocket.WebSocketContainer;
 import org.wgs.security.WampCRA;
 import org.wgs.util.HexUtils;
@@ -34,7 +32,6 @@ import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampMatchType;
-import org.wgs.wamp.type.WampObject;
 
 
 public class WampClient extends Endpoint 
@@ -95,10 +92,8 @@ public class WampClient extends Endpoint
                         onWampChallenge(clientSocket, authMethod, challengeDetails);
                         
                         if(authMethod.equalsIgnoreCase("wampcra") && WampClient.this.password != null) {
-                            MessageDigest md5 = MessageDigest.getInstance("MD5");
-                            String passwordMD5 = HexUtils.byteArrayToHexString(md5.digest(WampClient.this.password.getBytes("UTF-8")));
-                            String challenge = challengeDetails.getText("authchallenge");
-                            String signature = WampCRA.authSignature(challenge, passwordMD5, challengeDetails);
+                            String challenge = challengeDetails.getText("challenge");
+                            String signature = WampCRA.authSignature(challenge, WampClient.this.password, challengeDetails);
                             WampProtocol.sendAuthenticationMessage(clientSocket, signature, null);                            
                         }
                         
@@ -356,7 +351,7 @@ public class WampClient extends Endpoint
         WampProtocol.sendGoodbyeMessage(clientSocket, reason, null);
     }
     
-    public void hello(String realm, String user, String password)    
+    public void hello(String realm, String user, String password, boolean digestPasswordMD5) throws Exception
     {
         WampDict authDetails = new WampDict();
         WampList authMethods = new WampList();
@@ -368,7 +363,13 @@ public class WampClient extends Endpoint
         authMethods.add("anonymous");
         authDetails.put("authmethods", authMethods);
 
-        this.password = password;
+        if(password != null && digestPasswordMD5) {
+            MessageDigest md5 = MessageDigest.getInstance("MD5");
+            this.password = HexUtils.byteArrayToHexString(md5.digest(password.getBytes("UTF-8")));
+        } else {
+            this.password = password;
+        }
+        
         hello(realm, authDetails);
     }
     
