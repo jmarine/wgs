@@ -97,7 +97,10 @@ public class WampSubscription
         if(realm == null) {
             return sockets.keySet();
         } else {
-            return new HashSet<Long>(sessionIdsByRealm.get(realm));
+            Set<Long> set = sessionIdsByRealm.get(realm);
+            if(set == null) set = new HashSet<Long>();
+            else set = new HashSet<Long>(set);
+            return set;
         }
     }
     
