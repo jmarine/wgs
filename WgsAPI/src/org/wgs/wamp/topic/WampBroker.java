@@ -225,7 +225,7 @@ public class WampBroker
     public static Collection<WampTopic> unsubscribeClientFromTopic(WampApplication app, WampSocket clientSocket, Long requestId, Long subscriptionId)
     {
         Collection<WampTopic> matchingTopics = null;
-        WampSubscription subscription = clientSocket.removeSubscription(subscriptionId);
+        WampSubscription subscription = clientSocket.getSubscription(subscriptionId);
         if(subscription == null) {
             if(requestId != null) WampProtocol.sendErrorMessage(clientSocket, WampProtocol.UNSUBSCRIBE, requestId, null, "wamp.error.no_such_subscription", null, null);            
         } else {
@@ -243,6 +243,7 @@ public class WampBroker
                 }
             }
 
+            clientSocket.removeSubscription(subscriptionId);
             if(requestId != null) WampProtocol.sendUnsubscribedMessage(clientSocket, requestId);
         }
         
