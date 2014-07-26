@@ -9,6 +9,7 @@ public class WampException extends Exception
     public static final String ERROR_PREFIX   = "wamp.error";
     public static final String NOT_AUTHORIZED = "wamp.error.not_authorized";
     
+    private Long     invocationId;
     private String   errorURI;
     private WampDict details;
     private WampList args;
@@ -17,11 +18,23 @@ public class WampException extends Exception
     
     public WampException(WampDict errorDetails, String errorURI, WampList args, WampDict argsKw) 
     {
+        this(null, errorDetails, errorURI, args, argsKw);
+    }
+
+    public WampException(Long invocationId, WampDict errorDetails, String errorURI, WampList args, WampDict argsKw) 
+    {
         super(errorURI);
+        this.invocationId = invocationId;
         this.errorURI = errorURI;
         this.details = errorDetails;
         this.args = args;
         this.argsKw = argsKw;
+    }
+    
+    
+    public Long getInvocationId()
+    {
+        return invocationId;
     }
     
     

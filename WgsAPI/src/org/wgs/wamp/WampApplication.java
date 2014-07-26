@@ -573,14 +573,15 @@ public class WampApplication
     {
         Long invocationId = request.getLong(1);
         WampAsyncCallback callback = providerSocket.getInvocationAsyncCallback(invocationId);
-        WampDict details = (WampDict)request.get(2);
-        WampList result = (request.size() > 3) ? (WampList)request.get(3) : null;
-        WampDict resultKw = (request.size() > 4) ? (WampDict)request.get(4) : null;
-        if(details != null && details.has("progress") && details.getBoolean("progress")) {
-            callback.progress(invocationId,details,result, resultKw);
+        WampResult result = new WampResult(invocationId);
+        result.setDetails((WampDict)request.get(2));
+        result.setArgs((request.size() > 3) ? (WampList)request.get(3) : null);
+        result.setArgsKw((request.size() > 4) ? (WampDict)request.get(4) : null);
+        if(result.isProgressResult()) {
+            callback.progress(result);
         } else {
             try {
-                callback.resolve(invocationId,details,result,resultKw);
+                callback.resolve(result);
                 providerSocket.removeInvocationAsyncCallback(invocationId);
                 providerSocket.removeInvocationController(invocationId);
             } catch(Exception ex) {
@@ -598,8 +599,9 @@ public class WampApplication
         String errorURI = request.getText(4);
         WampList args = (request.size() > 5) ? (WampList)request.get(5) : null;
         WampDict argsKw = (request.size() > 6) ? (WampDict)request.get(6) : null;
+        WampException error = new WampException(invocationId, options, errorURI, args, argsKw);
         WampAsyncCallback callback = providerSocket.getInvocationAsyncCallback(invocationId);
-        callback.reject(invocationId, options, errorURI, args, argsKw);
+        callback.reject(error);
         providerSocket.removeInvocationAsyncCallback(invocationId);
         providerSocket.removeInvocationController(invocationId);
     }

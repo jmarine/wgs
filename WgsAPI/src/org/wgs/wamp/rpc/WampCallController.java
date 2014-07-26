@@ -9,6 +9,7 @@ import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
+import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
@@ -87,7 +88,11 @@ public class WampCallController implements Runnable
                 if((result.size() == 1) && (remoteInvocationResults == 1) && (result.get(0) instanceof WampList)) {
                     result = (WampList)result.get(0);
                 }   
-                remoteInvocationsCompletionCallback.resolve(callID, null, getResult(), getResultKw());
+                
+                WampResult wampResult = new WampResult(callID);
+                wampResult.setArgs(getResult());
+                wampResult.setArgsKw(getResultKw());
+                remoteInvocationsCompletionCallback.resolve(wampResult);
             }              
             return retval;
         } else {

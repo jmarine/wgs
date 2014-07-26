@@ -1,11 +1,11 @@
 package org.wgs.wamp.rpc;
 
 
-public interface WampAsyncCallback 
+public interface WampAsyncCallback<T> 
 {
-    void resolve(Object ... results);
+    void resolve(T obj);
     
-    void progress(Object ... progress);
+    void progress(T obj);
     
-    void reject(Object ... errors);
+    void reject(Throwable th);
 }
