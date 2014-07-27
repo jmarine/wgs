@@ -91,7 +91,7 @@ public class WampClientTest extends WampModule implements Runnable
             System.out.println("Publication after unsubscription.");
             doPublications(repeats);
             client.waitResponses();
-             
+            
             System.out.println("Closing session");
             client.goodbye("wamp.close.normal");
             client.waitResponses();

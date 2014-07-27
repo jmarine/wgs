@@ -151,6 +151,7 @@ public class WampModule
                     default:
                         final Deferred<WampResult,WampException,WampResult> deferred = new DeferredObject<WampResult,WampException,WampResult>();
 
+                        task.setPendingInvocationCount(remoteMethods.size());
                         task.setRemoteInvocationsCompletionCallback(deferred);
                         //synchronized(task) 
                         {

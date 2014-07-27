@@ -84,12 +84,12 @@ public class WampRemoteMethod extends WampMethod
 
         if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "CALL " + task.getCallID() + ": SENDING INVOCATION ID: " + invocationId + " (" + clientSocket.getSessionId() + " --> " + remotePeer.getSessionId() + ")");
         try {
+            task.decrementPendingInvocationCount();
             WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
-            if(!remotePeer.isOpen()) task.removeRemoteInvocation(invocationId);
+            if(!remotePeer.isOpen()) throw new Exception();
         } catch(Exception ex) {
             task.removeRemoteInvocation(invocationId);
         }
-                    
 
         return promise;
     }    

@@ -38,6 +38,7 @@ public class WampCallController implements Runnable
     private boolean cancelled;
     private boolean done;
 
+    private int pendingInvocationCount;
     private int remoteInvocationResults;
     private ConcurrentHashMap<Long, Deferred<WampResult,WampException,WampResult>> remoteInvocations;
     private Deferred remoteInvocationsCompletionCallback;
@@ -59,6 +60,16 @@ public class WampCallController implements Runnable
     {
         remoteInvocationResults++;
     }
+    
+    public synchronized void setPendingInvocationCount(int count)
+    {
+        this.pendingInvocationCount = count;
+    }    
+    
+    public synchronized void decrementPendingInvocationCount()
+    {
+        pendingInvocationCount--;
+    }    
     
     public void setRemoteInvocationsCompletionCallback(Deferred callback)
     {
@@ -89,7 +100,7 @@ public class WampCallController implements Runnable
     {
         if(remoteInvocations != null) { 
             Deferred<WampResult,WampException,WampResult> retval = remoteInvocations.remove(remoteInvocationId);
-            if(!done && remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
+            if(!done && pendingInvocationCount <= 0 && remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
                 if((result.size() == 1) && (remoteInvocationResults == 1) && (result.get(0) instanceof WampList)) {
                     result = (WampList)result.get(0);
                 }   
