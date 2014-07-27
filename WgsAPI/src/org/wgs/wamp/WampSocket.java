@@ -13,10 +13,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
+import org.jdeferred.Deferred;
 import org.wgs.security.User;
 import org.wgs.security.WampCRA;
 import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.rpc.WampAsyncCallback;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.topic.WampBroker;
@@ -41,7 +41,7 @@ public class WampSocket
     private Map<Long,WampSubscription> subscriptions;
     private Map<Long,WampCallController> callControllers;
     private Map<Long,WampCallController> invocationControllers;
-    private Map<Long,WampAsyncCallback> invocationAsyncCallbacks;
+    private Map<Long,Deferred> invocationAsyncCallbacks;
     private Map<Long,WampCalleeRegistration> rpcRegistrations;
     private WampConnectionState state;
     private Principal principal;
@@ -71,7 +71,7 @@ public class WampSocket
         sessionId   = WampProtocol.newId();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
-        invocationAsyncCallbacks = new ConcurrentHashMap<Long,WampAsyncCallback>();
+        invocationAsyncCallbacks = new ConcurrentHashMap<Long,Deferred>();
         callControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         invocationControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         rpcRegistrations = new java.util.concurrent.ConcurrentHashMap<Long,WampCalleeRegistration>();
@@ -293,17 +293,17 @@ public class WampSocket
     }
 
     
-    public void addInvocationAsyncCallback(Long callID, WampAsyncCallback rpcAsyncCallback)
+    public void addInvocationAsyncCallback(Long callID, Deferred rpcAsyncCallback)
     {
         invocationAsyncCallbacks.put(callID, rpcAsyncCallback);
     }
     
-    public WampAsyncCallback getInvocationAsyncCallback(Long callID)
+    public Deferred getInvocationAsyncCallback(Long callID)
     {
         return invocationAsyncCallbacks.get(callID);
     }    
     
-    public WampAsyncCallback removeInvocationAsyncCallback(Long callID) 
+    public Deferred removeInvocationAsyncCallback(Long callID) 
     {
         return invocationAsyncCallbacks.remove(callID);
     }

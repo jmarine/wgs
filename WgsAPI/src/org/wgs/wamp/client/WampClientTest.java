@@ -1,14 +1,17 @@
 package org.wgs.wamp.client;
 
 import java.security.MessageDigest;
+import org.jdeferred.DoneCallback;
+import org.jdeferred.FailCallback;
+import org.jdeferred.ProgressCallback;
 import org.wgs.util.HexUtils;
+import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
 import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.rpc.WampAsyncCallback;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.topic.WampPublishOptions;
@@ -118,21 +121,17 @@ public class WampClientTest extends WampModule implements Runnable
         pubOpt.setDiscloseMe(true);
         
         for(int i = 0; i < num; i++) {
-            client.publish("myapp.topic1", new WampList("'Hello, world from Java!!!"), null, pubOpt, new WampAsyncCallback<Long>() {
-                @Override
-                public void resolve(Long id) {
-                    System.out.println("Event published with id: " + id);
-                }
-
-                @Override
-                public void progress(Long id) {
-                }
-
-                @Override
-                public void reject(Throwable th) {
-                    System.out.println("Error: " + th.toString());
-                }
-            });
+            client.publish("myapp.topic1", new WampList("'Hello, world from Java!!!"), null, pubOpt)
+                    .done(new DoneCallback<Long>() {
+                        @Override
+                        public void onDone(Long id) {
+                            System.out.println("Event published with id: " + id);
+                        }})
+                    .fail(new FailCallback<WampException>() {
+                        @Override
+                        public void onFail(WampException e) {
+                            System.out.println("Error: " + e.toString());
+                        }});
         }
     }
     
@@ -142,25 +141,23 @@ public class WampClientTest extends WampModule implements Runnable
         callOptions.setExcludeMe(false);
         
         for(int i = 0; i < num; i++) {
-            client.call("com.myapp.add2", new WampList(2,3), null, callOptions, new WampAsyncCallback<WampResult>() {
-                @Override
-                public void resolve(WampResult result) {
-                    WampList args = result.getArgs();
-                    System.out.println(args);
-                }
-
-                @Override
-                public void progress(WampResult result) {
-                    WampList args = result.getArgs();
-                    System.out.println("Progress: " + args);
-                }
-
-                @Override
-                public void reject(Throwable th) {
-                    System.out.println("Error: " + th.toString());
-                }
-            }); 
-            
+            client.call("com.myapp.add2", new WampList(2,3), null, callOptions)
+                    .done(new DoneCallback<WampResult>() { 
+                        @Override
+                        public void onDone(WampResult r) {
+                            System.out.println(r.getArgs());
+                        }})
+                    .progress(new ProgressCallback<WampResult>() {
+                        @Override
+                        public void onProgress(WampResult p) {
+                            System.out.println("Progress: " + p.getArgs());
+                        }})
+                    .fail(new FailCallback<WampException>() {
+                        @Override
+                        public void onFail(WampException e) {
+                            System.out.println("Error: " + e.toString());
+                        }
+                    });
         }
         
     }

@@ -2,7 +2,13 @@ package org.wgs.wamp.rpc;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jdeferred.Deferred;
+import org.jdeferred.FailCallback;
+import org.jdeferred.Promise;
+import org.jdeferred.impl.DeferredObject;
+import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampProtocol;
+import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.type.WampDict;
@@ -48,47 +54,44 @@ public class WampRemoteMethod extends WampMethod
     
     
     @Override
-    public Object invoke(final WampCallController task, final WampSocket clientSocket, final WampList args, final WampDict argsKw, final WampCallOptions callOptions, final WampAsyncCallback callback) throws Exception
+    public Promise invoke(final WampCallController task, final WampSocket clientSocket, final WampList args, final WampDict argsKw, final WampCallOptions callOptions) throws Exception
     {
-        final Long invocationId = WampProtocol.newId();
-
-        WampAsyncCall asyncCall = new WampAsyncCall(callback) {
-            
+        DeferredObject<WampResult,WampException,WampResult> deferred = new DeferredObject<WampResult,WampException,WampResult>();
+        Promise<WampResult,WampException,WampResult> promise = deferred.promise();
+        promise.fail(new FailCallback<WampException>() {
             @Override
-            public Void call() throws Exception {
-
-                WampDict invocationOptions = new WampDict();
-                if(matchType != WampMatchType.exact) invocationOptions.put("procedure", task.getProcedureURI());
-                if(callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) invocationOptions.put("receive_progress", true);
-                if(callOptions.hasDiscloseMe()) {
-                    invocationOptions.put("caller", clientSocket.getSessionId());
-                    invocationOptions.put("authid", clientSocket.getAuthId());
-                    invocationOptions.put("authprovider", clientSocket.getAuthProvider());
-                    invocationOptions.put("authrole", clientSocket.getAuthRole());
+            public void onFail(WampException f) {
+                if(f.getErrorURI().equals("wgs.cancel_invocation")) {
+                    WampProtocol.sendInterruptMessage(remotePeer, f.getInvocationId(), f.getDetails());
                 }
-                
-                if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "CALL " + task.getCallID() + ": SENDING INVOCATION ID: " + invocationId + " (" + clientSocket.getSessionId() + " --> " + remotePeer.getSessionId() + ")");
-                try {
-                    WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
-                    if(!remotePeer.isOpen()) task.removeRemoteInvocation(invocationId);
-                } catch(Exception ex) {
-                    task.removeRemoteInvocation(invocationId);
-                }
-                    
-                return null;
             }
-
-            @Override
-            public void cancel(WampDict cancelOptions) {
-                WampProtocol.sendInterruptMessage(remotePeer, invocationId, cancelOptions);
-            }           
-            
-        };
-
-        task.addRemoteInvocation(invocationId, asyncCall);
+        });
+        
+        final Long invocationId = WampProtocol.newId();
+        task.addRemoteInvocation(invocationId, deferred);
         remotePeer.addInvocationController(invocationId, task);
-        remotePeer.addInvocationAsyncCallback(invocationId, callback);
-        return asyncCall;
+        remotePeer.addInvocationAsyncCallback(invocationId, deferred);
+
+        WampDict invocationOptions = new WampDict();
+        if(matchType != WampMatchType.exact) invocationOptions.put("procedure", task.getProcedureURI());
+        if(callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) invocationOptions.put("receive_progress", true);
+        if(callOptions.hasDiscloseMe()) {
+            invocationOptions.put("caller", clientSocket.getSessionId());
+            invocationOptions.put("authid", clientSocket.getAuthId());
+            invocationOptions.put("authprovider", clientSocket.getAuthProvider());
+            invocationOptions.put("authrole", clientSocket.getAuthRole());
+        }
+
+        if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "CALL " + task.getCallID() + ": SENDING INVOCATION ID: " + invocationId + " (" + clientSocket.getSessionId() + " --> " + remotePeer.getSessionId() + ")");
+        try {
+            WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
+            if(!remotePeer.isOpen()) task.removeRemoteInvocation(invocationId);
+        } catch(Exception ex) {
+            task.removeRemoteInvocation(invocationId);
+        }
+                    
+
+        return promise;
     }    
     
 }

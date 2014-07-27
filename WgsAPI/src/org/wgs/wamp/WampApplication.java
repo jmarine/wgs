@@ -1,6 +1,5 @@
 package org.wgs.wamp;
 
-import org.wgs.security.OpenIdConnectUtils;
 import java.security.Principal;
 import java.util.Collection;
 import java.util.HashMap;
@@ -13,25 +12,24 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
+import org.jdeferred.Deferred;
+import org.wgs.security.OpenIdConnectUtils;
 import org.wgs.security.User;
-import org.wgs.wamp.api.WampAPI;
-
 import org.wgs.security.WampCRA;
+import org.wgs.wamp.api.WampAPI;
 import org.wgs.wamp.rpc.WampCallController;
-import org.wgs.wamp.rpc.WampCalleeRegistration;
-import org.wgs.wamp.rpc.WampAsyncCallback;
 import org.wgs.wamp.rpc.WampCallOptions;
+import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.type.WampConnectionState;
-import org.wgs.wamp.type.WampMatchType;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampMatchType;
 
 
 public class WampApplication 
@@ -572,13 +570,13 @@ public class WampApplication
     private void processInvocationResult(WampSocket providerSocket, WampList request) throws Exception
     {
         Long invocationId = request.getLong(1);
-        WampAsyncCallback callback = providerSocket.getInvocationAsyncCallback(invocationId);
+        Deferred callback = providerSocket.getInvocationAsyncCallback(invocationId);
         WampResult result = new WampResult(invocationId);
         result.setDetails((WampDict)request.get(2));
         result.setArgs((request.size() > 3) ? (WampList)request.get(3) : null);
         result.setArgsKw((request.size() > 4) ? (WampDict)request.get(4) : null);
         if(result.isProgressResult()) {
-            callback.progress(result);
+            callback.notify(result);
         } else {
             try {
                 callback.resolve(result);
@@ -600,7 +598,7 @@ public class WampApplication
         WampList args = (request.size() > 5) ? (WampList)request.get(5) : null;
         WampDict argsKw = (request.size() > 6) ? (WampDict)request.get(6) : null;
         WampException error = new WampException(invocationId, options, errorURI, args, argsKw);
-        WampAsyncCallback callback = providerSocket.getInvocationAsyncCallback(invocationId);
+        Deferred callback = providerSocket.getInvocationAsyncCallback(invocationId);
         callback.reject(error);
         providerSocket.removeInvocationAsyncCallback(invocationId);
         providerSocket.removeInvocationController(invocationId);

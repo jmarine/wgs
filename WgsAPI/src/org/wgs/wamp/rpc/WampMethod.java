@@ -1,7 +1,9 @@
 package org.wgs.wamp.rpc;
+import org.jdeferred.Deferred;
+import org.jdeferred.Promise;
+import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
-import org.wgs.wamp.WampSocket;
 
 
 
@@ -18,7 +20,7 @@ public abstract class WampMethod
         return uri;
     }
     
-    public abstract Object invoke(WampCallController task, WampSocket clientSocket, WampList args, WampDict argsKw, WampCallOptions options, WampAsyncCallback callback)
+    public abstract Promise invoke(WampCallController task, WampSocket clientSocket, WampList args, WampDict argsKw, WampCallOptions options)
         throws Exception;
     
 }

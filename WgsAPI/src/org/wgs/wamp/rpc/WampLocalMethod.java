@@ -2,11 +2,16 @@ package org.wgs.wamp.rpc;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import org.jdeferred.Deferred;
+import org.jdeferred.Promise;
+import org.jdeferred.impl.DeferredObject;
 import org.wgs.wamp.WampApplication;
+import org.wgs.wamp.WampException;
+import org.wgs.wamp.WampModule;
+import org.wgs.wamp.WampResult;
+import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
-import org.wgs.wamp.WampModule;
-import org.wgs.wamp.WampSocket;
 
 
 
@@ -27,7 +32,7 @@ public class WampLocalMethod extends WampMethod
     
     @Override
     @SuppressWarnings("unchecked")
-    public Object invoke(WampCallController task, WampSocket clientSocket, WampList args, WampDict argsKw, WampCallOptions options, WampAsyncCallback callback) throws Exception
+    public Promise invoke(WampCallController task, WampSocket clientSocket, WampList args, WampDict argsKw, WampCallOptions options) throws Exception
     {
         int argCount = 0;
         
@@ -63,8 +68,14 @@ public class WampLocalMethod extends WampMethod
             }
         }
 
-        return method.invoke(this.module, params.toArray());
-
+        Object retval = method.invoke(this.module, params.toArray());
+        if(retval != null && retval instanceof Promise) {
+            return (Promise)retval;
+        } else {
+            DeferredObject<Object,Exception,Object> deferred = new DeferredObject<Object,Exception,Object>();
+            deferred.resolve(retval);
+            return deferred.promise();
+        }
     }
     
 }
