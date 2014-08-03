@@ -62,6 +62,7 @@ public class WampProtocol
     private static void sendWampMessage(WampSocket socket, WampList args)
     {
         try {        
+            if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "sendWampMessage: " + args);
             Object msg = socket.getEncoding().getSerializer().serialize(args);
             socket.sendObject(msg);
 
@@ -459,11 +460,11 @@ public class WampProtocol
     }
     
     
-    public static void sendInvocationResultMessage(WampSocket clientSocket, Long invocationRegistrationId, WampDict invocationResultOptions, WampList result, WampDict resultKw) 
+    public static void sendInvocationResultMessage(WampSocket clientSocket, Long invocationRequestId, WampDict invocationResultOptions, WampList result, WampDict resultKw) 
     {
         WampList msg = new WampList();
         msg.add(YIELD);
-        msg.add(invocationRegistrationId);
+        msg.add(invocationRequestId);
         msg.add(invocationResultOptions);
         msg.add(result);
         if(resultKw != null && resultKw.size() > 0) msg.add(resultKw);
@@ -472,6 +473,8 @@ public class WampProtocol
     
     public static void sendInterruptMessage(WampSocket remotePeer, Long invocationId, WampDict cancelOptions) 
     {
+        if(cancelOptions == null) cancelOptions = new WampDict();
+        
         WampList msg = new WampList();
         msg.add(INTERRUPT);
         msg.add(invocationId);

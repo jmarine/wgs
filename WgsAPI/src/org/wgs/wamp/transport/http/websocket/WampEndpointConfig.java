@@ -85,6 +85,7 @@ public class WampEndpointConfig
         final WampSocket clientSocket = getWampSocket(wampApp, session);
         
         String subproto = (session.getNegotiatedSubprotocol());
+        if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "Negotiated subprotocol: " + subproto);
         
         if(subproto != null && subproto.equalsIgnoreCase("wamp.2.msgpack")) {
             session.addMessageHandler(new MessageHandler.Whole<byte[]>() {

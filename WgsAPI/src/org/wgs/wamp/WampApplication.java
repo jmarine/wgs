@@ -9,7 +9,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.naming.InitialContext;
@@ -297,6 +296,7 @@ public class WampApplication
             
             clientSocket.setState(WampConnectionState.ANONYMOUS);
             clientSocket.setUserPrincipal(null);
+
         }
         
         // Clear session realm
@@ -324,7 +324,9 @@ public class WampApplication
                 break;
             case WampProtocol.GOODBYE:
                 WampProtocol.sendGoodbyeMessage(clientSocket, "wamp.close.normal", null);
-                onWampSessionEnd(clientSocket);
+                synchronized(this) {
+                    onWampSessionEnd(clientSocket);
+                }
                 break;
             case WampProtocol.HEARTBEAT:
                 processHeartbeatMessage(clientSocket, request);
@@ -364,13 +366,18 @@ public class WampApplication
                 unregistrationRealm.processUnregisterMessage(this, clientSocket, request);
                 break;                
             case WampProtocol.CALL:
-                processCallMessage(clientSocket, request);
+                synchronized(this) 
+                {
+                    processCallMessage(clientSocket, request);
+                }
                 break;
             case WampProtocol.CANCEL_CALL:
                 processCancelCallMessage(clientSocket, request);
                 break;
             case WampProtocol.YIELD:  // INVOCATION RESULT
-                processInvocationResult(clientSocket, request);
+                synchronized(this) {
+                    processInvocationResult(clientSocket, request);
+                }
                 break;
             case WampProtocol.INVOCATION:
                 // TODO: this server implementation only implements the "dealear" role
@@ -407,7 +414,7 @@ public class WampApplication
             
             logger.log(Level.FINEST, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
         }
-        
+
     }
     
     public String normalizeModuleName(String moduleName) 
@@ -560,8 +567,7 @@ public class WampApplication
             call.run();
             
         } else {
-            Future<?> future = executorService.submit(call);
-            call.setFuture(future);
+            executorService.submit(call);
         }
         
     }
@@ -570,7 +576,7 @@ public class WampApplication
     private void processInvocationResult(WampSocket providerSocket, WampList request) throws Exception
     {
         Long invocationId = request.getLong(1);
-        Deferred callback = providerSocket.getInvocationAsyncCallback(invocationId);
+        Deferred<WampResult, WampException, WampResult> callback = providerSocket.getInvocationAsyncCallback(invocationId);
         WampResult result = new WampResult(invocationId);
         result.setDetails((WampDict)request.get(2));
         result.setArgs((request.size() > 3) ? (WampList)request.get(3) : null);
@@ -598,8 +604,8 @@ public class WampApplication
         WampList args = (request.size() > 5) ? (WampList)request.get(5) : null;
         WampDict argsKw = (request.size() > 6) ? (WampDict)request.get(6) : null;
         WampException error = new WampException(invocationId, options, errorURI, args, argsKw);
-        Deferred callback = providerSocket.getInvocationAsyncCallback(invocationId);
-        callback.reject(error);
+        Deferred<WampResult, WampException, WampResult> callback = providerSocket.getInvocationAsyncCallback(invocationId);
+        if(!callback.isRejected()) callback.reject(error); 
         providerSocket.removeInvocationAsyncCallback(invocationId);
         providerSocket.removeInvocationController(invocationId);
     }

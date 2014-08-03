@@ -3,8 +3,8 @@ package org.wgs.wamp;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.jdeferred.Deferred;
 import org.jdeferred.DoneCallback;
 import org.jdeferred.FailCallback;
@@ -77,137 +77,78 @@ public class WampModule
     public void onDisconnect(WampSocket clientSocket) throws Exception { }
 
     @SuppressWarnings("unchecked")
-    public Promise onCall(final WampCallController task, final WampSocket clientSocket, String methodName, final WampList args, final WampDict argsKw, final WampCallOptions options) throws Exception 
+    public Promise<WampResult, WampException, WampResult> onCall(final WampCallController task, final WampSocket clientSocket, String methodName, final WampList args, final WampDict argsKw, final WampCallOptions options) throws Exception 
     {
         WampMethod method = app.getLocalRPC(methodName);
         if(method != null) {
-            final Deferred<WampResult,WampException,WampResult> deferred = new DeferredObject<WampResult,WampException,WampResult>();
-            Promise localCallPromise = method.invoke(task,clientSocket,args,argsKw,options);
-            localCallPromise.done(new DoneCallback() { 
-                @Override
-                public void onDone(Object response) {
-                    WampResult result = new WampResult(task.getCallID());
-                    if(response != null) {
-                        if (response instanceof WampDict) {
-                            result.setArgsKw((WampDict)response);
-                        } else if (response instanceof WampList) {
-                            result.setArgs((WampList)response);
-                        } else {
-                            WampList list = new WampList();
-                            list.add(response);
-                            result.setArgs(list);
-                        }
-                    }
-                    deferred.resolve(result);
-                }});
-            
-            localCallPromise.fail(new FailCallback() { 
-                @Override
-                public void onFail(Object f) {
-                    String uri = "wgs.local_invocation_exception";
-                    WampException error = new WampException(task.getCallID(), null, uri, null, null);
-                    deferred.reject(error);
-                }
-            });
-            
-            localCallPromise.progress(new ProgressCallback() {
-                @Override
-                public void onProgress(Object response) {
-                    WampResult progress = new WampResult(task.getCallID());
-                    if(response != null) {
-                        if (response instanceof WampDict) {
-                            progress.setArgsKw((WampDict)response);
-                        } else if (response instanceof WampList) {
-                            progress.setArgs((WampList)response);
-                        } else {
-                            WampList list = new WampList();
-                            list.add(response);
-                            progress.setArgs(list);
-                        }
-                    }                    
-                    deferred.notify(progress);
-                }
-            } );
-            
-            return deferred.promise();
+            return method.invoke(task,clientSocket,args,argsKw,options);
             
         } else {
             
             final WampRealm realm = WampRealm.getRealm(clientSocket.getRealm());
-            final ArrayList<WampRemoteMethod> remoteMethods = realm.getRemoteRPCs(clientSocket.getRealm(), methodName, options, clientSocket.getSessionId());
+            final List<WampRemoteMethod> remoteMethods = realm.getRemoteRPCs(clientSocket.getRealm(), methodName, options, clientSocket.getSessionId());
             
             if(remoteMethods.isEmpty()) {
                 System.out.println("No remote method: " + methodName);
                 throw new WampException(null, WampException.ERROR_PREFIX+".no_remote_method", null, null);
                 
             } else {
-                
-                switch(options.getRunOn()) {
-                    case any:
-                        int index = (int)(Math.random() * remoteMethods.size());
-                        method = remoteMethods.get(index);
-                        return method.invoke(task,clientSocket,args,argsKw,options);
+                final Deferred<WampResult,WampException,WampResult> deferred = new DeferredObject<WampResult,WampException,WampResult>();
 
-                    default:
-                        final Deferred<WampResult,WampException,WampResult> deferred = new DeferredObject<WampResult,WampException,WampResult>();
-
-                        task.setPendingInvocationCount(remoteMethods.size());
-                        task.setRemoteInvocationsCompletionCallback(deferred);
-                        //synchronized(task) 
-                        {
-                            for(final WampRemoteMethod remoteMethod : remoteMethods) {
-                                Promise<WampResult,WampException,WampResult> remoteInvocation = remoteMethod.invoke(task,clientSocket,args,argsKw,options);
-                                remoteInvocation.done(new DoneCallback<WampResult>() {
-                                    @Override
-                                    public void onDone(WampResult wampResult) {
-                                        if(!clientSocket.supportsProgressiveCallResults() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive) {
-                                            synchronized(task) {
-                                                task.incrementRemoteInvocationResults();
-                                                task.getResultKw().putAll(wampResult.getArgsKw());
-                                                task.getResult().add(wampResult.getArgs());
-                                            }
-
-                                        } else if(remoteMethods.size() <= 1) {
-                                            synchronized(task) {
-                                                task.setResult(wampResult.getArgs());
-                                                task.setResultKw(wampResult.getArgsKw());
-                                            }
-                                        } else {
-                                            deferred.notify(wampResult);
-                                        }
-
-                                        task.removeRemoteInvocation(wampResult.getRequestId());
-                                    }
-                                });
-
-                                remoteInvocation.progress(new ProgressCallback<WampResult>() {
-                                    @Override
-                                    public void onProgress(WampResult progress) {
-                                        deferred.notify(progress);
-                                    }
-                                });
-                                
-                                remoteInvocation.fail(new FailCallback<WampException>() {
-                                    @Override
-                                    public void onFail(WampException error) {
-                                        WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CALL, task.getCallID(), error.getDetails(), error.getErrorURI(), error.getArgs(), error.getArgsKw());
-                                    }
-                                 });
-
-                            }
-
-                        }
-
-                        deferred.fail(new FailCallback<WampException>() {
+                // synchronized(task) 
+                {
+                    task.setPendingInvocationCount(remoteMethods.size());
+                    task.setRemoteInvocationsCompletionCallback(deferred);
+                    
+                    for(final WampRemoteMethod remoteMethod : remoteMethods) {
+                        Promise<WampResult,WampException,WampResult> remoteInvocation = remoteMethod.invoke(task,clientSocket,args,argsKw,options);
+                        remoteInvocation.done(new DoneCallback<WampResult>() {
                             @Override
-                            public void onFail(WampException f) {
-                                // done by task.cancel(cancelOptions);
+                            public void onDone(WampResult wampResult) {
+                                if(!clientSocket.supportsProgressiveCallResults() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive || remoteMethods.size() <= 1) {
+                                    synchronized(task) {
+                                        task.incrementRemoteInvocationResults();
+                                        task.getResultKw().putAll(wampResult.getArgsKw());
+                                        task.getResult().add(wampResult.getArgs());
+                                    }
+                                } else {
+                                    deferred.notify(wampResult);
+                                }
+
+                                task.removeRemoteInvocation(wampResult.getRequestId());
                             }
                         });
-                        
-                        return deferred.promise();
+
+                        remoteInvocation.progress(new ProgressCallback<WampResult>() {
+                            @Override
+                            public void onProgress(WampResult progress) {
+                                //synchronized(task) 
+                                {
+                                    if(!task.isCancelled()) {
+                                        deferred.notify(progress);
+                                    }
+                                }
+                            }
+                        });
+
+                        remoteInvocation.fail(new FailCallback<WampException>() {
+                            @Override
+                            public void onFail(WampException error) {
+                                //synchronized(task) 
+                                {
+                                    if(!task.isCancelled()) {
+                                        task.cancel(null);
+                                    }
+                                }
+                            }
+                         });
+
+                    }
 
                 }
+
+                return deferred.promise();
+
                 
             }
             
@@ -271,15 +212,21 @@ public class WampModule
             throw new WampException(null, "wamp.error.registration_not_found", null, null);
         } else {
             
-            synchronized(registration) {
+            //synchronized(registration) 
+            {
                 clientSocket.removeRpcRegistration(registrationId);
                 registration.removeRemoteMethod(clientSocket);
                 //rpcsByName.remove(method.getProcedureURI());
             
+                WampDict interruptDetails = new WampDict();
                 for(Long invocationId : clientSocket.getInvocationIDs()) {
                     WampCallController task = clientSocket.removeInvocationController(invocationId);
-                    WampProtocol.sendErrorMessage(clientSocket, WampProtocol.INVOCATION, invocationId, null, null, null, null); 
                     task.removeRemoteInvocation(invocationId);
+                    try { 
+                        WampProtocol.sendInterruptMessage(clientSocket, invocationId, interruptDetails); 
+                    } catch(Exception ex) { 
+                        System.out.println("onUnregister: Error: " + ex.getMessage());
+                    }
                 }
             }
             

@@ -2,6 +2,7 @@ package org.wgs.wamp;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -47,10 +48,10 @@ public class WampRealm
     }
     
     
-    public ArrayList<WampRemoteMethod> getRemoteRPCs(String realm, String name, WampCallOptions options, Long callerId) throws WampException
+    public List<WampRemoteMethod> getRemoteRPCs(String realm, String name, WampCallOptions options, Long callerId) throws WampException
     {
         boolean found = false;
-        ArrayList<WampRemoteMethod> retval = new ArrayList<WampRemoteMethod>();
+        List<WampRemoteMethod> retval = new ArrayList<WampRemoteMethod>();
 
         String partition = null;
         if(options != null && options.getRunOn() == WampCallOptions.RunOnEnum.partition) partition = options.getPartition();
@@ -83,6 +84,11 @@ public class WampRealm
         if(retval.size() == 0) {
             if(found) throw new WampException(null, WampException.ERROR_PREFIX+".no_remote_method", null, null);
             else throw new WampException(null, WampException.ERROR_PREFIX+".method_unknown", null, null);
+        }
+        
+        if(options.getRunOn() == WampCallOptions.RunOnEnum.any) {
+            int index = (int)(Math.random() * retval.size());
+            retval = retval.subList(index, index+1);
         }
         
         return retval;
@@ -129,6 +135,7 @@ public class WampRealm
         if (registration == null) {
             Long registrationId = WampProtocol.newId();
             registration = new WampCalleeRegistration(registrationId, matchType, methodUriOrPattern);
+            // TODO: move to WampModule:
             calleeRegistrationById.put(registrationId, registration);
             calleeRegistrationByUri.put(methodUriOrPattern, registration);
             if (matchType != WampMatchType.exact) {
@@ -150,7 +157,7 @@ public class WampRealm
     }
 
     
-    public synchronized void processUnregisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
+    public void processUnregisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
         Long requestId = request.getLong(1);
         Long registrationId = request.getLong(2);
@@ -161,6 +168,8 @@ public class WampRealm
             } else {
                 WampModule module = app.getDefaultWampModule();
                 module.onUnregister(clientSocket, registrationId);
+
+                /* FIXME: not thread safe and it should also be executed on session goodbye
                 if (registration.getRemoteMethodsCount() == 0) {
                     for (String name : calleeRegistrationByUri.keySet()) {
                         if (WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
@@ -174,6 +183,7 @@ public class WampRealm
                     }
                     calleeRegistrationById.remove(registrationId);
                 }
+                */                            
                 
                 if (requestId != null) {
                     WampProtocol.sendUnregisteredMessage(clientSocket, requestId);

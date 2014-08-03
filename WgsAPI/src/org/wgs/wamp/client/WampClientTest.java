@@ -43,7 +43,7 @@ public class WampClientTest extends WampModule implements Runnable
     @WampRPC(name = "add2")  // implicit RPC registration
     public Long add2(Long p1, Long p2, WampCallOptions options, WampCallController task) 
     {
-        System.out.println("Received invocation: " + task.getProcedureURI() + ": authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole() + ", caller session id=" + options.getCallerId() + ", invocation id=" + task.getCallID());
+        //System.out.println("Received invocation: " + task.getProcedureURI() + ": authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole() + ", caller session id=" + options.getCallerId() + ", invocation id=" + task.getCallID());
         return p1+p2;
     }   
     
@@ -62,16 +62,18 @@ public class WampClientTest extends WampModule implements Runnable
         try {
             int repeats = 1000;
            
+            System.out.println("Connecting");
             client.connect();
 
-            System.out.println("Login");
+            System.out.println("Connected");
             
             client.hello(realm, user, password, digestPasswordMD5);
             client.waitResponses();
 
-            doCalls(repeats);
+            doCalls(1);
             client.waitResponses();
-
+            
+/*
             System.out.println("Publication without subscription.");
             doPublications(repeats);
             client.waitResponses();
@@ -96,8 +98,11 @@ public class WampClientTest extends WampModule implements Runnable
             client.goodbye("wamp.close.normal");
             client.waitResponses();
 
+*/   
+            
             System.out.println("Disconnection");
             client.close();
+                 
             
         } catch(Exception ex) {
 
@@ -165,11 +170,12 @@ public class WampClientTest extends WampModule implements Runnable
     
     public static final void main(String args[]) throws Exception
     {
-        WampClient client = new WampClient(url);
-        client.setPreferredWampEncoding(WampEncoding.JSON);
-        
-        WampClientTest test = new WampClientTest(client);
-        while(true) test.run();
+        while(true) {
+            WampClient client = new WampClient(url);
+            client.setPreferredWampEncoding(WampEncoding.JSON);
+            WampClientTest test = new WampClientTest(client);
+            test.run();
+        }
     }
 
     

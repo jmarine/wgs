@@ -54,7 +54,7 @@ public class WampRemoteMethod extends WampMethod
     
     
     @Override
-    public Promise invoke(final WampCallController task, final WampSocket clientSocket, final WampList args, final WampDict argsKw, final WampCallOptions callOptions) throws Exception
+    public Promise<WampResult, WampException, WampResult> invoke(final WampCallController task, final WampSocket clientSocket, final WampList args, final WampDict argsKw, final WampCallOptions callOptions) throws Exception
     {
         DeferredObject<WampResult,WampException,WampResult> deferred = new DeferredObject<WampResult,WampException,WampResult>();
         Promise<WampResult,WampException,WampResult> promise = deferred.promise();
@@ -86,6 +86,15 @@ public class WampRemoteMethod extends WampMethod
         try {
             task.decrementPendingInvocationCount();
             WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
+            
+            /* DEBUG: skip-invocations 
+            { 
+                WampResult wampResult = new WampResult(invocationId);
+                wampResult.setArgs(new WampList(6L));
+                deferred.resolve(wampResult);
+            }
+            */
+
             if(!remotePeer.isOpen()) throw new Exception();
         } catch(Exception ex) {
             task.removeRemoteInvocation(invocationId);

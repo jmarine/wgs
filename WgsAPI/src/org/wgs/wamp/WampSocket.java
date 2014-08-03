@@ -41,7 +41,7 @@ public class WampSocket
     private Map<Long,WampSubscription> subscriptions;
     private Map<Long,WampCallController> callControllers;
     private Map<Long,WampCallController> invocationControllers;
-    private Map<Long,Deferred> invocationAsyncCallbacks;
+    private Map<Long,Deferred<WampResult, WampException, WampResult>> invocationAsyncCallbacks;
     private Map<Long,WampCalleeRegistration> rpcRegistrations;
     private WampConnectionState state;
     private Principal principal;
@@ -71,7 +71,7 @@ public class WampSocket
         sessionId   = WampProtocol.newId();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
-        invocationAsyncCallbacks = new ConcurrentHashMap<Long,Deferred>();
+        invocationAsyncCallbacks = new ConcurrentHashMap<Long,Deferred<WampResult, WampException, WampResult>>();
         callControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         invocationControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         rpcRegistrations = new java.util.concurrent.ConcurrentHashMap<Long,WampCalleeRegistration>();
@@ -293,17 +293,17 @@ public class WampSocket
     }
 
     
-    public void addInvocationAsyncCallback(Long callID, Deferred rpcAsyncCallback)
+    public void addInvocationAsyncCallback(Long callID, Deferred<WampResult, WampException, WampResult> rpcAsyncCallback)
     {
         invocationAsyncCallbacks.put(callID, rpcAsyncCallback);
     }
     
-    public Deferred getInvocationAsyncCallback(Long callID)
+    public Deferred<WampResult, WampException, WampResult> getInvocationAsyncCallback(Long callID)
     {
         return invocationAsyncCallbacks.get(callID);
     }    
     
-    public Deferred removeInvocationAsyncCallback(Long callID) 
+    public Deferred<WampResult, WampException, WampResult> removeInvocationAsyncCallback(Long callID) 
     {
         return invocationAsyncCallbacks.remove(callID);
     }
@@ -357,7 +357,8 @@ public class WampSocket
     }    
     
     
-    synchronized void sendObject(Object msg) {
+    public void sendObject(Object msg) 
+    {
         try {
             if(isOpen()) {
                 switch(getEncoding()) {
@@ -373,9 +374,10 @@ public class WampSocket
             }
 
         } catch(Exception e) {
-            close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "wamp.close.error"));
+            //close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "wamp.close.error"));
         }
     }
+   
 
     
     public void close(CloseReason reason)
