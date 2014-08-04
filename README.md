@@ -1,5 +1,5 @@
-Web Game Services for Java
-==========================
+Web Game Services
+=================
 
 Version: 2.0-alpha1
 
