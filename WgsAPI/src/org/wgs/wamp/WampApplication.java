@@ -261,6 +261,7 @@ public class WampApplication
         }                 
     }
     
+
     public void onWampSessionEnd(WampSocket clientSocket) 
     {
         if(clientSocket.getRealm() != null) {
@@ -286,13 +287,16 @@ public class WampApplication
                 WampBroker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
             }      
 
-            // Remove RPC registrations
-            WampModule module = getDefaultWampModule();            
-            for(WampCalleeRegistration registration : clientSocket.getRpcRegistrations()) {
-                try {
-                    module.onUnregister(clientSocket, registration.getId());
-                } catch(Exception ex) { }
-            }        
+            synchronized(this)   // TODO: avoid synchronization by WampApplication (use WampCalleeRegistration)
+            {
+                // Remove RPC registrations
+                WampModule module = getDefaultWampModule();            
+                for(WampCalleeRegistration registration : clientSocket.getRpcRegistrations()) {
+                    try {
+                        module.onUnregister(clientSocket, registration.getId());
+                    } catch(Exception ex) { }
+                } 
+            }
             
             clientSocket.setState(WampConnectionState.ANONYMOUS);
             clientSocket.setUserPrincipal(null);
@@ -323,10 +327,8 @@ public class WampApplication
                 processAuthenticationMessage(clientSocket, signature, extra);
                 break;
             case WampProtocol.GOODBYE:
+                onWampSessionEnd(clientSocket);
                 WampProtocol.sendGoodbyeMessage(clientSocket, "wamp.close.normal", null);
-                synchronized(this) {
-                    onWampSessionEnd(clientSocket);
-                }
                 break;
             case WampProtocol.HEARTBEAT:
                 processHeartbeatMessage(clientSocket, request);
@@ -366,18 +368,13 @@ public class WampApplication
                 unregistrationRealm.processUnregisterMessage(this, clientSocket, request);
                 break;                
             case WampProtocol.CALL:
-                synchronized(this) 
-                {
-                    processCallMessage(clientSocket, request);
-                }
+                processCallMessage(clientSocket, request);
                 break;
             case WampProtocol.CANCEL_CALL:
                 processCancelCallMessage(clientSocket, request);
                 break;
             case WampProtocol.YIELD:  // INVOCATION RESULT
-                synchronized(this) {
-                    processInvocationResult(clientSocket, request);
-                }
+                processInvocationResult(clientSocket, request);
                 break;
             case WampProtocol.INVOCATION:
                 // TODO: this server implementation only implements the "dealear" role
@@ -559,13 +556,14 @@ public class WampApplication
         if(request.size()>5) {
             argumentsKw = (WampDict)request.get(5);
         }
-        
+
         WampCallController call = new WampCallController(this, clientSocket, callID, procedureURI, options, arguments, argumentsKw);
         clientSocket.addCallController(callID, call);
+
         if(executorService == null || call.isRemoteMethod()) {  
             // Ordering guarantees (RPC).
             call.run();
-            
+
         } else {
             executorService.submit(call);
         }
@@ -576,22 +574,27 @@ public class WampApplication
     private void processInvocationResult(WampSocket providerSocket, WampList request) throws Exception
     {
         Long invocationId = request.getLong(1);
-        Deferred<WampResult, WampException, WampResult> callback = providerSocket.getInvocationAsyncCallback(invocationId);
         WampResult result = new WampResult(invocationId);
         result.setDetails((WampDict)request.get(2));
         result.setArgs((request.size() > 3) ? (WampList)request.get(3) : null);
         result.setArgsKw((request.size() > 4) ? (WampDict)request.get(4) : null);
-        if(result.isProgressResult()) {
-            callback.notify(result);
-        } else {
-            try {
-                callback.resolve(result);
-                providerSocket.removeInvocationAsyncCallback(invocationId);
-                providerSocket.removeInvocationController(invocationId);
-            } catch(Exception ex) {
-                throw ex;
+
+        synchronized(this)   // TODO: avoid synchronization by WampApplication (use WampCalleeRegistration)
+        {
+            Deferred<WampResult, WampException, WampResult> deferred = providerSocket.getInvocationAsyncCallback(invocationId);
+            if(result.isProgressResult()) {
+                deferred.notify(result);
+            } else {
+                try {
+                    deferred.resolve(result);
+                    providerSocket.removeInvocationAsyncCallback(invocationId);
+                    providerSocket.removeInvocationController(invocationId);
+                } catch(Exception ex) {
+                    throw ex;
+                }
             }
         }
+
     }
 
     

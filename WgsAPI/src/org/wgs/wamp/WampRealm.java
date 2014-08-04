@@ -69,7 +69,7 @@ public class WampRealm
                 }
             }
         }
-        
+
         for(WampCalleeRegistration registration : calleePatterns.values()) {
             if(WampBroker.isUriMatchingWithRegExp(name, registration.getRegExp())) {
                 found = true;
@@ -80,7 +80,7 @@ public class WampRealm
                 }
             }
         }
-        
+
         if(retval.size() == 0) {
             if(found) throw new WampException(null, WampException.ERROR_PREFIX+".no_remote_method", null, null);
             else throw new WampException(null, WampException.ERROR_PREFIX+".method_unknown", null, null);
@@ -111,7 +111,7 @@ public class WampRealm
         return names;
     }    
 
-    public synchronized void processRegisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
+    public void processRegisterMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
         Long requestId = request.getLong(1);
         WampDict options = (WampDict) request.get(2);
@@ -130,9 +130,9 @@ public class WampRealm
         if (matchType == WampMatchType.prefix && !methodUriOrPattern.endsWith("..")) {
             methodUriOrPattern = methodUriOrPattern + "..";
         }
-        
-        WampCalleeRegistration registration = calleeRegistrationByUri.get(methodUriOrPattern);
-        if (registration == null) {
+
+        WampCalleeRegistration registration = calleeRegistrationByUri.get(methodUriOrPattern);        
+        if(registration == null) {
             Long registrationId = WampProtocol.newId();
             registration = new WampCalleeRegistration(registrationId, matchType, methodUriOrPattern);
             // TODO: move to WampModule:
@@ -142,6 +142,7 @@ public class WampRealm
                 calleePatterns.put(methodUriOrPattern, registration);
             }
         }
+        
         try {
             WampModule module = app.getDefaultWampModule();
             module.onRegister(registration.getId(), clientSocket, registration, matchType, methodUriOrPattern, request);
