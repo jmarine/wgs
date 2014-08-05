@@ -82,7 +82,7 @@ public class WampModule
         if(method != null) {
             return method.invoke(task,clientSocket,args,argsKw,options);
             
-        } else synchronized(app) {  // TODO: avoid synchronization by WampApplication (use WampCalleeRegistration)
+        } else synchronized(app) {  // TODO: avoid synchronization by WampApplication
             
             final WampRealm realm = WampRealm.getRealm(clientSocket.getRealm());
             final List<WampRemoteMethod> remoteMethods = realm.getRemoteRPCs(clientSocket.getRealm(), methodName, options, clientSocket.getSessionId());
@@ -207,14 +207,14 @@ public class WampModule
             throw new WampException(null, "wamp.error.registration_not_found", null, null);
         } else {
             
-            //synchronized(registration) 
-            {
-                clientSocket.removeRpcRegistration(registrationId);
-                registration.removeRemoteMethod(clientSocket);
-                //rpcsByName.remove(method.getProcedureURI());
+            clientSocket.removeRpcRegistration(registrationId);
+            registration.removeRemoteMethod(clientSocket);
+            //rpcsByName.remove(method.getProcedureURI());
 
+            synchronized(this.app)  // TODO: avoid synchronization by WampApplication
+            {
                 WampDict interruptDetails = new WampDict();
-                for(Long invocationId : clientSocket.getInvocationIDs()) {
+                for(Long invocationId : clientSocket.getInvocationIDs()) {  // critical section
                     WampCallController task = clientSocket.removeInvocationController(invocationId);
                     task.removeRemoteInvocation(invocationId);
                     try { 

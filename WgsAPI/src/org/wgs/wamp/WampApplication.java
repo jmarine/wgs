@@ -287,16 +287,13 @@ public class WampApplication
                 WampBroker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
             }      
 
-            synchronized(this)   // TODO: avoid synchronization by WampApplication (use WampCalleeRegistration)
-            {
-                // Remove RPC registrations
-                WampModule module = getDefaultWampModule();            
-                for(WampCalleeRegistration registration : clientSocket.getRpcRegistrations()) {
-                    try {
-                        module.onUnregister(clientSocket, registration.getId());
-                    } catch(Exception ex) { }
-                } 
-            }
+            // Remove RPC registrations
+            WampModule module = getDefaultWampModule();            
+            for(WampCalleeRegistration registration : clientSocket.getRpcRegistrations()) {
+                try {
+                    module.onUnregister(clientSocket, registration.getId());
+                } catch(Exception ex) { }
+            } 
             
             clientSocket.setState(WampConnectionState.ANONYMOUS);
             clientSocket.setUserPrincipal(null);
@@ -579,7 +576,7 @@ public class WampApplication
         result.setArgs((request.size() > 3) ? (WampList)request.get(3) : null);
         result.setArgsKw((request.size() > 4) ? (WampDict)request.get(4) : null);
 
-        synchronized(this)   // TODO: avoid synchronization by WampApplication (use WampCalleeRegistration)
+        synchronized(this)   // TODO: avoid synchronization by WampApplication
         {
             Deferred<WampResult, WampException, WampResult> deferred = providerSocket.getInvocationAsyncCallback(invocationId);
             if(result.isProgressResult()) {
