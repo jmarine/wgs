@@ -74,7 +74,7 @@ public class WampClientTest extends WampModule implements Runnable
             doCalls(repeats);
             client.waitResponses();
             
-            
+
             System.out.println("Publication without subscription.");
             doPublications(repeats);
             client.waitResponses();

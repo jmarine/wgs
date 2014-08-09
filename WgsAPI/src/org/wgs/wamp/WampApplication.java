@@ -304,7 +304,7 @@ public class WampApplication
         clientSocket.setRealm(null);
     }
     
-    public void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
+    public synchronized void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
     {
         Long requestType = request.getLong(0);
         if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "RECEIVED MESSAGE TYPE: " + requestType);
@@ -387,7 +387,7 @@ public class WampApplication
     }
     
     
-    public void onWampClose(WampSocket clientSocket, CloseReason reason) 
+    public synchronized void onWampClose(WampSocket clientSocket, CloseReason reason) 
     {
         if(clientSocket != null) {
 
@@ -576,9 +576,8 @@ public class WampApplication
         result.setArgs((request.size() > 3) ? (WampList)request.get(3) : null);
         result.setArgsKw((request.size() > 4) ? (WampDict)request.get(4) : null);
 
-        synchronized(this)   // TODO: avoid synchronization by WampApplication
-        {
-            Deferred<WampResult, WampException, WampResult> deferred = providerSocket.getInvocationAsyncCallback(invocationId);
+        Deferred<WampResult, WampException, WampResult> deferred = providerSocket.getInvocationAsyncCallback(invocationId);
+        if(deferred != null) synchronized(this) {
             if(result.isProgressResult()) {
                 deferred.notify(result);
             } else {
