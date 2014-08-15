@@ -2,15 +2,16 @@ package org.wgs.security;
 
 import java.io.*;
 import java.net.*;
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
 
 
 @Entity
@@ -155,9 +156,9 @@ public class OpenIdConnectProvider implements Serializable
         return retval.toString();
     }    
 
-    public static ObjectNode discover(String principal) throws Exception
+    public static JsonObject discover(String principal) throws Exception
     {
-        ObjectNode retval = null;
+        JsonObject retval = null;
         HttpURLConnection connection = null;
         if(principal.indexOf("#") != -1) principal = principal.substring(0, principal.indexOf("#"));
         if(principal.indexOf("?") != -1) principal = principal.substring(0, principal.indexOf("?"));
@@ -186,79 +187,68 @@ public class OpenIdConnectProvider implements Serializable
         connection.setInstanceFollowRedirects(true);
         connection.setDoOutput(false);
 
-        StringBuffer response = new StringBuffer();
-        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        String decodedString = null;
-        while ((decodedString = in.readLine()) != null) {
-            response.append(decodedString);
-        }
-        in.close();
-        connection.disconnect();
+        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+            
+            JsonObject webfingerResponse = jsonReader.readObject();        
+            
+            if(webfingerResponse.containsKey("links")) {
+                StringBuffer oidcConfig = new StringBuffer();
+                JsonArray links = webfingerResponse.getJsonArray("links");
+                for(int index = 0; index < links.size(); index++) {
+                    JsonObject link = (JsonObject)links.get(index);
+                    String rel = link.getString("rel");
+                    if(rel.equals("http://openid.net/specs/connect/1.0/issuer")) {
+                        webfingerUrl = new URL(link.getString("href"));
+                        webfingerUrl = new URL(webfingerUrl, "/.well-known/openid-configuration");
+                        HttpURLConnection connection2 = (HttpURLConnection)webfingerUrl.openConnection();
+                        connection2.setDoOutput(false);
 
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode webfingerResponse = (ObjectNode) mapper.readTree(response.toString());
-        if(webfingerResponse.has("links")) {
-            StringBuffer oidcConfig = new StringBuffer();
-            ArrayNode links = (ArrayNode)webfingerResponse.get("links");
-            for(int index = 0; index < links.size(); index++) {
-                ObjectNode link = (ObjectNode)links.get(index);
-                String rel = link.get("rel").asText();
-                if(rel.equals("http://openid.net/specs/connect/1.0/issuer")) {
-                    webfingerUrl = new URL(link.get("href").asText());
-                    webfingerUrl = new URL(webfingerUrl, "/.well-known/openid-configuration");
-                    connection = (HttpURLConnection)webfingerUrl.openConnection();
-                    connection.setDoOutput(false);
-
-                    in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                    while ((decodedString = in.readLine()) != null) {
-                        oidcConfig.append(decodedString);
+                        try(JsonReader jsonReader2 = Json.createReader(connection2.getInputStream())) {
+                            retval = jsonReader2.readObject();
+                        } finally {
+                            connection2.disconnect();
+                        }
+                        break;
                     }
-                    in.close();
-                    connection.disconnect();
-
-                    retval = (ObjectNode) mapper.readTree(oidcConfig.toString());
-                    break;
                 }
             }
+            
+        } finally {
+            connection.disconnect();        
         }
             
         return retval;
     }
 
-    public ObjectNode registerClient(String appName, String redirectUri) throws Exception
+    public JsonObject registerClient(String appName, String redirectUri) throws Exception
     {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode retval = null;
+        JsonObject retval = null;
         URL url = new URL(getRegistrationEndpointUrl());
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json");
         connection.setRequestProperty("Accept", "application/json");
 
-        ObjectNode req = mapper.createObjectNode();
-        ArrayNode redirect_uris = mapper.createArrayNode();
-        redirect_uris.add(redirectUri);
-        req.put("application_type", "web");
-        req.put("redirect_uris", redirect_uris);
-        req.put("client_name", appName);
+        JsonObject req = Json.createObjectBuilder()
+                .add("application_type", "web")
+                .add("redirect_uris", Json.createArrayBuilder().add(redirectUri))
+                .add("client_name", appName)
+                .build();
+                
         
         OutputStreamWriter out = new OutputStreamWriter(
                                          connection.getOutputStream());
         out.write(req.toString());
         out.close();
 
-        BufferedReader in = new BufferedReader(
-                                    new InputStreamReader(
-                                    connection.getInputStream()));
-        String decodedString;
-        StringBuffer data = new StringBuffer();
-        while ((decodedString = in.readLine()) != null) {
-	    data.append(decodedString);
+        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+            
+            retval = jsonReader.readObject();
+            
+        } finally {
+            connection.disconnect();
         }
-        in.close();
-        connection.disconnect();
 
-        retval = (ObjectNode) mapper.readTree(data.toString());
         return retval;
     }
     

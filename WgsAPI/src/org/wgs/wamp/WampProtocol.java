@@ -461,20 +461,20 @@ public class WampProtocol
         WampList msg = new WampList();
         msg.add(YIELD);
         msg.add(invocationRequestId);
-        msg.add(invocationResultOptions);
-        msg.add(result);
-        if(resultKw != null && resultKw.size() > 0) msg.add(resultKw);
+        msg.add((invocationResultOptions != null) ? invocationResultOptions : new WampDict());
+        if(result != null || (resultKw != null && resultKw.size() > 0) ) {
+            msg.add(result);
+            if(resultKw != null && resultKw.size() > 0) msg.add(resultKw);
+        }
         sendWampMessage(clientSocket, msg);        
     }
     
     public static void sendInterruptMessage(WampSocket remotePeer, Long invocationId, WampDict cancelOptions) 
     {
-        if(cancelOptions == null) cancelOptions = new WampDict();
-        
         WampList msg = new WampList();
         msg.add(INTERRUPT);
         msg.add(invocationId);
-        msg.add(cancelOptions);
+        msg.add((cancelOptions != null) ? cancelOptions : new WampDict());
         sendWampMessage(remotePeer, msg);        
     }
     

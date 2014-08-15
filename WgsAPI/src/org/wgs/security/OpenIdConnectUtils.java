@@ -1,20 +1,19 @@
 package org.wgs.security;
 
+import java.io.StringReader;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
-
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
-import org.glassfish.grizzly.http.util.URLDecoder;
-
 import org.wgs.util.Base64;
 import org.wgs.util.Social;
 import org.wgs.util.Storage;
@@ -109,14 +108,14 @@ public class OpenIdConnectUtils
                 
                 OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
                 if(provider == null) {
-                    ObjectNode oidcConfig = OpenIdConnectProvider.discover(principal);
+                    JsonObject oidcConfig = OpenIdConnectProvider.discover(principal);
                     provider = new OpenIdConnectProvider();
                     provider.setDomain(providerDomain);
                     provider.setDynamic(true);
-                    provider.setRegistrationEndpointUrl(oidcConfig.get("registration_endpoint").asText());
-                    provider.setAuthEndpointUrl(oidcConfig.get("authorization_endpoint").asText());
-                    provider.setAccessTokenEndpointUrl(oidcConfig.get("token_endpoint").asText());
-                    provider.setUserInfoEndpointUrl(oidcConfig.get("userinfo_endpoint").asText());
+                    provider.setRegistrationEndpointUrl(oidcConfig.getString("registration_endpoint"));
+                    provider.setAuthEndpointUrl(oidcConfig.getString("authorization_endpoint"));
+                    provider.setAccessTokenEndpointUrl(oidcConfig.getString("token_endpoint"));
+                    provider.setUserInfoEndpointUrl(oidcConfig.getString("userinfo_endpoint"));
                     provider = Storage.saveEntity(provider);
                 }
 
@@ -125,7 +124,7 @@ public class OpenIdConnectUtils
                 } else {
                     try {
                         // register OIDC client
-                        ObjectNode oidcClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
+                        JsonObject oidcClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
                         oidcClient = new OpenIdConnectClient();
                         oidcClient.setProvider(provider);
                         oidcClient.setRedirectUri(redirectUri);
@@ -148,7 +147,7 @@ public class OpenIdConnectUtils
                         Storage.removeEntity(oidcClient);
                         
                         OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
-                        ObjectNode oidcClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
+                        JsonObject oidcClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
                         oidcClient.load(oidcClientRegistrationResponse);
                     }
                     oidcClient = Storage.saveEntity(oidcClient);
@@ -204,7 +203,7 @@ public class OpenIdConnectUtils
             if(providerDomain.endsWith("facebook.com")) {
                 
                 int pos = accessTokenResponse.indexOf("&");
-                String accessToken = URLDecoder.decode(accessTokenResponse.substring("access_token=".length(), pos));
+                String accessToken = URLDecoder.decode(accessTokenResponse.substring("access_token=".length(), pos), "utf8");
                 String expires = accessTokenResponse.substring(pos + "&expires=".length());
                 Calendar expiration = Calendar.getInstance();
                 expiration.add(Calendar.SECOND, Integer.parseInt(expires));
@@ -212,34 +211,37 @@ public class OpenIdConnectUtils
                 String userInfo = oidcClient.getProvider().getUserInfo(accessToken);
                 System.out.println("user info: " + userInfo);
 
-                ObjectMapper mapper = new ObjectMapper();
-                ObjectNode   userInfoNode = (ObjectNode)mapper.readTree(userInfo);
-                
-                String id = userInfoNode.get("id").asText();
-                
-                usr = UserRepository.findUserByLoginAndDomain(id, providerDomain);
-                if(usr == null) {
-                    usr = new User();
-                    usr.setUid(UUID.randomUUID().toString());
-                    usr.setDomain(providerDomain);
-                    usr.setLogin(id);
-                    usr.setAdministrator(false);
+                try(JsonReader userInfoJsonReader = Json.createReader(new StringReader(userInfo))) {
+                    
+                    JsonObject userInfoNode = userInfoJsonReader.readObject();
+                    String id = userInfoNode.getString("id");
+
+                    usr = UserRepository.findUserByLoginAndDomain(id, providerDomain);
+                    if(usr == null) {
+                        usr = new User();
+                        usr.setUid(UUID.randomUUID().toString());
+                        usr.setDomain(providerDomain);
+                        usr.setLogin(id);
+                        usr.setAdministrator(false);
+                    }
+
+                    usr.setName(userInfoNode.getString("name"));
+                    if(userInfoNode.containsKey("email")) usr.setEmail(userInfoNode.getString("email"));
+                    usr.setPicture("https://graph.facebook.com/"+id+"/picture");
+                    usr.setTokenCaducity(expiration);                
+                    usr.setAccessToken(accessToken);
                 }
                 
-                usr.setName(userInfoNode.get("name").asText());
-                if(userInfoNode.has("email")) usr.setEmail(userInfoNode.get("email").asText());
-                usr.setPicture("https://graph.facebook.com/"+id+"/picture");
-                usr.setTokenCaducity(expiration);                
-                usr.setAccessToken(accessToken);
                 
             } else {
                 // OpenID Connect
 
-                ObjectMapper mapper = new ObjectMapper();
-                ObjectNode   response = (ObjectNode)mapper.readTree(accessTokenResponse);
+                JsonReader   accessTokenJsonReader = Json.createReader(new StringReader(accessTokenResponse));
+                JsonObject   response = accessTokenJsonReader.readObject();
+                accessTokenJsonReader.close();
 
-                if(response != null && response.has("id_token") && !response.get("id_token").isNull()) {
-                    String idTokenJWT = response.get("id_token").asText();
+                if(response != null && response.containsKey("id_token") && !response.isNull("id_token")) {
+                    String idTokenJWT = response.getString("id_token");
                     //System.out.println("Encoded id_token: " + idToken);
 
                     int pos1 = idTokenJWT.indexOf(".")+1;
@@ -249,53 +251,59 @@ public class OpenIdConnectUtils
                     idTokenData = Base64.decodeBase64ToString(idTokenData);
                     logger.fine("Decoded id_token: " + idTokenData);
 
-                    ObjectNode idTokenNode = (ObjectNode)mapper.readTree(idTokenData);          
-                    String issuer = idTokenNode.get("iss").asText();
-                    String login = idTokenNode.get("sub").asText();
-                    usr = UserRepository.findUserByLoginAndDomain(login, providerDomain);
-                    if(usr == null) {
-                        usr = new User();
-                        usr.setUid(UUID.randomUUID().toString());
-                        usr.setDomain(providerDomain);
-                        usr.setLogin(login);
-                        usr.setAdministrator(false);
+                    try(JsonReader idTokenJsonReader = Json.createReader(new StringReader(idTokenData))) {
+                        JsonObject idTokenNode = idTokenJsonReader.readObject();
+                        String issuer = idTokenNode.getString("iss");
+                        String login = idTokenNode.getString("sub");
+                        usr = UserRepository.findUserByLoginAndDomain(login, providerDomain);
+                        if(usr == null) {
+                            usr = new User();
+                            usr.setUid(UUID.randomUUID().toString());
+                            usr.setDomain(providerDomain);
+                            usr.setLogin(login);
+                            usr.setAdministrator(false);
+                        }
+                                      
+                        if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
+                            // Use cached UserInfo from local database
+                            logger.fine("Cached OIDC User: " + usr);
+                            wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
+
+                        } else if(response.containsKey("access_token")) {
+                            // Get UserInfo from OpenId Connect Provider
+                            String accessToken = response.getString("access_token");
+                            System.out.println("Access token: " + accessToken);
+
+                            String userInfo = oidcClient.getProvider().getUserInfo(accessToken);
+                            logger.fine("OIDC UserInfo: " + userInfo);
+
+                            try(JsonReader userInfoJsonReader = Json.createReader(new StringReader(userInfo))) {
+                                JsonObject userInfoNode = userInfoJsonReader.readObject();
+
+                                usr.setName(userInfoNode.getString("name"));
+                                if(userInfoNode.containsKey("email")) usr.setEmail(userInfoNode.getString("email"));
+                                if(userInfoNode.containsKey("picture")) usr.setPicture(userInfoNode.getString("picture"));
+                                if(idTokenNode.containsKey("exp")) {
+                                    Calendar caducity = Calendar.getInstance();
+                                    caducity.setTimeInMillis(idTokenNode.getJsonNumber("exp").longValue()*1000l);
+                                    usr.setProfileCaducity(caducity);
+                                }
+                            }
+
+                        } 
+                    
                     }
                     
-                    if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
-                        // Use cached UserInfo from local database
-                        logger.fine("Cached OIDC User: " + usr);
-                        wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
-
-                    } else if(response.has("access_token")) {
-                        // Get UserInfo from OpenId Connect Provider
-                        String accessToken = response.get("access_token").asText();
-                        System.out.println("Access token: " + accessToken);
-
-                        String userInfo = oidcClient.getProvider().getUserInfo(accessToken);
-                        logger.fine("OIDC UserInfo: " + userInfo);
-
-                        ObjectNode userInfoNode = (ObjectNode)mapper.readTree(userInfo);
-
-                        usr.setName(userInfoNode.get("name").asText());
-                        if(userInfoNode.has("email")) usr.setEmail(userInfoNode.get("email").asText());
-                        if(userInfoNode.has("picture")) usr.setPicture(userInfoNode.get("picture").asText());
-                        if(idTokenNode.has("exp")) {
-                            Calendar caducity = Calendar.getInstance();
-                            caducity.setTimeInMillis(idTokenNode.get("exp").asLong()*1000l);
-                            usr.setProfileCaducity(caducity);
-                        }
-
-                    } 
 
 
-                    if(response.has("refresh_token")) {
-                        usr.setRefreshToken(response.get("refresh_token").asText());
+                    if(response.containsKey("refresh_token")) {
+                        usr.setRefreshToken(response.getString("refresh_token"));
                     }
 
-                    if(response.has("access_token")) {
-                        usr.setAccessToken(response.get("access_token").asText());
-                        if(response.has("expires_in")) {
-                            int expires_in = response.get("expires_in").asInt();
+                    if(response.containsKey("access_token")) {
+                        usr.setAccessToken(response.getString("access_token"));
+                        if(response.containsKey("expires_in")) {
+                            int expires_in = response.getInt("expires_in");
                             Calendar expiration = Calendar.getInstance();
                             expiration.add(Calendar.SECOND, expires_in);
                             usr.setTokenCaducity(expiration);

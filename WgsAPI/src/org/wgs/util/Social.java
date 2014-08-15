@@ -1,7 +1,6 @@
 package org.wgs.util;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -9,9 +8,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
+import javax.json.*;
+
 import org.wgs.security.User;
 
 
@@ -46,44 +44,39 @@ public class Social
             // accessToken = refreshToken(usr);
         }
 
-        StringBuffer data = new StringBuffer();
+
         URL url = new URL("https://www.googleapis.com/plus/v1/people/"+URLEncoder.encode(usr.getLogin(),"utf8")+"/people/visible");
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setRequestProperty("Authorization", "Bearer " + accessToken);
         connection.setDoOutput(false);
 
-        BufferedReader in = new BufferedReader(
-                                    new InputStreamReader(
-                                    connection.getInputStream()));
-        String decodedString;
-        while ((decodedString = in.readLine()) != null) {
-            data.append(decodedString);
-        }
-        in.close();
-        connection.disconnect();
-
-        ObjectMapper mapper = new ObjectMapper();            
-        ObjectNode dataNode = (ObjectNode) mapper.readTree(data.toString());
-
-        ArrayNode items = (ArrayNode)dataNode.get("items");
-        for(int index = 0; index < items.size(); index++) {
-            ObjectNode item = (ObjectNode)items.get(index);
-            String login = item.get("id").asText();
-            List<User> found = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", login, domain);
-            User friend = (found != null && found.size() > 0)? found.get(0) : null;
-            if(friend == null) {
-                friend = new User();
-                friend.setUid(UUID.randomUUID().toString());
-                friend.setLogin(login);
-                friend.setDomain(domain);
-                friend.setName(item.get("displayName").asText());
-                friend.setAdministrator(false);
-                friend.setPicture(item.get("image").get("url").asText());
-                friend = Storage.saveEntity(friend);
+        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+            
+            JsonObject dataNode = jsonReader.readObject();
+            
+            JsonArray items = dataNode.getJsonArray("items");
+            for(int index = 0; index < items.size(); index++) {
+                JsonObject item = items.getJsonObject(index);
+                String login = item.getString("id");
+                List<User> found = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", login, domain);
+                User friend = (found != null && found.size() > 0)? found.get(0) : null;
+                if(friend == null) {
+                    friend = new User();
+                    friend.setUid(UUID.randomUUID().toString());
+                    friend.setLogin(login);
+                    friend.setDomain(domain);
+                    friend.setName(item.getString("displayName"));
+                    friend.setAdministrator(false);
+                    friend.setPicture(item.getJsonObject("image").getString("url"));
+                    friend = Storage.saveEntity(friend);
+                }
+                if(!friends.contains(friend)) {
+                    friends.add(friend);
+                }
             }
-            if(!friends.contains(friend)) {
-                friends.add(friend);
-            }
+            
+        } finally {
+            connection.disconnect();
         }
 
         usr.setFriends(friends);
@@ -104,44 +97,40 @@ public class Social
             // accessToken = refreshToken(usr);
         }
 
-        StringBuffer data = new StringBuffer();
+
         URL url = new URL("https://graph.facebook.com/" + usr.getLogin() + "/friends?access_token="+URLEncoder.encode(accessToken,"utf8"));
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setDoOutput(false);
 
-        BufferedReader in = new BufferedReader(
-                                    new InputStreamReader(
-                                    connection.getInputStream()));
-        String decodedString;
-        while ((decodedString = in.readLine()) != null) {
-            data.append(decodedString);
-        }
-        in.close();
-        connection.disconnect();
+        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+            
+            JsonObject dataNode = jsonReader.readObject();
 
-        ObjectMapper mapper = new ObjectMapper();            
-        ObjectNode dataNode = (ObjectNode) mapper.readTree(data.toString());
-
-        ArrayNode items = (ArrayNode)dataNode.get("data");
-        for(int index = 0; index < items.size(); index++) {
-            ObjectNode item = (ObjectNode)items.get(index);
-            String login = item.get("id").asText();
-            List<User> found = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", login, domain);
-            User friend = (found != null && found.size() > 0)? found.get(0) : null;
-            if(friend == null) {
-                friend = new User();
-                friend.setUid(UUID.randomUUID().toString());
-                friend.setLogin(login);
-                friend.setDomain(domain);
-                friend.setName(item.get("name").asText());
-                friend.setAdministrator(false);
-                friend.setPicture("https://graph.facebook.com/"+login+"/picture");
-                friend = Storage.saveEntity(friend);
+            JsonArray items = dataNode.getJsonArray("data");
+            for(int index = 0; index < items.size(); index++) {
+                JsonObject item = items.getJsonObject(index);
+                String login = item.getString("id");
+                List<User> found = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", login, domain);
+                User friend = (found != null && found.size() > 0)? found.get(0) : null;
+                if(friend == null) {
+                    friend = new User();
+                    friend.setUid(UUID.randomUUID().toString());
+                    friend.setLogin(login);
+                    friend.setDomain(domain);
+                    friend.setName(item.getString("name"));
+                    friend.setAdministrator(false);
+                    friend.setPicture("https://graph.facebook.com/"+login+"/picture");
+                    friend = Storage.saveEntity(friend);
+                }
+                if(!friends.contains(friend)) {
+                    friends.add(friend);
+                }
             }
-            if(!friends.contains(friend)) {
-                friends.add(friend);
-            }
+            
+        } finally {
+            connection.disconnect();
         }
+
 
         usr.setFriends(friends);
         usr = Storage.saveEntity(usr);

@@ -5,10 +5,11 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
 import javax.persistence.Column;
-import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
-import javax.persistence.EntityManager;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
 import javax.persistence.JoinColumn;
@@ -18,9 +19,6 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import javax.persistence.TemporalType;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
 import org.wgs.util.Storage;
 
 
@@ -160,16 +158,16 @@ public class OpenIdConnectClient implements Serializable
     }
     
     
-    public void load(ObjectNode oidcClientRegistrationResponse) {
+    public void load(JsonObject oidcClientRegistrationResponse) {
         this.setRedirectUri(redirectUri);
-        this.setClientId(oidcClientRegistrationResponse.get("client_id").asText());
-        this.setClientSecret(oidcClientRegistrationResponse.get("client_secret").asText());
-        this.setRegistrationClientUri(oidcClientRegistrationResponse.get("registration_client_uri").asText());
-        this.setRegistrationAccessToken(oidcClientRegistrationResponse.get("registration_access_token").asText());                        
+        this.setClientId(oidcClientRegistrationResponse.getString("client_id"));
+        this.setClientSecret(oidcClientRegistrationResponse.getString("client_secret"));
+        this.setRegistrationClientUri(oidcClientRegistrationResponse.getString("registration_client_uri"));
+        this.setRegistrationAccessToken(oidcClientRegistrationResponse.getString("registration_access_token"));
 
         Calendar expiration = null;
-        if(oidcClientRegistrationResponse.has("expires_at")) {
-            long expires_at = oidcClientRegistrationResponse.get("expires_at").asLong();
+        if(oidcClientRegistrationResponse.containsKey("expires_at")) {
+            long expires_at = oidcClientRegistrationResponse.getJsonNumber("expires_at").longValue();
             if(expires_at != 0l) {
                 expiration = Calendar.getInstance();
                 expiration.setTimeInMillis(expires_at*1000);
@@ -207,37 +205,35 @@ public class OpenIdConnectClient implements Serializable
 
     public void updateClientCredentials() throws Exception
     {
-        ObjectMapper mapper = new ObjectMapper();
         URL url = new URL(this.getRegistrationClientUri());
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setRequestProperty("Authorization", "Bearer " + this.getRegistrationAccessToken());
         
-        BufferedReader in = new BufferedReader(
-                                    new InputStreamReader(
-                                    connection.getInputStream()));
-        String decodedString;
-        StringBuffer data = new StringBuffer();
-        while ((decodedString = in.readLine()) != null) {
-	    data.append(decodedString);
-        }
-        in.close();
-        connection.disconnect();
 
-        ObjectNode oidcClient = (ObjectNode) mapper.readTree(data.toString());
-        Calendar expiration = null;
-        if(oidcClient.has("expires_at")) {
-            long expires_at = oidcClient.get("expires_at").asLong();
-            if(expires_at != 0l) {
-                expiration = Calendar.getInstance();
-                expiration.setTimeInMillis(oidcClient.get("expires_at").asLong()*1000);
+        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+            
+            JsonObject oidcClient = jsonReader.readObject();
+
+            setClientId(oidcClient.getString("client_id"));
+            if(oidcClient.containsKey("client_secret")) setClientSecret(oidcClient.getString("client_secret"));
+            if(oidcClient.containsKey("registration_client_uri")) setRegistrationClientUri(oidcClient.getString("registration_client_uri"));
+            if(oidcClient.containsKey("registration_access_token")) setRegistrationAccessToken(oidcClient.getString("registration_access_token"));
+
+            Calendar expiration = null;
+            if(oidcClient.containsKey("expires_at")) {
+                long expires_at = oidcClient.getJsonNumber("expires_at").longValue();
+                if(expires_at != 0l) {
+                    expiration = Calendar.getInstance();
+                    expiration.setTimeInMillis(expires_at*1000);
+                }
             }
+            setClientExpiration(expiration);
+
+        } finally {
+            connection.disconnect();
         }
+
         
-        setClientId(oidcClient.get("client_id").asText());
-        if(oidcClient.has("client_secret")) setClientSecret(oidcClient.get("client_secret").asText());
-        if(oidcClient.has("registration_client_uri")) setRegistrationClientUri(oidcClient.get("registration_client_uri").asText());
-        if(oidcClient.has("registration_access_token")) setRegistrationAccessToken(oidcClient.get("registration_access_token").asText());
-        setClientExpiration(expiration);
     }
     
 }
