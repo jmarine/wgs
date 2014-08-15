@@ -27,12 +27,6 @@
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library dirs="200">
-                    <file>${libs.OpenMQ_5.0.classpath}</file>
-                </library>
-                <library dirs="200">
-                    <file>${libs.tyrus.classpath}</file>
-                </library>
-                <library dirs="200">
                     <file>${libs.JDeferred.classpath}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
