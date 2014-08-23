@@ -306,11 +306,14 @@ public class WampClient extends Endpoint
     }
     
     
+    @SuppressWarnings("unchecked")
     private Deferred<Long, WampException, Long> getDeferredLong(WampList request)
     {
         return (Deferred<Long, WampException, Long>)request.get(0);
     }
     
+    
+    @SuppressWarnings("unchecked")
     private Deferred<WampResult, WampException, WampResult> getDeferredWampResult(WampList request)
     {
         return (Deferred<WampResult, WampException, WampResult>)request.get(0);

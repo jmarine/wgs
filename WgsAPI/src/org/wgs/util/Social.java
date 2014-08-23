@@ -1,6 +1,10 @@
 package org.wgs.util;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -9,7 +13,11 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
 import javax.json.*;
+import javax.naming.Context;
+import javax.naming.InitialContext;
 
+import org.wgs.security.OpenIdConnectClient;
+import org.wgs.security.OpenIdConnectClientPK;
 import org.wgs.security.User;
 
 
@@ -138,5 +146,79 @@ public class Social
         return friends;
     }
     
+    
+    
+    private static String getFacebookAppAccessToken(String clientId, String secret) throws Exception
+    {
+        return clientId + "|" + secret;
+    }
+    
+    
+    public static void notifyFacebookUser(OpenIdConnectClient oidcClient, String to_user_id, String rel_link, String template) throws Exception
+    {
+        String appToken = getFacebookAppAccessToken(oidcClient.getClientId(), oidcClient.getClientSecret());
+        URL url = new URL("https://graph.facebook.com/v2.1/" + to_user_id + "/apprequests?access_token="+ appToken + "&message=" + URLEncoder.encode(template,"utf8") + "&data=" + URLEncoder.encode(rel_link,"utf8")); 
+        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setDoOutput(false);
+        
+        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+            JsonObject dataNode = jsonReader.readObject();       
+            System.out.println("Notification result: " + dataNode.toString());
+        } finally {
+            connection.disconnect();
+        }
+    }
+    
+    
+    
+    public static void clearNotifications(OpenIdConnectClient oidcClient, User usr) throws Exception    
+    {
+        if(usr != null && usr.getDomain().equals("facebook.com")) {
+            clearFacebookNotifications(oidcClient, usr);
+        }
+    }
+    
+    public static void clearFacebookNotifications(OpenIdConnectClient oidcClient, User usr) throws Exception
+    {
+        URL url = new URL("https://graph.facebook.com/v2.1/me/apprequests?access_token="+ URLEncoder.encode(usr.getAccessToken(), "utf8"));
+        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        connection.setDoOutput(false);
+        
+        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+            JsonObject dataNode = jsonReader.readObject();  
+            System.out.println("Notification result: " + dataNode.toString());
+            
+            JsonArray  notifications = dataNode.getJsonArray("data");
+            for(int i = 0; i < notifications.size(); i++) {
+                JsonObject notification = notifications.getJsonObject(i);
+                String id = notification.getString("id");
+                JsonObject application = notification.getJsonObject("application");
+                if(application.getString("id").equalsIgnoreCase(oidcClient.getClientId())) {
+                
+                    System.out.println("Deleting : " + id);
+                    url = new URL("https://graph.facebook.com/v2.1/" + id + "?access_token="+ URLEncoder.encode(usr.getAccessToken(), "utf8"));
+                    HttpURLConnection connection2 = (HttpURLConnection)url.openConnection();
+                    connection2.setRequestMethod("DELETE");
+                    connection2.setDoOutput(false);
+
+                    try(JsonReader jsonReader2 = Json.createReader(connection2.getInputStream())) {
+                        JsonObject success = jsonReader2.readObject();
+                        System.out.println("Readed: " + success.toString());
+                    } catch(Exception ex) { }
+
+                }
+            }
+        } finally {
+            connection.disconnect();
+        }
+    }    
+    
+    public static final void doFacebookTest() throws Exception
+    {
+            OpenIdConnectClientPK oidcClientPK = new OpenIdConnectClientPK("facebook.com", "https://localhost:8181/webgl8x8boardgames/oauth2callback.html?provider=facebook.com");
+            OpenIdConnectClient oidcClient = Storage.findEntity(OpenIdConnectClient.class, oidcClientPK);
+            notifyFacebookUser(oidcClient, "", "?1234", "It's your turn");  
+    }
     
 }

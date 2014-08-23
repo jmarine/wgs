@@ -275,6 +275,7 @@ public class WampMessage implements javax.jms.TextMessage
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean isBodyAssignableTo(Class type) throws JMSException {
         return type.isAssignableFrom(body.getClass());
     }

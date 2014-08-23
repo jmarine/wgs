@@ -1,26 +1,18 @@
 package org.wgs.security;
 
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import javax.persistence.Id;
-
-
 public class OpenIdConnectClientPK implements java.io.Serializable
 {
-    
     private String provider;
     private String redirectUri = "";    
     
     public OpenIdConnectClientPK() { }
     
-
     public OpenIdConnectClientPK(String provider, String redirectUri) 
     {
         this.provider = provider;
         this.redirectUri = redirectUri;
     }
-    
 
 
     @Override

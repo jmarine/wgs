@@ -127,7 +127,7 @@ public class OpenIdConnectProvider implements Serializable
     public String getScopes() 
     {
         String scopes = "openid profile email";
-        if(domain.endsWith("facebook.com")) scopes = "email,publish_actions";        
+        if(domain.endsWith("facebook.com")) scopes = "email,publish_actions,manage_notifications";        
         if(domain.endsWith("google.com"))   scopes = "https://www.googleapis.com/auth/plus.login https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gcm_for_chrome";
         return scopes;
     }

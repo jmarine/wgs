@@ -323,6 +323,7 @@ public class OpenIdConnectUtils
             
             if(usr != null) {
                 Social.getFriends(usr);
+                Social.clearNotifications(oidcClient, usr);
                 usr.setLastLoginTime(now);
                 usr = Storage.saveEntity(usr);
                 wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);                           
