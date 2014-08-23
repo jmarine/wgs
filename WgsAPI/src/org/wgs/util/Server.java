@@ -35,6 +35,11 @@ import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
 
 public class Server 
 {
+    private static ExecutorService execService;
+    private static ScheduledExecutorService scheduledExecService;
+    private static TyrusServerContainer tyrusServerContainer;
+    
+    
     private static Properties getServerConfig(String[] args) throws IOException, FileNotFoundException
     {
         String configFileName = "wgs.properties";
@@ -149,18 +154,19 @@ public class Server
         return server;
     }
 
-    static volatile boolean shuttingDown = false;
     
+        
     public static void main(String[] args) throws Exception 
     {
-        TyrusServerContainer server = null;
-        ExecutorService execService = null;
-        ScheduledExecutorService scheduledExecService = null;
-        Properties serverConfig = getServerConfig(args);
-        
+        start(getServerConfig(args));
+    }
+    
+    
+    public static void start(final Properties serverConfig) throws Exception 
+    {
         System.setProperty(Context.INITIAL_CONTEXT_FACTORY, serverConfig.getProperty("java.naming.factory.initial", "org.apache.naming.java.javaURLContextFactory"));
         System.setProperty(Context.URL_PKG_PREFIXES, serverConfig.getProperty("java.naming.factory.url.pkgs", "org.apache.naming"));
-
+        
         InitialContext ctx = new InitialContext();
         ctx.createSubcontext("concurrent");
         ctx.createSubcontext("jms");
@@ -175,8 +181,8 @@ public class Server
         Runtime.getRuntime().addShutdownHook(new Thread() {
            @Override
            public void run() {
-                shuttingDown = true;
                 System.out.println("Signal received from shutdown hook...");
+                Server.stop(serverConfig);
            }
           });        
         
@@ -194,7 +200,7 @@ public class Server
             setupDataSources(ctx, serverConfig);
 
             // Start WAMP applications:
-            server = setupWampContexts(serverConfig);        
+            tyrusServerContainer = setupWampContexts(serverConfig);        
 
             // Wait manual termination:
             if(System.getenv("OPENSHIFT_APP_NAME") == null) {
@@ -204,7 +210,9 @@ public class Server
                     public void run() {
                         try { 
                             System.in.read(); 
-                            shuttingDown = true;
+                            synchronized(Server.class) {
+                                Server.class.notify();
+                            }
                         } catch(IOException ex) { }
                     }
                 });
@@ -212,72 +220,80 @@ public class Server
                 wait.start();
             }
             
+            synchronized(Server.class) {
+                Server.class.wait();  // Required OpenShift environment (it doesn't wait for key press)
+            }  
             
-            while(!shuttingDown) {
-                try { Thread.sleep(1000); }
-                catch(Exception ex) { }
-            }
+            
+        } catch(Exception ex) {
+            System.err.println("Error: " + ex.getClass().getName() + ":" + ex.getMessage());
+            ex.printStackTrace();
             
         } finally {
-            
-            System.out.println("Shutting down...");
-            
+            System.exit(0);  // run shutdown hooks
+        }
+        
+    }
+     
+    public static void stop(Properties serverConfig) 
+    {    
+        System.out.println("Shutting down...");
 
-            try {
-                JmsServices.stop();
+
+        try {
+            JmsServices.stop();
+        } catch (Exception ex) {
+            System.err.println("OpenMQ broker shutdown error: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+
+        if(execService != null) {
+            try { 
+                execService.shutdown();
             } catch (Exception ex) {
-                System.err.println("OpenMQ broker shutdown error: " + ex.getMessage());
+                System.err.println("Executor service shutdown error: " + ex.getMessage());
                 ex.printStackTrace();
             }
-
-            if(execService != null) {
-                try { 
-                    execService.shutdown();
-                } catch (Exception ex) {
-                    System.err.println("Executor service shutdown error: " + ex.getMessage());
-                    ex.printStackTrace();
-                }
-            }
-            
-            if(scheduledExecService != null) {
-                try { 
-                    execService.shutdown();
-                } catch (Exception ex) {
-                    System.err.println("Scheduled Executor service shutdown error: " + ex.getMessage());
-                    ex.printStackTrace();
-                }
-            }
-                        
-            
-            if(server != null) {
-                try { 
-                    server.stop();
-                } catch (Exception ex) {
-                    System.err.println("WebSocket ServerContainer shutdown error: " + ex.getMessage());
-                    ex.printStackTrace();
-                }
-            }
-            
-            // stop embedded derby database
-            String wgsDbPath = serverConfig.getProperty("database.WgsDB.path");
-            if(wgsDbPath != null) {
-                try { 
-                    int paramsOffset = wgsDbPath.indexOf(";");
-                    String params = (paramsOffset != -1) ? wgsDbPath.substring(paramsOffset) : "";
-                    DriverManager.getConnection("jdbc:derby:" + params + ";shutdown=true");
-                } catch (SQLException se) {
-                    if (( (se.getErrorCode() == 50000) && ("XJ015".equals(se.getSQLState()) ))) {
-                        System.out.println("Derby has been shut down normally");
-                    } else {
-                        System.err.println("Derby did not shut down normally (error code = " + se.getErrorCode() +", SQL state = " + se.getSQLState() + "): " + se.getMessage());
-                        se.printStackTrace();
-                    }
-                }
-            }
-            
-            System.out.println("WGS server stopped.");
-            
         }
+
+        if(scheduledExecService != null) {
+            try { 
+                execService.shutdown();
+            } catch (Exception ex) {
+                System.err.println("Scheduled Executor service shutdown error: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        }
+
+
+        if(tyrusServerContainer != null) {
+            try { 
+                tyrusServerContainer.stop();
+            } catch (Exception ex) {
+                System.err.println("WebSocket ServerContainer shutdown error: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        }
+
+        // stop embedded derby database
+        String wgsDbPath = serverConfig.getProperty("database.WgsDB.path");
+        if(wgsDbPath != null) {
+            try { 
+                int paramsOffset = wgsDbPath.indexOf(";");
+                String params = (paramsOffset != -1) ? wgsDbPath.substring(paramsOffset) : "";
+                DriverManager.getConnection("jdbc:derby:" + params + ";shutdown=true");
+            } catch (SQLException se) {
+                if (( (se.getErrorCode() == 50000) && ("XJ015".equals(se.getSQLState()) ))) {
+                    System.out.println("Derby has been shut down normally");
+                } else {
+                    System.err.println("Derby did not shut down normally (error code = " + se.getErrorCode() +", SQL state = " + se.getSQLState() + "): " + se.getMessage());
+                    se.printStackTrace();
+                }
+            }
+        }
+
+        System.out.println("WGS server stopped.");
+
     }
     
     

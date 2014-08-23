@@ -111,7 +111,7 @@ public class TurnValidator implements GroupActionValidator
             return isValid;
             
         } catch(Exception ex) {
-            System.err.println("Error: " + ex.getClass() + ": " + ex.getMessage());
+            System.err.println("Error: " + ex.getClass().getName() + ": " + ex.getMessage());
             ex.printStackTrace();
             return false;
         }
