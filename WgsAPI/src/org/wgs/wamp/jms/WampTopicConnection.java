@@ -56,6 +56,11 @@ public class WampTopicConnection extends Endpoint implements TopicConnection
         return wampApp;
     }
     
+    public WampSocket getWampSocket()
+    {
+        return clientSocket;
+    }
+    
     @Override
     public void onOpen(javax.websocket.Session session, EndpointConfig config) {
         this.clientSocket = new WampSocket(wampApp, session);

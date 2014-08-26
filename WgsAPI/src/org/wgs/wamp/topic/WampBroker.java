@@ -186,7 +186,7 @@ public class WampBroker
         
         WampSubscription subscription = topicSubscriptionsByTopicURI.get(topicUriOrPattern);
         if(subscription == null) {
-            Long subscriptionId = WampProtocol.newId();  
+            Long subscriptionId = WampProtocol.newRouterScopeId();  
             Collection<WampTopic> matchingTopics = WampBroker.getTopics(app, options.getMatchType(), topicUriOrPattern);            
             subscription = new WampSubscription(subscriptionId, options.getMatchType(), topicUriOrPattern, matchingTopics, options);
             topicSubscriptionsById.put(subscriptionId, subscription);

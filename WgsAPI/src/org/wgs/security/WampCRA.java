@@ -111,7 +111,7 @@ public class WampCRA
     {
         // simulate password salt
         WampDict saltParams = new WampDict();
-        saltParams.put("salt", String.valueOf(WampProtocol.newId()));
+        saltParams.put("salt", String.valueOf(WampProtocol.newGlobalScopeId()));
         saltParams.put("keylen", 32);
         saltParams.put("iterations", 1000);
         return saltParams;

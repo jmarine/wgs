@@ -82,7 +82,7 @@ public class WampModule
         if(method != null) {
             return method.invoke(task,clientSocket,args,argsKw,options);
             
-        } else synchronized(app) {  // TODO: avoid synchronization by WampApplication
+        } else {  
             
             final WampRealm realm = WampRealm.getRealm(clientSocket.getRealm());
             final List<WampRemoteMethod> remoteMethods = realm.getRemoteRPCs(clientSocket.getRealm(), methodName, options, clientSocket.getSessionId());
@@ -112,7 +112,7 @@ public class WampModule
                                 deferred.notify(wampResult);
                             }
 
-                            task.removeRemoteInvocation(wampResult.getRequestId());
+                            task.removeRemoteInvocation(remoteMethod.getRemotePeer().getSessionId(), wampResult.getRequestId());
                         }
                     });
 
@@ -162,7 +162,7 @@ public class WampModule
             if(options.hasEventsEnabled()) {
                 WampDict metaEvent = new WampDict();
                 metaEvent.put("session", clientSocket.getSessionId());
-                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
+                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
             }
         }
     }
@@ -174,7 +174,7 @@ public class WampModule
             if(options!=null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_REMOVED)) {
                 WampDict metaEvent = new WampDict();
                 metaEvent.put("session", clientSocket.getSessionId());                
-                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
+                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
             }
 
             subscription.removeSocket(clientSocket.getSessionId());
@@ -216,7 +216,7 @@ public class WampModule
                 WampDict interruptDetails = new WampDict();
                 for(Long invocationId : clientSocket.getInvocationIDs()) {  // critical section
                     WampCallController task = clientSocket.removeInvocationController(invocationId);
-                    task.removeRemoteInvocation(invocationId);
+                    task.removeRemoteInvocation(clientSocket.getSessionId(), invocationId);
                     try { 
                         WampProtocol.sendInterruptMessage(clientSocket, invocationId, interruptDetails); 
                     } catch(Exception ex) { 
@@ -230,7 +230,7 @@ public class WampModule
     
     public void onPublish(WampSocket clientSocket, WampTopic topic, WampList request) throws Exception 
     {
-        Long publicationId = WampProtocol.newId();
+        Long publicationId = WampProtocol.newSessionScopeId(clientSocket);
         Long requestId = request.getLong(1);
         if(requestId != null) {
             WampList payload   = (request.size() >= 5)? (WampList)request.get(4) : null;

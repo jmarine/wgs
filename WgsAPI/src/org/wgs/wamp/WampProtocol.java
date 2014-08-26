@@ -47,13 +47,22 @@ public class WampProtocol
     public static final int YIELD = 70;         // INVOCATION RESULT
     
     
-    public static long newId()
+    public static long newGlobalScopeId()
     {
         synchronized(randomizer) {
             return (((long)(randomizer.nextInt(67108864)) << 27) + randomizer.nextInt(134217728));  // 53 bits
         }
     }
     
+    public static long newRouterScopeId()
+    {
+        return newGlobalScopeId();
+    }
+    
+    public static long newSessionScopeId(WampSocket clientSocket)
+    {
+        return clientSocket.getNextRequestId();
+    }    
 
     private static void sendWampMessage(WampSocket socket, WampList args)
     {

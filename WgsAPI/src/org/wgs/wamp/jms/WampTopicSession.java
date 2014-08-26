@@ -52,7 +52,7 @@ public class WampTopicSession implements javax.jms.TopicSession
 
     @Override
     public TopicSubscriber createSubscriber(Topic topic) throws JMSException {
-        Long requestId = WampProtocol.newId();
+        Long requestId = WampProtocol.newSessionScopeId(con.getWampSocket());
         WampTopicSubscriber subscriber = new WampTopicSubscriber(this, topic, null, false);
         con.getWampApplication().registerWampModule(subscriber);
         subscriptionRequests.put(requestId, subscriber);
@@ -81,7 +81,7 @@ public class WampTopicSession implements javax.jms.TopicSession
 
     @Override
     public TemporaryTopic createTemporaryTopic() throws JMSException {
-        String uri = "wamp.topic.temp." + WampProtocol.newId();
+        String uri = "wamp.topic.temp." + WampProtocol.newGlobalScopeId();
         WampTopicOptions topicOptions = new WampTopicOptions();
         topicOptions.setTemporary(true);
         WampTopic topic = new WampTopic(uri, topicOptions);

@@ -67,8 +67,8 @@ public class WampRemoteMethod extends WampMethod
             }
         });
         
-        final Long invocationId = WampProtocol.newId();
-        task.addRemoteInvocation(invocationId, deferred);
+        final Long invocationId = WampProtocol.newSessionScopeId(remotePeer);
+        task.addRemoteInvocation(remotePeer.getSessionId(), invocationId, deferred);
         remotePeer.addInvocationController(invocationId, task);
         remotePeer.addInvocationAsyncCallback(invocationId, deferred);
 
@@ -97,7 +97,7 @@ public class WampRemoteMethod extends WampMethod
 
             if(!remotePeer.isOpen()) throw new Exception();
         } catch(Exception ex) {
-            task.removeRemoteInvocation(invocationId);
+            task.removeRemoteInvocation(remotePeer.getSessionId(), invocationId);
         }
 
         return promise;

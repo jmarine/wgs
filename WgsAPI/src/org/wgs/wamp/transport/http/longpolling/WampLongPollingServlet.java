@@ -42,7 +42,7 @@ public final class WampLongPollingServlet extends HttpServlet
         AsyncContext actx = req.startAsync();
         actx.setTimeout(40000);
         if(req.getSession() == null) {
-            req.getSession(true).setAttribute(WAMP_SESSION_ID_ATTRIBUTE, String.valueOf(WampProtocol.newId()));
+            req.getSession(true).setAttribute(WAMP_SESSION_ID_ATTRIBUTE, String.valueOf(WampProtocol.newGlobalScopeId()));
         }
 
         actx.addListener(new AsyncListener() {

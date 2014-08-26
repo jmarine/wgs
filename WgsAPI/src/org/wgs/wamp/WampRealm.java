@@ -133,7 +133,7 @@ public class WampRealm
 
         WampCalleeRegistration registration = calleeRegistrationByUri.get(methodUriOrPattern);        
         if(registration == null) {
-            Long registrationId = WampProtocol.newId();
+            Long registrationId = WampProtocol.newRouterScopeId();
             registration = new WampCalleeRegistration(registrationId, matchType, methodUriOrPattern);
             // TODO: move to WampModule:
             calleeRegistrationById.put(registrationId, registration);

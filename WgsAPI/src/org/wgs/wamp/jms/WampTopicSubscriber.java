@@ -96,7 +96,7 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
 
     @Override
     public void close() throws JMSException {
-        //TODO: send [UNSUBSCRIBE, WampProtocol.newId(), wampSubscription.getId()]
+        //TODO: send [UNSUBSCRIBE, WampProtocol.newSessionScopeId(con.getWampSocket()), wampSubscription.getId()]
     }
     
 }

@@ -267,7 +267,7 @@ public class WampEndpointConfig
         }
     
         if(wampCookieValue == null) {
-            wampAuthId = String.valueOf(WampProtocol.newId());
+            wampAuthId = String.valueOf(WampProtocol.newGlobalScopeId());
             wampCookieValue = signWampCookie(wampAuthId);
             
             List<String> cookies = response.getHeaders().get("Cookie");

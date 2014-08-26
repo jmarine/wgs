@@ -54,6 +54,7 @@ public class WampSocket
     private boolean goodbyeRequested;
     private String authMethod;
     private String authProvider;
+    private AtomicLong nextRequestId;
     
 
     public WampSocket(WampApplication app, Session session) 
@@ -67,8 +68,9 @@ public class WampSocket
         this.session = session;
         this.principal = session.getUserPrincipal();
         this.state = (principal != null) ? WampConnectionState.AUTHENTICATED : WampConnectionState.ANONYMOUS;
+        this.nextRequestId = new AtomicLong(0L);
         
-        sessionId   = WampProtocol.newId();
+        sessionId   = WampProtocol.newGlobalScopeId();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
         prefixes    = new HashMap<String,String>();
         invocationAsyncCallbacks = new ConcurrentHashMap<Long,Deferred<WampResult, WampException, WampResult>>();
@@ -125,6 +127,11 @@ public class WampSocket
         this.sessionId = id;
     }
     
+    
+    public synchronized long getNextRequestId()
+    {
+        return nextRequestId.incrementAndGet();
+    }
 
     /**
      * Get the session ID
@@ -293,6 +300,7 @@ public class WampSocket
     }
 
     
+
     public void addInvocationAsyncCallback(Long callID, Deferred<WampResult, WampException, WampResult> rpcAsyncCallback)
     {
         invocationAsyncCallbacks.put(callID, rpcAsyncCallback);
@@ -307,6 +315,7 @@ public class WampSocket
     {
         return invocationAsyncCallbacks.remove(callID);
     }
+
     
     
     public void addCallController(Long callID, WampCallController controller)
@@ -484,7 +493,7 @@ public class WampSocket
         options.setExcluded(excludedSet);
         options.setDiscloseMe(identifyMe);
 
-        WampBroker.publishEvent(this.getRealm(), WampProtocol.newId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), 
+        WampBroker.publishEvent(this.getRealm(), WampProtocol.newGlobalScopeId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), 
                 (options.hasDiscloseMe()? this.getSessionId() : null),
                 (options.hasDiscloseMe()? this.getAuthId() : null),
                 (options.hasDiscloseMe()? this.getAuthProvider() : null),
