@@ -62,7 +62,8 @@ public class WampEndpointConfig
     {
         WampSocket clientSocket = sockets.get(session.getId());
         if(clientSocket == null) {
-            clientSocket = new WampSocket(application, session);
+            clientSocket = new WampWebsocket(application, session);
+            clientSocket.init();
             sockets.put(session.getId(), clientSocket);
         }
         return clientSocket;

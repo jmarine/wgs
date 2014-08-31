@@ -23,6 +23,7 @@ import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
+import org.wgs.wamp.transport.http.websocket.WampWebsocket;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampObject;
 
@@ -39,7 +40,7 @@ public class WampTopicConnection extends Endpoint implements TopicConnection
     {
         this.open = false;
         this.con = ContainerProvider.getWebSocketContainer();        
-        this.wampApp = new WampApplication(WampApplication.WAMPv2, null);
+        this.wampApp = WampApplication.getInstance(WampApplication.WAMPv2, null);
         
         ClientEndpointConfig config = ClientEndpointConfig.Builder.create().preferredSubprotocols(java.util.Arrays.asList("wamp.2.json")).build();
         try {
@@ -63,7 +64,8 @@ public class WampTopicConnection extends Endpoint implements TopicConnection
     
     @Override
     public void onOpen(javax.websocket.Session session, EndpointConfig config) {
-        this.clientSocket = new WampSocket(wampApp, session);
+        this.clientSocket = new WampWebsocket(wampApp, session);
+        this.clientSocket.init();
         WampEndpointConfig.addWampMessageHandlers(wampApp, session);
     }    
     

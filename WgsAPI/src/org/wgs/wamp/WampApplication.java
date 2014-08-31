@@ -36,6 +36,7 @@ public class WampApplication
     public  static final int WAMPv1 = 1;
     public  static final int WAMPv2 = 2;   
 
+    private static final ConcurrentHashMap<String, WampApplication> apps = new ConcurrentHashMap<String, WampApplication>();
     private static final Logger logger = Logger.getLogger(WampApplication.class.getName());
 
     private int     wampVersion;
@@ -48,6 +49,28 @@ public class WampApplication
     
     private TreeMap<String,WampMethod> rpcsByName;
     private Map<String,Set<Long>> sessionsByUserId = new ConcurrentHashMap<String,Set<Long>>();
+
+    
+    public static void registerWampApplication(int version, String path, WampApplication app)
+    {
+        apps.put(getAppKey(version, path), app);
+    }
+    
+    public static synchronized WampApplication getInstance(int version, String path)
+    {
+        String key = getAppKey(version, path);
+        WampApplication app = apps.get(key);
+        if(app == null) {
+            app = new WampApplication(version, path);
+        }
+        return app;
+    }
+    
+    private static String getAppKey(int version, String path)
+    {
+        String key = path + "_" + version;
+        return key;
+    }
     
     
     public WampApplication(int version, String path)
@@ -64,6 +87,7 @@ public class WampApplication
         this.modules = new HashMap<String,WampModule>();
         this.rpcsByName = new TreeMap<String,WampMethod>();
 
+        registerWampApplication(version, path, this);
         registerWampModules();
         
         this.defaultModule = new WampModule(this);

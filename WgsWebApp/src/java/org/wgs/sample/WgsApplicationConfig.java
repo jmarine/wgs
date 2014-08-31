@@ -20,7 +20,7 @@ public class WgsApplicationConfig implements ServerApplicationConfig
   {
     return new HashSet<ServerEndpointConfig>() {
       {
-        add(new WampEndpointConfig(WgsEndpoint.class, new WampApplication(WampApplication.WAMPv2, "/wgs")));
+        add(new WampEndpointConfig(WgsEndpoint.class, WampApplication.getInstance(WampApplication.WAMPv2, "/wgs")));
       }
     };
   }

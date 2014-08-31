@@ -35,6 +35,7 @@ import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
+import org.wgs.wamp.transport.http.websocket.WampWebsocket;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampMatchType;
@@ -358,7 +359,8 @@ public class WampClient extends Endpoint
     public void onOpen(javax.websocket.Session session, EndpointConfig config) 
     {
         this.encoding = getWampEncodingByName(session.getNegotiatedSubprotocol());
-        this.clientSocket = new WampSocket(wampApp, session);
+        this.clientSocket = new WampWebsocket(wampApp, session);
+        this.clientSocket.init();
 
         WampEndpointConfig.addWampMessageHandlers(wampApp, session);
         

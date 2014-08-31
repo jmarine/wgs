@@ -31,7 +31,7 @@ public class WampCRA
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
             throw new WampException(null, "wamp.cra.error.already_authenticated", null, null);
         }
-        if(socket.getSessionData().containsKey("_clientPendingAuthInfo")) {
+        if(socket.containsSessionData("_clientPendingAuthInfo")) {
             throw new WampException(null, "wamp.cra.error.authentication_already_requested", null, null);
         }
         
@@ -63,8 +63,8 @@ public class WampCRA
             infoser = "";
         }
         
-        socket.getSessionData().put("_clientPendingAuthInfo", info);
-        socket.getSessionData().put("_clientPendingAuthSig", sig);
+        socket.putSessionData("_clientPendingAuthInfo", info);
+        socket.putSessionData("_clientPendingAuthSig", sig);
         
         WampDict challenge = new WampDict();
         challenge.put("challenge", infoser);
@@ -78,14 +78,14 @@ public class WampCRA
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
             throw new WampException(null, "wamp.cra.error.already_authenticated", null, null);
         }
-        if(!socket.getSessionData().containsKey("_clientPendingAuthInfo")) {
+        if(!socket.containsSessionData("_clientPendingAuthInfo")) {
             System.out.println("wamp.cra.error.authentication_failed: no authentication previously requested");
             throw new WampException(null, "wamp.cra.error.authentication_failed", null, null);
         }
 
-        WampDict info = (WampDict)socket.getSessionData().remove("_clientPendingAuthInfo");
+        WampDict info = (WampDict)socket.removeSessionData("_clientPendingAuthInfo");
 
-        String clientPendingAuthSig = (String)socket.getSessionData().remove("_clientPendingAuthSig");
+        String clientPendingAuthSig = (String)socket.removeSessionData("_clientPendingAuthSig");
         if(clientPendingAuthSig == null) clientPendingAuthSig = "";
         
         if(signature == null) {

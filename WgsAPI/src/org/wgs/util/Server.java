@@ -29,6 +29,7 @@ import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.topic.WampBroker;
+import org.wgs.wamp.transport.http.longpolling.WampLongPollingServlet;
 import org.wgs.wamp.transport.http.websocket.WampEndpoint;
 import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
 
@@ -112,8 +113,8 @@ public class Server
 
                 System.out.println("Creating WAMP context URI: " + uri);
 
-                int wampVersion = Integer.parseInt(serverConfig.getProperty("context." + context + ".wampVersion", "1"));
-                WampApplication wampApplication = new WampApplication(wampVersion, uri);
+                int wampVersion = Integer.parseInt(serverConfig.getProperty("context." + context + ".wampVersion", "2"));
+                WampApplication wampApplication = WampApplication.getInstance(wampVersion, uri);
                 //tyrusServerConfig = tyrusServerConfig.endpoint(WampEndpoint.class, uri);
                 //server.publishServer(WampEndpoint.class  /* , uri */ );
 
@@ -141,7 +142,7 @@ public class Server
                 // register the application
                 // server.deploy(new WampEndpointConfig(wampApplication, WampEndpoint.class));
                 server.register(new WampEndpointConfig(WampEndpoint.class, wampApplication));
-                
+                tyrusContainer.addServlet(uri +"/longpoll", "/*", WampLongPollingServlet.class);
             }
         }
 

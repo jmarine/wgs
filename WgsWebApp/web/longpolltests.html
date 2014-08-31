@@ -1,0 +1,58 @@
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<script language="javascript" src="js/jquery-1.8.3.js"></script>
+<script language="javascript">
+var timer = null;
+var sessionId = null;
+
+function newid() {
+  return Math.floor(Math.random()*10000000);
+}
+
+var lpConnect= function() {
+    $.post('wgs/longpoll/open?x=' + newid(), {}, lpOnOpen, 'json')
+     .fail(function() { alert( "connect error" ); });
+};
+
+
+var lpOnOpen = function(response) {
+   console.log(response);
+   sessionId = response.transport;
+   lpReceive();
+  };
+
+
+
+var lpReceive = function(response) {
+   $.post('wgs/longpoll/'+sessionId+'/receive?x=' + newid(), {}, lpOnReceive, 'json')
+    .fail(function() { alert( "receive error" ); });;
+ };
+  
+
+var lpOnReceive = function(response) {
+   console.log(response);
+   lpReceive();
+  };
+  
+var lpHeartBeat = function() {
+    $.post('wgs/longpoll/'+sessionId+'/send?x=' + newid(), '[7,0,1,"******"]');
+};
+
+var lpClose = function() {
+    $.post('wgs/longpoll/'+sessionId+'/close?x=' + newid(), []);
+};
+
+//$(document).ready(lpConnect);
+</script>
+</head>
+<body>
+Tests:
+<br>
+    <form>
+        <button onclick="javascript:lpConnect(); return false;">Connect</button>
+        <button onclick="javascript:lpHeartBeat(); return false;">HeartBeat</button>
+        <button onclick="javascript:lpClose(); return false;">Close</button>
+    </form>
+</body>
+</html>

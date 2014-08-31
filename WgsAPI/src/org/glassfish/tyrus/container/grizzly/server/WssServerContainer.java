@@ -7,6 +7,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.servlet.ServletRegistration;
+import javax.servlet.http.HttpServlet;
 import javax.websocket.DeploymentException;
 import javax.websocket.server.ServerEndpointConfig;
 import org.glassfish.grizzly.PortRange;
@@ -16,9 +18,9 @@ import org.glassfish.grizzly.http.server.Request;
 import org.glassfish.grizzly.http.server.Response;
 import org.glassfish.grizzly.http.server.ServerConfiguration;
 import org.glassfish.grizzly.http.server.StaticHttpHandler;
+import org.glassfish.grizzly.servlet.WebappContext;
 import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
-
 import org.glassfish.tyrus.core.TyrusWebSocketEngine;
 import org.glassfish.tyrus.core.TyrusWebSocketEngine.TyrusWebSocketEngineBuilder;
 import org.glassfish.tyrus.server.TyrusServerContainer;
@@ -29,10 +31,21 @@ import org.glassfish.tyrus.spi.WebSocketEngine;
 public class WssServerContainer extends GrizzlyServerContainer
 {
     private Properties serverProperties;
+    private HttpServer server;
+
     
     public WssServerContainer(Properties serverProperties) 
     { 
+        this.server = new HttpServer();
         this.serverProperties = serverProperties;
+    }
+    
+    public void addServlet(String contextPath, String servletMapping, Class<? extends HttpServlet> servletClass)
+    {
+        WebappContext context = new WebappContext("WebappContext", contextPath);
+        ServletRegistration registration = context.addServlet("ServletContainer", servletClass);
+        registration.addMapping(servletMapping);
+        context.deploy(server);               
     }
     
     
@@ -52,7 +65,6 @@ public class WssServerContainer extends GrizzlyServerContainer
 
             private final WebSocketEngine engine = TyrusWebSocketEngine.builder(this).incomingBufferSize(incommingBufferSize).build();
 
-            private HttpServer server;
             private String contextPath = "";
 
             @Override
@@ -72,9 +84,7 @@ public class WssServerContainer extends GrizzlyServerContainer
             
             @Override
             public void start(String rootPath, int port) throws IOException, DeploymentException {
-
-                //server = HttpServer.createSimpleServer(rootPath, port);
-                server = new HttpServer();
+                
                 if (rootPath != null) {
                     ServerConfiguration config = server.getServerConfiguration();
                     config.addHttpHandler(new CustomHttpHandler(rootPath), "/");

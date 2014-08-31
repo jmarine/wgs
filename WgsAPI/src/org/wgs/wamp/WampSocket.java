@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.websocket.CloseReason;
-import javax.websocket.Session;
 import org.jdeferred.Deferred;
 import org.wgs.security.User;
 import org.wgs.security.WampCRA;
@@ -28,14 +27,15 @@ import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 
 
-public class WampSocket 
+public abstract class WampSocket 
 {
     private static final String DEFAULT_REALM = "realm1";
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
 
+    protected Principal principal;
+    protected boolean connected;
+    
     private WampApplication app;
-    private boolean connected;
-    private Session session;
     private Long    sessionId;
     private Map<String,String> prefixes;
     private Map<Long,WampSubscription> subscriptions;
@@ -44,7 +44,6 @@ public class WampSocket
     private Map<Long,Deferred<WampResult, WampException, WampResult>> invocationAsyncCallbacks;
     private Map<Long,WampCalleeRegistration> rpcRegistrations;
     private WampConnectionState state;
-    private Principal principal;
     private long incomingHeartbeatSeq;
     private AtomicLong outgoingHeartbeatSeq;
     private int versionSupport;
@@ -57,7 +56,7 @@ public class WampSocket
     private AtomicLong nextRequestId;
     
 
-    public WampSocket(WampApplication app, Session session) 
+    public WampSocket(WampApplication app) 
     {
         this.authMethod = "anonymous";
         this.incomingHeartbeatSeq = 0L;
@@ -65,9 +64,6 @@ public class WampSocket
         this.versionSupport = 1;
         this.app = app;
         this.connected = true;
-        this.session = session;
-        this.principal = session.getUserPrincipal();
-        this.state = (principal != null) ? WampConnectionState.AUTHENTICATED : WampConnectionState.ANONYMOUS;
         this.nextRequestId = new AtomicLong(0L);
         
         sessionId   = WampProtocol.newGlobalScopeId();
@@ -77,8 +73,12 @@ public class WampSocket
         callControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         invocationControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         rpcRegistrations = new java.util.concurrent.ConcurrentHashMap<Long,WampCalleeRegistration>();
-
-        String subprotocol = session.getNegotiatedSubprotocol();
+    }
+    
+    public void init() {
+        this.principal = getUserPrincipal();
+        this.state = (this.principal == null) ? WampConnectionState.ANONYMOUS : WampConnectionState.AUTHENTICATED;
+        String subprotocol = getNegotiatedSubprotocol();
         if(subprotocol != null) {
             switch(subprotocol) {
                 case "wamp":
@@ -142,7 +142,7 @@ public class WampSocket
             User usr = (User)principal;
             return usr.getLogin();
         } else {
-            return (String)this.getSessionData().get(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME);
+            return (String)this.getSessionData(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME);
         }
     }
     
@@ -156,13 +156,17 @@ public class WampSocket
         }
     }
     
+    
+    public abstract String getNegotiatedSubprotocol();
+    
     /**
      * Get the session data 
      * @return the user name
      */
-    public Map<String,Object> getSessionData() {
-        return session.getUserProperties();
-    }
+    public abstract Object  getSessionData(String key);
+    public abstract void    putSessionData(String key, Object val);
+    public abstract Object  removeSessionData(String key);
+    public abstract boolean containsSessionData(String key);
 
     /**
      * Get the user principal
@@ -170,9 +174,9 @@ public class WampSocket
      */
     public Principal getUserPrincipal()
     {
-        if(this.principal != null) return this.principal;
-        else return this.session.getUserPrincipal();
+        return this.principal;
     }
+
     
     /**
      * Set the user principal 
@@ -366,45 +370,25 @@ public class WampSocket
     }    
     
     
-    public void sendObject(Object msg) 
-    {
-        try {
-            if(isOpen()) {
-                switch(getEncoding()) {
-                    case JSON:
-                        session.getBasicRemote().sendText(msg.toString());
-                        break;
-                    case MsgPack:
-                        session.getBasicRemote().sendBinary(ByteBuffer.wrap((byte[])msg));
-                        break;
-                    default:
-                        session.getBasicRemote().sendObject(msg);
-                }
-            }
-
-        } catch(Exception e) {
-            //close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "wamp.close.error"));
-        }
-    }
+    public abstract void sendObject(Object msg);
    
-
     
-    public void close(CloseReason reason)
+    public boolean close(CloseReason reason)
     {
         if(isOpen()) {
             WampProtocol.sendGoodbyeMessage(this, null, reason.getReasonPhrase());
 
             this.connected = false;
             
-            try { session.close(reason); } 
-            catch(Exception ex) { }        
+            return true;
+        } else {
+            return false;
         }
-        
     }
     
     public boolean isOpen() 
     {
-        return connected && session.isOpen();
+        return connected;
     }
     
     
