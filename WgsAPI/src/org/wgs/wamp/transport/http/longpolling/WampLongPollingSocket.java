@@ -26,14 +26,14 @@ public class WampLongPollingSocket extends WampSocket
     private LinkedBlockingQueue<Object> queue;
     
     
-    public WampLongPollingSocket(WampApplication app, WampLongPollingServlet servlet, AsyncContext asyncContext, String wampSessionId, LinkedBlockingQueue<Object> queue) 
+    public WampLongPollingSocket(WampApplication app, WampLongPollingServlet servlet, String wampSessionId, LinkedBlockingQueue<Object> queue) 
     {
         super(app);
         this.servlet = servlet;
-        this.asyncContext = asyncContext;
         this.wampSessionId = wampSessionId;
         this.queue = queue;
         
+        AsyncContext asyncContext = servlet.getAsyncContext(wampSessionId);
         HttpServletRequest request = (HttpServletRequest)asyncContext.getRequest();
         setUserPrincipal(request.getUserPrincipal());
     }
@@ -42,6 +42,7 @@ public class WampLongPollingSocket extends WampSocket
     
     private HttpSession getSession()
     {
+        AsyncContext asyncContext = servlet.getAsyncContext(wampSessionId);        
         HttpServletRequest request = (HttpServletRequest)asyncContext.getRequest();
         return request.getSession();
     }
@@ -98,7 +99,7 @@ public class WampLongPollingSocket extends WampSocket
     {
         System.out.println("WampLPSocket: close");
         if(super.close(reason)) {
-            //asyncContext.complete();
+            // The previous GOODBYE message will completes "/receive" AsyncContext
             return true;
         }
         return false;

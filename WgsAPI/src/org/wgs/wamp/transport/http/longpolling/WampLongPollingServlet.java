@@ -67,11 +67,12 @@ public final class WampLongPollingServlet extends HttpServlet implements AsyncLi
         
   
         WampLongPollingSocket socket = sockets.get(wampSessionId);
-        if(socket == null && path.endsWith("/open")) {
+        if(path.endsWith("/open")) {
             LinkedBlockingQueue<Object> queue = new LinkedBlockingQueue<Object>();
             messageQueues.put(wampSessionId, queue);
             
-            socket = new WampLongPollingSocket(app, this, actx, wampSessionId, queue);
+            asyncContexts.put(wampSessionId, actx);
+            socket = new WampLongPollingSocket(app, this, wampSessionId, queue);
             socket.init();   
             sockets.put(wampSessionId, socket);
             
@@ -89,10 +90,10 @@ public final class WampLongPollingServlet extends HttpServlet implements AsyncLi
                 Logger.getLogger(WampLongPollingServlet.class.getName()).log(Level.SEVERE, "Error serializing data", ex);
             }
             
-        } 
-
-
-        if(path.endsWith("/open") || path.endsWith("/receive")) {
+            actx.start(new MessageSender(wampSessionId, actx, messageQueues.get(wampSessionId)));
+            
+        } else if(path.endsWith("/receive")) {
+            
             asyncContexts.put(wampSessionId, actx);
             actx.setTimeout(POLLING_TIMEOUT);
             actx.start(new MessageSender(wampSessionId, actx, messageQueues.get(wampSessionId)));
@@ -112,6 +113,11 @@ public final class WampLongPollingServlet extends HttpServlet implements AsyncLi
         }
         
 
+    }
+    
+    public AsyncContext getAsyncContext(String wampSessionId)
+    {
+        return asyncContexts.get(wampSessionId);
     }
 
     
