@@ -31,7 +31,7 @@ import org.wgs.wamp.type.WampList;
 //@WebServlet(urlPatterns = "/wamp2servlet", displayName = "wamp2servlet", asyncSupported = true)
 public final class WampLongPollingServlet extends HttpServlet implements AsyncListener
 {
-    private static final  int  POLLING_TIMEOUT = 5000;
+    private static final  int  POLLING_TIMEOUT = 15000;
    
     
     private static ConcurrentHashMap<String, WampLongPollingSocket> sockets = new ConcurrentHashMap<String, WampLongPollingSocket>();
@@ -226,6 +226,7 @@ public final class WampLongPollingServlet extends HttpServlet implements AsyncLi
                 String message = buffer.toString();
                 WampList wampMessage = (WampList)WampEncoding.JSON.getSerializer().deserialize(message, 0, message.length());
                 app.onWampMessage(socket, wampMessage);
+                response.setContentType("text/plain");  // to prevent firefox "no element found" warnings on empty response
                 response.setStatus(202); 
                 asyncContext.complete();
 
