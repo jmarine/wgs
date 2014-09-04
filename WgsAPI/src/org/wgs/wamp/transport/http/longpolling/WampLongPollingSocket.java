@@ -97,7 +97,7 @@ public class WampLongPollingSocket extends WampSocket
     @Override
     public boolean close(CloseReason reason)
     {
-        System.out.println("WampLPSocket: close");
+        System.out.println("WampLongPollingServlet: close");
         if(super.close(reason)) {
             // The previous GOODBYE message will completes "/receive" AsyncContext
             return true;

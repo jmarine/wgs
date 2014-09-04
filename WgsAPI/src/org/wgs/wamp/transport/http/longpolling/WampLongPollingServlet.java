@@ -29,7 +29,7 @@ import org.wgs.wamp.type.WampList;
 
 //TODO: COMPLETE LONG-POLLING SERVLET IMPLEMENTATION
 //@WebServlet(urlPatterns = "/wamp2servlet", displayName = "wamp2servlet", asyncSupported = true)
-public final class WampLongPollingServlet extends HttpServlet implements AsyncListener
+public class WampLongPollingServlet extends HttpServlet implements AsyncListener
 {
     private static final  int  POLLING_TIMEOUT = 15000;
    
@@ -41,17 +41,38 @@ public final class WampLongPollingServlet extends HttpServlet implements AsyncLi
     
     private WampApplication app;
     
+    public WampApplication getWampApplication()
+    {
+        return app;
+    }
+    
+    public void setWampApplication(WampApplication app)
+    {
+        this.app = app;
+    }    
+
+    public void onApplicationStart(WampApplication app) 
+    {
+    }
+    
+    
     @Override
     public void init(ServletConfig config) throws ServletException
     {
         System.out.println("WampLongPollingServlet: init");
         super.init(config);
         
-        String contextPath = config.getServletContext().getContextPath();
-        contextPath = contextPath.substring(0, contextPath.length() - 9);  // without "/longpoll"
-        this.app = WampApplication.getInstance(WampApplication.WAMPv2, contextPath);
+        String contextPath = config.getInitParameter("wgs.longpoll.context");
+        if(contextPath == null) {
+            contextPath = config.getServletContext().getContextPath();
+            contextPath = contextPath.substring(0, contextPath.length() - 9);  // without "/longpoll"
+        }
+        
+        app = WampApplication.getInstance(WampApplication.WAMPv2, contextPath);
+        if(app.start()) onApplicationStart(app);
         System.out.println("WampLongPollingServlet: initialized on " + contextPath);
     }
+    
 
     @Override
     public void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException 
@@ -99,20 +120,22 @@ public final class WampLongPollingServlet extends HttpServlet implements AsyncLi
             actx.start(new MessageSender(wampSessionId, actx, messageQueues.get(wampSessionId)));
             
         } else if(path.endsWith("/send")) {
+            
             actx.start(new MessageReceiver(socket, actx));
 
         } else if(path.endsWith("/close")) {
             
             app.onWampClose(sockets.remove(wampSessionId), new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
-            response.setStatus(202);
+            response.setContentType("text/plain");            
+            response.setStatus(HttpServletResponse.SC_ACCEPTED);  // 202
             actx.complete();
             
         } else {
-            response.setStatus(400);
+            response.setContentType("text/plain");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);  // 400
             actx.complete();
         }
         
-
     }
     
     public AsyncContext getAsyncContext(String wampSessionId)
@@ -129,7 +152,7 @@ public final class WampLongPollingServlet extends HttpServlet implements AsyncLi
             System.out.println("WampLongPollingServlet: sendmsg (" + req.getPathInfo() + ")");
             
             HttpServletResponse res = (HttpServletResponse)actx.getResponse();
-            res.setStatus(HttpServletResponse.SC_OK);
+            res.setStatus(HttpServletResponse.SC_OK);  // 200
             res.setContentType("application/json");
             res.getWriter().print(msg);
             actx.complete();
@@ -177,7 +200,7 @@ public final class WampLongPollingServlet extends HttpServlet implements AsyncLi
         
         String wampSessionId = getWampSessionId(req);
         WampSocket socket = sockets.get(wampSessionId);
-        WampProtocol.sendHeartbeatMessage(socket, "****discard*****");
+        WampProtocol.sendHeartbeatMessage(socket, "**** long-poll timeout *****");
         Object msg = messageQueues.get(wampSessionId).poll();
         if(msg != null) sendMsg(wampSessionId, msg);
     }
@@ -227,12 +250,13 @@ public final class WampLongPollingServlet extends HttpServlet implements AsyncLi
                 WampList wampMessage = (WampList)WampEncoding.JSON.getSerializer().deserialize(message, 0, message.length());
                 app.onWampMessage(socket, wampMessage);
                 response.setContentType("text/plain");  // to prevent firefox "no element found" warnings on empty response
-                response.setStatus(202); 
+                response.setStatus(HttpServletResponse.SC_ACCEPTED);  // 202
                 asyncContext.complete();
 
             } catch (Exception ex) {
                 Logger.getLogger(WampLongPollingServlet.class.getName()).log(Level.SEVERE, null, ex);
-                response.setStatus(400);
+                response.setContentType("text/plain");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);  // 400
                 asyncContext.complete();
                 
             } finally {
