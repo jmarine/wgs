@@ -35,7 +35,8 @@ public class WampLongPollingSocket extends WampSocket
         
         AsyncContext asyncContext = servlet.getAsyncContext(wampSessionId);
         HttpServletRequest request = (HttpServletRequest)asyncContext.getRequest();
-        setUserPrincipal(request.getUserPrincipal());
+        try { setUserPrincipal(request.getUserPrincipal()); }
+        catch(Exception ex) { /* GRIZZLY-1707 issue */ } 
     }
     
     
