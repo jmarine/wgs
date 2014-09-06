@@ -362,7 +362,7 @@ public class WampClient extends Endpoint
         this.clientSocket = new WampWebsocket(wampApp, session);
         this.clientSocket.init();
 
-        WampEndpointConfig.addWampMessageHandlers(wampApp, session);
+        WampEndpointConfig.addWampMessageHandlers(wampApp, session, clientSocket);
         
     }    
     

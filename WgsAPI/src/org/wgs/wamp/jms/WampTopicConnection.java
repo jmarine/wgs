@@ -16,16 +16,11 @@ import javax.websocket.CloseReason;
 import javax.websocket.ContainerProvider;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
 import javax.websocket.WebSocketContainer;
 import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
-import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
 import org.wgs.wamp.transport.http.websocket.WampWebsocket;
-import org.wgs.wamp.type.WampList;
-import org.wgs.wamp.type.WampObject;
 
 
 public class WampTopicConnection extends Endpoint implements TopicConnection
@@ -66,7 +61,7 @@ public class WampTopicConnection extends Endpoint implements TopicConnection
     public void onOpen(javax.websocket.Session session, EndpointConfig config) {
         this.clientSocket = new WampWebsocket(wampApp, session);
         this.clientSocket.init();
-        WampEndpointConfig.addWampMessageHandlers(wampApp, session);
+        WampEndpointConfig.addWampMessageHandlers(wampApp, session, clientSocket);
     }    
     
     @Override

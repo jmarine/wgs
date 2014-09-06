@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.websocket.CloseReason;
@@ -24,7 +23,6 @@ import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.encoding.WampSerializerBatchedJSON;
 import org.wgs.wamp.type.WampList;
-import org.wgs.wamp.type.WampObject;
 
 
 public class WampEndpointConfig 
@@ -41,7 +39,6 @@ public class WampEndpointConfig
     private WampApplication application;
     private Map<String, Object> userProperties;
     
-    static private ConcurrentHashMap<String,WampSocket> sockets = new ConcurrentHashMap<String,WampSocket>();
     
 
     public WampEndpointConfig(Class endpointClass, WampApplication application)
@@ -58,34 +55,22 @@ public class WampEndpointConfig
     }
     
     
-    public static WampSocket getWampSocket(WampApplication application, Session session) 
+    public void onWampOpen(final Session session, WampEndpoint endpoint) 
     {
-        WampSocket clientSocket = sockets.get(session.getId());
-        if(clientSocket == null) {
-            clientSocket = new WampWebsocket(application, session);
-            clientSocket.init();
-            sockets.put(session.getId(), clientSocket);
-        }
-        return clientSocket;
-    }
-
-    
-    public void onWampOpen(final Session session, WampEndpoint endpoint) {
-        WampSocket clientSocket = getWampSocket(application, session);
+        WampSocket clientSocket = new WampWebsocket(application, session);
+        clientSocket.init();
         session.setMaxIdleTimeout(0L);  // forever (but fails on Jetty)
-
-        addWampMessageHandlers(application, session);
+        session.getUserProperties().put("wampSessionId" , clientSocket.getSessionId());
+        
+        addWampMessageHandlers(application, session, clientSocket);
         
         if(application.start()) endpoint.onApplicationStart(application);
         application.onWampOpen(clientSocket);
-       
     }   
     
-    public static void addWampMessageHandlers(final WampApplication wampApp, final Session session)
+    public static void addWampMessageHandlers(final WampApplication wampApp, final Session session, final WampSocket clientSocket)
     {
-        final WampSocket clientSocket = getWampSocket(wampApp, session);
-        
-        String subproto = (session.getNegotiatedSubprotocol());
+        String subproto = session.getNegotiatedSubprotocol();
         if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "Negotiated subprotocol: " + subproto);
         
         if(subproto != null && subproto.equalsIgnoreCase("wamp.2.msgpack")) {
@@ -173,7 +158,8 @@ public class WampEndpointConfig
     
     public static void removeWampMessageHandlers(WampApplication application, Session session, CloseReason reason) 
     {
-        WampSocket clientSocket = sockets.remove(session.getId());
+        Long wampSessionId = (Long)session.getUserProperties().get("wampSessionId");
+        WampSocket clientSocket = application.getWampSocket(wampSessionId);
         if(clientSocket != null) {
             application.onWampClose(clientSocket, reason);
         }

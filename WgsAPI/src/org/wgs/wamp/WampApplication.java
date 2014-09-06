@@ -45,7 +45,7 @@ public class WampApplication
     private Map<String,WampModule> modules;
     private WampModule defaultModule;
     private ExecutorService executorService;
-    private ConcurrentHashMap<String,WampSocket> sockets;    
+    private ConcurrentHashMap<Long,WampSocket> sockets;    
     
     private TreeMap<String,WampMethod> rpcsByName;
     private Map<String,Set<Long>> sessionsByUserId = new ConcurrentHashMap<String,Set<Long>>();
@@ -83,7 +83,7 @@ public class WampApplication
         this.wampVersion = version;
         this.path = path;
         
-        this.sockets = new ConcurrentHashMap<String,WampSocket>();
+        this.sockets = new ConcurrentHashMap<Long,WampSocket>();
         this.modules = new HashMap<String,WampModule>();
         this.rpcsByName = new TreeMap<String,WampMethod>();
 
@@ -154,9 +154,18 @@ public class WampApplication
         return "wgs-server-2.0-alpha1";
     }
 
+
+    public WampSocket getWampSocket(Long sessionId)
+    {
+        if(sessionId == null) return null;
+        else return sockets.get(sessionId);
+    }        
+    
     
     public void onWampOpen(WampSocket clientSocket) 
     {
+        sockets.put(clientSocket.getSessionId(), clientSocket);
+        
         for(WampModule module : modules.values()) {
             try { 
                 module.onConnect(clientSocket); 
@@ -431,6 +440,8 @@ public class WampApplication
                     logger.log(Level.SEVERE, "Error disconnecting client:", ex);
                 }
             }
+            
+            sockets.remove(clientSocket.getSessionId());
             
             logger.log(Level.FINEST, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
         }
