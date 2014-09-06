@@ -296,7 +296,6 @@ Wamp2.prototype = {
         } else {
             console.log("This Browser does not support WebSockets");
             this.connectLP(realm, extra, onstatechange);
-            //onstatechange(ConnectionState.ERROR, "browser.websockets_not_supported");
             return;
         }
 
@@ -358,9 +357,8 @@ Wamp2.prototype = {
     connectLP: function(realm, extra, onstatechange) {    
         var client = this;
                 
-        this.url = this.url;
-        if(this.url.indexOf("ws://") == 0) this.url = "http://" + his.url.substring(5) + "/longpoll";
-        else if(this.url.indexOf("wss://") == 0) this.url = "https://" + his.url.substring(6) + "/longpoll";
+        if(this.url.indexOf("ws://") == 0) this.url = "http://" + this.url.substring(5) + "-longpoll";
+        else if(this.url.indexOf("wss://") == 0) this.url = "https://" + this.url.substring(6) + "-longpoll";
 
         var lpOnOpen = function(response) {
            console.log(response);
@@ -397,8 +395,10 @@ Wamp2.prototype = {
 
     sendLP: function(msg) {
         var client = this;
-        var url = client.url + '/'+client.transport+'/send?x=' + client.newGlobalScopeId();
-        $.post(url, msg);
+        if(client.open) {
+            var url = client.url + '/'+client.transport+'/send?x=' + client.newGlobalScopeId();
+            $.post(url, msg);
+        }
     },
 
     closeLP: function() {

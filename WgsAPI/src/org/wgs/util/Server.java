@@ -142,7 +142,7 @@ public class Server
                 // register the application
                 // server.deploy(new WampEndpointConfig(wampApplication, WampEndpoint.class));
                 server.register(new WampEndpointConfig(WampEndpoint.class, wampApplication));
-                tyrusContainer.addServlet(uri +"/longpoll", "/*", WampLongPollingServlet.class);
+                tyrusContainer.addServlet(uri +"-longpoll", "/*", WampLongPollingServlet.class);
             }
         }
 

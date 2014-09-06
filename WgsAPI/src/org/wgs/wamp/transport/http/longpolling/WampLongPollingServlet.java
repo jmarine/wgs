@@ -65,7 +65,7 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         String contextPath = config.getInitParameter("wgs.longpoll.context");
         if(contextPath == null) {
             contextPath = config.getServletContext().getContextPath();
-            contextPath = contextPath.substring(0, contextPath.length() - 9);  // without "/longpoll"
+            if(contextPath.endsWith("-longpoll")) contextPath = contextPath.substring(0, contextPath.length() - 9);  // without "-longpoll"
         }
         
         app = WampApplication.getInstance(WampApplication.WAMPv2, contextPath);
