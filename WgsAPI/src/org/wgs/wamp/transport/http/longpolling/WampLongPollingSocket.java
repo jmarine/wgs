@@ -1,11 +1,5 @@
 package org.wgs.wamp.transport.http.longpolling;
 
-import java.nio.ByteBuffer;
-import java.security.Principal;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
@@ -13,9 +7,6 @@ import javax.servlet.http.HttpSession;
 import javax.websocket.CloseReason;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampSocket;
-import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.type.WampConnectionState;
-import org.wgs.wamp.type.WampObject;
 
 
 public class WampLongPollingSocket extends WampSocket
@@ -35,8 +26,7 @@ public class WampLongPollingSocket extends WampSocket
         
         AsyncContext asyncContext = servlet.getAsyncContext(wampSessionId);
         HttpServletRequest request = (HttpServletRequest)asyncContext.getRequest();
-        try { setUserPrincipal(request.getUserPrincipal()); }
-        catch(Exception ex) { /* GRIZZLY-1707 issue */ } 
+        setUserPrincipal(request.getUserPrincipal());
     }
     
     
