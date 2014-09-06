@@ -83,6 +83,9 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         String wampSessionId = getWampSessionId(request);
         System.out.println("WampLongPollingServlet: service: wamp session id = " + wampSessionId);
 
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.addHeader("Allow-Control-Allow-Methods", "POST,GET,OPTIONS"); 
+        
         AsyncContext actx = request.startAsync(request, response);
         actx.addListener(this);
         
@@ -93,7 +96,8 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
             messageQueues.put(wampSessionId, queue);
             
             asyncContexts.put(wampSessionId, actx);
-            socket = new WampLongPollingSocket(app, this, wampSessionId, queue);
+            
+            socket = new WampLongPollingSocket(app, request, queue);
             socket.init();   
             sockets.put(wampSessionId, socket);
             

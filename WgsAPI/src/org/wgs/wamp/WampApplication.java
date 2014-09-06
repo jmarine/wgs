@@ -229,6 +229,8 @@ public class WampApplication
                 
             } catch(Exception ex) { 
                 WampProtocol.sendAbortMessage(clientSocket, "wamp.error.authentication_failed", ex.getMessage());
+                System.err.println("Error: " +ex.getClass().getName() + ":" + ex.getMessage());
+                ex.printStackTrace();
                 break;
             }
         }

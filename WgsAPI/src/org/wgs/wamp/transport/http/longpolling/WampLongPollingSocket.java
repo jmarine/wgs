@@ -11,31 +11,22 @@ import org.wgs.wamp.WampSocket;
 
 public class WampLongPollingSocket extends WampSocket
 {
-    private String wampSessionId;
-    private AsyncContext asyncContext;
-    private WampLongPollingServlet servlet;
     private LinkedBlockingQueue<Object> queue;
+    private HttpSession  session;
     
     
-    public WampLongPollingSocket(WampApplication app, WampLongPollingServlet servlet, String wampSessionId, LinkedBlockingQueue<Object> queue) 
+    public WampLongPollingSocket(WampApplication app, HttpServletRequest request, LinkedBlockingQueue<Object> queue) 
     {
         super(app);
-        this.servlet = servlet;
-        this.wampSessionId = wampSessionId;
         this.queue = queue;
-        
-        AsyncContext asyncContext = servlet.getAsyncContext(wampSessionId);
-        HttpServletRequest request = (HttpServletRequest)asyncContext.getRequest();
+        this.session = request.getSession();
         setUserPrincipal(request.getUserPrincipal());
     }
     
     
-    
     private HttpSession getSession()
     {
-        AsyncContext asyncContext = servlet.getAsyncContext(wampSessionId);        
-        HttpServletRequest request = (HttpServletRequest)asyncContext.getRequest();
-        return request.getSession();
+        return session;
     }
     
     @Override
