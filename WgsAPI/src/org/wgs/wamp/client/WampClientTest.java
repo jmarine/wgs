@@ -101,7 +101,7 @@ public class WampClientTest extends WampModule implements Runnable
 
             System.out.println("Disconnection");
             client.close();
-
+            
             
         } catch(Exception ex) {
 
@@ -169,10 +169,10 @@ public class WampClientTest extends WampModule implements Runnable
     
     public static final void main(String args[]) throws Exception
     {
+        WampClient client = new WampClient(url);
+        client.setPreferredWampEncoding(WampEncoding.JSON);
+        WampClientTest test = new WampClientTest(client);
         while(true) {
-            WampClient client = new WampClient(url);
-            client.setPreferredWampEncoding(WampEncoding.JSON);
-            WampClientTest test = new WampClientTest(client);
             test.run();
         }
     }
