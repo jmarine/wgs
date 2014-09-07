@@ -122,8 +122,12 @@ public class WampLocalMethod extends WampMethod
     private WampException wrapToWampException(Long callId, Object ex) 
     {
         if(ex != null && ex instanceof Throwable) {
+            Throwable th = (Throwable)ex;
+            System.err.println("WampLocalMethod: Error: " + ex.getClass().getName() + ":" + th.getMessage());
+            th.printStackTrace();
             return new WampException(callId, null, "wamp.error.local_invocation", null, null);
         } else {
+            System.err.println("WampLocalMethod: Error: " + ex);
             return new WampException(callId, null, "wamp.error.local_invocation", new WampList(ex), null);
         }
     }
