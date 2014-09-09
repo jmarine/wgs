@@ -7,7 +7,7 @@ Version: 2.0-alpha1
 About
 -----
 
-This project implements the following services:
+This project offers the following services:
     
 * local user registration/authentication.
 * authentication with Google+, Facebook, and OpenID Connect providers.
@@ -15,10 +15,9 @@ This project implements the following services:
 * real-time presence and communications.
 * notifications (... well, this is not yet implemented).
 
-The server-side is developed in Java language, and it can be deployed as a standalone server, or within a JavaEE 7 application server. 
-The services are provided with the [WAMP v2](http://wamp.ws) specification (over websocket and long-polling transports).
+The server-side is developed in Java language, and it can be deployed as a standalone server, or within JavaEE 7 application servers. 
 
-The project also includes Javascript libraries for browser-based applications clients.
+The project also includes Javascript libraries to access the services using websockets and the [WAMP v2](http://wamp.ws) specification.
 
 
 Demo sites
