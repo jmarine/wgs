@@ -15,8 +15,10 @@ This project implements the following services:
 * real-time presence and communications.
 * notifications (... well, this is not yet implemented).
 
-The server-side is developed in Java language, but there are also Javascript libraries for browser applications.
-The services are provided over websockets with the [WAMP v2](http://wamp.ws) specification.
+The server-side is developed in Java language, and it can be deployed as a standalone server, or within a JavaEE 7 application server. 
+The services are provided with the [WAMP v2](http://wamp.ws) specification (over websocket and long-polling transports).
+
+The project also includes Javascript libraries for browser-based applications clients.
 
 
 Demo sites
