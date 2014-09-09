@@ -17,7 +17,7 @@ This project offers the following services:
 
 The server-side is developed in Java language, and it can be deployed as a standalone server, or within JavaEE 7 application servers. 
 
-The project also includes Javascript libraries to access the services using websockets and the [WAMP](http://wamp.ws) (Web Application Messaging Protocol) specification.
+The project also includes Javascript libraries to access the services using websockets and [WAMP](http://wamp.ws) (Web Application Messaging Protocol).
 
 
 Demo sites
