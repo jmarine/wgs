@@ -391,7 +391,7 @@ Wamp2.prototype = {
 
         var url = client.url + '/open?x=' + client.newGlobalScopeId();
         console.log("Connecting to URL " + url);
-        $.post(url, {}, lpOnOpen, 'json')
+        $.post(url, JSON.stringify({ "protocols": ["wamp.2.json"] }), lpOnOpen, 'json')
          .fail(function(e) { onstatechange(ConnectionState.ERROR, "WGS connection error"); });
     },
 

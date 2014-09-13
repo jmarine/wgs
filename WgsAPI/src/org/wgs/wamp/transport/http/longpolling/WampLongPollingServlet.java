@@ -1,9 +1,8 @@
 package org.wgs.wamp.transport.http.longpolling;
 
-
-import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -104,7 +103,7 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
             // Long-polling OPEN response:
             try {
                 WampDict obj = new WampDict();
-                obj.put("protocol", "wamp.2.json");
+                obj.put("protocol", socket.getNegotiatedSubprotocol());
                 obj.put("transport", transport);
                 
                 Object msg = WampEncoding.JSON.getSerializer().serialize(obj);
@@ -244,20 +243,36 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         
         @Override
         public void run() {
-            StringBuffer buffer = new StringBuffer();
             HttpServletRequest request = (HttpServletRequest)asyncContext.getRequest();
             HttpServletResponse response = (HttpServletResponse)asyncContext.getResponse();
-            
-            BufferedReader reader = null;
+
             try {
-                reader = new BufferedReader(new InputStreamReader(request.getInputStream()));
-                String line;
-                while( (line = reader.readLine()) != null) {
-                    buffer.append(line);
+                byte binaryBuffer[] = new byte[10240];
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                try(InputStream stream = request.getInputStream()) {
+                    int len;
+                    while( (len = stream.read(binaryBuffer)) > 0) {
+                        baos.write(binaryBuffer, 0, len);
+                    }
+                } finally {
+                    binaryBuffer = baos.toByteArray();
                 }
-                
-                String message = buffer.toString();
-                WampList wampMessage = (WampList)WampEncoding.JSON.getSerializer().deserialize(message, 0, message.length());
+
+                WampList wampMessage = null;
+                switch(socket.getEncoding()) {
+                    case MsgPack:
+                    case BatchedMsgPack:
+                        wampMessage = (WampList)socket.getEncoding().getSerializer().deserialize(binaryBuffer, 0, binaryBuffer.length);
+                        break;
+                    
+                    case JSON:
+                    case BatchedJSON:
+                        String charEncoding = request.getCharacterEncoding();
+                        String message = new String(binaryBuffer, charEncoding);
+                        wampMessage = (WampList)socket.getEncoding().getSerializer().deserialize(message, 0, message.length());
+                        break;
+                }
+            
                 application.onWampMessage(socket, wampMessage);
                 response.setContentType("text/plain");  // to prevent firefox "no element found" warnings on empty response
                 response.setStatus(HttpServletResponse.SC_ACCEPTED);  // 202
@@ -268,13 +283,7 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
                 response.setContentType("text/plain");
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);  // 400
                 asyncContext.complete();
-                
-            } finally {
-                if(reader != null) {
-                    try { reader.close(); }
-                    catch(Exception ex) { }
-                }
-            }
+            } 
             
             
             
