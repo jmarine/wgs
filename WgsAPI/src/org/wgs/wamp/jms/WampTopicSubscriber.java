@@ -6,7 +6,7 @@ import javax.jms.MessageListener;
 import javax.jms.Topic;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
-import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampTopic;
 import org.wgs.wamp.type.WampDict;
@@ -16,6 +16,8 @@ import org.wgs.wamp.type.WampObject;
 
 public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSubscriber
 {
+    private WampClient client;
+    
     private WampTopicSession session;
     
     private boolean noLocal;
@@ -29,13 +31,15 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
     private WampSubscription wampSubscription;
 
     
-    public WampTopicSubscriber(WampTopicSession session, Topic topic, String messageSelector, boolean noLocal)
+    public WampTopicSubscriber(WampTopicSession session, Topic topic, String messageSelector, boolean noLocal) throws JMSException
     {
-        super(((WampTopicConnection)session.getTopicConnection()).getWampApplication());
+        super(((WampTopicConnection)session.getTopicConnection()).getWampClient().getWampApplication());
         this.session = session;
         this.topic = topic;
         this.messageSelector = messageSelector;
         this.noLocal = noLocal;
+        this.client = ((WampTopicConnection)session.getTopicConnection()).getWampClient();
+        this.client.subscribe(topic.getTopicName(), null);
     }
     
     @Override
@@ -48,11 +52,7 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
     {
         if(messageListener != null) {
             if(subscriptionId.equals(wampSubscription.getId())) {
-                WampMessage msg = new WampMessage(publicationId, details);
-                WampList list = new WampList();
-                list.add(payload);
-                list.add(payloadKw);
-                msg.setText(WampEncoding.JSON.getSerializer().serialize(list).toString());
+                WampMessage msg = new WampMessage(publicationId, details, payload, payloadKw);
                 messageListener.onMessage(msg);
             }
         }
@@ -96,7 +96,7 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
 
     @Override
     public void close() throws JMSException {
-        //TODO: send [UNSUBSCRIBE, WampProtocol.newSessionScopeId(con.getWampSocket()), wampSubscription.getId()]
+        client.unsubscribe(topic.getTopicName(), wampSubscription.getOptions());
     }
     
 }

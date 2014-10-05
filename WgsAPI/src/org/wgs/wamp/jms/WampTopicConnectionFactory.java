@@ -1,25 +1,37 @@
 package org.wgs.wamp.jms;
 
-import java.net.URI;
 import javax.jms.Connection;
 import javax.jms.JMSContext;
 import javax.jms.JMSException;
 import javax.jms.TopicConnection;
 import javax.jms.TopicConnectionFactory;
+import org.wgs.wamp.encoding.WampEncoding;
 
 
 public class WampTopicConnectionFactory implements TopicConnectionFactory
 {
-    private URI uri;
+    private String url;
+    private WampEncoding enc;
     
-    public WampTopicConnectionFactory(URI uri)
+    public WampTopicConnectionFactory(String url)
     {
-        this.uri = uri;
+        this(url, WampEncoding.MsgPack);
+    }
+    
+    public WampTopicConnectionFactory(String url, WampEncoding enc)
+    {
+        this.url = url;
+        this.enc = enc;
     }
 
-    public URI getURI()
+    public String getURL()
     {
-        return uri;
+        return url;
+    }
+    
+    public WampEncoding getWampEncoding()
+    {
+        return enc;
     }
     
     @Override

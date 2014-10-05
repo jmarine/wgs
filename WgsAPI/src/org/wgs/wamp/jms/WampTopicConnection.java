@@ -1,6 +1,5 @@
 package org.wgs.wamp.jms;
 
-import java.util.logging.Level;
 import javax.jms.ConnectionConsumer;
 import javax.jms.ConnectionMetaData;
 import javax.jms.Destination;
@@ -11,35 +10,22 @@ import javax.jms.Session;
 import javax.jms.Topic;
 import javax.jms.TopicConnection;
 import javax.jms.TopicSession;
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.CloseReason;
-import javax.websocket.ContainerProvider;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.WebSocketContainer;
-import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.WampSocket;
-import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
-import org.wgs.wamp.transport.http.websocket.WampWebsocket;
+import org.wgs.wamp.client.WampClient;
+import org.wgs.wamp.encoding.WampEncoding;
 
 
-public class WampTopicConnection extends Endpoint implements TopicConnection
+public class WampTopicConnection implements TopicConnection
 {
     private boolean open;
     private boolean startDelivery;
-    private WebSocketContainer con;
-    private WampApplication wampApp;
-    private WampSocket clientSocket;
+    private WampClient client;
     
     public WampTopicConnection(WampTopicConnectionFactory factory, String userName, String password) throws JMSException
     {
-        this.open = false;
-        this.con = ContainerProvider.getWebSocketContainer();        
-        this.wampApp = WampApplication.getInstance(WampApplication.WAMPv2, null);
-        
-        ClientEndpointConfig config = ClientEndpointConfig.Builder.create().preferredSubprotocols(java.util.Arrays.asList("wamp.2.json")).build();
         try {
-            con.connectToServer(this, config, factory.getURI());
+            client = new WampClient(factory.getURL());
+            client.setPreferredWampEncoding(factory.getWampEncoding());
+            
         } catch(Exception e) {
             System.err.println("Error: " + e.getClass().getName() + ": " + e.getMessage());
             e.printStackTrace();
@@ -47,30 +33,12 @@ public class WampTopicConnection extends Endpoint implements TopicConnection
         }
     }
     
-    public WampApplication getWampApplication()
+    
+    public WampClient getWampClient()
     {
-        return wampApp;
+        return client;
     }
     
-    public WampSocket getWampSocket()
-    {
-        return clientSocket;
-    }
-    
-    @Override
-    public void onOpen(javax.websocket.Session session, EndpointConfig config) {
-        this.clientSocket = new WampWebsocket(wampApp, session);
-        this.clientSocket.init();
-        WampEndpointConfig.addWampMessageHandlers(wampApp, session, clientSocket);
-    }    
-    
-    @Override
-    public void onClose(javax.websocket.Session session, CloseReason reason) 
-    {
-        WampEndpointConfig.removeWampMessageHandlers(wampApp, session, reason);
-        super.onClose(session, reason);
-    }
-        
 
     @Override
     public TopicSession createTopicSession(boolean transacted, int acknowledgeMode) throws JMSException {
@@ -157,14 +125,18 @@ public class WampTopicConnection extends Endpoint implements TopicConnection
 
     @Override
     public void close() throws JMSException {
-        open = false;
         stop();
-        this.clientSocket.close(null);
+        try { 
+            client.waitResponses();
+            this.client.close(); 
+        } catch(Exception ex) { 
+            throw new JMSException("Unable to close: " + ex.getMessage()); 
+        }
     }
     
     public boolean isOpen()
     {
-        return open;
+        return client.isOpen();
     }
 
     @Override

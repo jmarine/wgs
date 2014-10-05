@@ -82,14 +82,14 @@ public class WampClientTest extends WampModule implements Runnable
             System.out.println("Subscription");
             WampSubscriptionOptions subOpt = new WampSubscriptionOptions(null);
             subOpt.setMatchType(WampMatchType.prefix);
-            client.subscribe("myapp", subOpt, null);
+            client.subscribe("myapp", subOpt);
             client.waitResponses();
 
             System.out.println("Publication with subscription.");
             doPublications(repeats);
             client.waitResponses();
 
-            client.unsubscribe("myapp", subOpt, null);
+            client.unsubscribe("myapp", subOpt);
             client.waitResponses();
             System.out.println("Publication after unsubscription.");
             doPublications(repeats);

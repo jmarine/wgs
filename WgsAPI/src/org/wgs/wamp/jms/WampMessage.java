@@ -5,35 +5,44 @@ import java.util.Enumeration;
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
 
 
-public class WampMessage implements javax.jms.TextMessage
+public class WampMessage implements javax.jms.Message
 {
     private Long     id; 
     private WampDict props;
-    private String   body;
+    private WampList payload;
+    private WampDict payloadKw;
     
     public WampMessage()
     {
         this.props = new WampDict();
     }
 
-    public WampMessage(Long id, WampDict details)
+    public WampMessage(Long id, WampDict details, WampList payload, WampDict payloadKw)
     {
         this.id = id;
         this.props = details;
+        this.payload = payload;
+        this.payloadKw = payloadKw;
+    }
+
+    public WampList getPayload()
+    {
+        return payload;
     }
     
-    @Override
-    public void setText(String string) throws JMSException {
-        this.body = body;
+    public WampDict getPayloadKw()
+    {
+        return payloadKw;
     }
-
-    @Override
-    public String getText() throws JMSException {
-        return body;
+    
+    public WampDict getDetails()
+    {
+        return props;
     }
-
+    
     @Override
     public String getJMSMessageID() throws JMSException {
         return id.toString();
@@ -266,18 +275,26 @@ public class WampMessage implements javax.jms.TextMessage
 
     @Override
     public void clearBody() throws JMSException {
-        body = null;
+        payload = null;
+        payloadKw = null;
     }
 
     @Override
     public <T> T getBody(Class<T> type) throws JMSException {
-        return type.cast(body);
+        if(type.isAssignableFrom(WampList.class)) {
+            return type.cast(payload);
+        } else if(type.isAssignableFrom(WampDict.class)) {
+            return type.cast(payloadKw);
+        } else {
+            throw new JMSException("WampMessage body is not assignable to " + type.getName());
+        }
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public boolean isBodyAssignableTo(Class type) throws JMSException {
-        return type.isAssignableFrom(body.getClass());
+        return (payload != null && type.isAssignableFrom(WampList.class))
+               || (payloadKw != null && type.isAssignableFrom(WampDict.class));
     }
     
 }

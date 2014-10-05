@@ -1,4 +1,3 @@
-
 package org.wgs.wamp.client;
 
 import java.net.URI;
@@ -311,6 +310,16 @@ public class WampClient extends Endpoint
         return wampApp;
     }
     
+    public WampSocket getWampSocket()
+    {
+        return clientSocket;
+    }
+    
+    public boolean isOpen()
+    {
+        return open;
+    }
+    
     
     @SuppressWarnings("unchecked")
     private Deferred<Long, WampException, Long> getDeferredLong(WampList request)
@@ -542,8 +551,9 @@ public class WampClient extends Endpoint
         return subscriptionsByTopicAndOptions.get(topicAndOptionsKey);
     }
     
-    public void subscribe(String topicURI, WampSubscriptionOptions options, Deferred dfd) 
+    public Promise<Long, WampException, Long> subscribe(String topicURI, WampSubscriptionOptions options) 
     {
+        DeferredObject<Long, WampException, Long> deferred = new DeferredObject<Long, WampException, Long>();        
         if(options == null) options = new WampSubscriptionOptions(null);
         if(topicURI.indexOf("..") != -1) {
             options.setMatchType(WampMatchType.wildcard);
@@ -553,16 +563,18 @@ public class WampClient extends Endpoint
         
         Long requestId = WampProtocol.newSessionScopeId(clientSocket);
         WampList list = new WampList();
-        list.add(dfd);        
+        list.add(deferred);        
         list.add(topicAndOptionsKey);
         list.add(options);
         createPendingMessage(requestId, list);
         
         WampProtocol.sendSubscribeMessage(clientSocket, requestId, topicURI, options);
+        return deferred.promise();
     }
     
-    public void unsubscribe(String topic, WampSubscriptionOptions options, Deferred dfd) 
+    public Promise<Long, WampException, Long> unsubscribe(String topic, WampSubscriptionOptions options) 
     {
+        DeferredObject<Long, WampException, Long> deferred = new DeferredObject<Long, WampException, Long>();        
         if(options == null) options = new WampSubscriptionOptions(null);
         if(topic.indexOf("..") != -1) {
             options.setMatchType(WampMatchType.wildcard);
@@ -572,12 +584,13 @@ public class WampClient extends Endpoint
         Long unsubscriptionId = getSubscriptionIdByTopicAndOptions(topic,options);
         
         WampList list = new WampList();
-        list.add(dfd);      
+        list.add(deferred);      
         list.add(unsubscriptionId);
         list.add(getTopicAndOptionsKey(topic,options));
         
         createPendingMessage(requestId, list);
         WampProtocol.sendUnsubscribeMessage(clientSocket, requestId, unsubscriptionId);
+        return deferred.promise();
     }
 
    

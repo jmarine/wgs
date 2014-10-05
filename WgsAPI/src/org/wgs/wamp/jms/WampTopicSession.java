@@ -52,9 +52,9 @@ public class WampTopicSession implements javax.jms.TopicSession
 
     @Override
     public TopicSubscriber createSubscriber(Topic topic) throws JMSException {
-        Long requestId = WampProtocol.newSessionScopeId(con.getWampSocket());
+        Long requestId = WampProtocol.newSessionScopeId(con.getWampClient().getWampSocket());
         WampTopicSubscriber subscriber = new WampTopicSubscriber(this, topic, null, false);
-        con.getWampApplication().registerWampModule(subscriber);
+        con.getWampClient().getWampApplication().registerWampModule(subscriber);
         subscriptionRequests.put(requestId, subscriber);
         return subscriber;
     }
