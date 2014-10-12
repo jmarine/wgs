@@ -15,10 +15,12 @@ import java.util.UUID;
 import javax.json.*;
 import javax.naming.Context;
 import javax.naming.InitialContext;
+import javax.persistence.EntityManager;
 
 import org.wgs.security.OpenIdConnectClient;
 import org.wgs.security.OpenIdConnectClientPK;
 import org.wgs.security.User;
+import org.wgs.wamp.WampSocket;
 
 
 public class Social 
@@ -152,7 +154,34 @@ public class Social
     {
         return clientId + "|" + secret;
     }
+
     
+    public static void notifyUser(WampSocket fromClientSocket, User toUser, String gameGuid, String template) throws Exception
+    {
+        User fromUser = (User)fromClientSocket.getUserPrincipal();
+        
+        if("facebook.com".equals(toUser.getDomain()) && fromUser.getDomain().equals(toUser.getDomain())) {
+            String redirectUri = fromClientSocket.getHelloDetails().getText("_oauth2_redirect_uri");
+            if(redirectUri != null) redirectUri = redirectUri + ((redirectUri.indexOf("?") == -1)?"?":"&") + "provider=" + URLEncoder.encode(fromUser.getDomain(), "utf8");
+            template = template.replace("%me%", fromUser.getName()); // "@[" + fromUser.getLogin() + "]");
+                    
+            EntityManager manager = null;
+            try {
+                manager = Storage.getEntityManager();
+                OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(fromUser.getDomain(), redirectUri);
+                OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
+                notifyFacebookUser(oidcClient, toUser.getLogin(), "?gid=" + gameGuid, template);
+            } finally {
+                if(manager != null) {
+                    try { manager.close(); }
+                    catch(Exception ex) { }
+                }
+            }
+            
+        } else {
+            // SEND E-MAIL?  // but e-mail address are not verified, yet
+        }
+    }
     
     public static void notifyFacebookUser(OpenIdConnectClient oidcClient, String to_user_id, String rel_link, String template) throws Exception
     {

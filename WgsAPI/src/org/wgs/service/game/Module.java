@@ -39,6 +39,7 @@ import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
 import org.wgs.security.WampCRA;
+import org.wgs.util.Social;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampTopic;
@@ -684,6 +685,8 @@ public class Module extends WampModule
             
             broadcastAppEventInfo(socket, g, created? "group_created" : "group_updated");
             
+            if(created) notifyOfflineUsers(socket, g, getActionNameDescription("INIT"));
+            
             g.setVersion(Storage.saveEntity(g).getVersion());
 
         }
@@ -1110,6 +1113,43 @@ public class Module extends WampModule
     }
 
     
+    private void notifyOfflineUsers(WampSocket socket, Group g, String msg) throws Exception    
+    {
+        System.out.println("Starting OFFLINE notifications");
+        if(g != null && msg != null) {
+            for(Member m : g.getMembers()) {
+                if(m != null && m.getUser() != null) {
+                    Client c = m.getClient();
+                    if(c == null) {
+                        System.out.println("OFFLINE notifications to " + m.getUser().getName());
+                        Social.notifyUser(socket, m.getUser(), g.getGid(), msg);
+                    }
+                }
+            }
+        }
+        System.out.println("Finished OFFLINE notifications");
+    }
+    
+    
+    private String getActionNameDescription(String actionName)
+    {
+        switch(actionName) {
+            case "INIT":
+                return "%me% started a game with you, play now!";
+            case "MOVE":
+                return "%me% has moved, and now it's your turn!";
+            case "RETRACT_QUESTION":
+                return "%me% wants to retract last move!";
+            case "RETRACT_ACCEPTED":
+                return "%me% accepted to retract last move!";
+            case "RETRACT_REJECTED":
+                return "%me% rejected to retract last move!";
+            default:
+                return actionName;
+        }
+    }
+
+    
     private void broadcastAppEventInfo(WampSocket socket, Group g, String cmd) throws Exception
     {
         WampDict event = g.toWampObject(false);
@@ -1192,6 +1232,7 @@ public class Module extends WampModule
         return scoresNode;
     }
     
+    
     @WampRPC(name = "add_action")
     public boolean addAction(WampSocket socket, String gid, Long playerSlot, String actionName, String actionValue) throws Exception
     {
@@ -1226,6 +1267,7 @@ public class Module extends WampModule
                 
                 socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, excludeMe, false);
                 broadcastAppEventInfo(socket, g, "group_updated"); // i.e: turn change
+                notifyOfflineUsers(socket, g, getActionNameDescription(actionName));
                 
                 return true;
                 
