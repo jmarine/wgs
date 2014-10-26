@@ -692,8 +692,8 @@ function show_group(group) {
                 currentUserIsOfflineMember = true;
             }
         });
-        group.members.forEach(function(member, index) {
-            var memberId = index;
+        group.members.forEach(function(member) {
+            var memberId = member.slot;
             var memberUser = "";
             var selected = "";
             var roleFixed = false;
@@ -716,7 +716,7 @@ function show_group(group) {
                 roleFixed = true;
             }
 
-            var added = wgsclient.user == $("#group_admin").val() && index >= wgsclient.getGroupMinMembers(group.gid);
+            var added = wgsclient.user == $("#group_admin").val() && memberId >= wgsclient.getGroupMinMembers(group.gid);
             append_group_member(added, memberId, member, currentUserSelected, roleFixed, currentApp.ai);
 
         });
@@ -946,7 +946,7 @@ function update_group_callback(id,details,errorURI,payload,payloadKw) {
         }    
 }
 
-function update_group(state, data) {
+function update_group(state, ready, data) {
     var appId = $("#apps").val();
     var gid = $("#group_gid").val();
     var automatch = $("#grp_automatch").is(':checked');
@@ -955,13 +955,13 @@ function update_group(state, data) {
     var dynamic = $("#grp_dynamic").is(':checked');
     var alliances = $("#grp_alliances").is(':checked');
 
-    wgsclient.updateGroup(appId, gid, state, data, automatch, hidden, observable, dynamic, alliances, function(id,details,errorURI,result,resultKw) {
+    wgsclient.updateGroup(appId, gid, state, ready, data, automatch, hidden, observable, dynamic, alliances, function(id,details,errorURI,result,resultKw) {
         if(!errorURI) update_group_callback(id,details,errorURI,result,resultKw);
     });
 }
 
 function start_group() {
-    update_group("STARTED", null);
+    update_group("STARTED", true, null);
 }
 
 

@@ -723,6 +723,7 @@ public class Module extends WampModule
     {
         // TODO: change group properties (state, observable, etc)
         boolean valid = false;
+        boolean excludeMe = true;
         boolean broadcastAppInfo = false;
         boolean broadcastGroupInfo = false;
         String appId = node.getText("app");
@@ -785,11 +786,12 @@ public class Module extends WampModule
             
             response.putAll(g.toWampObject(true));
             if(node.has("state")) {            
-                if(g.getState() == GroupState.STARTED) {
+                if(g.getState() == GroupState.STARTED && node.has("ready") && node.getBoolean("ready") ) {
                     for(int slot = 0; slot < g.getNumSlots(); slot++) {
                         Member member = g.getMember(slot);
                         if(member != null && member.getClient() != null && socket.getSessionId().equals(member.getClient().getSessionId())) {
                             member.setState(MemberState.READY);
+                            excludeMe = false;
                         }
                     }
                 }
@@ -805,7 +807,7 @@ public class Module extends WampModule
         response.put("valid", valid);
 
         if(broadcastAppInfo)    broadcastAppEventInfo(socket, g, "group_updated");
-        if(broadcastGroupInfo)  socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, response, true, false);  // exclude Me
+        if(broadcastGroupInfo)  socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, response, excludeMe, false);  // exclude Me
         return response;
     }
     
