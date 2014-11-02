@@ -1,5 +1,6 @@
 package org.wgs.wamp.rpc;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import org.jdeferred.Deferred;
@@ -119,16 +120,24 @@ public class WampLocalMethod extends WampMethod
         return deferred.promise();
     }
     
-    private WampException wrapToWampException(Long callId, Object ex) 
+    private WampException wrapToWampException(Long callId, Object error) 
     {
-        if(ex != null && ex instanceof Throwable) {
-            Throwable th = (Throwable)ex;
-            System.err.println("WampLocalMethod: Error: " + ex.getClass().getName() + ":" + th.getMessage());
+        if(error != null && error instanceof InvocationTargetException) {
+            Exception ex = (Exception)error;
+            error = ex.getCause();
+        } 
+        
+        if(error != null && error instanceof WampException) {
+            WampException ex = (WampException)error;
+            return new WampException(callId, ex.getDetails(), ex.getErrorURI(), ex.getArgs(), ex.getArgsKw());
+        } else if(error != null && error instanceof Throwable) {
+            Throwable th = (Throwable)error;
+            System.err.println("WampLocalMethod: Error: " + error.getClass().getName() + ":" + th.getMessage());
             th.printStackTrace();
             return new WampException(callId, null, "wamp.error.local_invocation", null, null);
         } else {
-            System.err.println("WampLocalMethod: Error: " + ex);
-            return new WampException(callId, null, "wamp.error.local_invocation", new WampList(ex), null);
+            System.err.println("WampLocalMethod: Error: " + error);
+            return new WampException(callId, null, "wamp.error.local_invocation", new WampList(error), null);
         }
     }
     

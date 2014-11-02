@@ -1240,24 +1240,31 @@ public class Module extends WampModule
     {
         Group g = groups.get(gid);
         if(g != null) synchronized(g) {
-            Member member = g.getMember(playerSlot.intValue());
-            if(!member.getUser().equals(socket.getUserPrincipal())) throw new WampException(null, "wgs.incorrect_user_member", null, null);
-            
             String state = g.getData();
 
             GroupActionValidator validator = null;
             String validatorClassName = g.getApplication().getActionValidator();
             if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).newInstance();
+
+            Member member = null;
+            if(playerSlot >= 0) {
+                member = g.getMember(playerSlot.intValue());
+                if(!member.getUser().equals(socket.getUserPrincipal())) throw new WampException(null, "wgs.incorrect_user_member", null, null);
+            }
             
             if(validator == null || validator.validAction(this.applications.values(), g, actionName, actionValue, playerSlot)) {
                 GroupAction action = new GroupAction();
+                
                 action.setApplicationGroup(g);
                 action.setActionOrder(g.getActions().size()+1);
                 action.setActionName(actionName);
                 action.setActionValue(actionValue);
                 action.setActionTime(Calendar.getInstance());
-                action.setSlot(member.getSlot());
-                action.setUser(member.getUser());
+                action.setSlot(-1);
+                action.setUser((User)socket.getUserPrincipal());
+                if(member != null) {
+                    action.setSlot(member.getSlot());
+                }
                 
                 g.getActions().add(action);
                 g.setVersion(Storage.saveEntity(g).getVersion());

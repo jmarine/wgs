@@ -14,6 +14,8 @@ public class TurnValidator implements GroupActionValidator
     {
         try {
             boolean isValid = false;
+            if(actionName.equals("CHAT")) return true;
+            // else if(actionSlot < 0) return false;
             
             GroupAction lastAction = null;
             String gameType = g.getApplication().getName();

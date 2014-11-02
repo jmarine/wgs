@@ -166,6 +166,7 @@ public class GroupAction implements java.io.Serializable
         event.put("value", actionValue);
         event.put("time",  actionTime);
         if(slot >= 0) event.put("slot",  slot);
+        else if(user != null) event.put("user", user.getName());
         
         return event;
     }
