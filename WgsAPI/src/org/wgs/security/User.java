@@ -335,7 +335,9 @@ public class User implements Serializable, Principal
         if(includeFriends && getFriends() != null) {
             WampList friends = new WampList();
             for(User friend : getFriends()) {
-                friends.add(friend.toWampObject(false));
+                if(friend.getLastLoginTime() != null) {
+                    friends.add(friend.toWampObject(false));
+                }
             }
             retval.put("friends", friends);
         }
