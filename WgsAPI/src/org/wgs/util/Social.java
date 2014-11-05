@@ -170,7 +170,7 @@ public class Social
                 manager = Storage.getEntityManager();
                 OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(fromUser.getDomain(), redirectUri);
                 OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
-                notifyFacebookUser(oidcClient, toUser.getLogin(), "?gid=" + gameGuid, template);
+                notifyFacebookUser(oidcClient, toUser.getLogin(), "?provider=facebook.com&gid=" + gameGuid, template);
             } finally {
                 if(manager != null) {
                     try { manager.close(); }
