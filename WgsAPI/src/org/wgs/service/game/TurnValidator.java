@@ -44,6 +44,7 @@ public class TurnValidator implements GroupActionValidator
             engine.eval("var game = new "+gameType+"();");
             engine.eval("game.initFromStateStr('"+g.getData()+"');");
             for(GroupAction action : g.getActions()) {
+              if(!action.getActionName().equals("CHAT")) {
                 lastAction = action;
                 switch(action.getActionName()) {
                     case "MOVE":
@@ -61,6 +62,7 @@ public class TurnValidator implements GroupActionValidator
                         break;
                     }
                 }
+              }
             }            
             
             if(actionName.equalsIgnoreCase("INIT")) {
