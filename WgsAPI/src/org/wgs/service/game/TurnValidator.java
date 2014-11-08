@@ -46,14 +46,6 @@ public class TurnValidator implements GroupActionValidator
             for(GroupAction action : g.getActions()) {
               if(!action.getActionName().equals("CHAT")) {
                 lastAction = action;
-                switch(action.getActionName()) {
-                    case "MOVE":
-                        engine.eval("game.makeMove(game.parseMoveString('" + action.getActionValue() + "'));");
-                        break;
-                    case "RETRACT_ACCEPTED":
-                        engine.eval("game.initFromStateStr('"+action.getActionValue()+"');");
-                        break;
-                }
                 
                 if(actionName.equalsIgnoreCase("RETRACT_QUESTION")) {
                     String gameState = (String)engine.eval("game.toString();");
@@ -62,6 +54,16 @@ public class TurnValidator implements GroupActionValidator
                         break;
                     }
                 }
+                
+                switch(action.getActionName()) {
+                    case "MOVE":
+                        engine.eval("game.makeMove(game.parseMoveString('" + action.getActionValue() + "'));");
+                        break;
+                    case "RETRACT_ACCEPTED":
+                        engine.eval("game.initFromStateStr('"+action.getActionValue()+"');");
+                        break;
+                }
+
               }
             }            
             
