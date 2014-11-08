@@ -13,7 +13,7 @@ This project offers the following services:
 * authentication with Google+, Facebook, and OpenID Connect providers.
 * lobby services (to create/list/join/automatch multi-player online games).
 * real-time presence and communications.
-* notifications (... well, this is not yet implemented).
+* Facebook notifications.
 
 The server-side is developed in Java language, and it can be deployed as a standalone server, or within JavaEE 7 application servers. 
 
