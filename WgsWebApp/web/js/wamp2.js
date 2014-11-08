@@ -429,8 +429,9 @@ Wamp2.prototype = {
 
         } else if (arr[0] == 4) {  // CHALLENGE
             var extra = arr[2] || {};
-            client.authmethod = arr[1];
             extra.authmethod = arr[1];
+            client.authmethod = arr[1];
+            client.state = ConnectionState.CHALLENGED;
             onstatechange(ConnectionState.CHALLENGED, extra);
 
         } else if (arr[0] == 6) {  // GOODBYE 
