@@ -69,6 +69,12 @@ public class TurnValidator implements GroupActionValidator
             
             if(actionName.equalsIgnoreCase("INIT")) {
                 isValid = true;
+                
+            } else if(actionName.equalsIgnoreCase("RESIGN") && actionSlot >= 0) {
+                g.setState(GroupState.FINISHED);
+                // g.setWinner(2-actionSlot);
+                isValid = true;
+                
             } else if(actionName.equalsIgnoreCase("MOVE")) {
                 if(!actionValue.matches("[a-z|0-9]+")) throw new Exception("Invalid move syntax");
                 

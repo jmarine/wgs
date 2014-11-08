@@ -1140,6 +1140,8 @@ public class Module extends WampModule
                 return "%me% started a game with you, play now!";
             case "MOVE":
                 return "%me% has moved, and now it's your turn!";
+            case "RESIGN":
+                return "%me% has resigned the game!";
             case "RETRACT_QUESTION":
                 return "%me% wants to retract last move!";
             case "RETRACT_ACCEPTED":
