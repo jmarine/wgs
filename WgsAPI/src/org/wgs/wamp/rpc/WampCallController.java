@@ -100,10 +100,7 @@ public class WampCallController implements Runnable
         synchronized(this) {
             if(!done && !cancelled && pendingInvocationCount <= 0 && remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
                 done = true;
-                if((result.size() == 1) && (remoteInvocationResults == 1) && (result.get(0) instanceof WampList)) {
-                    result = (WampList)result.get(0);
-                }   
-
+                
                 wampResult = new WampResult(callID);
                 wampResult.setArgs(getResult());
                 wampResult.setArgsKw(getResultKw());
@@ -192,15 +189,7 @@ public class WampCallController implements Runnable
                             {
                                 getResultKw().putAll(progress.getArgsKw());
                                 if(progress.getArgs() != null) {
-                                    switch(progress.getArgs().size()) {
-                                        case 0: 
-                                            break;
-                                        case 1:
-                                            getResult().add(progress.getArgs().get(0));
-                                            break;
-                                        default:
-                                            getResult().add(progress.getArgs());
-                                    }
+                                    getResult().add(progress.getArgs());
                                 }
                             }
                         }

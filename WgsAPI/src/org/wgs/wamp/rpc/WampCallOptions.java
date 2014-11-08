@@ -30,7 +30,7 @@ public class WampCallOptions
     {
         this.timeout = 0;
         this.discloseMe = false;
-        this.runOn = RunOnEnum.all;
+        this.runOn = RunOnEnum.any;
         this.runMode = RunModeEnum.gather;
         setExcludeMe(true); // a Caller of a procedure will never itself be forwarded the call issued
         
@@ -267,8 +267,8 @@ public class WampCallOptions
         if(discloseMe) options.put("disclose_me", discloseMe);
         if(!excludeMe) options.put("exclude_me", excludeMe);
         if(timeout > 0) options.put("timeout", timeout);
-        if(runOn != null) options.put("runOn", runOn.toString());
-        if(runMode != null && runMode != RunModeEnum.gather) options.put("runMode", runMode.toString());
+        if(runOn != null) options.put("runon", runOn.toString());
+        if(runMode != null && runMode != RunModeEnum.gather) options.put("runmode", runMode.toString());
         if(rkey != null) options.put("rkey", rkey);
  
         if(eligible != null) {
