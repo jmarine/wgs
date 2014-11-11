@@ -176,7 +176,7 @@ Chess.prototype.parseMoveString = function(str) {
     var movs = this.getMovements();
     if(movs.length > 0) {
       var promotion = NONE;
-      if(str.length > 4) {
+      if(str.length == 5) {
 	promotion = this.parsePieceType(str.substring(4));
 	str = str.substring(0,4);
       }
@@ -184,7 +184,9 @@ Chess.prototype.parseMoveString = function(str) {
       str = str.toLowerCase();
       for(var i = 0; i < movs.length; i++) {
         var move = movs[i];
-        if(str == this.getMoveString(move).substring(0,4)) {  // ignore default QUEEN promotion
+        var moveStr = this.getMoveString(move);
+        if(moveStr.length == 5) moveStr = moveStr.substring(0,4);  // ignore default promotion
+        if(str == moveStr) { 
 	  move.promotion = promotion;  // update promotion type
 	  return move;
 	}
