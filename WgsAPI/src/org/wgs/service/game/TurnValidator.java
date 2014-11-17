@@ -98,9 +98,12 @@ public class TurnValidator implements GroupActionValidator
                 String gameState = lastAction.getActionValue();
                 if(gameState.equals(actionValue)) {
                     engine.eval("game.initFromStateStr('"+gameState+"');");
+                    if(g.getState() == GroupState.FINISHED) {
+                        g.setState(GroupState.STARTED);
+                    }
                     isValid = true;
                 }
-
+               
             } else if(lastAction != null && lastAction.getActionName().equals("RETRACT_QUESTION") 
                     && actionSlot >= 0 && actionSlot != lastAction.getSlot()
                     && actionName.equalsIgnoreCase("RETRACT_REJECTED")) {
@@ -115,9 +118,13 @@ public class TurnValidator implements GroupActionValidator
             
             System.out.println("ActionValidator: " + actionName + ": valid = " + isValid);
             if(isValid) {
-                int turn = ((Number)engine.eval("game.getTurn()")).intValue();
-                g.setTurn(turn-1);
-                System.out.println("ActionValidator: " + actionName + ": new turn = " + turn);
+                if(actionName.equals("RETRACT_QUESTION")) {
+                    g.setTurn(1-actionSlot.intValue());
+                } else {
+                    int turn = ((Number)engine.eval("game.getTurn()")).intValue();
+                    g.setTurn(turn-1);
+                }
+                System.out.println("ActionValidator: " + actionName + ": new turn = " + g.getTurn());
             }
             
             return isValid;
