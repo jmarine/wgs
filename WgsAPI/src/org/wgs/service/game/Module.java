@@ -635,7 +635,7 @@ public class Module extends WampModule
                     response.put("slotJoinedByClient", member.getSlot());
                     member.setClient(client);
                     member.setState(MemberState.JOINED);
-                    member.setUser(manager.merge(client.getUser()));  // prevent user duplication
+                    member.setUser(manager.getReference(User.class, client.getUser().getUid()));
                     if(options != null && options.has("role") && options.getText("role").length() > 0) {
                         Role oldRole = member.getRole();
                         String roleName = options.getText("role");

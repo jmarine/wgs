@@ -33,7 +33,7 @@ public class Member implements java.io.Serializable
     @Column(name="userType")
     private String userType;
     
-    @ManyToOne(fetch= FetchType.EAGER, cascade = { CascadeType.DETACH })
+    @ManyToOne(fetch= FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name="uid", referencedColumnName = "uid")
     })      
