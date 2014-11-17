@@ -29,7 +29,6 @@ import org.wgs.wamp.type.WampList;
 
 public abstract class WampSocket 
 {
-    private static final String DEFAULT_REALM = "realm1";
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
 
     protected Principal principal;
@@ -197,12 +196,12 @@ public abstract class WampSocket
     
     public String getRealm()
     {
-        return (realm == null || realm.equals("null")) ? DEFAULT_REALM : realm;
+        return realm;
     }
     
     public void setRealm(String realm)
     {
-        this.realm = (realm == null || realm.equals("null")) ? DEFAULT_REALM : realm;
+        this.realm = realm;
     }
     
     

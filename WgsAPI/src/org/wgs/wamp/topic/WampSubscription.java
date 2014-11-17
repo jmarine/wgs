@@ -74,7 +74,9 @@ public class WampSubscription
             if(ref.refCount(-1) == 0) {
                 WampSocket socket = ref.getObject();
                 sockets.remove(sessionId);
-                sessionIdsByRealm.get(socket.getRealm()).remove(sessionId);
+                HashSet<Long> realmSessions = sessionIdsByRealm.get(socket.getRealm());
+                if(realmSessions != null) realmSessions.remove(sessionId);
+                else System.out.println("WARN: no sessionId " + sessionId + " in realm " + socket.getRealm());
             }
             return ref.getObject();
         }

@@ -300,7 +300,7 @@ public class WampApplication
     public void onWampSessionEnd(WampSocket clientSocket) 
     {
         if(clientSocket.getRealm() != null) {
-
+            
             // Notify modules:
             for(WampModule module : modules.values()) {
                 try { 
@@ -309,7 +309,7 @@ public class WampApplication
                     logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
                 }
             }         
-        
+
             // First remove subscriptions to topic patterns:
             for(WampSubscription subscription : clientSocket.getSubscriptions()) {
                 if(subscription.getOptions().getMatchType() != WampMatchType.exact) {  // prefix or wildcards
@@ -329,10 +329,8 @@ public class WampApplication
                     module.onUnregister(clientSocket, registration.getId());
                 } catch(Exception ex) { }
             } 
-            
-            clientSocket.setState(WampConnectionState.ANONYMOUS);
-            clientSocket.setUserPrincipal(null);
 
+            onUserLogout(clientSocket);
         }
         
         // Clear session realm
@@ -429,10 +427,6 @@ public class WampApplication
             clientSocket.close(reason);
             clientSocket.setState(WampConnectionState.OFFLINE);
 
-            onWampSessionEnd(clientSocket);
-
-            onUserLogout(clientSocket);
-            
             for(WampModule module : modules.values()) {
                 try { 
                     module.onDisconnect(clientSocket); 
@@ -441,6 +435,8 @@ public class WampApplication
                 }
             }
             
+            onWampSessionEnd(clientSocket);
+
             sockets.remove(clientSocket.getSessionId());
             
             logger.log(Level.FINEST, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
