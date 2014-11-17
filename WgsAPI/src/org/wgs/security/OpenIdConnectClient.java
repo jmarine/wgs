@@ -174,7 +174,7 @@ public class OpenIdConnectClient implements Serializable
     }
 
     
-    public String getAccessTokenResponse(String authorization_code) throws Exception
+    public String getAccessTokenResponse(String authorization_code, String redirectUri) throws Exception
     {
         URL url = new URL(provider.getAccessTokenEndpointUrl());
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
@@ -182,7 +182,7 @@ public class OpenIdConnectClient implements Serializable
 
         OutputStreamWriter out = new OutputStreamWriter(
                                          connection.getOutputStream());
-        out.write("grant_type=authorization_code&code=" + URLEncoder.encode(authorization_code,"utf8") + "&client_id=" + URLEncoder.encode(getClientId(),"utf8") + "&client_secret=" + URLEncoder.encode(getClientSecret(),"utf8") + "&redirect_uri=" + URLEncoder.encode(getRedirectUri(),"utf8") );
+        out.write("grant_type=authorization_code&code=" + URLEncoder.encode(authorization_code,"utf8") + "&client_id=" + URLEncoder.encode(getClientId(),"utf8") + "&client_secret=" + URLEncoder.encode(getClientSecret(),"utf8") + "&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8") );
         out.close();
 
         BufferedReader in = new BufferedReader(

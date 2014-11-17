@@ -1037,7 +1037,7 @@ function openid_connect(redirectUri) {
             redirectUri = clear_openid_connect_params(redirectUri, false);
             
             if(!wgsclient) wgsclient = new WgsClient(url);
-            wgsclient.openIdConnectAuthCode(realm, provider, redirectUri, code, notificationChannel, authentication);
+            wgsclient.openIdConnectAuthCode(realm, provider, redirectUri, redirectUri, code, notificationChannel, authentication);
         } else {
             var error = get_url_param(redirectUri, "error");
             disconnect();

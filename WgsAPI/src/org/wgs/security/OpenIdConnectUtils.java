@@ -187,17 +187,19 @@ public class OpenIdConnectUtils
 
         try {
             String providerDomain = data.getText("authprovider");
+            String wgsRedirectUri = data.getText("_wgs_redirect_uri");
             String redirectUri = data.getText("_oauth2_redirect_uri");
+            if(redirectUri == null) redirectUri = wgsRedirectUri;
             
             manager = Storage.getEntityManager();
-            OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(providerDomain, redirectUri);
+            OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(providerDomain, wgsRedirectUri);
             OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
             if(oidcClient == null) {
-                System.err.println("Unknown OpenId Connect provider domain");
+                System.err.println("Unknown OpenId Connect provider domain=" + providerDomain + ",redirect_uri=" + redirectUri);
                 throw new WampException(null, "wgs.error.unknown_oidc_provider", null, null);
             }
 
-            String accessTokenResponse = oidcClient.getAccessTokenResponse(code);
+            String accessTokenResponse = oidcClient.getAccessTokenResponse(code, redirectUri);
             logger.fine("AccessToken endpoint response: " + accessTokenResponse);
             
             if(providerDomain.endsWith("facebook.com")) {
