@@ -46,7 +46,7 @@ public class GroupAction implements java.io.Serializable
     @Column(name="slot")
     private int slot;
     
-    @ManyToOne(fetch= FetchType.EAGER, cascade = { CascadeType.DETACH } )
+    @ManyToOne(fetch= FetchType.EAGER)
     @JoinColumns({@JoinColumn(name="uid", referencedColumnName = "uid")})      
     private User user;
 
