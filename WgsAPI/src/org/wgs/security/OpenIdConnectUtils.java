@@ -195,7 +195,7 @@ public class OpenIdConnectUtils
             OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(providerDomain, wgsRedirectUri);
             OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
             if(oidcClient == null) {
-                System.err.println("Unknown OpenId Connect provider domain=" + providerDomain + ",redirect_uri=" + redirectUri);
+                System.err.println("Unknown OpenId Connect provider domain=" + providerDomain + ",redirect_uri=" + wgsRedirectUri);
                 throw new WampException(null, "wgs.error.unknown_oidc_provider", null, null);
             }
 
