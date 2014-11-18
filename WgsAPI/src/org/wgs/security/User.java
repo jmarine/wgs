@@ -60,6 +60,9 @@ public class User implements Serializable, Principal
     @Column(name="email",unique=false)
     private String email;
     
+    @Column(name="email_valid")
+    private boolean emailValidated;
+    
     @Column(name="picture")
     private String picture;    
 
@@ -215,6 +218,20 @@ public class User implements Serializable, Principal
         this.email = email;
     }
     
+    
+    /**
+     * @return the emailValidated
+     */
+    public boolean isEmailValidated() {
+        return emailValidated;
+    }
+
+    /**
+     * @param emailValidated the emailValidated to set
+     */
+    public void setEmailValidated(boolean emailValidated) {
+        this.emailValidated = emailValidated;
+    }
     
     /**
      * @return the URL of the picture
