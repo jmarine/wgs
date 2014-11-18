@@ -181,21 +181,14 @@ public class Module extends WampModule
     }
 
     
-    @WampRPC(name="openid_connect_providers")
-    public WampDict openIdConnectProviders(WampSocket socket, WampDict data) throws Exception
-    {
-        String redirectUri = data.getText("redirect_uri");
-        return OpenIdConnectUtils.getProviders(redirectUri);
-    }
-            
-    
     @WampRPC(name="openid_connect_login_url")
     public String openIdConnectLoginUrl(WampSocket socket, WampDict data) throws Exception
     {
+        String clientName = data.getText("_oauth2_client_name");
         String redirectUri = data.getText("_oauth2_redirect_uri");
         String subject = data.getText("_oauth2_subject");
         String state = data.has("_oauth2_state")? data.getText("_oauth2_state") : null;
-        return OpenIdConnectUtils.getAuthURL(redirectUri, subject, state);
+        return OpenIdConnectUtils.getAuthURL(clientName, redirectUri, subject, state);
     }
     
     

@@ -216,15 +216,17 @@ public class WampApplication
                     break;
                     
                 } else if(authMethod.equalsIgnoreCase("oauth2-providers-list")) {
+                    String clientName = helloDetails.getText("_oauth2_client_name");
                     String redirectUrl = helloDetails.getText("_oauth2_redirect_uri");
-                    WampDict extra = OpenIdConnectUtils.getProviders(redirectUrl);
+                    WampDict extra = OpenIdConnectUtils.getProviders(clientName, redirectUrl);
                     WampProtocol.sendChallengeMessage(clientSocket, "oauth2", extra);
                     break;
                 } else if(authMethod.startsWith("oauth2")) {
+                    String clientName = helloDetails.getText("_oauth2_client_name");
                     String subject = helloDetails.getText("_oauth2_subject");
                     String redirectUrl = helloDetails.getText("_oauth2_redirect_uri");
                     String state = helloDetails.getText("_oauth2_state");
-                    String url = OpenIdConnectUtils.getAuthURL(redirectUrl, subject, state);
+                    String url = OpenIdConnectUtils.getAuthURL(clientName, redirectUrl, subject, state);
 
                     WampDict extra = new WampDict();
                     extra.put("_oauth2_provider_url", url);

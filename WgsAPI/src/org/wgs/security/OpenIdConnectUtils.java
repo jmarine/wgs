@@ -30,7 +30,7 @@ public class OpenIdConnectUtils
     private static final Logger logger = Logger.getLogger(OpenIdConnectUtils.class.toString());
     
     
-    public static WampDict getProviders(String redirectUri) 
+    public static WampDict getProviders(String clientName, String redirectUri) 
     {
         WampDict retval = new WampDict();
         WampList providers = new WampList();
@@ -49,7 +49,7 @@ public class OpenIdConnectUtils
                     try {
                         //node.put("registrationEndpoint", provider.getRegistrationEndpointUrl());
                         node.put("name", domain);
-                        node.put("url", getAuthURL(redirectUri, domain, null));  // Auto registration with OpenID Connect provider
+                        node.put("url", getAuthURL(clientName, redirectUri, domain, null));  // Auto registration with OpenID Connect provider
                         providers.add(node);
 
                     } catch(Exception ex) { }
@@ -74,7 +74,7 @@ public class OpenIdConnectUtils
     }
             
     
-    public static String getAuthURL(String redirectUri, String principal, String state) throws Exception
+    public static String getAuthURL(String clientName, String redirectUri, String principal, String state) throws Exception
     {
         String retval = null;
         String providerDomain = null;
@@ -102,10 +102,9 @@ public class OpenIdConnectUtils
         EntityManager manager = null;
         try {
             manager = Storage.getEntityManager();
-            OpenIdConnectClientPK oidcId = new OpenIdConnectClientPK(providerDomain, redirectUri);
+            OpenIdConnectClientPK oidcId = new OpenIdConnectClientPK(providerDomain, clientName);
             OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcId);
             if(oidcClient == null && !providerDomain.equals("defaultProvider")) {
-                
                 OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
                 if(provider == null) {
                     JsonObject oidcConfig = OpenIdConnectProvider.discover(principal);
@@ -124,9 +123,10 @@ public class OpenIdConnectUtils
                 } else {
                     try {
                         // register OIDC client
-                        JsonObject oidcClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
+                        JsonObject oidcClientRegistrationResponse = provider.registerClient(clientName, redirectUri);
                         oidcClient = new OpenIdConnectClient();
                         oidcClient.setProvider(provider);
+                        oidcClient.setClientName(clientName);
                         oidcClient.setRedirectUri(redirectUri);
                         oidcClient.load(oidcClientRegistrationResponse);
                         oidcClient = Storage.saveEntity(oidcClient);
@@ -147,7 +147,7 @@ public class OpenIdConnectUtils
                         Storage.removeEntity(oidcClient);
                         
                         OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
-                        JsonObject oidcClientRegistrationResponse = provider.registerClient("wgs", redirectUri);
+                        JsonObject oidcClientRegistrationResponse = provider.registerClient(clientName, redirectUri);
                         oidcClient.load(oidcClientRegistrationResponse);
                     }
                     oidcClient = Storage.saveEntity(oidcClient);
@@ -187,18 +187,18 @@ public class OpenIdConnectUtils
 
         try {
             String providerDomain = data.getText("authprovider");
-            String wgsRedirectUri = data.getText("_wgs_redirect_uri");
-            String redirectUri = data.getText("_oauth2_redirect_uri");
-            if(redirectUri == null) redirectUri = wgsRedirectUri;
+            String clientName = data.getText("_oauth2_client_name");
             
             manager = Storage.getEntityManager();
-            OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(providerDomain, wgsRedirectUri);
+            OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(providerDomain, clientName);
             OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
             if(oidcClient == null) {
-                System.err.println("Unknown OpenId Connect provider domain=" + providerDomain + ",redirect_uri=" + wgsRedirectUri);
+                System.err.println("Unknown OpenId Connect provider provider_domain=" + providerDomain + ",client_name=" + clientName);
                 throw new WampException(null, "wgs.error.unknown_oidc_provider", null, null);
             }
 
+            String redirectUri = data.getText("_oauth2_redirect_uri");
+            if(redirectUri == null) redirectUri = oidcClient.getRedirectUri();
             String accessTokenResponse = oidcClient.getAccessTokenResponse(code, redirectUri);
             logger.fine("AccessToken endpoint response: " + accessTokenResponse);
             

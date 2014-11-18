@@ -1015,6 +1015,13 @@ function getWgsClient() {
     return wgsclient;
 }
 
+
+function getOAuth2ClientName()
+{
+    return "WebGL 8x8 board games";
+}
+
+
 function openid_connect(redirectUri) {
     
     if(!wgsclient) wgsclient = getWgsClient();
@@ -1026,7 +1033,7 @@ function openid_connect(redirectUri) {
             alert("User name is empty");
         } else {
             wgsclient = getWgsClient();
-            wgsclient.openIdConnectFromSubject(realm, user, redirectUri, notificationChannel, authentication);
+            wgsclient.openIdConnectFromSubject(realm, user, getOAuth2ClientName(), redirectUri, notificationChannel, authentication);
         }
         
     } else {
@@ -1037,7 +1044,7 @@ function openid_connect(redirectUri) {
             redirectUri = clear_openid_connect_params(redirectUri, false);
             
             if(!wgsclient) wgsclient = new WgsClient(url);
-            wgsclient.openIdConnectAuthCode(realm, provider, redirectUri, redirectUri, code, notificationChannel, authentication);
+            wgsclient.openIdConnectAuthCode(realm, provider, getOAuth2ClientName(), redirectUri, code, notificationChannel, authentication);
         } else {
             var error = get_url_param(redirectUri, "error");
             disconnect();
@@ -1143,7 +1150,7 @@ function openid_connect_menu(self) {
     wgsclient = getWgsClient();
     var realm = wgsclient.getDefaultRealm();
     
-    wgsclient.openIdConnectProviders(realm, redirectUri, authentication);
+    wgsclient.openIdConnectProviders(realm, getOAuth2ClientName(), redirectUri, authentication);
 }
 
 

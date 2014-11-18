@@ -161,14 +161,13 @@ public class Social
         User fromUser = (User)fromClientSocket.getUserPrincipal();
         
         if("facebook.com".equals(toUser.getDomain()) && fromUser.getDomain().equals(toUser.getDomain())) {
-            String redirectUri = fromClientSocket.getHelloDetails().getText("_oauth2_redirect_uri");
-            if(redirectUri != null) redirectUri = redirectUri + ((redirectUri.indexOf("?") == -1)?"?":"&") + "provider=" + URLEncoder.encode(fromUser.getDomain(), "utf8");
+            String clientName = fromClientSocket.getHelloDetails().getText("_oauth2_clientName");
             template = template.replace("%me%", fromUser.getName()); // "@[" + fromUser.getLogin() + "]");
                     
             EntityManager manager = null;
             try {
                 manager = Storage.getEntityManager();
-                OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(fromUser.getDomain(), redirectUri);
+                OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(fromUser.getDomain(), clientName);
                 OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
                 notifyFacebookUser(oidcClient, toUser.getLogin(), "?provider=facebook.com&gid=" + gameGuid, template);
             } finally {
@@ -245,7 +244,7 @@ public class Social
     
     public static final void doFacebookTest() throws Exception
     {
-            OpenIdConnectClientPK oidcClientPK = new OpenIdConnectClientPK("facebook.com", "https://localhost:8181/webgl8x8boardgames/oauth2callback.html?provider=facebook.com");
+            OpenIdConnectClientPK oidcClientPK = new OpenIdConnectClientPK("facebook.com", "WebGL 8x8 board games");
             OpenIdConnectClient oidcClient = Storage.findEntity(OpenIdConnectClient.class, oidcClientPK);
             notifyFacebookUser(oidcClient, "", "?1234", "It's your turn");  
     }

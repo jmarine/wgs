@@ -4,14 +4,14 @@ package org.wgs.security;
 public class OpenIdConnectClientPK implements java.io.Serializable
 {
     private String provider;
-    private String redirectUri = "";    
+    private String clientName = "";    
     
     public OpenIdConnectClientPK() { }
     
-    public OpenIdConnectClientPK(String provider, String redirectUri) 
+    public OpenIdConnectClientPK(String provider, String clientName) 
     {
         this.provider = provider;
-        this.redirectUri = redirectUri;
+        this.clientName = clientName;
     }
 
 
@@ -19,7 +19,7 @@ public class OpenIdConnectClientPK implements java.io.Serializable
     public boolean equals(Object o) { 
         if( (o != null) && (o instanceof OpenIdConnectClientPK) ) {
             OpenIdConnectClientPK pk = (OpenIdConnectClientPK)o;
-            return provider.equals(pk.provider) && redirectUri.equals(pk.redirectUri);
+            return provider.equals(pk.provider) && clientName.equals(pk.clientName);
         } else {
             return false;
         }
@@ -28,7 +28,7 @@ public class OpenIdConnectClientPK implements java.io.Serializable
     
     @Override
     public int hashCode() {
-        return provider.hashCode() + redirectUri.hashCode();
+        return provider.hashCode() + clientName.hashCode();
     }
     
 }

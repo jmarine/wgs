@@ -21,9 +21,6 @@ import javax.persistence.TemporalType;
 
 @Entity
 @Table(name="OIDC_CLIENT")
-@NamedQueries({
-  @NamedQuery(name="OpenIdConnectClient.findByRedirectUri", query="SELECT OBJECT(p) FROM OpenIdConnectClient p WHERE p.redirectUri like :uri")
-})
 @IdClass(OpenIdConnectClientPK.class)
 public class OpenIdConnectClient implements Serializable
 {
@@ -33,6 +30,9 @@ public class OpenIdConnectClient implements Serializable
     private OpenIdConnectProvider provider;
 
     @Id
+    @Column(name="client_name")
+    private String clientName = "";
+    
     @Column(name="redirect_url")
     private String redirectUri = "";
 
@@ -66,6 +66,21 @@ public class OpenIdConnectClient implements Serializable
     public void setProvider(OpenIdConnectProvider provider) {
         this.provider = provider;
     }
+
+    
+    /**
+     * @return the clientName
+     */
+    public String getClientName() {
+        return clientName;
+    }
+
+    /**
+     * @param clientName the clientName to set
+     */
+    public void setClientName(String clientName) {
+        this.clientName = clientName;
+    }   
     
     /**
      * @return the redirectUri
@@ -156,7 +171,6 @@ public class OpenIdConnectClient implements Serializable
     
     
     public void load(JsonObject oidcClientRegistrationResponse) {
-        this.setRedirectUri(redirectUri);
         this.setClientId(oidcClientRegistrationResponse.getString("client_id"));
         this.setClientSecret(oidcClientRegistrationResponse.getString("client_secret"));
         this.setRegistrationClientUri(oidcClientRegistrationResponse.getString("registration_client_uri"));
