@@ -161,7 +161,7 @@ public class Social
         User fromUser = (User)fromClientSocket.getUserPrincipal();
         
         if("facebook.com".equals(toUser.getDomain()) && fromUser.getDomain().equals(toUser.getDomain())) {
-            String clientName = fromClientSocket.getHelloDetails().getText("_oauth2_clientName");
+            String clientName = fromClientSocket.getHelloDetails().getText("_oauth2_client_name");
             template = template.replace("%me%", fromUser.getName()); // "@[" + fromUser.getLogin() + "]");
                     
             EntityManager manager = null;
