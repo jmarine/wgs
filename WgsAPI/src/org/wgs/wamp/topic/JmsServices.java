@@ -32,11 +32,16 @@ import org.wgs.wamp.type.WampList;
 public class JmsServices
 {
     private static final Logger logger = Logger.getLogger(JmsServices.class.getName());
-    
+
     private static String           imqEnabled = null;
     private static boolean          brokerTested = false;
     private static boolean          brokerAvailable = false;
-    private static String           brokerId = "wgs-" + UUID.randomUUID().toString();
+    public  static String           brokerId = "wgs-" + UUID.randomUUID().toString();
+
+    private static String           wgsClusterNodeEndpoint = null;
+    private static WampTopic        wgsClusterTopic = new WampTopic("wgs.cluster", null);
+    private static WampTopic        wgsClusterNodeTopic = new WampTopic("wgs.cluster." + brokerId, null);
+    
     
     private static TopicConnection  reusableTopicConnection = null;
     private static ConcurrentHashMap<WampTopic,TopicSubscriber> topicSubscriptions = new ConcurrentHashMap<WampTopic,TopicSubscriber>();
@@ -48,10 +53,24 @@ public class JmsServices
         if(imqEnabled != null && imqEnabled.equalsIgnoreCase("true")) {        
             EmbeddedOpenMQ.start(serverConfig);
         }
+
+        wgsClusterNodeEndpoint = serverConfig.getProperty("wgsClusterNodeEndpoint");
+        WampDict metaData = new WampDict();
+        metaData.put("_wgsClusterNodeEndpoint", wgsClusterNodeEndpoint);
+        metaData.put("_wgsTicket", brokerId);  // TODO: use one time password.
+        subscribeMessageListener(wgsClusterTopic);
+        subscribeMessageListener(wgsClusterNodeTopic);
+        publishMetaEvent("cluster", WampProtocol.newGlobalScopeId(), wgsClusterTopic, "wgs.cluster.node_attached", metaData, null);
     }
 
-    public static void stop() 
+    public static void stop() throws Exception
     {
+        WampDict metaData = new WampDict();
+        metaData.put("_wgsClusterNodeEndpoint", wgsClusterNodeEndpoint);
+        publishMetaEvent("cluster", WampProtocol.newGlobalScopeId(), wgsClusterTopic, "wgs.cluster.node_detached", metaData, null);
+        unsubscribeMessageListener(wgsClusterNodeTopic);
+        unsubscribeMessageListener(wgsClusterTopic);
+
         if(reusableTopicConnection != null) {
             try {
                 //reusableTopicConnection.stop();
@@ -191,7 +210,7 @@ public class JmsServices
             if(eligible != null)    msg.setStringProperty("eligible", serializeSessionIDs(eligible));
             if(exclude != null)     msg.setStringProperty("exclude", serializeSessionIDs(exclude));
 
-            // msg.setStringProperty("excludeBroker", brokerId);
+            msg.setStringProperty("brokerId", brokerId);
             
             publisher.send(msg);
 
@@ -244,7 +263,7 @@ public class JmsServices
         HashSet<Long> retval = null;
         if(ids != null) {
             retval = new HashSet<Long>();
-            StringTokenizer stk = new StringTokenizer(ids, "," , false);
+            StringTokenizer stk = new StringTokenizer(ids, ", " , false);
             while(stk.hasMoreTokens()) {
                 Long id = Long.parseLong(stk.nextToken());
                 retval.add(id);
@@ -259,14 +278,14 @@ public class JmsServices
         @Override
         public void onMessage(Message receivedMessageFromBroker) {
             try {
-                System.out.println ("Received message from broker.");
-                //String excludeBroker = receivedMessageFromBroker.getStringProperty("excludeBroker");
-                //if(excludeBroker != null && excludeBroker.equals(brokerId)) return;
-                
+                String publisherBrokerId = receivedMessageFromBroker.getStringProperty("brokerId");
+                System.out.println ("Received message from broker: " + publisherBrokerId);
+
+                Long   publicationId = receivedMessageFromBroker.getLongProperty("id");
                 String topicName = receivedMessageFromBroker.getStringProperty("topic");
                 String realm     = receivedMessageFromBroker.propertyExists("realm") ? receivedMessageFromBroker.getStringProperty("realm") : null;
                 String metaTopic = receivedMessageFromBroker.propertyExists("metaTopic") ? receivedMessageFromBroker.getStringProperty("metaTopic") : null;
-                Long publisherId = receivedMessageFromBroker.propertyExists("publisherId") ? receivedMessageFromBroker.getLongProperty("publisherId") : null;
+                Long   publisherId = receivedMessageFromBroker.propertyExists("publisherId") ? receivedMessageFromBroker.getLongProperty("publisherId") : null;
                 String publisherAuthId = receivedMessageFromBroker.propertyExists("publisherAuthId") ? receivedMessageFromBroker.getStringProperty("publisherAuthId") : null;
                 String publisherAuthProvider = receivedMessageFromBroker.propertyExists("publisherAuthProvider") ? receivedMessageFromBroker.getStringProperty("publisherAuthProvider") : null;
                 String publisherAuthRole = receivedMessageFromBroker.propertyExists("publisherAuthRole") ? receivedMessageFromBroker.getStringProperty("publisherAuthRole") : null;
@@ -280,14 +299,41 @@ public class JmsServices
                 Set<Long> eligible = receivedMessageFromBroker.propertyExists("eligible")? parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible")) : null;
                 Set<Long> exclude  = receivedMessageFromBroker.propertyExists("exclude")?  parseSessionIDs(receivedMessageFromBroker.getStringProperty("exclude"))  : null;
 
-                for(WampSubscription subscription : WampBroker.getTopic(topicName).getSubscriptions()) {
-                    for(WampTopic topic : subscription.getTopics()) {
-                        broadcastClusterEventToLocalNodeClients(realm, subscription.getId(), topic, metaTopic, payload, payloadKw, eligible, exclude, publisherId, publisherAuthId, publisherAuthProvider, publisherAuthRole);
+                if(topicName.startsWith(wgsClusterTopic.getTopicName())) {
+
+                    if(publisherBrokerId != null && !publisherBrokerId.equals(brokerId)) {  // exclude me
+                        String wgsTicket = payloadKw.getText("_wgsTicket");
+                        String wgsRemoteClusterNodeEndpoint = payloadKw.getText("_wgsClusterNodeEndpoint");
+                        switch(metaTopic) {
+                            case "wgs.cluster.node_attached":
+                                WampDict metaData = new WampDict();
+                                metaData.put("_wgsClusterNodeEndpoint", wgsClusterNodeEndpoint);
+                                metaData.put("_wgsTicket", brokerId);  // TODO: use one time password.
+                                WampCluster.addNode(wgsRemoteClusterNodeEndpoint, new WampCluster.Node(publisherBrokerId, wgsRemoteClusterNodeEndpoint, wgsTicket));
+                                publishMetaEvent("cluster", WampProtocol.newGlobalScopeId(), new WampTopic(wgsClusterTopic.getTopicName() + "." + publisherBrokerId, null), "wgs.cluster.node_presence", metaData, null);
+                                break;
+                            case "wgs.cluster.node_presence":
+                                WampCluster.addNode(wgsRemoteClusterNodeEndpoint, new WampCluster.Node(publisherBrokerId, wgsRemoteClusterNodeEndpoint, wgsTicket));
+                                break;
+                            case "wgs.cluster.node_detached":
+                                WampCluster.removeNode(wgsRemoteClusterNodeEndpoint);
+                                break;                                
+                        }
+                    }
+
+
+                } else {
+                    WampTopic topic = WampBroker.getTopic(topicName);
+                    if(topic != null) {
+                        broadcastClusterEventToLocalNodeClients(realm, publicationId, topic, metaTopic, payload, payloadKw, eligible, exclude, publisherId, publisherAuthId, publisherAuthProvider, publisherAuthRole);
                     }
                 }
+
                 
             } catch (Exception ex) {
                 logger.log(Level.SEVERE, "Error receiving message from broker", ex);
+                System.err.println("Error: " + ex.getClass().getName() + ": " + ex.getMessage());
+                ex.printStackTrace();
             }
         }
         

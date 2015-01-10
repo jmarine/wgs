@@ -95,6 +95,22 @@ public class WampTopic implements Topic, TemporaryTopic
     {
         return subscriptions.size();
     }    
+    
+    @Override
+    public int hashCode()
+    {
+        return this.topicName.hashCode();
+    }
 
+    @Override
+    public boolean equals(Object obj)
+    {
+        if(obj != null && obj instanceof WampTopic) {
+            WampTopic topic = (WampTopic)obj;
+            return this.topicName.equals(topic.getTopicName());
+        }
+        return false;
+    }
+    
 
 }

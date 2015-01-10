@@ -1,9 +1,11 @@
 package org.wgs.wamp;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -25,16 +27,26 @@ public class WampRealm
     private String realmName;
     
     private ConcurrentHashMap<String,WampCalleeRegistration> calleePatterns;
-    private ConcurrentHashMap<Long,WampCalleeRegistration>   calleeRegistrationById;
     private ConcurrentHashMap<String,WampCalleeRegistration> calleeRegistrationByUri;
+    private static ConcurrentHashMap<Long,WampCalleeRegistration> calleeRegistrationById;
     
+
+    static 
+    {
+        calleeRegistrationById = new ConcurrentHashMap<Long,WampCalleeRegistration>();
+    }
     
     public WampRealm(String realmName)
     {
         this.realmName = realmName;
-        this.calleeRegistrationById = new ConcurrentHashMap<Long,WampCalleeRegistration>();
         this.calleeRegistrationByUri = new ConcurrentHashMap<String,WampCalleeRegistration>();
         this.calleePatterns = new ConcurrentHashMap<String,WampCalleeRegistration>();
+    }
+    
+   
+    public static Collection<String> getRealmNames()
+    {
+        return realms.keySet();
     }
     
     public static WampRealm getRealm(String name)
@@ -47,6 +59,11 @@ public class WampRealm
         return realm;
     }
     
+    
+    public String getRealmName()
+    {
+        return realmName;
+    }
     
     public List<WampRemoteMethod> getRemoteRPCs(String realm, String name, WampCallOptions options, Long callerId) throws WampException
     {
@@ -94,10 +111,23 @@ public class WampRealm
         return retval;
     }    
     
-    public WampCalleeRegistration getRegistration(Long registrationId)
+    
+    public Collection<Long> getRegistrationIds()
+    {
+        return calleeRegistrationById.keySet();
+    }
+    
+    public static WampCalleeRegistration getRegistration(Long registrationId)
     {
         return calleeRegistrationById.get(registrationId);
     }    
+    
+    
+    public Collection<WampCalleeRegistration> getPatternRegistrations()
+    {
+        return calleePatterns.values();
+    }
+        
     
     public WampList getRpcNames()
     {
@@ -131,10 +161,11 @@ public class WampRealm
             methodUriOrPattern = methodUriOrPattern + "..";
         }
 
+        String realmName = this.getRealmName();
         WampCalleeRegistration registration = calleeRegistrationByUri.get(methodUriOrPattern);        
         if(registration == null) {
             Long registrationId = WampProtocol.newRouterScopeId();
-            registration = new WampCalleeRegistration(registrationId, matchType, methodUriOrPattern);
+            registration = new WampCalleeRegistration(realmName, registrationId, matchType, methodUriOrPattern);
             // TODO: move to WampModule:
             calleeRegistrationById.put(registrationId, registration);
             calleeRegistrationByUri.put(methodUriOrPattern, registration);
@@ -145,7 +176,7 @@ public class WampRealm
         
         try {
             WampModule module = app.getDefaultWampModule();
-            module.onRegister(registration.getId(), clientSocket, registration, matchType, methodUriOrPattern, request);
+            module.onRegister(clientSocket, registration.getId(), methodUriOrPattern, registration, matchType, methodUriOrPattern, request);
             if (requestId != null) {
                 WampProtocol.sendRegisteredMessage(clientSocket, requestId, registration.getId());
             }
@@ -168,7 +199,7 @@ public class WampRealm
                 throw new Exception("method registration id not found: " + registrationId);
             } else {
                 WampModule module = app.getDefaultWampModule();
-                module.onUnregister(clientSocket, registrationId);
+                module.onUnregister(clientSocket, registration);
 
                 /* FIXME: not thread safe and it should also be executed on session goodbye
                 if (registration.getRemoteMethodsCount() == 0) {

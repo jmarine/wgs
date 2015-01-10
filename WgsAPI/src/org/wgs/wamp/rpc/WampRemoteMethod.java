@@ -22,15 +22,17 @@ public class WampRemoteMethod extends WampMethod
     
     private Long registrationId;
     private WampSocket remotePeer;
+    private Long calleeSessionId;
     private WampMatchType matchType;
     private WampDict options;
 
     
-    public WampRemoteMethod(Long registrationId, WampSocket remotePeer, WampMatchType matchType, WampDict options)
+    public WampRemoteMethod(Long registrationId, String methodName, WampSocket remotePeer, Long clientSessionId, WampMatchType matchType, WampDict options)
     {
-        super(null);
+        super(methodName);
         this.registrationId = registrationId;
         this.remotePeer = remotePeer;
+        this.calleeSessionId = clientSessionId;
         this.matchType = matchType;
         this.options = options;
     }

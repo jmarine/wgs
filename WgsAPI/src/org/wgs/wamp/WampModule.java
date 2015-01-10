@@ -19,6 +19,7 @@ import org.wgs.wamp.rpc.WampLocalMethod;
 import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.rpc.WampRemoteMethod;
 import org.wgs.wamp.topic.WampBroker;
+import org.wgs.wamp.topic.WampCluster;
 import org.wgs.wamp.topic.WampMetaTopic;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscription;
@@ -189,27 +190,39 @@ public class WampModule
         }
     }
     
-    public void onRegister(Long registrationId, WampSocket clientSocket, WampCalleeRegistration registration, WampMatchType matchType, String methodUriOrPattern, WampList request) throws Exception
+    public void onRegister(WampSocket clientSocket, Long registrationId, String methodName, WampCalleeRegistration registration, WampMatchType matchType, String methodUriOrPattern, WampList request) throws Exception
     {
         WampDict options = (WampDict)request.get(2);
+        String calleeRealm = clientSocket.getRealm();
+        if(options.has("_cluster_peer_realm")) calleeRealm = options.getText("_cluster_peer_realm");
+        Long calleeSessionId = options.getLong("_cluster_peer_sid");
 
-        WampRemoteMethod remoteMethod = new WampRemoteMethod(registration.getId(), clientSocket, matchType, options);
+        WampRemoteMethod remoteMethod = new WampRemoteMethod(registration.getId(), methodName, clientSocket, calleeSessionId, matchType, options);
         registration.addRemoteMethod(clientSocket.getSessionId(), remoteMethod);
         
         clientSocket.addRpcRegistration(registration);
+        
+        if(!"cluster".equals(clientSocket.getRealm())) {
+            WampCluster.registerClusteredRPC(WampRealm.getRealm(calleeRealm), registration, remoteMethod);
+        }
     }
     
-    public void onUnregister(WampSocket clientSocket, Long registrationId) throws Exception
+    public void onUnregister(WampSocket clientSocket, WampCalleeRegistration calleeRegistration) throws Exception
     {
-        WampRealm realm = WampRealm.getRealm(clientSocket.getRealm());
+        Long registrationId = calleeRegistration.getId();
+        WampRealm realm = WampRealm.getRealm(calleeRegistration.getRealmName());
         WampCalleeRegistration registration = realm.getRegistration(registrationId);
         if(registration == null) {
             throw new WampException(null, "wamp.error.registration_not_found", null, null);
         } else {
             
             clientSocket.removeRpcRegistration(registrationId);
-            registration.removeRemoteMethod(clientSocket);
+            WampRemoteMethod remoteMethod = registration.removeRemoteMethod(clientSocket);
             //rpcsByName.remove(method.getProcedureURI());
+            
+            if(!"cluster".equals(clientSocket.getRealm())) {
+                WampCluster.unregisterClusteredRPC(realm, registration, remoteMethod);
+            }
 
             synchronized(this.app)  // TODO: avoid synchronization by WampApplication
             {

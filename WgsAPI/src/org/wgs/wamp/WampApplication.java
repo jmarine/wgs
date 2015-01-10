@@ -14,15 +14,24 @@ import java.util.logging.Logger;
 import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
 import org.jdeferred.Deferred;
+import org.jdeferred.DoneCallback;
+import org.jdeferred.FailCallback;
+import org.jdeferred.ProgressCallback;
+import org.jdeferred.Promise;
+import org.jdeferred.impl.DeferredObject;
 import org.wgs.security.OpenIdConnectUtils;
 import org.wgs.security.User;
 import org.wgs.security.WampCRA;
 import org.wgs.wamp.api.WampAPI;
+import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampMethod;
+import org.wgs.wamp.rpc.WampRemoteMethod;
+import org.wgs.wamp.topic.JmsServices;
 import org.wgs.wamp.topic.WampBroker;
+import org.wgs.wamp.topic.WampCluster;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.type.WampConnectionState;
@@ -49,6 +58,7 @@ public class WampApplication
     
     private TreeMap<String,WampMethod> rpcsByName;
     private Map<String,Set<Long>> sessionsByUserId = new ConcurrentHashMap<String,Set<Long>>();
+    private ConcurrentHashMap<Long, WampList> pendingClusterInvocations = new ConcurrentHashMap<Long, WampList>();
 
     
     public static void registerWampApplication(int version, String path, WampApplication app)
@@ -204,6 +214,14 @@ public class WampApplication
                     clientSocket.setAuthMethod("anonymous");
                     onWampSessionEstablished(clientSocket, clientSocket.getHelloDetails());
                     break;
+                } else if(authMethod.equalsIgnoreCase("ticket")) {
+                    String authId = helloDetails.getText("authid");
+                    if(authId.startsWith("wgs-")) {
+                        clientSocket.setAuthMethod("ticket");
+                        WampProtocol.sendChallengeMessage(clientSocket, authMethod, null);
+                        break;
+                    }
+                    
                 } else if(authMethod.equalsIgnoreCase("cookie")) {
                     // TODO
                 } else if(authMethod.equalsIgnoreCase("wampcra") 
@@ -258,6 +276,14 @@ public class WampApplication
             if(authmethod.equals("anonymous")) {
                 onUserLogon(clientSocket, null, WampConnectionState.ANONYMOUS);
                 welcomed = true;
+            } else if(authmethod.equals("ticket") && signature.equals(JmsServices.brokerId)) {
+                User clusterNodeUser = new User();
+                clusterNodeUser.setName("clusternode");
+                clusterNodeUser.setUid(clientSocket.getHelloDetails().getText("authid").substring(4));                
+                clientSocket.setAuthMethod("ticket");
+                clientSocket.setAuthProvider("jms-cluster");
+                onUserLogon(clientSocket, clusterNodeUser, WampConnectionState.AUTHENTICATED);                                               
+                welcomed = true;
             } else if(authmethod.equals("cookie")) {
                 // TODO
             } else if(authmethod.equals("wampcra")) {
@@ -295,7 +321,8 @@ public class WampApplication
             } catch(Exception ex) {
                 logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
             }
-        }                 
+        }     
+        
     }
     
 
@@ -328,7 +355,7 @@ public class WampApplication
             WampModule module = getDefaultWampModule();            
             for(WampCalleeRegistration registration : clientSocket.getRpcRegistrations()) {
                 try {
-                    module.onUnregister(clientSocket, registration.getId());
+                    module.onUnregister(clientSocket, registration);
                 } catch(Exception ex) { }
             } 
 
@@ -338,6 +365,8 @@ public class WampApplication
         // Clear session realm
         clientSocket.setRealm(null);
     }
+    
+    
     
     public synchronized void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
     {
@@ -392,11 +421,16 @@ public class WampApplication
                 processEventMessage(this, clientSocket, request);
                 break;
             case WampProtocol.REGISTER:
-                WampRealm registrationRealm = WampRealm.getRealm(clientSocket.getRealm());
+                String registrationRealmName = clientSocket.getRealm();
+                WampDict options = (WampDict)request.get(2);
+                if(options.has("_cluster_peer_realm")) registrationRealmName = options.getText("_cluster_peer_realm");
+                WampRealm registrationRealm = WampRealm.getRealm(registrationRealmName);
                 registrationRealm.processRegisterMessage(this, clientSocket, request);
                 break;
             case WampProtocol.UNREGISTER:
-                WampRealm unregistrationRealm = WampRealm.getRealm(clientSocket.getRealm());
+                Long registrationId = request.getLong(2);
+                WampCalleeRegistration unregisterCalleeRegistration = WampRealm.getRegistration(registrationId);
+                WampRealm unregistrationRealm = WampRealm.getRealm(unregisterCalleeRegistration.getRealmName());
                 unregistrationRealm.processUnregisterMessage(this, clientSocket, request);
                 break;                
             case WampProtocol.CALL:
@@ -408,12 +442,75 @@ public class WampApplication
             case WampProtocol.YIELD:  // INVOCATION RESULT
                 processInvocationResult(clientSocket, request);
                 break;
+                
+            // FEDERATION SUPPORT:
             case WampProtocol.INVOCATION:
-                // TODO: this server implementation only implements the "dealear" role
-                // (it doesn't receive invocatoin messages)
+                // The "dealer" shouldn't receive invocation messages, 
+                // but other federated servers may route invocations between them.
+                // (TODO: use a different message type?)
+            
+                final Long invocationRequestId = request.getLong(1);
+                Long invocationRegistrationId = request.getLong(2);
+                WampDict details = (WampDict)request.get(3);
+                WampList arguments = (request.size() > 4) ? (WampList)request.get(4) : null;
+                WampDict argumentsKw = (request.size() > 5) ? (WampDict)request.get(5) : null;                        
+
+                Long invocationPeerSID = details.getLong("_cluster_peer_sid");
+
+                final WampSocket invocationPeerSocket = getWampSocket(invocationPeerSID);
+                if("cluster".equals(invocationPeerSocket.getRealm())) {
+                    DeferredObject<WampResult, WampException, WampResult> deferred = new DeferredObject<WampResult, WampException, WampResult>();                
+                    Promise<WampResult, WampException, WampResult> promise = deferred.promise();
+                    promise.done(new DoneCallback<WampResult>() {
+                        @Override
+                        public void onDone(WampResult result) {
+                            WampProtocol.sendInvocationResultMessage(invocationPeerSocket, invocationRequestId, result.getDetails(), result.getArgs(), result.getArgsKw());
+                            WampApplication.this.pendingClusterInvocations.remove(invocationRequestId);
+                        }
+                    });
+
+                    promise.progress(new ProgressCallback<WampResult>() {
+                        @Override
+                        public void onProgress(WampResult progress) {
+                            WampProtocol.sendInvocationResultMessage(invocationPeerSocket, invocationRequestId, progress.getDetails(), progress.getArgs(), progress.getArgsKw());
+                        }
+
+                    });                                
+
+                    promise.fail(new FailCallback<WampException>() {
+                        @Override
+                        public void onFail(WampException ex) {
+                            WampProtocol.sendErrorMessage(invocationPeerSocket, WampProtocol.INVOCATION, invocationRequestId, ex.getDetails(), "wamp.error.remote_invocation_error", ex.getArgs(), ex.getArgsKw());
+                            WampApplication.this.pendingClusterInvocations.remove(invocationRequestId);
+                        }
+                    });
+
+                    WampList invocationList = new WampList(invocationPeerSID, deferred);
+                    this.pendingClusterInvocations.put(invocationRequestId, invocationList);
+
+                    invocationPeerSocket.addInvocationAsyncCallback(invocationRequestId, deferred);
+                    WampProtocol.sendInvocationMessage(invocationPeerSocket, invocationRequestId, invocationRegistrationId, details, arguments, argumentsKw);
+
+                }
+                break;
+                
             case WampProtocol.INTERRUPT:
-                // TODO: this server implementation only implements the "dealear" role
-                // (it doesn't receive interrupt messages)
+                // The "dealer" shouldn't receive interrupt messages, 
+                // but other federated servers may route interrupts between them.
+                // (TODO: use a different message type?)
+                
+                Long interruptRequestId = request.getLong(1);
+                WampList interruptList = pendingClusterInvocations.remove(interruptRequestId);
+                if(interruptList != null) {
+                    WampDict interruptOptions = (request.size()>2)? (WampDict)request.get(2) : null;
+                    Long interruptPeerSID = interruptList.getLong(0);
+                    WampSocket interruptPeerSocket = getWampSocket(interruptPeerSID);
+                    WampProtocol.sendInterruptMessage(interruptPeerSocket, interruptRequestId, interruptOptions);
+                    WampApplication.this.pendingClusterInvocations.remove(interruptRequestId);
+                    interruptPeerSocket.removeInvocationAsyncCallback(interruptRequestId);                    
+                }
+
+                break;
             default:
                 logger.log(Level.SEVERE, "Request type not implemented: {0}", new Object[]{requestType});
         }

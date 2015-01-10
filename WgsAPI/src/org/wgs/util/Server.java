@@ -195,13 +195,13 @@ public class Server
             ctx.bind("concurrent/WampRpcExecutorService", execService);
             ctx.bind("java:comp/DefaultManagedExecutorService", execService);
             ctx.bind("java:comp/DefaultManagedScheduledExecutorService", scheduledExecService);
-            
-            JmsServices.start(serverConfig);
 
             setupDataSources(ctx, serverConfig);
+            
 
             // Start WAMP applications:
             tyrusServerContainer = setupWampContexts(serverConfig);        
+            JmsServices.start(serverConfig);
 
             // Wait manual termination:
             if(System.getenv("OPENSHIFT_APP_NAME") == null) {

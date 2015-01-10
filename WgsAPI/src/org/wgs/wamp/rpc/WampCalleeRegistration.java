@@ -14,6 +14,8 @@ public class WampCalleeRegistration
 {
     private Long registrationId;
     
+    private String realmName;
+    
     private WampMatchType matchType;
     
     private String methodRegExp;
@@ -22,8 +24,9 @@ public class WampCalleeRegistration
     
     
     
-    public WampCalleeRegistration(Long registrationId, WampMatchType matchType, String methodUriOrPattern)
+    public WampCalleeRegistration(String realmName, Long registrationId, WampMatchType matchType, String methodUriOrPattern)
     {
+        this.realmName = realmName;
         this.registrationId = registrationId;
         this.matchType = matchType;
         this.methodRegExp = WampBroker.getPatternRegExp(matchType, methodUriOrPattern);
@@ -35,10 +38,21 @@ public class WampCalleeRegistration
         return this.registrationId;
     }    
     
+    public String getRealmName()
+    {
+        return realmName;
+    }
+    
     
     public String getRegExp()
     {
         return methodRegExp;
+    }
+    
+    
+    public WampMatchType getMatchType()
+    {
+        return matchType;
     }
     
     
@@ -47,9 +61,9 @@ public class WampCalleeRegistration
         remoteMethods.put(sessionId, remoteMethod);                    
     }
     
-    public void removeRemoteMethod(WampSocket socket)
+    public WampRemoteMethod removeRemoteMethod(WampSocket socket)
     {
-        remoteMethods.remove(socket.getSessionId());
+        return remoteMethods.remove(socket.getSessionId());
     }
     
     public int getRemoteMethodsCount()
@@ -62,6 +76,7 @@ public class WampCalleeRegistration
     {
         Collection<WampRemoteMethod> retval = new ArrayList<WampRemoteMethod>();
 
+        if(options == null) options = new WampCallOptions(null);
         Set<Long> eligibleParam = options.getEligible();
         Set<Long> excluded = options.getExcluded();
         Set<Long> eligible = (eligibleParam != null) ? new HashSet<Long>(eligibleParam) : null;
@@ -76,7 +91,9 @@ public class WampCalleeRegistration
         for (Long sid : eligible) {
             if(!excluded.contains(sid)) {
                 WampRemoteMethod method = remoteMethods.get(sid);
-                if(method != null) retval.add(method);
+                if(method != null) {
+                    retval.add(method);
+                }
             }
         }
         
