@@ -61,6 +61,7 @@ public class WampCallOptions
             
             if(options.has("authid")) {
                 setAuthId(options.getText("authid"));
+                setDiscloseMe(true);
             }                     
 
             if(options.has("authprovider")) {

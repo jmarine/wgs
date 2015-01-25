@@ -78,10 +78,17 @@ public class WampRemoteMethod extends WampMethod
         if(matchType != WampMatchType.exact) invocationOptions.put("procedure", task.getProcedureURI());
         if(callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) invocationOptions.put("receive_progress", true);
         if(callOptions.hasDiscloseMe()) {
-            invocationOptions.put("caller", clientSocket.getSessionId());
-            invocationOptions.put("authid", clientSocket.getAuthId());
-            invocationOptions.put("authprovider", clientSocket.getAuthProvider());
-            invocationOptions.put("authrole", clientSocket.getAuthRole());
+            if("cluster".equals(clientSocket.getRealm())) {            
+                invocationOptions.put("caller", callOptions.getCallerId());
+                invocationOptions.put("authid", callOptions.getAuthId());
+                invocationOptions.put("authprovider", callOptions.getAuthProvider());
+                invocationOptions.put("authrole", callOptions.getAuthRole());
+            } else {
+                invocationOptions.put("caller", clientSocket.getSessionId());
+                invocationOptions.put("authid", clientSocket.getAuthId());
+                invocationOptions.put("authprovider", clientSocket.getAuthProvider());
+                invocationOptions.put("authrole", clientSocket.getAuthRole());
+            }
         }
 
         if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "CALL " + task.getCallID() + ": SENDING INVOCATION ID: " + invocationId + " (" + clientSocket.getSessionId() + " --> " + remotePeer.getSessionId() + ")");
