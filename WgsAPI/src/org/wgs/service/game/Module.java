@@ -1135,6 +1135,12 @@ public class Module extends WampModule
                 return "%me% has moved, and now it's your turn!";
             case "RESIGN":
                 return "%me% has resigned the game!";
+            case "DRAW_QUESTION":
+                return "%me% offers a draw!";
+            case "DRAW_ACCEPTED":
+                return "%me% accepted the draw offer!";                
+            case "DRAW_REJECTED":
+                return "%me% rejected the draw offer!";                
             case "RETRACT_QUESTION":
                 return "%me% wants to retract last move!";
             case "RETRACT_ACCEPTED":

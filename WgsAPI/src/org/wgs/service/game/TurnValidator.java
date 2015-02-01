@@ -70,9 +70,24 @@ public class TurnValidator implements GroupActionValidator
             if(actionName.equalsIgnoreCase("INIT")) {
                 isValid = true;
                 
+            } else if(actionName.equalsIgnoreCase("DRAW_QUESTION")) {
+                isValid = true;    
+                
+            } else if(lastAction != null && lastAction.getActionName().equals("DRAW_QUESTION") 
+                    && actionSlot >= 0 && actionSlot != lastAction.getSlot()
+                    && actionName.equalsIgnoreCase("DRAW_ACCEPTED")) {
+                g.setState(GroupState.FINISHED);                
+                //g.setWinner(0);                
+                isValid = true;                  
+
+            } else if(lastAction != null && lastAction.getActionName().equals("DRAW_QUESTION") 
+                    && actionSlot >= 0 && actionSlot != lastAction.getSlot()
+                    && actionName.equalsIgnoreCase("DRAW_REJECTED")) {
+                isValid = true;
+                
             } else if(actionName.equalsIgnoreCase("RESIGN") && actionSlot >= 0) {
                 g.setState(GroupState.FINISHED);
-                // g.setWinner(2-actionSlot);
+                //g.setWinner(2-actionSlot);
                 isValid = true;
                 
             } else if(actionName.equalsIgnoreCase("MOVE")) {
@@ -118,7 +133,7 @@ public class TurnValidator implements GroupActionValidator
             
             System.out.println("ActionValidator: " + actionName + ": valid = " + isValid);
             if(isValid) {
-                if(actionName.equals("RETRACT_QUESTION")) {
+                if(actionName.equals("RETRACT_QUESTION") || actionName.equals("DRAW_QUESTION")) {
                     g.setTurn(1-actionSlot.intValue());
                 } else {
                     int turn = ((Number)engine.eval("game.getTurn()")).intValue();
