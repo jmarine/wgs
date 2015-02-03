@@ -558,7 +558,7 @@ public class Module extends WampModule
             int num_slots = g.getNumSlots();
             if(!spectator) {
                 User currentUser = client.getUser();
-                int avail_slots = 0;
+                int avail_slots = g.getAvailSlots();
                 int minSlot = 0;
                 int maxSlot = Math.max(num_slots, g.getMinMembers());
                 if(options.has("slot")) {
@@ -574,13 +574,14 @@ public class Module extends WampModule
                     if(!connected && (options.has("slot") || (currentUser!=null && user.equals(currentUser.getUid()))) ) {
                         reserved = true;
                         reservedSlot = index;
+                        if(member == null || member.getUser() == null) {
+                            avail_slots--;
+                        }                        
                         break;
-                    } else if(member == null || member.getUser() == null) {
-                        avail_slots++;
-                    }
+                    } 
                 }
 
-                if(!reserved && avail_slots == 1 && g.getState()==GroupState.OPEN) {
+                if(g.getState()==GroupState.OPEN && avail_slots == 0) {
                     g.setAutoMatchCompleted(true);
                 }
 

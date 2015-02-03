@@ -304,7 +304,7 @@ public class Group implements java.io.Serializable
         int count = 0;
         for(int i = 0; i < members.size(); i++) {
             Member member = getMember(i);
-            if( (member != null) && (member.getClient() != null)) count++;
+            if( (member != null) && (member.getClient() != null) ) count++;
         }
         return count;
     }
@@ -315,7 +315,11 @@ public class Group implements java.io.Serializable
         if(maxMembers <= 0) {
             return -1;
         } else {
-            int count = getNumMembers();
+            int count = 0;
+            for(int i = 0; i < members.size(); i++) {
+                Member member = getMember(i);
+                if( (member != null) && (member.getUser() != null) ) count++;
+            }            
             return maxMembers - count;
         }
     }
