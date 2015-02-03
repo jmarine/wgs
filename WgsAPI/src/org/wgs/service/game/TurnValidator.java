@@ -2,9 +2,12 @@ package org.wgs.service.game;
 
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Iterator;
 import javax.script.*;
+import org.wgs.security.User;
+import org.wgs.util.Storage;
 
 
 public class TurnValidator implements GroupActionValidator 
@@ -77,7 +80,13 @@ public class TurnValidator implements GroupActionValidator
                     && actionSlot >= 0 && actionSlot != lastAction.getSlot()
                     && actionName.equalsIgnoreCase("DRAW_ACCEPTED")) {
                 g.setState(GroupState.FINISHED);                
+
                 //g.setWinner(0);                
+                Member m0 = g.getMember(0);
+                Member m1 = g.getMember(1);
+                saveAchievement(g, m0.getRole(), m0.getUser(), "DRAW", m1.getUser().getUid());
+                saveAchievement(g, m1.getRole(), m1.getUser(), "DRAW", m0.getUser().getUid());
+
                 isValid = true;                  
 
             } else if(lastAction != null && lastAction.getActionName().equals("DRAW_QUESTION") 
@@ -87,7 +96,15 @@ public class TurnValidator implements GroupActionValidator
                 
             } else if(actionName.equalsIgnoreCase("RESIGN") && actionSlot >= 0) {
                 g.setState(GroupState.FINISHED);
-                //g.setWinner(2-actionSlot);
+                
+                if(g.getNumSlots() == 2)  {
+                    //g.setWinner(actionSlot);
+                    Member m0 = g.getMember(2-actionSlot.intValue()-1);
+                    Member m1 = g.getMember(actionSlot.intValue());
+                    saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
+                    saveAchievement(g, m1.getRole(), m1.getUser(), "RESIGN", m0.getUser().getUid());
+                }
+                
                 isValid = true;
                 
             } else if(actionName.equalsIgnoreCase("MOVE")) {
@@ -102,6 +119,22 @@ public class TurnValidator implements GroupActionValidator
                         String newState = (String)engine.eval("game.makeMove(game.parseMoveString('" + actionValue + "')); game.toString()");
                         System.out.println("ActionValidator: new state = " + newState);
                         //g.setData(newState);  // WARN: group's data contains initial state for chess960
+                        
+                        boolean isOver = (boolean)engine.eval("game.isOver()");
+                        System.out.println("ActionValidator: ISOVER=" + isOver);                        
+                        
+                        if(isOver) {
+                            g.setState(GroupState.FINISHED);
+                            
+                            //g.setWinner(winner);
+                            int winner = ((Double)engine.eval("game.getWinner()")).intValue();
+                            System.out.println("ActionValidator: WINNER=" + winner);
+                            Member m0 = g.getMember(winner-1);
+                            Member m1 = g.getMember(2-winner);
+                            saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
+                            saveAchievement(g, m1.getRole(), m1.getUser(), "LOSE", m0.getUser().getUid());
+                        }
+                        
                     }
                     
                 }
@@ -150,4 +183,19 @@ public class TurnValidator implements GroupActionValidator
             return false;
         }
     }
+
+    
+    private void saveAchievement(Group group, Role role, User user, String type, String val)
+    {
+        Achievement appEvent = new Achievement();
+        appEvent.setApp(group.getApplication());
+        appEvent.setGid(group.getGid());
+        appEvent.setName(type);
+        appEvent.setValue(val);
+        appEvent.setSourceRole(role);
+        appEvent.setSourceUser(user);
+        appEvent.setWhen(Calendar.getInstance());
+        Storage.saveEntity(appEvent);
+    }
+    
 }

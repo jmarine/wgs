@@ -328,10 +328,6 @@ public class Module extends WampModule
             query3.setParameter("app", app);
             int rows3 = query3.executeUpdate();
             
-            Query query4 = manager.createQuery("DELETE FROM LeaderBoard lb WHERE lb.application = :app");
-            query4.setParameter("app", app);
-            int rows4 = query4.executeUpdate();
-            
             tx.commit();
             manager.close();
             
@@ -1212,30 +1208,6 @@ public class Module extends WampModule
     }    
 
     
-    @WampRPC(name = "get_leaderboard")
-    public WampList getLeaderBoard(WampSocket socket, String appId, int leaderBoardId)
-    {
-        WampList scoresNode = new WampList();
-        Application app = applications.get(appId);
-        
-        LeaderBoard leaderBoard = new LeaderBoard();
-        for(LeaderBoard ld : app.getLeaderBoards()) {
-            if(leaderBoardId == ld.getId()) {
-                leaderBoard = ld;
-                break;
-            }
-        }
-        
-        for(Score score : leaderBoard.getScores()) {
-            if(score != null) {
-                scoresNode.add(score.toWampObject());
-            }
-        }
-
-        return scoresNode;
-    }
-    
-    
     @WampRPC(name = "add_action")
     public boolean addAction(WampSocket socket, String gid, Long playerSlot, String actionName, String actionValue) throws Exception
     {
@@ -1286,65 +1258,4 @@ public class Module extends WampModule
         return false;
     }
     
-    @WampRPC(name = "add_score")
-    public int addScore(WampSocket socket, String appId, int leaderBoardId, BigDecimal value)
-    {
-        Application app = applications.get(appId);
-        Calendar time = Calendar.getInstance();
-        Client client = clients.get(socket.getSessionId());
-        User usr = (client != null) ? client.getUser() : null;
-        
-        int position = -1;
-        if(app != null && value != null) {
-        
-            LeaderBoard leaderBoard = null;
-            for(LeaderBoard ld : app.getLeaderBoards()) {
-                if(leaderBoardId == ld.getId()) {
-                    leaderBoard = ld;
-                    break;
-                }
-            }
-            
-            if(leaderBoard == null) {
-                leaderBoard = new LeaderBoard();
-                leaderBoard.setApplication(app);
-                leaderBoard.setId(leaderBoardId);
-            }
-            
-            
-            BigDecimal factor = BigDecimal.ONE;
-            if(app.isDescendingScoreOrder()) factor = factor.negate();
-
-            Score score = null;
-            int index = app.getMaxScores();
-            while(index > 1) {
-                score = leaderBoard.getScore(index-1);
-                if(score == null || score.getValue().compareTo(value) < 0) {
-                    index--;
-                    leaderBoard.setScore(index, leaderBoard.getScore(index-1));
-                } else {
-                    break;
-                }
-            }      
-            
-            if( index < app.getMaxScores() 
-                    && (score == null || score.getValue().multiply(factor).compareTo(value) < 0) )  {
-                score = new Score();
-                score.setPosition(index);
-                score.setUser(usr);
-                score.setTime(time);
-                score.setLeaderBoard(leaderBoard);
-                score.setValue(value);
-                leaderBoard.setScore(index, score);
-
-                Storage.saveEntity(leaderBoard);
-                
-                position = index;
-            }
-        
-        }
-        
-        return position;
-    }    
-
 }

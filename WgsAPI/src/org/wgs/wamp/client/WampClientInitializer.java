@@ -12,6 +12,7 @@ import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
 
 
+@SuppressWarnings("unchecked")
 @HandlesTypes({WampModule.class})
 public class WampClientInitializer implements ServletContainerInitializer 
 {

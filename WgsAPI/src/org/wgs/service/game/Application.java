@@ -85,9 +85,6 @@ public class Application implements Serializable {
     @Column(name="desc_scores")
     private boolean descendingScoreOrder;
     
-    @OneToMany(mappedBy = "application", fetch=FetchType.EAGER, cascade = { CascadeType.ALL })
-    private ArrayList<LeaderBoard> leaderBoards = new ArrayList<LeaderBoard>();    
-    
     
     @Transient
     private HashMap<String,Group> groupsByGid = new HashMap<String,Group>();
@@ -380,23 +377,6 @@ public class Application implements Serializable {
     public void setDescendingScoreOrder(boolean descendingScoreOrder) {
         this.descendingScoreOrder = descendingScoreOrder;
     }
-    
-    
-    /**
-     * @return the leaderBoards
-     */
-    public ArrayList<LeaderBoard> getLeaderBoards() {
-        return leaderBoards;
-    }
-
-    /**
-     * @param leaderBoards the leaderBoards to set
-     */
-    public void setLeaderBoards(ArrayList<LeaderBoard> leaderBoards) {
-        this.leaderBoards = leaderBoards;
-    }
-
-
     
     
     public WampDict toWampObject()
