@@ -23,7 +23,7 @@ public class WampCalleeRegistration
     private ConcurrentHashMap<Long,WampRemoteMethod> remoteMethods = new ConcurrentHashMap<Long,WampRemoteMethod>();
     
     
-    
+
     public WampCalleeRegistration(String realmName, Long registrationId, WampMatchType matchType, String methodUriOrPattern)
     {
         this.realmName = realmName;

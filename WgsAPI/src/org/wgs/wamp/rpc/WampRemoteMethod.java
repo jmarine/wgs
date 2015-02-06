@@ -24,7 +24,7 @@ public class WampRemoteMethod extends WampMethod
     private WampSocket remotePeer;
     private Long calleeSessionId;
     private WampMatchType matchType;
-    private WampDict options;
+    private WampDict regOptions;
 
     
     public WampRemoteMethod(Long registrationId, String methodName, WampSocket remotePeer, Long clientSessionId, WampMatchType matchType, WampDict options)
@@ -34,14 +34,14 @@ public class WampRemoteMethod extends WampMethod
         this.remotePeer = remotePeer;
         this.calleeSessionId = clientSessionId;
         this.matchType = matchType;
-        this.options = options;
+        this.regOptions = options;
     }
     
     
     public boolean hasPartition(String partition)
     {
-        if(options != null && options.has("partition")) {
-            String regExp = options.getText("paritition");
+        if(regOptions != null && regOptions.has("partition")) {
+            String regExp = regOptions.getText("paritition");
             return partition == null || WampBroker.isUriMatchingWithRegExp(partition, regExp);
         } else {
             return true;
@@ -77,7 +77,7 @@ public class WampRemoteMethod extends WampMethod
         WampDict invocationOptions = new WampDict();
         if(matchType != WampMatchType.exact) invocationOptions.put("procedure", task.getProcedureURI());
         if(callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) invocationOptions.put("receive_progress", true);
-        if(callOptions.hasDiscloseMe()) {
+        if(callOptions.hasDiscloseMe() || regOptions.getBoolean("disclose_caller")) {
             if("cluster".equals(clientSocket.getRealm())) {            
                 invocationOptions.put("caller", callOptions.getCallerId());
                 invocationOptions.put("authid", callOptions.getAuthId());
