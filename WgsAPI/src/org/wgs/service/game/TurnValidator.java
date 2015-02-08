@@ -101,8 +101,10 @@ public class TurnValidator implements GroupActionValidator
                     //g.setWinner(actionSlot);
                     Member m0 = g.getMember(2-actionSlot.intValue()-1);
                     Member m1 = g.getMember(actionSlot.intValue());
-                    saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
-                    saveAchievement(g, m1.getRole(), m1.getUser(), "RESIGN", m0.getUser().getUid());
+                    if(m0 != null && m1 != null) {
+                        saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
+                        saveAchievement(g, m1.getRole(), m1.getUser(), "RESIGN", m0.getUser().getUid());
+                    }
                 }
                 
                 isValid = true;
