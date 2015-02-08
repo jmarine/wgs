@@ -70,17 +70,7 @@ public class Social
                 String login = item.getString("id");
                 List<User> found = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", login, domain);
                 User friend = (found != null && found.size() > 0)? found.get(0) : null;
-                if(friend == null) {
-                    friend = new User();
-                    friend.setUid(UUID.randomUUID().toString());
-                    friend.setLogin(login);
-                    friend.setDomain(domain);
-                    friend.setName(item.getString("displayName"));
-                    friend.setAdministrator(false);
-                    friend.setPicture(item.getJsonObject("image").getString("url"));
-                    friend = Storage.saveEntity(friend);
-                }
-                if(!friends.contains(friend)) {
+                if(friend != null && !friends.contains(friend)) {
                     friends.add(friend);
                 }
             }
@@ -122,17 +112,7 @@ public class Social
                 String login = item.getString("id");
                 List<User> found = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", login, domain);
                 User friend = (found != null && found.size() > 0)? found.get(0) : null;
-                if(friend == null) {
-                    friend = new User();
-                    friend.setUid(UUID.randomUUID().toString());
-                    friend.setLogin(login);
-                    friend.setDomain(domain);
-                    friend.setName(item.getString("name"));
-                    friend.setAdministrator(false);
-                    friend.setPicture("https://graph.facebook.com/"+login+"/picture");
-                    friend = Storage.saveEntity(friend);
-                }
-                if(!friends.contains(friend)) {
+                if(friend != null && !friends.contains(friend)) {
                     friends.add(friend);
                 }
             }
