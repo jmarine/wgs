@@ -6,9 +6,9 @@
 
 package org.wgs.service.game;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +21,12 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
 import javax.persistence.LockModeType;
 import javax.persistence.Query;
+import javax.persistence.Tuple;
 import javax.persistence.TypedQuery;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Root;
 import org.wgs.util.Storage;
 import org.wgs.security.User;
 import org.wgs.security.OpenIdConnectUtils;
@@ -1259,4 +1264,89 @@ public class Module extends WampModule
         return false;
     }
     
+    
+    @WampRPC(name = "get_profile")
+    public WampDict getProfile(WampSocket socket, String opponentUid) throws Exception
+    {
+        EntityManager manager = null;
+        WampDict stats = new WampDict();
+        WampDict appStats = new WampDict();
+        stats.put("apps", appStats);
+        if(opponentUid != null && opponentUid.length() > 0) stats.put("opponent", opponentUid);
+                
+        User user = (User)socket.getUserPrincipal();
+        if(user != null) {
+            for(Application app : applications.values()) {
+                WampDict appStat = new WampDict();
+                appStat.put("active", 0);
+                appStat.put("win", 0);
+                appStat.put("draw", 0);
+                appStat.put("lose", 0);
+                appStat.put("resign", 0);
+                appStats.put(app.getName(), appStat);
+            }
+    
+            try {
+                manager = Storage.getEntityManager();
+
+                CriteriaBuilder cb = manager.getCriteriaBuilder();
+                CriteriaQuery<Tuple> q = cb.createTupleQuery();
+                Root<Achievement> achievement = q.from(Achievement.class);
+                Expression<Application> appExpr = achievement.get("sourceRole").get("application");
+                Expression<String> nameExpr = achievement.get("name");
+                q.multiselect(appExpr.alias("app"), nameExpr.alias("name"), cb.count(nameExpr).alias("count"));
+                if(opponentUid == null || opponentUid.length() == 0) {
+                    q.where(cb.equal(achievement.get("sourceUser"), user));
+                } else {
+                    q.where(cb.and(cb.equal(achievement.get("sourceUser"), user), cb.equal(achievement.get("value"), opponentUid)));
+                }
+                q.groupBy(appExpr, achievement.get("name"));
+
+                TypedQuery<Tuple> tq = manager.createQuery(q);
+                List<Tuple> results = tq.getResultList();
+                for (Tuple t : results) {
+                    Application a = (Application)t.get("app");
+                    String name = (String)t.get("name");
+                    Object count = t.get("count");
+                    WampDict appStat = (WampDict)appStats.get(a.getName());
+                    appStat.put(name.toLowerCase(), count);
+                }
+                
+
+                q = cb.createTupleQuery();
+                Root<Group> group = q.from(Group.class);
+                Expression<String> gidExpr = group.get("gid");
+                Expression<GroupState> stateExpr = group.get("state");
+                appExpr = group.get("application");
+                Expression<Collection<String>> usersExpr = group.get("members").get("user").get("uid");
+                q.multiselect(appExpr.alias("app"), cb.countDistinct(gidExpr).alias("count"));
+                if(opponentUid == null || opponentUid.length() == 0) {
+                    q.where(cb.and(cb.notEqual(stateExpr, GroupState.FINISHED), cb.isMember(user.getUid(), usersExpr)));
+                } else {
+                    Expression<Collection<String>> usersExpr2 = group.get("members").get("user").get("uid");
+                    q.where(cb.and(cb.notEqual(stateExpr, GroupState.FINISHED), cb.isMember(user.getUid(), usersExpr), cb.isMember(opponentUid, usersExpr2)));
+                }
+                q.groupBy(appExpr);
+                
+                
+                
+                tq = manager.createQuery(q);
+                results = tq.getResultList();
+                for (Tuple t : results) {
+                    Application a = (Application)t.get("app");
+                    Object count = t.get("count");
+                    WampDict appStat = (WampDict)appStats.get(a.getName());
+                    appStat.put("active", count);
+                }
+                
+            } finally {
+                if(manager != null) {
+                    try { manager.close(); }
+                    catch(Exception e) { }
+                }
+            }
+        }
+        return stats;
+    }
+        
 }
