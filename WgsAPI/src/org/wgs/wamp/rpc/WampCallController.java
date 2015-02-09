@@ -18,6 +18,7 @@ import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampMatchType;
 
 
 public class WampCallController implements Runnable 
@@ -134,7 +135,7 @@ public class WampCallController implements Runnable
     
     public boolean isRemoteMethod()
     {
-        WampMethod method = app.getLocalRPC(procedureURI);        
+        WampMethod method = app.searchLocalRPC(procedureURI);        
         return (method == null);
     }
     

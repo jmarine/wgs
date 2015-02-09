@@ -11,6 +11,7 @@ import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.annotation.WampSubscribed;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
@@ -48,6 +49,9 @@ public class WampClientTest extends WampModule implements Runnable
     }   
     
 
+    //FIXME: why this annotation generates deadlocks on JMS cluster, and programmatic subscriptions doesn't?
+    //@WampSubscribed(topic = "myapp", match = WampMatchType.prefix)
+    //public void onMyAppEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     @Override
     public void onEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
@@ -70,11 +74,6 @@ public class WampClientTest extends WampModule implements Runnable
             client.hello(realm, user, password, digestPasswordMD5);
             client.waitResponses();
 
-            
-            doCalls(repeats);
-            client.waitResponses();
-            
-
             System.out.println("Publication without subscription.");
             doPublications(repeats);
             client.waitResponses();
@@ -82,13 +81,16 @@ public class WampClientTest extends WampModule implements Runnable
             System.out.println("Subscription");
             WampSubscriptionOptions subOpt = new WampSubscriptionOptions(null);
             subOpt.setMatchType(WampMatchType.prefix);
-            client.subscribe("myapp", subOpt);
+            client.subscribe("myapp", subOpt);  // received in onEvent method of registered modules
             client.waitResponses();
-
-            System.out.println("Publication with subscription.");
+            
+            System.out.println("Publication with annotated subscription.");
             doPublications(repeats);
             client.waitResponses();
 
+            doCalls(repeats);
+            client.waitResponses();            
+            
             client.unsubscribe("myapp", subOpt);
             client.waitResponses();
             System.out.println("Publication after unsubscription.");
@@ -113,8 +115,8 @@ public class WampClientTest extends WampModule implements Runnable
     @Override
     public void onSessionEstablished(WampSocket clientSocket, WampDict details) 
     { 
-        System.out.println("Hello " + details.getText("authid"));
-        // doWork(10);
+        super.onSessionEstablished(clientSocket, details);
+        System.out.println("Hello " + details.getText("authid"));        
     }
     
     public void doPublications(int num)
@@ -125,7 +127,7 @@ public class WampClientTest extends WampModule implements Runnable
         pubOpt.setDiscloseMe(true);
         
         for(int i = 0; i < num; i++) {
-            client.publish("myapp.topic1", new WampList("'Hello, world from Java!!!"), null, pubOpt)
+            client.publish("myapp.topic1", new WampList("Hello, world from Java!!!"), null, pubOpt)
                     .done(new DoneCallback<Long>() {
                         @Override
                         public void onDone(Long id) {

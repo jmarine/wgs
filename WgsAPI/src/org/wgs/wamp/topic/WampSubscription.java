@@ -84,7 +84,12 @@ public class WampSubscription
     
     public WampSocket getSocket(Long sessionId)
     {
-        return sockets.get(sessionId).getObject();
+        RefCount<WampSocket> refCount = sockets.get(sessionId);
+        if(refCount != null) {
+            return refCount.getObject();
+        } else {
+            return null;
+        }
     }
     
 

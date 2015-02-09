@@ -1,4 +1,4 @@
-package org.wgs.wamp.client;
+package org.wgs.wamp.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface WampClientConfig {
+public @interface WampRouterConfig {
     String url() default "";
     String authmethod() default "";
     String realm() default "";

@@ -1,6 +1,9 @@
 package org.wgs.wamp;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -33,12 +36,14 @@ import org.wgs.wamp.type.WampMatchType;
 public class WampModule 
 {
     private WampApplication app;
+    private HashMap<Long,Collection<Method>> eventListeners;  // by subscriptionId
 
 
     public WampModule(WampApplication app) 
     {
         String moduleName = app.normalizeModuleName(getModuleName());
         this.app = app;
+        this.eventListeners = new HashMap<Long,Collection<Method>>();
 
         for(Method method : this.getClass().getMethods()) {
             WampRPC rpc = method.getAnnotation(WampRPC.class);
@@ -46,7 +51,7 @@ public class WampModule
                 String name = rpc.name();
                 if(name.length() == 0) name = method.getName();
                 name = moduleName + name;
-                app.createRPC(name, new WampLocalMethod(name,this,method));
+                app.registerLocalRPC(rpc.match(), name, new WampLocalMethod(name,this,method));
             }
         }
         
@@ -66,20 +71,32 @@ public class WampModule
         return retval;
     }
     
+    public void addSubscriptionMethod(Long subscriptionId, Method method)
+    {
+        Collection<Method> methods = eventListeners.get(subscriptionId);
+        if(methods == null) methods = new ArrayList<Method>();
+        methods.add(method);
+        eventListeners.put(subscriptionId, methods);
+    }
+    
+    
     public void onConnect(WampSocket clientSocket) throws Exception { }
     
     public void onChallenge(WampSocket clientSocket, String authMethod, WampDict details) throws Exception { }
     
-    public void onSessionEstablished(WampSocket clientSocket, WampDict details) { }
+    public void onSessionEstablished(WampSocket clientSocket, WampDict details) { 
+        this.eventListeners = new HashMap<Long,Collection<Method>>();        
+    }
     
-    public void onSessionEnd(WampSocket clientSocket) { }
+    public void onSessionEnd(WampSocket clientSocket) { 
+    }
     
     public void onDisconnect(WampSocket clientSocket) throws Exception { }
 
     @SuppressWarnings("unchecked")
     public Promise<WampResult, WampException, WampResult> onCall(final WampCallController task, final WampSocket clientSocket, String methodName, final WampList args, final WampDict argsKw, final WampCallOptions options) throws Exception 
     {
-        WampMethod method = app.getLocalRPC(methodName);
+        WampMethod method = app.searchLocalRPC(methodName);
         if(method != null) {
             return method.invoke(task,clientSocket,args,argsKw,options);
             
@@ -271,7 +288,13 @@ public class WampModule
     
     public void onEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
-        
+        Collection<Method> methods = eventListeners.get(subscriptionId);
+        if(methods != null) {
+            for(Method method : methods) {
+                try { method.invoke(this, serverSocket, subscriptionId, publicationId, details, payload, payloadKw); }
+                catch(Exception ex) { }
+            }
+        }
     }
 
     

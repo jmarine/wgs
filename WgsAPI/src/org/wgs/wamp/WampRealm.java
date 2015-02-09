@@ -151,7 +151,7 @@ public class WampRealm
             matchType = WampMatchType.valueOf(options.getText("match").toLowerCase());
         }
         
-        if (app.getLocalRPC(methodUriOrPattern) != null) {
+        if (app.getLocalRPC(matchType, methodUriOrPattern) != null) {
             if (requestId != null) {
                 WampProtocol.sendErrorMessage(clientSocket, WampProtocol.REGISTER, requestId, null, "wamp.error.procedure_already_exists", null, null);
             }

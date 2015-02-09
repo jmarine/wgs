@@ -10,6 +10,7 @@ import javax.servlet.annotation.HandlesTypes;
 
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
+import org.wgs.wamp.annotation.WampRouterConfig;
 
 
 @SuppressWarnings("unchecked")
@@ -17,12 +18,12 @@ import org.wgs.wamp.WampModule;
 public class WampClientInitializer implements ServletContainerInitializer 
 {
     public static HashMap<String,WampClient> clients = new HashMap<String,WampClient>();
-    public static HashMap<String,WampClientConfig> configs = new HashMap<String,WampClientConfig>();
+    public static HashMap<String,WampRouterConfig> configs = new HashMap<String,WampRouterConfig>();
 
     @Override
     public void onStartup(Set<Class<?>> set, ServletContext sc) throws ServletException {
         for(Class cls : set) {
-            WampClientConfig config = (WampClientConfig)cls.getAnnotation(WampClientConfig.class);
+            WampRouterConfig config = (WampRouterConfig)cls.getAnnotation(WampRouterConfig.class);
             if(config != null) {
                 System.out.println("Detected WampClientConfig in module: " + cls.getName());
                 String key = config.url() + "/" + config.user() + "@" + config.realm();
@@ -43,7 +44,7 @@ public class WampClientInitializer implements ServletContainerInitializer
         
         for(String key : clients.keySet()) {
             WampClient client = clients.get(key);
-            WampClientConfig config = configs.get(key);
+            WampRouterConfig config = configs.get(key);
 
             try {
                 client.connect();

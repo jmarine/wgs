@@ -3,13 +3,13 @@ package org.wgs.sample;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.annotation.WampModuleName;
-import org.wgs.wamp.client.WampClientConfig;
+import org.wgs.wamp.annotation.WampRouterConfig;
 import org.wgs.wamp.annotation.WampRPC;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 
 @WampModuleName("com.myapp")
-@WampClientConfig(url = "http://localhost:8082/wgs", realm = "localhost")
+@WampRouterConfig(url = "http://localhost:8082/wgs", realm = "localhost")
 public class TestExternalModule extends WampModule 
 {
     public TestExternalModule(WampApplication app) {

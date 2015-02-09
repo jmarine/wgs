@@ -14,21 +14,14 @@ import java.util.logging.Logger;
 import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
 import org.jdeferred.Deferred;
-import org.jdeferred.DoneCallback;
-import org.jdeferred.FailCallback;
-import org.jdeferred.ProgressCallback;
-import org.jdeferred.Promise;
-import org.jdeferred.impl.DeferredObject;
 import org.wgs.security.OpenIdConnectUtils;
 import org.wgs.security.User;
 import org.wgs.security.WampCRA;
 import org.wgs.wamp.api.WampAPI;
-import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampMethod;
-import org.wgs.wamp.rpc.WampRemoteMethod;
 import org.wgs.wamp.topic.JmsServices;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampCluster;
@@ -57,6 +50,7 @@ public class WampApplication
     private ConcurrentHashMap<Long,WampSocket> sockets;    
     
     private TreeMap<String,WampMethod> rpcsByName;
+    private TreeMap<String,WampMethod> rpcsByPattern;
     private Map<String,Set<Long>> sessionsByUserId = new ConcurrentHashMap<String,Set<Long>>();
     private ConcurrentHashMap<Long, WampList> pendingClusterInvocations = new ConcurrentHashMap<Long, WampList>();
 
@@ -96,6 +90,7 @@ public class WampApplication
         this.sockets = new ConcurrentHashMap<Long,WampSocket>();
         this.modules = new HashMap<String,WampModule>();
         this.rpcsByName = new TreeMap<String,WampMethod>();
+        this.rpcsByPattern = new TreeMap<String,WampMethod>();
 
         registerWampApplication(version, path, this);
         registerWampModules();
@@ -529,20 +524,51 @@ public class WampApplication
     }
     
     
-    public void createRPC(String name, WampMethod rpc)
+    public void registerLocalRPC(WampMatchType matchType, String name, WampMethod rpc)
     {
-        this.rpcsByName.put(name,rpc);
+        if(matchType == WampMatchType.exact) {
+            this.rpcsByName.put(name, rpc);
+        } else {
+            if(matchType == WampMatchType.prefix) name = name + "..";
+            String regExp = WampBroker.getPatternRegExp(matchType, name);
+            this.rpcsByPattern.put(regExp, rpc);
+        }
     }
     
-    public void removeRPC(String name)
+    public void unregisterLocalRPC(WampMatchType matchType, String name)
     {
-        this.rpcsByName.remove(name);
+        if(matchType == WampMatchType.exact) {
+            this.rpcsByName.remove(name);
+        } else {
+            if(matchType == WampMatchType.prefix) name = name + "..";
+            String regExp = WampBroker.getPatternRegExp(matchType, name);
+            this.rpcsByPattern.remove(regExp);
+        }
     }
 
-    
-    public WampMethod getLocalRPC(String name)
+    public WampMethod searchLocalRPC(String name)
     {
-        return rpcsByName.get(name);
+        WampMethod method = rpcsByName.get(name);
+        if(method == null && this.rpcsByPattern.size() > 0) {
+            for(String regExp : this.rpcsByPattern.keySet()) {
+                if(WampBroker.isUriMatchingWithRegExp(name, regExp)) {
+                    return this.rpcsByPattern.get(regExp);
+                }
+            }
+        }
+        return method;
+    }
+    
+    public WampMethod getLocalRPC(WampMatchType matchType, String name)
+    {
+        if(matchType == WampMatchType.exact) {
+            return rpcsByName.get(name);
+        } else {
+            if(matchType == WampMatchType.prefix && !name.endsWith("..")) name = name + "..";
+            String regExp = WampBroker.getPatternRegExp(matchType, name);
+            return this.rpcsByPattern.get(regExp);
+        }
+        
     }
 
     

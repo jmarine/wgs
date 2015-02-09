@@ -1,5 +1,6 @@
 package org.wgs.wamp.client;
 
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.security.MessageDigest;
 import java.util.List;
@@ -28,11 +29,11 @@ import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampRealm;
 import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
+import org.wgs.wamp.annotation.WampRPC;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
-import org.wgs.wamp.rpc.WampLocalMethod;
 import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.rpc.WampRemoteMethod;
 import org.wgs.wamp.topic.WampCluster;
@@ -43,6 +44,7 @@ import org.wgs.wamp.transport.http.websocket.WampWebsocket;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampMatchType;
+import org.wgs.wamp.annotation.WampSubscribed;
 
 
 public class WampClient extends Endpoint 
@@ -275,9 +277,10 @@ public class WampClient extends Endpoint
                         
                     case WampProtocol.ERROR:
                         logger.severe("ERROR: " + request.toString());
-                        Long errorResponseId = request.getLong(1);
+                        Long errorResponseId = request.getLong(2);
                         removePendingMessage(errorResponseId);
                         break;
+                        
                     default:
                         super.onWampMessage(clientSocket, request);
                 }
@@ -307,7 +310,8 @@ public class WampClient extends Endpoint
                     }
                 }                
                 
-                registerAllRPCs();
+                processRegisteredAnnotations();
+                processSubscribedAnnotations();  // FIXME: deadlocks?
                 
             }            
 
@@ -410,6 +414,10 @@ public class WampClient extends Endpoint
     
     public void goodbye(String reason)
     {
+        for(WampModule module : wampApp.getWampModules()) {
+            module.onSessionEnd(clientSocket);
+        }
+
         WampProtocol.sendGoodbyeMessage(clientSocket, reason, null);
     }
     
@@ -481,6 +489,7 @@ public class WampClient extends Endpoint
         
         createPendingMessage(null, null);
         WampProtocol.sendHelloMessage(clientSocket, realm, authDetails);
+
     }
     
     public Promise<Long, WampException, Long> publish(String topic, WampList payload, WampDict payloadKw, WampPublishOptions options)
@@ -510,13 +519,42 @@ public class WampClient extends Endpoint
         WampProtocol.sendCancelCallMessage(clientSocket, callID, options);
     }
     
-    // Callee API
-    private void registerAllRPCs()  {
-        WampList names = wampApp.getAllRpcNames(helloRealm);
-        for(int i = 0; i < names.size(); i++) {
-            String procedureURI = names.getText(i);
-            registerRPC(null, procedureURI, wampApp.getLocalRPC(procedureURI));
+
+    private void processSubscribedAnnotations() {
+        for(final WampModule module : wampApp.getWampModules()) {
+            for(final Method method : module.getClass().getMethods()) {
+                WampSubscribed subscription = method.getAnnotation(WampSubscribed.class);
+                if(subscription != null) {
+                    WampSubscriptionOptions subOpt = new WampSubscriptionOptions(null);
+                    subOpt.setMatchType(subscription.match());
+                    subOpt.setMetaTopics(new WampList((Object[])subscription.metatopics()));
+                    subOpt.setEventsEnabled(!subscription.metaonly());
+                    subscribe(subscription.topic(), subOpt).done(new DoneCallback<Long>() {
+                        @Override
+                        public void onDone(Long subscriptionId) {
+                            module.addSubscriptionMethod(subscriptionId, method);
+                        }
+                    });
+                }
+            }
         }
+    }
+    
+
+    private void processRegisteredAnnotations()  {
+        for(final WampModule module : wampApp.getWampModules()) {
+            String moduleName = module.getModuleName();
+            for(final Method method : module.getClass().getMethods()) {
+                WampRPC registration = method.getAnnotation(WampRPC.class);
+                if(registration != null) {
+                    WampDict options = new WampDict();
+                    options.put("match", registration.match().toString());
+                    String rpcName = moduleName + "." + registration.name();
+                    registerRPC(options, rpcName, wampApp.getLocalRPC(registration.match(), rpcName));
+                }
+            }
+        }
+
         
         if("cluster".equals(helloRealm)) {
             for(String realmName : WampRealm.getRealmNames()) {
@@ -668,6 +706,11 @@ public class WampClient extends Endpoint
     }
 
     public void close() throws Exception {
+        
+        for(WampModule module : wampApp.getWampModules()) {
+            module.onDisconnect(clientSocket);
+        }
+        
         open = false;
         this.clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
     }

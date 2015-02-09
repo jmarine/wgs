@@ -258,8 +258,10 @@ public class WampProtocol
         request.add(requestId);
         request.add( (options != null) ? options : new WampDict() );      
         request.add(topic);
-        request.add(payload);
-        request.add(payloadKw);
+        if( (payload != null && payload.size() > 0) || (payloadKw != null && payloadKw.size() > 0) ) {        
+            request.add(payload);
+            if(payloadKw != null && payloadKw.size() > 0) request.add(payloadKw);
+        }
         sendWampMessage(clientSocket, request);
     }
     
@@ -315,7 +317,8 @@ public class WampProtocol
                     WampSubscriptionOptions subOptions = subscription.getOptions();
                     if(subOptions != null && subOptions.hasEventsEnabled() && subOptions.isEligibleForEvent(sid, subscription, payload, payloadKw)) {
                         WampSocket socket = subscription.getSocket(sid);
-                        synchronized(socket) {
+                        if(socket != null) {
+                          synchronized(socket) {
                             if(socket != null && socket.isOpen() && realm.equals(socket.getRealm()) ) {
                                 WampEncoding enc = socket.getEncoding();                            
                                 if(msg[enc.ordinal()] == null) {
@@ -323,6 +326,7 @@ public class WampProtocol
                                 }
                                 socket.sendObject(msg[enc.ordinal()]);
                             }
+                          }
                         }
                     }
                 }
