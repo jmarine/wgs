@@ -57,7 +57,7 @@ public class WampEndpointConfig
     
     public void onWampOpen(final Session session, WampEndpoint endpoint) 
     {
-        WampSocket clientSocket = new WampWebsocket(application, session);
+        WampSocket clientSocket = new WampWebsocket(session);
         clientSocket.init();
         session.setMaxIdleTimeout(0L);  // forever (but fails on Jetty)
         session.getUserProperties().put("wampSessionId" , clientSocket.getSessionId());

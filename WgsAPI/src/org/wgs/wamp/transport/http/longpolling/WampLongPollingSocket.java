@@ -25,7 +25,6 @@ public class WampLongPollingSocket extends WampSocket
     
     public WampLongPollingSocket(WampApplication app, HttpServletRequest request, LinkedBlockingQueue<Object> queue) 
     {
-        super(app);
         this.queue = queue;
         this.session = request.getSession();
         setUserPrincipal(request.getUserPrincipal());

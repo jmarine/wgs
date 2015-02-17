@@ -14,9 +14,8 @@ public class WampWebsocket extends WampSocket
 {
     private Session session;
     
-    public WampWebsocket(WampApplication app, Session session) 
+    public WampWebsocket(Session session) 
     {
-        super(app);
         this.session = session;
         setUserPrincipal(this.session.getUserPrincipal());
     }

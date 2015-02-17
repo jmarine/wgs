@@ -34,7 +34,6 @@ public abstract class WampSocket
     protected Principal principal;
     protected boolean connected;
     
-    private WampApplication app;
     private Long    sessionId;
     private Map<String,String> prefixes;
     private Map<Long,WampSubscription> subscriptions;
@@ -55,13 +54,12 @@ public abstract class WampSocket
     private AtomicLong nextRequestId;
     
 
-    public WampSocket(WampApplication app) 
+    public WampSocket() 
     {
         this.authMethod = "anonymous";
         this.incomingHeartbeatSeq = 0L;
         this.outgoingHeartbeatSeq = new AtomicLong(0L);
         this.versionSupport = 1;
-        this.app = app;
         this.connected = true;
         this.nextRequestId = new AtomicLong(0L);
         

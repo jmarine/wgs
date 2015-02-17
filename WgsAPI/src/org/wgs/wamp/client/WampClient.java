@@ -13,6 +13,7 @@ import javax.websocket.CloseReason;
 import javax.websocket.ContainerProvider;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
+import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
 import org.jdeferred.Deferred;
 import org.jdeferred.DoneCallback;
@@ -45,9 +46,11 @@ import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampMatchType;
 import org.wgs.wamp.annotation.WampSubscribed;
+import org.wgs.wamp.transport.http.websocket.WampEndpoint;
+import org.wgs.wamp.transport.raw.WampRawSocket;
 
 
-public class WampClient extends Endpoint 
+public class WampClient
 {
     private static final Logger logger = Logger.getLogger(WampClient.class.getName());    
     
@@ -57,7 +60,6 @@ public class WampClient extends Endpoint
     private String helloRealm;
     private WampEncoding preferredEncoding;
     private WampEncoding encoding;
-    private WebSocketContainer con;
     private WampApplication wampApp;
     private WampSocket clientSocket;
     private AtomicInteger taskCount;
@@ -375,28 +377,7 @@ public class WampClient extends Endpoint
         }
     }
    
-
-    
-    @Override
-    public void onOpen(javax.websocket.Session session, EndpointConfig config) 
-    {
-        this.encoding = getWampEncodingByName(session.getNegotiatedSubprotocol());
-        this.clientSocket = new WampWebsocket(wampApp, session);
-        this.clientSocket.init();
-
-        WampEndpointConfig.addWampMessageHandlers(wampApp, session, clientSocket);
-        
-    }    
-    
-    @Override
-    public void onClose(javax.websocket.Session session, CloseReason reason) 
-    {
-        WampEndpointConfig.removeWampMessageHandlers(wampApp, session, reason);
-        super.onClose(session, reason);
-    }
-        
-    
-    
+   
     public void setPreferredWampEncoding(WampEncoding preferredEncoding)
     {
         this.preferredEncoding = preferredEncoding;
@@ -405,13 +386,28 @@ public class WampClient extends Endpoint
     public void connect() throws Exception
     {
         this.open = false;
-        this.con = ContainerProvider.getWebSocketContainer();        
         this.taskCount = new AtomicInteger(0);        
         
-        ClientEndpointConfig config = ClientEndpointConfig.Builder.create().preferredSubprotocols(getPreferredSubprotocolOrder()).build();
-        con.connectToServer(this, config, uri);
+        switch(uri.getScheme()) {
+            case "ws":
+            case "wss":
+                ClientEndpointConfig config = ClientEndpointConfig.Builder.create().preferredSubprotocols(getPreferredSubprotocolOrder()).build();
+                ContainerProvider.getWebSocketContainer().connectToServer(new WampEndpoint(), config, uri);
+                break;
+
+            case "tcp":
+            case "ssl":
+                clientSocket = new WampRawSocket(wampApp, uri);
+                break;
+                
+            case "http":
+            case "https":
+                throw new WampException(null, "wamp.error.protocol_not_implemented", null, null);
+                
+        }
     }
     
+
     public void goodbye(String reason)
     {
         for(WampModule module : wampApp.getWampModules()) {

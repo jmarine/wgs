@@ -48,10 +48,11 @@ public class WampClientCallerTest extends WampModule implements Runnable
             
             client.hello(realm, user, password, digestPasswordMD5);
             client.waitResponses();
-
             
             doCalls(repeats);
             client.waitResponses();
+            
+            client.close();
             
             
         } catch(Exception ex) {

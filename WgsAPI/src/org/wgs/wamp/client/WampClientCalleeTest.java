@@ -54,6 +54,8 @@ public class WampClientCalleeTest extends WampModule implements Runnable
             System.out.println("Press a key to stop application.");
             System.in.read();
             
+            client.close();
+            
         } catch(Exception ex) {
 
             System.err.println("Error: " + ex.getMessage());
