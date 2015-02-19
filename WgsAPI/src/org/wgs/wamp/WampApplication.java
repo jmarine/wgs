@@ -228,21 +228,19 @@ public class WampApplication
                     WampProtocol.sendChallengeMessage(clientSocket, authMethod, challenge);
                     break;
                     
-                } else if(authMethod.equalsIgnoreCase("oauth2-providers-list")) {
+                } else if(authMethod.equals("oauth2")) {
+                    WampDict extra = null;
                     String clientName = helloDetails.getText("_oauth2_client_name");
                     String redirectUrl = helloDetails.getText("_oauth2_redirect_uri");
-                    WampDict extra = OpenIdConnectUtils.getProviders(clientName, redirectUrl);
-                    WampProtocol.sendChallengeMessage(clientSocket, "oauth2", extra);
-                    break;
-                } else if(authMethod.startsWith("oauth2")) {
-                    String clientName = helloDetails.getText("_oauth2_client_name");
                     String subject = helloDetails.getText("_oauth2_subject");
-                    String redirectUrl = helloDetails.getText("_oauth2_redirect_uri");
-                    String state = helloDetails.getText("_oauth2_state");
-                    String url = OpenIdConnectUtils.getAuthURL(clientName, redirectUrl, subject, state);
-
-                    WampDict extra = new WampDict();
-                    extra.put("_oauth2_provider_url", url);
+                    if(subject == null) {
+                        extra = OpenIdConnectUtils.getProviders(clientName, redirectUrl);                        
+                    } else {
+                        String state = helloDetails.getText("_oauth2_state");
+                        String url = OpenIdConnectUtils.getAuthURL(clientName, redirectUrl, subject, state);
+                        extra = new WampDict();
+                        extra.put("_oauth2_provider_url", url);
+                    }
                     WampProtocol.sendChallengeMessage(clientSocket, authMethod, extra);
                     break;
                 }
@@ -284,7 +282,7 @@ public class WampApplication
             } else if(authmethod.equals("wampcra")) {
                 WampCRA.verifySignature(this, clientSocket, signature);
                 welcomed = true;
-            } else if(authmethod.startsWith("oauth2")) {
+            } else if(authmethod.equals("oauth2")) {
                 String code = signature;
                 clientSocket.setAuthMethod(authmethod);
                 clientSocket.setAuthProvider(extra.getText("authprovider"));
