@@ -185,39 +185,6 @@ public class Module extends WampModule
         
     }
 
-    
-    @WampRPC(name="openid_connect_login_url")
-    public String openIdConnectLoginUrl(WampSocket socket, WampDict data) throws Exception
-    {
-        String clientName = data.getText("_oauth2_client_name");
-        String redirectUri = data.getText("_oauth2_redirect_uri");
-        String subject = data.getText("_oauth2_subject");
-        String state = data.has("_oauth2_state")? data.getText("_oauth2_state") : null;
-        return OpenIdConnectUtils.getAuthURL(clientName, redirectUri, subject, state);
-    }
-    
-    
-    @WampRPC(name="openid_connect_auth")
-    public WampDict openIdConnectAuth(WampSocket socket, WampDict data) throws Exception
-    {
-        WampDict retval = null;
-
-        try {
-            String code = data.getText("auth_code");
-            retval = OpenIdConnectUtils.verifyCodeFlow(wampApp, socket, code, data);
-            
-        } catch(Exception ex) {
-            retval = null;
-            logger.log(Level.SEVERE, "OpenID Connect error: " + ex.getClass().getName() + ":" + ex.getMessage(), ex);
-        }
-
-        if(retval == null) {
-            System.err.println("OpenID Connect protocol error");
-            throw new WampException(null, WGS_MODULE_NAME + ".oidc_error", null, null);
-        }
-        return retval;
-    }            
-    
         
     @WampRPC(name="list_apps")
     public WampDict listApps() throws Exception
