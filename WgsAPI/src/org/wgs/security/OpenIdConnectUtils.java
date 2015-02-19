@@ -47,9 +47,11 @@ public class OpenIdConnectUtils
                 if(!domains.contains(domain) && !"defaultProvider".equals(domain)) {
                     WampDict node = new WampDict();
                     try {
+                        String url = getAuthURL(clientName, redirectUri, domain, null);  // Auto registration with OpenID Connect provider
+
                         //node.put("registrationEndpoint", provider.getRegistrationEndpointUrl());
                         node.put("name", domain);
-                        node.put("url", getAuthURL(clientName, redirectUri, domain, null));  // Auto registration with OpenID Connect provider
+                        node.put("url", url);  
                         providers.add(node);
 
                     } catch(Exception ex) { }
