@@ -129,7 +129,7 @@ public class TurnValidator implements GroupActionValidator
                             g.setState(GroupState.FINISHED);
                             
                             //g.setWinner(winner);
-                            int winner = ((Double)engine.eval("game.getWinner()")).intValue();
+                            int winner = ((Number)engine.eval("game.getWinner()")).intValue();
                             System.out.println("ActionValidator: WINNER=" + winner);
                             Member m0 = g.getMember(winner-1);
                             Member m1 = g.getMember(2-winner);
