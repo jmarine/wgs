@@ -252,7 +252,7 @@ public class OpenIdConnectUtils
                     int pos2 = idTokenJWT.indexOf(".", pos1);
                     String idTokenData = idTokenJWT.substring(pos1, pos2);
                     while((idTokenData.length() % 4) != 0) idTokenData = idTokenData + "=";
-                    idTokenData = Base64.decodeBase64ToString(idTokenData);
+                    idTokenData = new String(Base64.decodeBase64ToByteArray(idTokenData));
                     logger.fine("Decoded id_token: " + idTokenData);
 
                     try(JsonReader idTokenJsonReader = Json.createReader(new StringReader(idTokenData))) {
