@@ -31,7 +31,8 @@ public class WampEndpoint extends Endpoint
     
 
     
-    public void onApplicationStart(WampApplication app) { }
+    public void onApplicationStart(WampApplication app) { 
+    }
    
     @Override
     public  void onOpen(Session session, EndpointConfig endpointConfig) {

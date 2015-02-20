@@ -59,6 +59,7 @@ public class WampClientCalleeTest extends WampModule implements Runnable
         } catch(Exception ex) {
 
             System.err.println("Error: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 

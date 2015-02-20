@@ -6,6 +6,7 @@
 
 package org.wgs.util;
 
+import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import org.wgs.wamp.topic.JmsServices;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -23,7 +24,6 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
-import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 
 import org.wgs.wamp.WampApplication;

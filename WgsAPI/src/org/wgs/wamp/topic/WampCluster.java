@@ -106,8 +106,6 @@ public class WampCluster
             client.hello("cluster", authDetails);
             client.waitResponses();
             
-            
-            
             System.out.println("Cluster node is active!");
         }
         

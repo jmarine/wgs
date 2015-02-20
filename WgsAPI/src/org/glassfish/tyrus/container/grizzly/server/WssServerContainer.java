@@ -22,7 +22,6 @@ import org.glassfish.grizzly.servlet.WebappContext;
 import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
 import org.glassfish.tyrus.core.TyrusWebSocketEngine;
-import org.glassfish.tyrus.core.TyrusWebSocketEngine.TyrusWebSocketEngineBuilder;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.ServerContainer;
 import org.glassfish.tyrus.spi.WebSocketEngine;
@@ -97,7 +96,7 @@ public class WssServerContainer extends GrizzlyServerContainer
                 server.addListener(listener);
                 
                 server.getListener("grizzly").getKeepAlive().setIdleTimeoutInSeconds(-1);  // forever
-                server.getListener("grizzly").registerAddOn(new WebSocketAddOn(this));
+                server.getListener("grizzly").registerAddOn(new WebSocketAddOn(this, "/"));
                 
                 String wssPort = serverProperties.getProperty("wss-port");
                 if(wssPort != null) {
@@ -113,7 +112,7 @@ public class WssServerContainer extends GrizzlyServerContainer
                     networkListener.setSecure(true); 
                     networkListener.setSSLEngineConfig(new SSLEngineConfigurator(sslContextConfig, false, false, false));
                     networkListener.getKeepAlive().setIdleTimeoutInSeconds(-1);  // forever
-                    networkListener.registerAddOn(new WebSocketAddOn(this));
+                    networkListener.registerAddOn(new WebSocketAddOn(this, "/"));
 
                     server.addListener(networkListener);
                 }

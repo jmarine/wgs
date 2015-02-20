@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.security.MessageDigest;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -11,8 +12,12 @@ import java.util.logging.Logger;
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.CloseReason;
 import javax.websocket.ContainerProvider;
+import javax.websocket.Decoder;
+import javax.websocket.Encoder;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
+import javax.websocket.Extension;
+import javax.websocket.HandshakeResponse;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
 import org.jdeferred.Deferred;
@@ -392,7 +397,10 @@ public class WampClient
             case "ws":
             case "wss":
                 ClientEndpointConfig config = ClientEndpointConfig.Builder.create().preferredSubprotocols(getPreferredSubprotocolOrder()).build();
-                ContainerProvider.getWebSocketContainer().connectToServer(new WampEndpoint(), config, uri);
+                config.getUserProperties().put(WampEndpointConfig.WAMP_ENDPOINTCONFIG_PROPERTY_NAME, 
+                                               new WampEndpointConfig(WampEndpoint.class, wampApp));
+                Session session = ContainerProvider.getWebSocketContainer().connectToServer(WampEndpoint.class, config, uri);
+                clientSocket = new WampWebsocket(session);
                 break;
 
             case "tcp":
@@ -405,6 +413,9 @@ public class WampClient
                 throw new WampException(null, "wamp.error.protocol_not_implemented", null, null);
                 
         }
+        
+        clientSocket.init();
+        
     }
     
 
