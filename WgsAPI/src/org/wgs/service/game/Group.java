@@ -43,6 +43,12 @@ public class Group implements java.io.Serializable
     @Column(name="data")
     private String data;
     
+    @Column(name="initial_data")
+    private String initialData;    
+    
+    @Column(name="internal_data")
+    private String internalData;     
+    
     @Column(name="password")
     private String password;
     
@@ -284,6 +290,36 @@ public class Group implements java.io.Serializable
     }
 
     /**
+     * @return the initialData
+     */
+    public String getInitialData() {
+        return initialData;
+    }
+
+    /**
+     * @param initialData the initialData to set
+     */
+    public void setInitialData(String initialData) {
+        this.initialData = initialData;
+    }
+
+    
+    /**
+     * @return the internalData
+     */
+    public String getInternalData() {
+        return internalData;
+    }
+
+    /**
+     * @param internalData the internalData to set
+     */
+    public void setInternalData(String internalData) {
+        this.internalData = internalData;
+    }
+    
+    
+    /**
      * @return the app
      */
     public Application getApplication() {
@@ -468,6 +504,7 @@ public class Group implements java.io.Serializable
         obj.put("password", (password != null) && (password.length() > 0) );
         if(withData) {
             obj.put("data", data);
+            obj.put("initial_data", initialData);
             WampList actions = new WampList();
             for(GroupAction action : getActions()) {
                 actions.add(action.toWampObject());
@@ -476,7 +513,6 @@ public class Group implements java.io.Serializable
         }
         return obj;
     }
-
 
 }
 

@@ -440,6 +440,7 @@ public class Module extends WampModule
                 g.setAutoMatchCompleted(false);
                 if(options != null) {
                     if(options.has("data")) {
+                        g.setInitialData(options.getText("data"));
                         g.setData(options.getText("data"));
                     }
                     if(options.has("automatch")) {
@@ -468,7 +469,7 @@ public class Module extends WampModule
                 String validatorClassName = g.getApplication().getActionValidator();
                 if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).newInstance();
             
-                if(validator == null || validator.validAction(this.applications.values(), g, "INIT", g.getData(), -1L)) {
+                if(validator == null || validator.validAction(this.applications.values(), g, "INIT", g.getInitialData(), -1L)) {
                     app.addGroup(g);
                     groups.put(g.getGid(), g);
                     created = true;
@@ -731,12 +732,6 @@ public class Module extends WampModule
                 broadcastAppInfo = true;
                 broadcastGroupInfo = true;
             }                                 
-            
-            if(node.has("data")) {
-                String data = node.getText("data");
-                g.setData(data);
-                broadcastGroupInfo = true;
-            }
             
             if(node.has("state")) {
                 String state = node.getText("state");
@@ -1186,8 +1181,6 @@ public class Module extends WampModule
     {
         Group g = groups.get(gid);
         if(g != null) synchronized(g) {
-            String state = g.getData();
-
             GroupActionValidator validator = null;
             String validatorClassName = g.getApplication().getActionValidator();
             if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).newInstance();
