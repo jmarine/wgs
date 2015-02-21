@@ -5,16 +5,22 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.script.*;
+
 import org.wgs.security.User;
 import org.wgs.util.Storage;
 
 
 public class TurnValidator implements GroupActionValidator 
 {
+    private static ConcurrentLinkedQueue<ScriptEngine> ruleEngines = new ConcurrentLinkedQueue<>();
+
+        
     @Override
     public boolean validAction(Collection<Application> apps, Group g, String actionName, String actionValue, Long actionSlot) throws Exception 
     {
+        ScriptEngine ruleEngine = null;
         try {
             boolean isValid = false;
             if(actionName.equals("CHAT")) return true;
@@ -24,34 +30,15 @@ public class TurnValidator implements GroupActionValidator
             String gameType = g.getApplication().getName();
             gameType = Character.toUpperCase(gameType.charAt(0)) + gameType.substring(1);
 
-            ScriptEngineManager factory = new ScriptEngineManager();
-            ScriptEngine engine = factory.getEngineByName("JavaScript");
-
-            ClassLoader cl = this.getClass().getClassLoader();
-            engine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/move.js")));
-            engine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/game.js")));
-
-            ArrayList<Application> appsToLoad = new ArrayList<Application>();
-            appsToLoad.addAll(apps);                
-            while(!appsToLoad.isEmpty()) {  // Note: inherited classes may fail until super class has been loaded
-                Iterator<Application> iter = appsToLoad.iterator();
-                while(iter.hasNext()) {
-                    try { 
-                        Application app = iter.next();
-                        engine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/" + app.getName() +".js"))); 
-                        iter.remove();
-                    } catch(Exception ex) { }
-                }
-            }
-
-            engine.eval("var game = new "+gameType+"();");
-            engine.eval("game.initFromStateStr('"+g.getData()+"');");
+            ruleEngine = getRuleEngine(apps);
+            ruleEngine.eval("var game = new "+gameType+"();");
+            ruleEngine.eval("game.initFromStateStr('"+g.getData()+"');");
             for(GroupAction action : g.getActions()) {
               if(!action.getActionName().equals("CHAT")) {
                 lastAction = action;
                 
                 if(actionName.equalsIgnoreCase("RETRACT_QUESTION")) {
-                    String gameState = (String)engine.eval("game.toString();");
+                    String gameState = (String)ruleEngine.eval("game.toString();");
                     if(gameState.equals(actionValue)) {
                         isValid = true;
                         break;
@@ -60,10 +47,10 @@ public class TurnValidator implements GroupActionValidator
                 
                 switch(action.getActionName()) {
                     case "MOVE":
-                        engine.eval("game.makeMove(game.parseMoveString('" + action.getActionValue() + "'));");
+                        ruleEngine.eval("game.makeMove(game.parseMoveString('" + action.getActionValue() + "'));");
                         break;
                     case "RETRACT_ACCEPTED":
-                        engine.eval("game.initFromStateStr('"+action.getActionValue()+"');");
+                        ruleEngine.eval("game.initFromStateStr('"+action.getActionValue()+"');");
                         break;
                 }
 
@@ -112,24 +99,24 @@ public class TurnValidator implements GroupActionValidator
             } else if(actionName.equalsIgnoreCase("MOVE")) {
                 if(!actionValue.matches("[a-z|0-9]+[R|N|B|Q]?")) throw new Exception("Invalid move syntax:"+actionValue);
                 
-                int turn = ((Number)engine.eval("game.getTurn()")).intValue();
+                int turn = ((Number)ruleEngine.eval("game.getTurn()")).intValue();
                 if(actionSlot < 0 || turn != actionSlot+1) {
                     System.err.println("ActionValidator: MOVE action, but incorrect turn.");
                 } else {
-                    isValid = (boolean)engine.eval("game.isValidMove('" + actionValue + "')");
+                    isValid = (boolean)ruleEngine.eval("game.isValidMove('" + actionValue + "')");
                     if(isValid) {
-                        String newState = (String)engine.eval("game.makeMove(game.parseMoveString('" + actionValue + "')); game.toString()");
+                        String newState = (String)ruleEngine.eval("game.makeMove(game.parseMoveString('" + actionValue + "')); game.toString()");
                         System.out.println("ActionValidator: new state = " + newState);
                         //g.setData(newState);  // WARN: group's data contains initial state for chess960
                         
-                        boolean isOver = (boolean)engine.eval("game.isOver()");
+                        boolean isOver = (boolean)ruleEngine.eval("game.isOver()");
                         System.out.println("ActionValidator: ISOVER=" + isOver);                        
                         
                         if(isOver) {
                             g.setState(GroupState.FINISHED);
                             
                             //g.setWinner(winner);
-                            int winner = ((Number)engine.eval("game.getWinner()")).intValue();
+                            int winner = ((Number)ruleEngine.eval("game.getWinner()")).intValue();
                             System.out.println("ActionValidator: WINNER=" + winner);
                             Member m0 = g.getMember(winner-1);
                             Member m1 = g.getMember(2-winner);
@@ -147,7 +134,7 @@ public class TurnValidator implements GroupActionValidator
                 
                 String gameState = lastAction.getActionValue();
                 if(gameState.equals(actionValue)) {
-                    engine.eval("game.initFromStateStr('"+gameState+"');");
+                    ruleEngine.eval("game.initFromStateStr('"+gameState+"');");
                     if(g.getState() == GroupState.FINISHED) {
                         g.setState(GroupState.STARTED);
                     }
@@ -158,9 +145,9 @@ public class TurnValidator implements GroupActionValidator
                     && actionSlot >= 0 && actionSlot != lastAction.getSlot()
                     && actionName.equalsIgnoreCase("RETRACT_REJECTED")) {
                 
-                String gameState = (String)engine.eval("game.toString();");
+                String gameState = (String)ruleEngine.eval("game.toString();");
                 if(gameState.equals(actionValue)) {
-                    engine.eval("game.initFromStateStr('"+gameState+"');");
+                    ruleEngine.eval("game.initFromStateStr('"+gameState+"');");
                     isValid = true;
                 }
             }
@@ -171,7 +158,7 @@ public class TurnValidator implements GroupActionValidator
                 if(actionName.equals("RETRACT_QUESTION") || actionName.equals("DRAW_QUESTION")) {
                     g.setTurn(1-actionSlot.intValue());
                 } else {
-                    int turn = ((Number)engine.eval("game.getTurn()")).intValue();
+                    int turn = ((Number)ruleEngine.eval("game.getTurn()")).intValue();
                     g.setTurn(turn-1);
                 }
                 System.out.println("ActionValidator: " + actionName + ": new turn = " + g.getTurn());
@@ -183,6 +170,11 @@ public class TurnValidator implements GroupActionValidator
             System.err.println("Error: " + ex.getClass().getName() + ": " + ex.getMessage());
             ex.printStackTrace();
             return false;
+            
+        } finally {
+            if(ruleEngine != null) {
+                recycleRuleEngine(ruleEngine);
+            }
         }
     }
 
@@ -200,4 +192,39 @@ public class TurnValidator implements GroupActionValidator
         Storage.saveEntity(appEvent);
     }
     
+    
+    private ScriptEngine getRuleEngine(Collection<Application> apps) throws Exception
+    {
+        ScriptEngine ruleEngine = ruleEngines.poll();
+        if(ruleEngine == null) {
+            ScriptEngineManager factory = new ScriptEngineManager();
+            ruleEngine = factory.getEngineByName("JavaScript");
+
+            ClassLoader cl = this.getClass().getClassLoader();
+            ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/move.js")));
+            ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/game.js")));
+
+            ArrayList<Application> appsToLoad = new ArrayList<Application>();
+            appsToLoad.addAll(apps);                
+            while(!appsToLoad.isEmpty()) {  // Note: inherited classes may fail until super class has been loaded
+                Iterator<Application> iter = appsToLoad.iterator();
+                while(iter.hasNext()) {
+                    try { 
+                        Application app = iter.next();
+                        ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/" + app.getName() +".js"))); 
+                        iter.remove();
+                    } catch(Exception ex) { }
+                }
+            }        
+        }
+
+        return ruleEngine;
+    }    
+
+    
+    private void recycleRuleEngine(ScriptEngine ruleEngine)
+    {
+        if(ruleEngine != null) ruleEngines.offer(ruleEngine);
+    }
+
 }
