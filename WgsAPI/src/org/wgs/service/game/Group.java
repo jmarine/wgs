@@ -504,7 +504,7 @@ public class Group implements java.io.Serializable
         obj.put("password", (password != null) && (password.length() > 0) );
         if(withData) {
             obj.put("data", data);
-            obj.put("initial_data", initialData);
+            obj.put("initialData", initialData);
             WampList actions = new WampList();
             for(GroupAction action : getActions()) {
                 actions.add(action.toWampObject());

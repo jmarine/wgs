@@ -14,6 +14,6 @@ import java.util.Collection;
  */
 public interface GroupActionValidator {
 
-    boolean validAction(Collection<Application> apps, Group g, String actionName, String actionValue, Long actionSlot) throws Exception;
+    boolean isValidAction(Collection<Application> apps, Group g, String actionName, String actionValue, Long actionSlot) throws Exception;
     
 }

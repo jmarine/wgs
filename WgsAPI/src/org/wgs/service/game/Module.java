@@ -469,7 +469,7 @@ public class Module extends WampModule
                 String validatorClassName = g.getApplication().getActionValidator();
                 if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).newInstance();
             
-                if(validator == null || validator.validAction(this.applications.values(), g, "INIT", g.getInitialData(), -1L)) {
+                if(validator == null || validator.isValidAction(this.applications.values(), g, "INIT", g.getInitialData(), -1L)) {
                     app.addGroup(g);
                     groups.put(g.getGid(), g);
                     created = true;
@@ -1191,7 +1191,7 @@ public class Module extends WampModule
                 if(!member.getUser().equals(socket.getUserPrincipal())) throw new WampException(null, "wgs.incorrect_user_member", null, null);
             }
             
-            if(validator == null || validator.validAction(this.applications.values(), g, actionName, actionValue, playerSlot)) {
+            if(validator == null || validator.isValidAction(this.applications.values(), g, actionName, actionValue, playerSlot)) {
                 GroupAction action = new GroupAction();
                 
                 action.setApplicationGroup(g);

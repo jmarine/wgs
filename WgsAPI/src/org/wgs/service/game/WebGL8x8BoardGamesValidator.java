@@ -12,13 +12,13 @@ import org.wgs.security.User;
 import org.wgs.util.Storage;
 
 
-public class TurnValidator implements GroupActionValidator 
+public class WebGL8x8BoardGamesValidator implements GroupActionValidator 
 {
     private static ConcurrentLinkedQueue<ScriptEngine> ruleEngines = new ConcurrentLinkedQueue<>();
 
         
     @Override
-    public boolean validAction(Collection<Application> apps, Group g, String actionName, String actionValue, Long actionSlot) throws Exception 
+    public boolean isValidAction(Collection<Application> apps, Group g, String actionName, String actionValue, Long actionSlot) throws Exception 
     {
         ScriptEngine ruleEngine = null;
         try {
