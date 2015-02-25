@@ -1,4 +1,4 @@
-package org.wgs.wamp.client;
+package org.wgs.wamp.client.test;
 
 import org.jdeferred.DoneCallback;
 import org.jdeferred.FailCallback;
@@ -8,31 +8,40 @@ import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
+import org.wgs.wamp.annotation.WampSubscribed;
+import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampMatchType;
 
 
 @WampModuleName("com.myapp")
-public class WampClientCallerTest extends WampModule implements Runnable
+public class WampClientAuthTest extends WampModule implements Runnable
 {
-    private static String  url = "ws://localhost:8082/wgs"; 
-    private static String  realm = "localhost";
-    private static String  user = null;
-    private static String  password = null;
-    private static boolean digestPasswordMD5 = true;
+    private static String  url = "ws://localhost:8080/ws"; 
+    private static String  realm = "realm1";
+    private static String  user = "joe";
+    private static String  password = "secret1";
+    private static boolean digestPasswordMD5 = false;
 
     
     private WampClient client;
     
-    public WampClientCallerTest(WampClient client) {
+    public WampClientAuthTest(WampClient client) {
         super(client.getWampApplication());
         client.getWampApplication().registerWampModule(this);
         this.client = client;
     }
-    
-    
+
+    //@WampSubscribed(topic = "wamp.metaevent.session.on_join", match = WampMatchType.exact)
+    @WampSubscribed(topic = "test", match = WampMatchType.exact, metatopics = {"wamp.topic.on_subscribe","wamp.topic.on_unsubscribe"})
+    public void onMyAppEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
+    {
+        String topic = client.getTopicFromEventData(subscriptionId, details);
+        System.out.println("OnEvent: topic=" + topic + ", publicationId=" + publicationId + ", payload=" + payload + ", payloadKw=" + payloadKw + ", " + details);
+    }    
  
     
     @Override
@@ -49,8 +58,10 @@ public class WampClientCallerTest extends WampModule implements Runnable
             client.hello(realm, user, password, digestPasswordMD5);
             client.waitResponses();
             
-            doCalls(repeats);
-            client.waitResponses();
+            //listSessions();
+            //client.waitResponses();
+            System.out.println("Press a key to exit.");
+            System.in.read();
             
             client.close();
             
@@ -71,15 +82,14 @@ public class WampClientCallerTest extends WampModule implements Runnable
     
 
     
-    public void doCalls(int num) {
+    public void listSessions() {
         WampCallOptions callOptions = new WampCallOptions(null);
         callOptions.setRunOn(WampCallOptions.RunOnEnum.all);
         callOptions.setRunMode(WampCallOptions.RunModeEnum.gather);
         callOptions.setDiscloseMe(true);
         callOptions.setExcludeMe(false);
         
-        for(int i = 0; i < num; i++) {
-            client.call("com.myapp.add2", new WampList(2,3), null, callOptions)
+        client.call("wamp.session.list", new WampList(), null, callOptions)
                     .done(new DoneCallback<WampResult>() { 
                         @Override
                         public void onDone(WampResult r) {
@@ -96,7 +106,7 @@ public class WampClientCallerTest extends WampModule implements Runnable
                             System.out.println("Error: " + e.toString());
                         }
                     });
-        }
+
         
     }
         
@@ -105,7 +115,7 @@ public class WampClientCallerTest extends WampModule implements Runnable
     {
         WampClient client = new WampClient(url);
         client.setPreferredWampEncoding(WampEncoding.JSON);
-        WampClientCallerTest test = new WampClientCallerTest(client);
+        WampClientAuthTest test = new WampClientAuthTest(client);
         test.run();
     }
 

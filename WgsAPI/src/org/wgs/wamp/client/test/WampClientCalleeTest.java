@@ -1,9 +1,10 @@
-package org.wgs.wamp.client;
+package org.wgs.wamp.client.test;
 
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
