@@ -2,7 +2,6 @@ package org.wgs.wamp.topic;
 
 
 public class WampMetaTopic {
-    public static final String SUBSCRIBER_ADDED   = "wamp.metatopic.subscriber.add";
-    public static final String SUBSCRIBER_REMOVED = "wamp.metatopic.subscriber.remove";
-    public static final String PUBLICATION_NOT_AUTHORIZED = "wamp.metatopic.publication.error.not_authorized";
+    public static final String SUBSCRIBER_ADDED   = "wamp.topic.on_subscribe";
+    public static final String SUBSCRIBER_REMOVED = "wamp.topic.on_unsubscribe";
 }
