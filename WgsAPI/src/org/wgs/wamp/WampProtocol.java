@@ -365,7 +365,7 @@ public class WampProtocol
                     Object[] msg = new Object[WampEncoding.values().length];
                     for(Long sid : subscription.getSessionIds(realm)) {  // FIXME: concurrent modification exceptions
                         WampSocket remoteSocket = subscription.getSocket(sid);
-                        if(realm.equals(remoteSocket.getRealm()) && remoteSocket.supportVersion(WampApplication.WAMPv2)) {
+                        if(remoteSocket != null && realm.equals(remoteSocket.getRealm()) && remoteSocket.supportVersion(WampApplication.WAMPv2)) {
                             WampEncoding enc = remoteSocket.getEncoding();
                             if(msg[enc.ordinal()] == null) {
                                 msg[enc.ordinal()] = enc.getSerializer().serialize(response);
