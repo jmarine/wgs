@@ -117,7 +117,7 @@ public class WampSubscriptionOptions
         dict.put("match", getMatchType().toString());
         if(!eventsEnabled) dict.put("metaonly", true);
         if(metaTopics != null && metaTopics.size() > 0) {
-            WampList metas = new WampList(metaTopics);
+            WampList metas = new WampList(metaTopics.toArray());
             dict.put("metatopics", metas);
         }
         return dict;
