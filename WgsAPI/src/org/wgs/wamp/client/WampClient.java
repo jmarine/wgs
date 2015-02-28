@@ -392,7 +392,8 @@ public class WampClient
                 config.getUserProperties().put(WampEndpointConfig.WAMP_ENDPOINTCONFIG_PROPERTY_NAME, 
                                                new WampEndpointConfig(WampEndpoint.class, wampApp));
                 Session session = ContainerProvider.getWebSocketContainer().connectToServer(WampEndpoint.class, config, uri);
-                clientSocket = new WampWebsocket(session);
+                Long sessionId = (Long)session.getUserProperties().get("wampSessionId");
+                clientSocket = wampApp.getWampSocket(sessionId);
                 break;
 
             case "tcp":
@@ -406,7 +407,7 @@ public class WampClient
                 
         }
         
-        clientSocket.init();
+        this.open = true;
         
     }
     
@@ -497,7 +498,7 @@ public class WampClient
         Long requestId = WampProtocol.newSessionScopeId(clientSocket);
         WampList list = new WampList();
         list.add(deferred);
-        createPendingMessage(requestId, list);
+        if(options.hasAck()) createPendingMessage(requestId, list);
         WampProtocol.sendPublishMessage(clientSocket, requestId, topic, payload, payloadKw, options.toWampObject());
         return deferred.promise();
     }
@@ -638,7 +639,7 @@ public class WampClient
         }
         
         String topicAndOptionsKey = getTopicAndOptionsKey(topicURI,options);        
-        
+
         Long requestId = WampProtocol.newSessionScopeId(clientSocket);
         WampList list = new WampList();
         list.add(deferred);        
@@ -659,29 +660,30 @@ public class WampClient
         }
 
         Long requestId = WampProtocol.newSessionScopeId(clientSocket);
-        Long unsubscriptionId = getSubscriptionIdByTopicAndOptions(topic,options);
+        Long subscriptionId = getSubscriptionIdByTopicAndOptions(topic,options);
         
         WampList list = new WampList();
         list.add(deferred);      
-        list.add(unsubscriptionId);
+        list.add(subscriptionId);
         list.add(getTopicAndOptionsKey(topic,options));
         
         createPendingMessage(requestId, list);
-        WampProtocol.sendUnsubscribeMessage(clientSocket, requestId, unsubscriptionId);
+        WampProtocol.sendUnsubscribeMessage(clientSocket, requestId, subscriptionId);
         return deferred.promise();
     }
-
-   
+    
+    
     private void createPendingMessage(Long requestId, WampList requestData)
     {
         if(requestId != null) pendingRequests.put(requestId, requestData);
         taskCount.incrementAndGet();
     }
     
-    private void removePendingMessage(Long requestId) {
+    private void removePendingMessage(Long requestId) 
+    {
         if(requestId != null) pendingRequests.remove(requestId);
         if(taskCount.decrementAndGet() <= 0) {
-            synchronized(taskCount) { 
+            synchronized(taskCount) {             
                 taskCount.notifyAll();
             }
         }
@@ -689,8 +691,8 @@ public class WampClient
     
     public void waitResponses() throws Exception
     {
-        synchronized(taskCount) {
-            if(taskCount.get() > 0) {
+        while(taskCount.get() > 0) {
+            synchronized(taskCount) {            
                 taskCount.wait();
             }
         }

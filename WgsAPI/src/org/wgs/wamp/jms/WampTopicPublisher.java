@@ -5,12 +5,24 @@ import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.Topic;
+import org.wgs.wamp.client.WampClient;
+import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.topic.WampPublishOptions;
+import org.wgs.wamp.topic.WampTopic;
+import org.wgs.wamp.type.WampDict;
+import org.wgs.wamp.type.WampList;
 
 
 public class WampTopicPublisher implements javax.jms.TopicPublisher
 {
-    public WampTopicSession session;
-    public Topic topic;
+    private Topic topic;
+    private WampTopicSession session;
+    
+    private int  deliveryMode; 
+    private int  priority;
+    private long timeToLive;
+    private long deliveryDelay;
+    
     
     public WampTopicPublisher(WampTopicSession session, Topic topic)
     {
@@ -25,22 +37,22 @@ public class WampTopicPublisher implements javax.jms.TopicPublisher
 
     @Override
     public void publish(Message msg) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        send(msg);
     }
 
     @Override
-    public void publish(Message msg, int i, int i1, long l) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void publish(Message msg, int deliveryMode, int priority, long timeToLive) throws JMSException {
+        send(msg, deliveryMode, priority, timeToLive);
     }
 
     @Override
     public void publish(Topic topic, Message msg) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        send(topic, msg);
     }
 
     @Override
-    public void publish(Topic topic, Message msg, int i, int i1, long l) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void publish(Topic topic, Message msg, int deliveryMode, int priority, long timeToLive) throws JMSException {
+        send(topic, msg, deliveryMode, priority, timeToLive);
     }
 
     @Override
@@ -64,73 +76,88 @@ public class WampTopicPublisher implements javax.jms.TopicPublisher
     }
 
     @Override
-    public void setDeliveryMode(int i) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setDeliveryMode(int deliveryMode) throws JMSException {
+        this.deliveryMode = deliveryMode;
     }
 
     @Override
     public int getDeliveryMode() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return deliveryMode;
     }
 
     @Override
-    public void setPriority(int i) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setPriority(int priority) throws JMSException {
+        this.priority = priority;
     }
 
     @Override
     public int getPriority() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return this.priority;
     }
 
     @Override
-    public void setTimeToLive(long l) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setTimeToLive(long timeToLive) throws JMSException {
+        this.timeToLive = timeToLive;
     }
 
     @Override
     public long getTimeToLive() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return this.timeToLive;
     }
 
     @Override
-    public void setDeliveryDelay(long l) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setDeliveryDelay(long deliveryDelay) throws JMSException {
+        this.deliveryDelay = deliveryDelay;
     }
 
     @Override
     public long getDeliveryDelay() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return this.deliveryDelay;
     }
 
     @Override
     public Destination getDestination() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return topic;
     }
 
     @Override
     public void close() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        if(session != null) {
+            session.close();
+        }
     }
 
     @Override
     public void send(Message msg) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        send(topic, msg, getDeliveryMode(), getPriority(), getTimeToLive());
     }
 
     @Override
-    public void send(Message msg, int i, int i1, long l) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void send(Message msg, int deliveryMode, int priority, long timeToLive) throws JMSException {
+        send(topic, msg, deliveryMode, priority, timeToLive);
     }
 
     @Override
-    public void send(Destination dstntn, Message msg) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void send(Destination destination, Message msg) throws JMSException {
+        send(destination, msg, getDeliveryMode(), getPriority(), getTimeToLive());
     }
 
     @Override
-    public void send(Destination dstntn, Message msg, int i, int i1, long l) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void send(Destination destination, Message m, int deliveryMode, int priority, long timeToLive) throws JMSException {
+        try {
+            WampTopic topic = (WampTopic)destination;
+            WampPublishOptions options = new WampPublishOptions();
+            options.setAck(true);
+            options.setExcludeMe(false);
+            options.setDiscloseMe(true);
+            WampTopicConnection tc = (WampTopicConnection)session.getTopicConnection();
+            WampList payload = m.getBody(WampList.class);
+            WampDict payloadKw = m.getBody(WampDict.class);
+            if(!tc.isOpen()) tc.connect();
+            tc.getWampClient().publish(topic.getTopicName(), payload, payloadKw, options);
+        } catch(Exception ex) {
+            throw new JMSException(ex.getMessage());
+        }
     }
 
     @Override
@@ -139,7 +166,7 @@ public class WampTopicPublisher implements javax.jms.TopicPublisher
     }
 
     @Override
-    public void send(Message msg, int i, int i1, long l, CompletionListener cl) throws JMSException {
+    public void send(Message msg, int deliveryMode, int priority, long timeToLive, CompletionListener cl) throws JMSException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -149,7 +176,7 @@ public class WampTopicPublisher implements javax.jms.TopicPublisher
     }
 
     @Override
-    public void send(Destination dstntn, Message msg, int i, int i1, long l, CompletionListener cl) throws JMSException {
+    public void send(Destination dstntn, Message msg, int deliveryMode, int priority, long timeToLive, CompletionListener cl) throws JMSException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     

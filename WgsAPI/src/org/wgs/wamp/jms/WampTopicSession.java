@@ -30,12 +30,12 @@ import org.wgs.wamp.topic.WampTopicOptions;
 public class WampTopicSession implements javax.jms.TopicSession
 {
     private WampTopicConnection con; 
-    private Map<Long, WampTopicSubscriber> subscriptionRequests;
+    private int acknowledgeMode;
     
     
     public WampTopicSession(WampTopicConnection con, boolean transacted, int acknowledgeMode) {
         this.con = con;
-        this.subscriptionRequests = new ConcurrentHashMap<Long, WampTopicSubscriber>();
+        this.acknowledgeMode = acknowledgeMode;
     }
     
     public TopicConnection getTopicConnection()
@@ -44,7 +44,6 @@ public class WampTopicSession implements javax.jms.TopicSession
     }
     
 
-    
     @Override
     public Topic createTopic(String topicName) throws JMSException {
         return new WampTopic(topicName, null);
@@ -52,16 +51,16 @@ public class WampTopicSession implements javax.jms.TopicSession
 
     @Override
     public TopicSubscriber createSubscriber(Topic topic) throws JMSException {
-        Long requestId = WampProtocol.newSessionScopeId(con.getWampClient().getWampSocket());
-        WampTopicSubscriber subscriber = new WampTopicSubscriber(this, topic, null, false);
-        con.getWampClient().getWampApplication().registerWampModule(subscriber);
-        subscriptionRequests.put(requestId, subscriber);
-        return subscriber;
+        return createSubscriber(topic, null, false);
     }
 
     @Override
     public TopicSubscriber createSubscriber(Topic topic, String messageSelector, boolean noLocal) throws JMSException {
-        return new WampTopicSubscriber(this, topic, messageSelector, noLocal);
+        Long id = WampProtocol.newGlobalScopeId();
+        WampTopicSubscriber subscriber = new WampTopicSubscriber(this, topic, messageSelector, noLocal);
+        con.getWampClient().getWampApplication().registerWampModule(subscriber);
+        con.requestSubscription(subscriber);
+        return subscriber;
     }
 
     @Override
@@ -140,7 +139,7 @@ public class WampTopicSession implements javax.jms.TopicSession
 
     @Override
     public int getAcknowledgeMode() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return acknowledgeMode;
     }
 
     @Override
@@ -155,7 +154,7 @@ public class WampTopicSession implements javax.jms.TopicSession
 
     @Override
     public void close() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        if(con != null) con.close();
     }
 
     @Override

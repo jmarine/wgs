@@ -18,6 +18,7 @@ public class WampRawSocket extends WampSocket implements Runnable
 {
     private static final int DEFAULT_PORT = 8080;
     
+    private boolean handshake;
     private URI url;
     private WampApplication app;
     private Socket socket;
@@ -47,7 +48,16 @@ public class WampRawSocket extends WampSocket implements Runnable
         
         Thread listener = new Thread(this);
         listener.start();
+        
+        synchronized(this) {
+            while(!handshake) {
+                this.wait();
+            }
+        }
+
     }
+    
+    
     
     
     @Override
@@ -58,6 +68,7 @@ public class WampRawSocket extends WampSocket implements Runnable
             
             is = socket.getInputStream();
             os = socket.getOutputStream();
+            
 
             /*
             // WAMP V2:
@@ -81,6 +92,12 @@ public class WampRawSocket extends WampSocket implements Runnable
             }
             */
             
+
+            this.init();
+            synchronized(this) {
+                handshake = true;
+                this.notifyAll();
+            }
             
             while( isOpen() && (len = is.read(msg,0,4)) == 4 ) {
                 len = ntohs(msg, 0, 4);
@@ -93,7 +110,7 @@ public class WampRawSocket extends WampSocket implements Runnable
             os.close();
                 
         } catch(Exception ex) {
-            
+            if(isOpen()) System.out.println("WampRawSocket::run: ERROR: " + ex.getMessage());
         }
         
     }
@@ -153,7 +170,8 @@ public class WampRawSocket extends WampSocket implements Runnable
     
     @Override
     public String getNegotiatedSubprotocol() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        // FIXME: obtain negotiatiated subprotocol
+        return "wamp.2.msgpack";
     }
 
     @Override

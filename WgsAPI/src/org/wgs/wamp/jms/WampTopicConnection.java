@@ -1,5 +1,8 @@
 package org.wgs.wamp.jms;
 
+import java.util.Map;
+import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.jms.ConnectionConsumer;
 import javax.jms.ConnectionMetaData;
 import javax.jms.Destination;
@@ -16,13 +19,24 @@ import org.wgs.wamp.encoding.WampEncoding;
 
 public class WampTopicConnection implements TopicConnection
 {
-    private boolean open;
+    private String  realm;
+    private String  user;
+    private String  password;
+    private boolean digestPasswordMD5;
     private boolean startDelivery;
     private WampClient client;
+    
+    private Stack<WampTopicSubscriber> pendingSubscriptionRequests = new Stack<WampTopicSubscriber>();
+    
     
     public WampTopicConnection(WampTopicConnectionFactory factory, String userName, String password) throws JMSException
     {
         try {
+            this.realm = factory.getRealm();
+            this.digestPasswordMD5 = factory.getDigestPasswordMD5();
+            this.user = userName;
+            this.password = password;
+            
             client = new WampClient(factory.getURL());
             client.setPreferredWampEncoding(factory.getWampEncoding());
             
@@ -33,10 +47,16 @@ public class WampTopicConnection implements TopicConnection
         }
     }
     
-    
     public WampClient getWampClient()
     {
         return client;
+    }
+    
+    
+    public void requestSubscription(WampTopicSubscriber subscriber) throws JMSException
+    {
+        if(isStarted()) subscriber.start();
+        else pendingSubscriptionRequests.add(subscriber);
     }
     
 
@@ -109,9 +129,34 @@ public class WampTopicConnection implements TopicConnection
     
     @Override
     public void start() throws JMSException {
-        synchronized(this) {
-            startDelivery = true;
-            this.notifyAll();
+        try {
+            synchronized(this) {
+                startDelivery = true;
+                this.notifyAll();
+            }
+
+            connect();
+            while(pendingSubscriptionRequests.size() > 0) {
+                try {
+                    WampTopicSubscriber subscriber = pendingSubscriptionRequests.pop();
+                    subscriber.start();
+                } catch(Exception ex) {
+                    System.err.println("Error: " + ex.getClass().getName() + ": " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+            }
+            
+        } catch(Exception ex) {
+            throw new JMSException(ex.getMessage());
+        }
+    }
+    
+    public void connect() throws Exception
+    {
+        if(!isOpen()) {
+            client.connect();
+            client.hello(realm, user, password, digestPasswordMD5);
+            client.waitResponses();
         }
     }
 

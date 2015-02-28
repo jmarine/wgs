@@ -4,13 +4,15 @@ import java.util.Collections;
 import java.util.Enumeration;
 import javax.jms.Destination;
 import javax.jms.JMSException;
+import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.topic.JmsServices;
+import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 
 
-public class WampMessage implements javax.jms.Message
+public class WampMessage implements javax.jms.TextMessage
 {
-    private Long     id; 
     private WampDict props;
     private WampList payload;
     private WampDict payloadKw;
@@ -20,23 +22,16 @@ public class WampMessage implements javax.jms.Message
         this.props = new WampDict();
     }
 
-    public WampMessage(Long id, WampDict details, WampList payload, WampDict payloadKw)
+    public WampMessage(Long id, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
-        this.id = id;
         this.props = details;
+        if(props == null) props = new WampDict();
+        
+        setJMSMessageID(id.toString());
         this.payload = payload;
         this.payloadKw = payloadKw;
     }
 
-    public WampList getPayload()
-    {
-        return payload;
-    }
-    
-    public WampDict getPayloadKw()
-    {
-        return payloadKw;
-    }
     
     public WampDict getDetails()
     {
@@ -45,127 +40,127 @@ public class WampMessage implements javax.jms.Message
     
     @Override
     public String getJMSMessageID() throws JMSException {
-        return id.toString();
+        return props.getText("_jms_msgid");
     }
 
     @Override
     public void setJMSMessageID(String strID) throws JMSException {
-        id = Long.parseLong(strID);
+        props.put("_jms_msgid", strID);
     }
 
     @Override
     public long getJMSTimestamp() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getLong("_jms_timestamp");
     }
 
     @Override
-    public void setJMSTimestamp(long l) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setJMSTimestamp(long t) throws JMSException {
+        props.put("_jms_timestamp", new Long(t));
     }
 
     @Override
     public byte[] getJMSCorrelationIDAsBytes() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return getJMSCorrelationID().getBytes();
     }
 
     @Override
     public void setJMSCorrelationIDAsBytes(byte[] bytes) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        setJMSCorrelationID(new String(bytes));
     }
 
     @Override
-    public void setJMSCorrelationID(String string) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setJMSCorrelationID(String correlation) throws JMSException {
+        props.put("_jms_correlationid", correlation);
     }
 
     @Override
     public String getJMSCorrelationID() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getText("_jms_correlationid");
     }
 
     @Override
     public Destination getJMSReplyTo() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return WampBroker.getTopic(props.getText("_jms_replyto"));
     }
 
     @Override
-    public void setJMSReplyTo(Destination dstntn) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setJMSReplyTo(Destination destination) throws JMSException {
+        props.put("_jms_replyto", destination.toString());
     }
 
     @Override
     public Destination getJMSDestination() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return WampBroker.getTopic(props.getText("_jms_destination"));
     }
 
     @Override
-    public void setJMSDestination(Destination dstntn) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setJMSDestination(Destination destination) throws JMSException {
+        props.put("_jms_destination", destination.toString());
     }
 
     @Override
     public int getJMSDeliveryMode() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getLong("_jms_delivery_mode").intValue();
     }
 
     @Override
-    public void setJMSDeliveryMode(int i) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setJMSDeliveryMode(int deliveryMode) throws JMSException {
+        props.put("_jms_delivery_mode", deliveryMode);
     }
 
     @Override
     public boolean getJMSRedelivered() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getBoolean("_jms_redelivered");
     }
 
     @Override
-    public void setJMSRedelivered(boolean bln) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setJMSRedelivered(boolean redelivered) throws JMSException {
+        props.put("_jms_redelivered", redelivered);
     }
 
     @Override
     public String getJMSType() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getText("_jms_type");
     }
 
     @Override
-    public void setJMSType(String string) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setJMSType(String type) throws JMSException {
+        props.put("_jms_type", type);
     }
 
     @Override
     public long getJMSExpiration() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getLong("_jms_expiration");
     }
 
     @Override
-    public void setJMSExpiration(long l) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setJMSExpiration(long expiration) throws JMSException {
+        props.put("_jms_expiration", expiration);
     }
 
     @Override
     public long getJMSDeliveryTime() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getLong("_jms_delibery_type");
     }
 
     @Override
-    public void setJMSDeliveryTime(long l) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setJMSDeliveryTime(long deliveryTime) throws JMSException {
+        props.put("_jms_delibery_type", deliveryTime);
     }
 
     @Override
     public int getJMSPriority() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getLong("_jms_priority").intValue();
     }
 
     @Override
-    public void setJMSPriority(int i) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setJMSPriority(int priority) throws JMSException {
+        props.put("_jms_priority", priority);
     }
 
     @Override
     public void clearProperties() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        props.clear();
     }
 
     @Override
@@ -180,42 +175,42 @@ public class WampMessage implements javax.jms.Message
 
     @Override
     public byte getByteProperty(String propName) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getLong(propName).byteValue();
     }
 
     @Override
     public short getShortProperty(String propName) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getLong(propName).shortValue();
     }
 
     @Override
     public int getIntProperty(String propName) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getLong(propName).intValue();
     }
 
     @Override
     public long getLongProperty(String propName) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getLong(propName);
     }
 
     @Override
     public float getFloatProperty(String propName) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getDouble(propName).floatValue();
     }
 
     @Override
     public double getDoubleProperty(String propName) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getDouble(propName).doubleValue();
     }
 
     @Override
     public String getStringProperty(String propName) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.getText(propName);
     }
 
     @Override
     public Object getObjectProperty(String propName) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return props.get(propName);
     }
 
     @Override
@@ -295,6 +290,43 @@ public class WampMessage implements javax.jms.Message
     public boolean isBodyAssignableTo(Class type) throws JMSException {
         return (payload != null && type.isAssignableFrom(WampList.class))
                || (payloadKw != null && type.isAssignableFrom(WampDict.class));
+    }
+
+    @Override
+    public void setText(String payload) throws JMSException {
+        if(payload == null) {
+            this.payload = null;
+            this.payloadKw = null;
+        } else {
+            try {
+                WampList list = (WampList)WampEncoding.JSON.getSerializer().deserialize(payload, 0, payload.length());
+                this.payload = (WampList)list.get(0);
+                this.payloadKw = (WampDict)list.get(1);
+            } catch(Exception ex) {
+                throw new JMSException("ERROR: " + ex.getMessage());
+            }
+        }
+    }
+
+    @Override
+    public String getText() throws JMSException {
+        try {
+            WampList event = new WampList();
+            event.add(payload);
+            event.add(payloadKw);        
+            return (String)WampEncoding.JSON.getSerializer().serialize(event);
+        } catch(Exception ex) {
+            throw new JMSException("ERROR: " + ex.getMessage());
+        }
+    }
+    
+    @Override
+    public String toString() {
+        try {
+            return getText();
+        } catch(Exception ex) {
+            throw new RuntimeException("WampMessage.toString: ERROR: " + ex.getClass() + ": " + ex.getMessage(), ex);
+        }
     }
     
 }

@@ -51,9 +51,10 @@ public class WampDict extends WampObject
     }      
     
     
-    public void put(String key, Object obj)
+    public WampDict put(String key, Object obj)
     {
         hashmap.put(key, castToWampObject(obj));
+        return this;
     }
 
     
@@ -71,6 +72,10 @@ public class WampDict extends WampObject
         hashmap.remove(key);
     }
     
+    public void clear()
+    {
+        hashmap.clear();
+    }
 
     public Set<String> keySet()
     {

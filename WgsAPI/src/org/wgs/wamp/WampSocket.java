@@ -110,6 +110,7 @@ public abstract class WampSocket
                     
             }        
         }
+        
     }
     
     /**

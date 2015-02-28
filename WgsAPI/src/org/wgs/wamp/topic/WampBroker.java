@@ -200,19 +200,18 @@ public class WampBroker
             for(WampTopic topic : subscription.getTopics()) {
                 JmsServices.subscribeMessageListener(topic);
             }
-            
-            WampProtocol.sendSubscribedMessage(clientSocket, requestId, subscription.getId());
         
             for(WampTopic topic : subscription.getTopics()) {
-                WampModule module = app.getWampModule(topic.getTopicName(), app.getDefaultWampModule());
-
                 try { 
+                    WampModule module = app.getWampModule(topic.getTopicName(), app.getDefaultWampModule());
                     module.onSubscribe(clientSocket, topic, subscription, options);
                 } catch(Exception ex) {
                     System.err.println("Error: " + ex.getClass().getName() + ": " + ex.getMessage());
                     ex.printStackTrace();
                 }
             }
+
+            WampProtocol.sendSubscribedMessage(clientSocket, requestId, subscription.getId());
             
         } catch(Exception ex) {
             WampProtocol.sendErrorMessage(clientSocket, WampProtocol.SUBSCRIBE, requestId, null, "wamp.error.subscription_error", null, null);

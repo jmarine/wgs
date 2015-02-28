@@ -10,18 +10,18 @@ import org.wgs.wamp.encoding.WampEncoding;
 
 public class WampTopicConnectionFactory implements TopicConnectionFactory
 {
-    private String url;
     private WampEncoding enc;
+    private String url;
+    private String realm;
+    private boolean digestPasswordMD5;
     
-    public WampTopicConnectionFactory(String url)
-    {
-        this(url, WampEncoding.MsgPack);
-    }
     
-    public WampTopicConnectionFactory(String url, WampEncoding enc)
+    public WampTopicConnectionFactory(WampEncoding enc, String url, String realm, boolean digestPasswordMD5)
     {
         this.url = url;
         this.enc = enc;
+        this.realm = realm;
+        this.digestPasswordMD5 = digestPasswordMD5;
     }
 
     public String getURL()
@@ -29,10 +29,22 @@ public class WampTopicConnectionFactory implements TopicConnectionFactory
         return url;
     }
     
+    public String getRealm()
+    {
+        return realm;
+    }
+    
     public WampEncoding getWampEncoding()
     {
         return enc;
     }
+    
+    public boolean getDigestPasswordMD5()
+    {
+        return digestPasswordMD5;
+    }
+    
+    
     
     @Override
     public TopicConnection createTopicConnection() throws JMSException {
