@@ -9,6 +9,7 @@ import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.annotation.WampSubscribed;
 import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallController;
@@ -27,7 +28,7 @@ public class WampClientTest extends WampModule implements Runnable
     private static String  realm = "localhost";
     private static String  user = null;
     private static String  password = null;
-    private static boolean digestPasswordMD5 = true;
+    private static boolean digestPasswordMD5 = false;
 
     
     private WampClient client;
@@ -173,8 +174,9 @@ public class WampClientTest extends WampModule implements Runnable
     {
         WampClient client = new WampClient(url);
         client.setPreferredWampEncoding(WampEncoding.JSON);
+
         WampClientTest test = new WampClientTest(client);
-        while(true) {
+        while(true) {        
             test.run();
         }
     }

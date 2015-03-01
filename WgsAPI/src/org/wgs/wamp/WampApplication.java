@@ -160,16 +160,16 @@ public class WampApplication
     }
 
 
-    public WampSocket getWampSocket(Long sessionId)
+    public WampSocket getWampSocket(Long socketId)
     {
-        if(sessionId == null) return null;
-        else return sockets.get(sessionId);
+        if(socketId == null) return null;
+        else return sockets.get(socketId);
     }        
     
     
     public void onWampOpen(WampSocket clientSocket) 
     {
-        sockets.put(clientSocket.getSessionId(), clientSocket);
+        sockets.put(clientSocket.getSocketId(), clientSocket);
         
         for(WampModule module : modules.values()) {
             try { 
@@ -463,7 +463,7 @@ public class WampApplication
             
             onWampSessionEnd(clientSocket);
 
-            sockets.remove(clientSocket.getSessionId());
+            sockets.remove(clientSocket.getSocketId());
             
             logger.log(Level.FINEST, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
         }

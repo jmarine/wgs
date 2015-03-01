@@ -34,7 +34,7 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
    
     private static ConcurrentHashMap<Long, AsyncContext> asyncContexts = new ConcurrentHashMap<Long, AsyncContext>();
     private static ConcurrentHashMap<Long, LinkedBlockingQueue<Object>> messageQueues = new ConcurrentHashMap<Long, LinkedBlockingQueue<Object>>();
-    private static ConcurrentHashMap<Long, Long> wampSessionIdByTransport = new ConcurrentHashMap<Long, Long>();
+    private static ConcurrentHashMap<Long, Long> socketIdByTransport = new ConcurrentHashMap<Long, Long>();
 
     private WampApplication application;
     
@@ -75,8 +75,8 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         System.out.println("WampLongPollingServlet: service: path info = " + path);
         
         Long transport = getWampTransport(request);
-        Long wampSessionId = (transport != null)? wampSessionIdByTransport.get(transport) : null;
-        System.out.println("WampLongPollingServlet: service: wampSessionId=" + wampSessionId);
+        Long socketId = (transport != null)? socketIdByTransport.get(transport) : null;
+        System.out.println("WampLongPollingServlet: service: socketId=" + socketId);
 
         response.setHeader("Access-Control-Allow-Origin", "*");
         response.addHeader("Allow-Control-Allow-Methods", "POST,GET,OPTIONS"); 
@@ -85,7 +85,7 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         actx.addListener(this);
         
   
-        WampSocket socket = application.getWampSocket(wampSessionId);
+        WampSocket socket = application.getWampSocket(socketId);
         if(path.endsWith("/open")) {
             LinkedBlockingQueue<Object> queue = new LinkedBlockingQueue<Object>();
             socket = new WampLongPollingSocket(application, request, queue);
@@ -94,7 +94,7 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
             transport = WampProtocol.newGlobalScopeId();
             setWampTransport(request, transport);
             
-            wampSessionIdByTransport.put(transport, socket.getSessionId());
+            socketIdByTransport.put(transport, socket.getSocketId());
             messageQueues.put(transport, queue);
             asyncContexts.put(transport, actx);
 
@@ -131,7 +131,7 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
 
             messageQueues.remove(transport);
             asyncContexts.remove(transport);
-            wampSessionIdByTransport.remove(transport);
+            socketIdByTransport.remove(transport);
             
             response.setContentType("text/plain");            
             response.setStatus(HttpServletResponse.SC_ACCEPTED);  // 202
@@ -204,8 +204,8 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         System.out.println("WampLongPollingServlet: timeout (" + req.getPathInfo() + ")");
         
         Long transport = getWampTransport(req);
-        Long wampSessionId = wampSessionIdByTransport.get(transport);
-        WampSocket socket = application.getWampSocket(wampSessionId);
+        Long socketId = socketIdByTransport.get(transport);
+        WampSocket socket = application.getWampSocket(socketId);
         WampProtocol.sendHeartbeatMessage(socket, "**** long-poll timeout *****");
         Object msg = messageQueues.get(transport).poll();
         if(msg != null) sendMsg(transport, msg);

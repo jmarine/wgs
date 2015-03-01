@@ -392,8 +392,8 @@ public class WampClient
                 config.getUserProperties().put(WampEndpointConfig.WAMP_ENDPOINTCONFIG_PROPERTY_NAME, 
                                                new WampEndpointConfig(WampEndpoint.class, wampApp));
                 Session session = ContainerProvider.getWebSocketContainer().connectToServer(WampEndpoint.class, config, uri);
-                Long sessionId = (Long)session.getUserProperties().get("wampSessionId");
-                clientSocket = wampApp.getWampSocket(sessionId);
+                Long socketId = (Long)session.getUserProperties().get("_socketId");
+                clientSocket = wampApp.getWampSocket(socketId);
                 break;
 
             case "tcp":

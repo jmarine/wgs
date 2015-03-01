@@ -34,6 +34,7 @@ public abstract class WampSocket
     protected Principal principal;
     protected boolean connected;
     
+    private Long    socketId;
     private Long    sessionId;
     private Map<String,String> prefixes;
     private Map<Long,WampSubscription> subscriptions;
@@ -63,9 +64,9 @@ public abstract class WampSocket
         this.connected = true;
         this.nextRequestId = new AtomicLong(0L);
         
-        sessionId   = WampProtocol.newGlobalScopeId();
+        socketId = WampProtocol.newGlobalScopeId();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
-        prefixes    = new HashMap<String,String>();
+        prefixes = new HashMap<String,String>();
         invocationAsyncCallbacks = new ConcurrentHashMap<Long,Deferred<WampResult, WampException, WampResult>>();
         callControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         invocationControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
@@ -117,8 +118,16 @@ public abstract class WampSocket
      * Get the session ID
      * @return the user name
      */
+    public Long getSocketId() {
+        return socketId;
+    }    
+    
+    /**
+     * Get the session ID
+     * @return the user name
+     */
     public Long getSessionId() {
-        return sessionId;
+        return (sessionId != null) ? sessionId : socketId;
     }
     
     public void setSessionId(Long id) {

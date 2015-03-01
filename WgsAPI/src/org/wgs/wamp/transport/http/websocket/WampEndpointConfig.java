@@ -60,7 +60,7 @@ public class WampEndpointConfig
         WampSocket clientSocket = new WampWebsocket(session);
         clientSocket.init();
         session.setMaxIdleTimeout(0L);  // forever (but fails on Jetty)
-        session.getUserProperties().put("wampSessionId" , clientSocket.getSessionId());
+        session.getUserProperties().put("_socketId" , clientSocket.getSocketId());
         
         addWampMessageHandlers(application, session, clientSocket);
         
@@ -158,8 +158,8 @@ public class WampEndpointConfig
     
     public static void removeWampMessageHandlers(WampApplication application, Session session, CloseReason reason) 
     {
-        Long wampSessionId = (Long)session.getUserProperties().get("wampSessionId");
-        WampSocket clientSocket = application.getWampSocket(wampSessionId);
+        Long socketId = (Long)session.getUserProperties().get("_socketId");
+        WampSocket clientSocket = application.getWampSocket(socketId);
         if(clientSocket != null) {
             application.onWampClose(clientSocket, reason);
         }
