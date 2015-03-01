@@ -4,19 +4,24 @@ import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampObject;
 import org.wgs.wamp.type.WampList;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.Iterator;
+import java.util.Map;
+import org.msgpack.core.MessageFormat;
 
-import org.msgpack.MessagePack;
-import org.msgpack.packer.BufferPacker;
-import org.msgpack.type.ArrayValue;
-import org.msgpack.type.BooleanValue;
-import org.msgpack.type.FloatValue;
-import org.msgpack.type.IntegerValue;
-import org.msgpack.type.MapValue;
-import org.msgpack.type.NilValue;
-import org.msgpack.type.RawValue;
-import org.msgpack.type.Value;
-import org.msgpack.unpacker.Unpacker;
+import org.msgpack.core.MessagePack;
+import org.msgpack.core.MessagePacker;
+import org.msgpack.core.MessageUnpacker;
+import org.msgpack.value.ArrayValue;
+import org.msgpack.value.BooleanValue;
+import org.msgpack.value.FloatValue;
+import org.msgpack.value.IntegerValue;
+import org.msgpack.value.MapValue;
+import org.msgpack.value.NilValue;
+import org.msgpack.value.RawValue;
+import org.msgpack.value.Value;
+import org.msgpack.value.holder.ValueHolder;
+
 
 
 public class WampSerializerMsgPack extends WampObject implements WampSerializer
@@ -24,40 +29,42 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
     @Override
     public Object serialize(WampObject obj) throws Exception 
     {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         MessagePack msgpack = new MessagePack();
-        BufferPacker packer = msgpack.createBufferPacker();
+        MessagePacker packer = msgpack.newPacker(baos);
         write(packer, obj);
-        byte[] bytes = packer.toByteArray();
+        packer.close();
+        byte[] bytes = baos.toByteArray();
         return bytes;
     }
 
-    private void write(BufferPacker packer, Object obj) throws Exception
+    private void write(MessagePacker packer, Object obj) throws Exception
     {
         if(obj == null) {
-            packer.writeNil();
+            packer.packNil();
         } else if(obj instanceof String) {
-            packer.write((String)obj);
+            packer.packString((String)obj);
         } else if(obj instanceof Boolean) {
-            packer.write((boolean)obj);
+            packer.packBoolean((boolean)obj);
         } else if(obj instanceof Long) {
-            packer.write((long)obj);
+            packer.packLong((long)obj);
         } else if(obj instanceof Double) {
-            packer.write((double)obj);
+            packer.packDouble((double)obj);
         } else if(obj instanceof WampDict) {                    
             WampDict dict = (WampDict)obj;
-            packer.writeMapBegin(dict.size());
+            packer.packMapHeader(dict.size());
             for(String key : dict.keySet()) {
-                packer.write(key);
+                packer.packString(key);
                 write(packer, dict.get(key));
             }
-            packer.writeMapEnd();
+            //packer.packMapEnd();
         } else if(obj instanceof WampList) {
             WampList arr = (WampList)obj;
-            packer.writeArrayBegin(arr.size());
+            packer.packArrayHeader(arr.size());
             for(int i = 0; i < arr.size(); i++) {
                 write(packer, arr.get(i));
             }
-            packer.writeArrayEnd();
+            //packer.packArrayEnd();
         }
     }    
     
@@ -66,9 +73,11 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
     public WampObject deserialize(Object obj, int offset, int len) throws Exception 
     {
         MessagePack msgpack = new MessagePack();
-        Unpacker unpacker = msgpack.createUnpacker(new ByteArrayInputStream((byte[])obj, offset, len));
-        unpacker.resetReadByteCount();
-        Value val = unpacker.readValue();
+        MessageUnpacker unpacker = msgpack.newUnpacker(new ByteArrayInputStream((byte[])obj, offset, len));
+        //unpacker.resetReadByteCount();
+        ValueHolder vh = new ValueHolder();
+        MessageFormat fmt = unpacker.unpackValue(vh);
+        Value val = vh.get();
         return (WampObject)castToWampObject(val);
     }
     
@@ -78,15 +87,15 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
         if(obj instanceof NilValue) {
             retval = null;
         } else if(obj instanceof BooleanValue) {
-            retval = new Boolean(((BooleanValue)obj).getBoolean());
+            retval = new Boolean(((BooleanValue)obj).toBoolean());
         } else if(obj instanceof IntegerValue) {
-            retval = new Long(((IntegerValue)obj).getLong());
+            retval = new Long(((IntegerValue)obj).toLong());
         } else if(obj instanceof FloatValue) {
-            retval = new Double(((FloatValue)obj).getDouble());
+            retval = new Double(((FloatValue)obj).toDouble());
         } else if(obj instanceof String) {
             retval = (String)obj;
         } else if(obj instanceof RawValue) {
-            retval = ((RawValue)obj).getString();
+            retval = ((RawValue)obj).toString();
         } else if(obj instanceof ArrayValue) {
             retval = createWampList((ArrayValue)obj);
         } else if(obj instanceof MapValue) {
@@ -109,10 +118,11 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
     private WampDict createWampDict(MapValue node)
     {
         WampDict dict = new WampDict();
-        Iterator<Value> iter = node.keySet().iterator();
+        Map<Value,Value> map = node.toMap();
+        Iterator<Value> iter = map.keySet().iterator();
         while(iter.hasNext()) {
             Value key = iter.next();
-            dict.put(castToWampObject(key).toString(), castToWampObject(node.get(key)));
+            dict.put(castToWampObject(key).toString(), castToWampObject(map.get(key)));
         }
         return dict;
     }          

@@ -1,23 +1,6 @@
 package org.wgs.wamp.encoding;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
-import java.util.logging.Level;
-
-import org.msgpack.MessagePack;
-import org.msgpack.packer.BufferPacker;
-import org.msgpack.type.ArrayValue;
-import org.msgpack.type.BooleanValue;
-import org.msgpack.type.FloatValue;
-import org.msgpack.type.IntegerValue;
-import org.msgpack.type.MapValue;
-import org.msgpack.type.NilValue;
-import org.msgpack.type.RawValue;
-import org.msgpack.type.Value;
-import org.msgpack.unpacker.Unpacker;
-import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampObject;
 

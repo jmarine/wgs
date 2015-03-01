@@ -1,17 +1,14 @@
 package org.wgs.wamp.client.test;
 
-import java.security.MessageDigest;
 import org.jdeferred.DoneCallback;
 import org.jdeferred.FailCallback;
 import org.jdeferred.ProgressCallback;
-import org.wgs.util.HexUtils;
 import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRPC;
-import org.wgs.wamp.annotation.WampSubscribed;
 import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallController;
@@ -26,7 +23,7 @@ import org.wgs.wamp.type.WampMatchType;
 @WampModuleName("com.myapp")
 public class WampClientTest extends WampModule implements Runnable
 {
-    private static String  url = "ws://localhost:8080/wgs"; 
+    private static String  url = "ws://localhost:8080/wgs";
     private static String  realm = "localhost";
     private static String  user = null;
     private static String  password = null;
