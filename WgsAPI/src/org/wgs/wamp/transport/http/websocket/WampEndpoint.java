@@ -1,9 +1,3 @@
-/**
- * WebSocket Message Application Protocol implementation
- *
- * @author Jordi Marine Fort 
- */
-
 package org.wgs.wamp.transport.http.websocket;
 
 import java.util.Map;

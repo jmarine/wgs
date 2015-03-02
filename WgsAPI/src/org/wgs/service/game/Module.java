@@ -1,5 +1,5 @@
 /**
- * WebSocket Game services implementation
+ * Web Game services implementation
  *
  * @author Jordi Marine Fort 
  */
