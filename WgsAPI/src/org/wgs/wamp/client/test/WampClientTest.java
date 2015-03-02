@@ -112,9 +112,9 @@ public class WampClientTest extends WampModule implements Runnable
 
     
     @Override
-    public void onSessionEstablished(WampSocket clientSocket, WampDict details) 
+    public void onWampSessionEstablished(WampSocket clientSocket, WampDict details) 
     { 
-        super.onSessionEstablished(clientSocket, details);
+        super.onWampSessionEstablished(clientSocket, details);
         System.out.println("Hello " + details.getText("authid"));        
     }
     
@@ -181,6 +181,4 @@ public class WampClientTest extends WampModule implements Runnable
         }
     }
 
-    
-    
 }

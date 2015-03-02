@@ -115,26 +115,30 @@ public abstract class WampSocket
     }
     
     /**
-     * Get the session ID
-     * @return the user name
+     * Get the socket ID
+     * @return the socket ID
      */
     public Long getSocketId() {
         return socketId;
     }    
     
     /**
-     * Get the session ID
-     * @return the user name
+     * Get the WAMP session ID
+     * @return the WAMP session ID, or null if the session has not been welcomed
      */
-    public Long getSessionId() {
-        return (sessionId != null) ? sessionId : socketId;
+    public Long getWampSessionId() {
+        return sessionId;
     }
     
-    public void setSessionId(Long id) {
+    public void setWampSessionId(Long id) {
         this.sessionId = id;
     }
     
-    
+    /**
+     * Get a new request ID (session scope).
+     * 
+     * @return a request ID.
+     */
     public synchronized long getNextRequestId()
     {
         return nextRequestId.incrementAndGet();
@@ -478,14 +482,14 @@ public abstract class WampSocket
     {
         logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1},{2}", new Object[]{topic.getTopicName(),payload,payloadKw});
         Set<Long> excludedSet = new HashSet<Long>();
-        if(excludeMe) excludedSet.add(this.getSessionId());
+        if(excludeMe) excludedSet.add(this.getWampSessionId());
         WampPublishOptions options = new WampPublishOptions();
         options.setExcludeMe(excludeMe);
         options.setExcluded(excludedSet);
         options.setDiscloseMe(identifyMe);
 
         WampBroker.publishEvent(this.getRealm(), WampProtocol.newGlobalScopeId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), 
-                (options.hasDiscloseMe()? this.getSessionId() : null),
+                (options.hasDiscloseMe()? this.getWampSessionId() : null),
                 (options.hasDiscloseMe()? this.getAuthId() : null),
                 (options.hasDiscloseMe()? this.getAuthProvider() : null),
                 (options.hasDiscloseMe()? this.getAuthRole() : null)

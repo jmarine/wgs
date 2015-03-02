@@ -117,7 +117,7 @@ public class WampClient
                         
                     case WampProtocol.WELCOME:
                         WampDict welcomeDetails = (request.size() > 2) ? (WampDict)request.get(2) : null;
-                        clientSocket.setSessionId(request.getLong(1));
+                        clientSocket.setWampSessionId(request.getLong(1));
                         onWampWelcome(clientSocket, welcomeDetails);
                         removePendingMessage(null);
                         break;     
@@ -303,7 +303,7 @@ public class WampClient
                 
                 for(WampModule module : wampApp.getWampModules()) {
                     try { 
-                        module.onSessionEstablished(clientSocket, details); 
+                        module.onWampSessionEstablished(clientSocket, details); 
                     } catch(Exception ex) {
                         logger.log(Level.SEVERE, "Error with wamp challenge:", ex);
                     }
@@ -393,7 +393,7 @@ public class WampClient
                                                new WampEndpointConfig(WampEndpoint.class, wampApp));
                 Session session = ContainerProvider.getWebSocketContainer().connectToServer(WampEndpoint.class, config, uri);
                 Long socketId = (Long)session.getUserProperties().get("_socketId");
-                clientSocket = wampApp.getWampSocket(socketId);
+                clientSocket = wampApp.getSocketById(socketId);
                 break;
 
             case "tcp":
@@ -414,11 +414,14 @@ public class WampClient
 
     public void goodbye(String reason)
     {
-        for(WampModule module : wampApp.getWampModules()) {
-            module.onSessionEnd(clientSocket);
-        }
+        if(clientSocket.getWampSessionId() != null) {
+            for(WampModule module : wampApp.getWampModules()) {
+                module.onSessionEnd(clientSocket); 
+            }
 
-        WampProtocol.sendGoodbyeMessage(clientSocket, reason, null);
+            WampProtocol.sendGoodbyeMessage(clientSocket, reason, null);
+            clientSocket.setWampSessionId(null);
+        }
     }
     
     public void hello(String realm, String user, String password, boolean digestPasswordMD5) throws Exception
@@ -707,11 +710,7 @@ public class WampClient
     }
 
     public void close() throws Exception {
-        
-        for(WampModule module : wampApp.getWampModules()) {
-            module.onDisconnect(clientSocket);
-        }
-        
+        //goodbye(null);
         open = false;
         this.clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
     }

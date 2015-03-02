@@ -16,6 +16,8 @@ public class WampTopicConnectionFactory implements TopicConnectionFactory
     private boolean digestPasswordMD5;
     
     
+    public WampTopicConnectionFactory() { }
+    
     public WampTopicConnectionFactory(WampEncoding enc, String url, String realm, boolean digestPasswordMD5)
     {
         this.url = url;
@@ -23,27 +25,66 @@ public class WampTopicConnectionFactory implements TopicConnectionFactory
         this.realm = realm;
         this.digestPasswordMD5 = digestPasswordMD5;
     }
-
+    
+    
     public String getURL()
     {
         return url;
     }
+    
     
     public String getRealm()
     {
         return realm;
     }
     
+    
     public WampEncoding getWampEncoding()
     {
         return enc;
     }
     
+    
     public boolean getDigestPasswordMD5()
     {
         return digestPasswordMD5;
     }
+
+
+    public String getProperty(String propName)
+    {
+        switch(propName) {
+            case "url":
+                return this.url;
+            case "realm":
+                return this.realm;
+            case "digestPasswordMD5":
+                return String.valueOf(this.digestPasswordMD5);
+            case "enc":
+                return String.valueOf(this.enc);
+            default:
+                return null;
+        }
+    }
+
     
+    public void setProperty(String propName, String propValue)
+    {
+        switch(propName) {
+            case "url":
+                this.url = propValue;
+                break;
+            case "realm":
+                this.realm = propValue;
+                break;
+            case "digestPasswordMD5":
+                this.digestPasswordMD5 = Boolean.parseBoolean(propValue.toLowerCase());
+                break;
+            case "enc":
+                this.enc = WampEncoding.valueOf(propValue);
+                break;
+        }
+    }
     
     
     @Override

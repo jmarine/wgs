@@ -80,18 +80,21 @@ public class WampModule
     }
     
     
-    public void onConnect(WampSocket clientSocket) throws Exception { }
+    public void onChallenge(WampSocket clientSocket, String authMethod, WampDict details) throws Exception 
+    { 
+    }
+
     
-    public void onChallenge(WampSocket clientSocket, String authMethod, WampDict details) throws Exception { }
-    
-    public void onSessionEstablished(WampSocket clientSocket, WampDict details) { 
+    public void onWampSessionEstablished(WampSocket clientSocket, WampDict details) 
+    { 
         this.eventListeners = new HashMap<Long,Collection<Method>>();        
     }
     
-    public void onSessionEnd(WampSocket clientSocket) { 
+    
+    public void onSessionEnd(WampSocket clientSocket) 
+    { 
     }
     
-    public void onDisconnect(WampSocket clientSocket) throws Exception { }
 
     @SuppressWarnings("unchecked")
     public Promise<WampResult, WampException, WampResult> onCall(final WampCallController task, final WampSocket clientSocket, String methodName, final WampList args, final WampDict argsKw, final WampCallOptions options) throws Exception 
@@ -103,7 +106,7 @@ public class WampModule
         } else {  
             
             final WampRealm realm = WampRealm.getRealm(clientSocket.getRealm());
-            final List<WampRemoteMethod> remoteMethods = realm.getRemoteRPCs(clientSocket.getRealm(), methodName, options, clientSocket.getSessionId());
+            final List<WampRemoteMethod> remoteMethods = realm.getRemoteRPCs(clientSocket.getRealm(), methodName, options, clientSocket.getWampSessionId());
             
             if(remoteMethods.isEmpty()) {
                 System.out.println("No remote method: " + methodName);
@@ -130,7 +133,7 @@ public class WampModule
                                 deferred.notify(wampResult);
                             }
 
-                            task.removeRemoteInvocation(remoteMethod.getRemotePeer().getSessionId(), wampResult.getRequestId());
+                            task.removeRemoteInvocation(remoteMethod.getRemotePeer().getWampSessionId(), wampResult.getRequestId());
                         }
                     });
 
@@ -179,7 +182,7 @@ public class WampModule
         if(options != null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_ADDED)) {
             if(options.hasEventsEnabled()) {
                 WampDict metaEvent = new WampDict();
-                metaEvent.put("session", clientSocket.getSessionId());
+                metaEvent.put("session", clientSocket.getWampSessionId());
                 WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
             }
         }
@@ -187,15 +190,15 @@ public class WampModule
 
     public void onUnsubscribe(WampSocket clientSocket, Long subscriptionId, WampTopic topic) throws Exception { 
         WampSubscription subscription = topic.getSubscription(subscriptionId);
-        if(subscription.getSocket(clientSocket.getSessionId()) != null) {
+        if(subscription.getSocket(clientSocket.getWampSessionId()) != null) {
             WampSubscriptionOptions options = subscription.getOptions();
             if(options!=null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_REMOVED)) {
                 WampDict metaEvent = new WampDict();
-                metaEvent.put("session", clientSocket.getSessionId());                
+                metaEvent.put("session", clientSocket.getWampSessionId());                
                 WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
             }
 
-            subscription.removeSocket(clientSocket.getSessionId());
+            subscription.removeSocket(clientSocket.getWampSessionId());
             if(subscription.getSocketsCount() == 0) {
                 topic.removeSubscription(subscription.getId());
                 if(topic.getSubscriptionCount() == 0) {
@@ -215,7 +218,7 @@ public class WampModule
         Long calleeSessionId = options.getLong("_cluster_peer_sid");
 
         WampRemoteMethod remoteMethod = new WampRemoteMethod(registration.getId(), methodName, clientSocket, calleeSessionId, matchType, options);
-        registration.addRemoteMethod(clientSocket.getSessionId(), remoteMethod);
+        registration.addRemoteMethod(clientSocket.getWampSessionId(), remoteMethod);
         
         clientSocket.addRpcRegistration(registration);
         
@@ -246,7 +249,7 @@ public class WampModule
                 WampDict interruptDetails = new WampDict();
                 for(Long invocationId : clientSocket.getInvocationIDs()) {  // critical section
                     WampCallController task = clientSocket.removeInvocationController(invocationId);
-                    task.removeRemoteInvocation(clientSocket.getSessionId(), invocationId);
+                    task.removeRemoteInvocation(clientSocket.getWampSessionId(), invocationId);
                     try { 
                         WampProtocol.sendInterruptMessage(clientSocket, invocationId, interruptDetails); 
                     } catch(Exception ex) { 
@@ -269,7 +272,7 @@ public class WampModule
             if(options.hasExcludeMe()) {
                 Set<Long> excludedSet = options.getExcluded();
                 if(excludedSet == null) excludedSet = new HashSet<Long>();
-                excludedSet.add(clientSocket.getSessionId());
+                excludedSet.add(clientSocket.getWampSessionId());
                 options.setExcluded(excludedSet);
             }
 
@@ -278,7 +281,7 @@ public class WampModule
             }
         
             WampBroker.publishEvent(clientSocket.getRealm(), publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), 
-                    (options.hasDiscloseMe()? clientSocket.getSessionId() : null),
+                    (options.hasDiscloseMe()? clientSocket.getWampSessionId() : null),
                     (options.hasDiscloseMe()? clientSocket.getAuthId() : null),
                     (options.hasDiscloseMe()? clientSocket.getAuthProvider(): null),
                     (options.hasDiscloseMe()? clientSocket.getAuthRole(): null)

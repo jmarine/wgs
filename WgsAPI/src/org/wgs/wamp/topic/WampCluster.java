@@ -62,7 +62,7 @@ public class WampCluster
     {
         WampDict options = new WampDict();
         options.put("_cluster_peer_realm", realm.getRealmName());            
-        options.put("_cluster_peer_sid", remoteMethod.getRemotePeer().getSessionId());
+        options.put("_cluster_peer_sid", remoteMethod.getRemotePeer().getWampSessionId());
         options.put("match", registration.getMatchType().toString());
         client.registerRPC(options, remoteMethod.getProcedureURI(), remoteMethod);
     }

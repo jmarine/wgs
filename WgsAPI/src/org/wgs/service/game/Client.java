@@ -15,10 +15,15 @@ public class Client
     private User user;
     private WampSocket socket;
     private Map<String,Group> groups = new ConcurrentHashMap<String,Group>();
+    
+    public Client(WampSocket socket)
+    {
+        setSocket(socket);
+    }
 
 
     public Long getSessionId() {
-        return socket.getSessionId();
+        return socket.getWampSessionId();
     }
     
     /**

@@ -70,7 +70,7 @@ public class WampRemoteMethod extends WampMethod
         });
         
         final Long invocationId = WampProtocol.newSessionScopeId(remotePeer);
-        task.addRemoteInvocation(remotePeer.getSessionId(), invocationId, deferred);
+        task.addRemoteInvocation(remotePeer.getWampSessionId(), invocationId, deferred);
         remotePeer.addInvocationController(invocationId, task);
         remotePeer.addInvocationAsyncCallback(invocationId, deferred);
 
@@ -84,14 +84,14 @@ public class WampRemoteMethod extends WampMethod
                 invocationOptions.put("authprovider", callOptions.getAuthProvider());
                 invocationOptions.put("authrole", callOptions.getAuthRole());
             } else {
-                invocationOptions.put("caller", clientSocket.getSessionId());
+                invocationOptions.put("caller", clientSocket.getWampSessionId());
                 invocationOptions.put("authid", clientSocket.getAuthId());
                 invocationOptions.put("authprovider", clientSocket.getAuthProvider());
                 invocationOptions.put("authrole", clientSocket.getAuthRole());
             }
         }
 
-        if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "CALL " + task.getCallID() + ": SENDING INVOCATION ID: " + invocationId + " (" + clientSocket.getSessionId() + " --> " + remotePeer.getSessionId() + ")");
+        if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "CALL " + task.getCallID() + ": SENDING INVOCATION ID: " + invocationId + " (" + clientSocket.getWampSessionId() + " --> " + remotePeer.getWampSessionId() + ")");
         try {
             task.decrementPendingInvocationCount();
             WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
@@ -106,7 +106,7 @@ public class WampRemoteMethod extends WampMethod
 
             if(!remotePeer.isOpen()) throw new Exception();
         } catch(Exception ex) {
-            task.removeRemoteInvocation(remotePeer.getSessionId(), invocationId);
+            task.removeRemoteInvocation(remotePeer.getWampSessionId(), invocationId);
         }
 
         return promise;

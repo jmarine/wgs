@@ -20,8 +20,8 @@ public class WampClientCallerTest extends WampModule implements Runnable
 {
     private static String  url = "ws://localhost:8082/wgs"; 
     private static String  realm = "localhost";
-    private static String  user = null;
-    private static String  password = null;
+    private static String  user = "magda";
+    private static String  password ="magda";
     private static boolean digestPasswordMD5 = true;
 
     
@@ -64,7 +64,7 @@ public class WampClientCallerTest extends WampModule implements Runnable
 
     
     @Override
-    public void onSessionEstablished(WampSocket clientSocket, WampDict details) 
+    public void onWampSessionEstablished(WampSocket clientSocket, WampDict details) 
     { 
         System.out.println("Hello " + details.getText("authid"));
         // doWork(10);

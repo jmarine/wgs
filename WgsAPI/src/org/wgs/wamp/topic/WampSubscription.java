@@ -53,11 +53,11 @@ public class WampSubscription
             sessionIdsByRealm.put(realm, realmSessions);
         }
         
-        RefCount<WampSocket> ref = sockets.get(socket.getSessionId());
+        RefCount<WampSocket> ref = sockets.get(socket.getWampSessionId());
         if(ref == null) {
             ref = new RefCount<WampSocket>(socket, 1);
-            sockets.put(socket.getSessionId(), ref);
-            realmSessions.add(socket.getSessionId());
+            sockets.put(socket.getWampSessionId(), ref);
+            realmSessions.add(socket.getWampSessionId());
             return true;
         } else {
             ref.refCount(+1);

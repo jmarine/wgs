@@ -8,9 +8,8 @@ import javax.jms.TopicConnectionFactory;
 import javax.jms.TopicPublisher;
 import javax.jms.TopicSession;
 import javax.jms.TopicSubscriber;
+
 import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.topic.JmsServices;
-import static org.wgs.wamp.topic.JmsServices.normalizeTopicName;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 
@@ -28,9 +27,7 @@ public class WampJmsTests
         String topicName = "myapp";
         
         TopicConnectionFactory tcf = new WampTopicConnectionFactory(WampEncoding.MsgPack, url, realm, digestMD5);
-        WampTopicConnection connection = (WampTopicConnection)tcf.createTopicConnection(user, password);
-
-        //connection.setAuthDetails(null);
+        TopicConnection connection = tcf.createTopicConnection(user, password);
 
         TopicSession session = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
         Topic jmsTopic = session.createTopic(topicName);

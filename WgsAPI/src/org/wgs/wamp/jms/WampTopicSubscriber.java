@@ -98,7 +98,7 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
     {
         if( messageListener != null
                 && subscriptionId.equals(this.subscriptionId)
-                && !(noLocal && details.getLong("publisher").equals(((WampTopicConnection)session.getTopicConnection()).getWampClient().getWampSocket().getSessionId())) ) {
+                && !(noLocal && details.getLong("publisher").equals(((WampTopicConnection)session.getTopicConnection()).getWampClient().getWampSocket().getWampSessionId())) ) {
             WampMessage msg = new WampMessage(publicationId, details, payload, payloadKw);
             messageListener.onMessage(msg);
         }

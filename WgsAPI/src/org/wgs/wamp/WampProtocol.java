@@ -93,7 +93,7 @@ public class WampProtocol
         // Send WELCOME message to client:
         WampList response = new WampList();
         response.add(WELCOME);
-        response.add(clientSocket.getSessionId());
+        response.add(clientSocket.getWampSessionId());
 
         WampDict brokerFeatures = new WampDict();
         brokerFeatures.put("subscriber_blackwhite_listing", true);

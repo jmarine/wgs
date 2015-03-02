@@ -159,7 +159,7 @@ public class WampEndpointConfig
     public static void removeWampMessageHandlers(WampApplication application, Session session, CloseReason reason) 
     {
         Long socketId = (Long)session.getUserProperties().get("_socketId");
-        WampSocket clientSocket = application.getWampSocket(socketId);
+        WampSocket clientSocket = application.getSocketById(socketId);
         if(clientSocket != null) {
             application.onWampClose(clientSocket, reason);
         }

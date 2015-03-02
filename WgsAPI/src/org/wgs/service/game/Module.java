@@ -100,34 +100,26 @@ public class Module extends WampModule
 
 
     @Override
-    public void onConnect(WampSocket socket) throws Exception 
+    public void onWampSessionEstablished(WampSocket socket, WampDict details) 
     {
-        super.onConnect(socket);
-        Client client = new Client();
-        client.setSocket(socket);
-        socket.setState(WampConnectionState.ANONYMOUS);
-        if(socket.getUserPrincipal() != null) {
-            User usr = UserRepository.findUserByLoginAndDomain(socket.getUserPrincipal().getName(), socket.getRealm());
-            wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
-        }
-        clients.put(socket.getSessionId(), client);
+        super.onWampSessionEstablished(socket, details);
+        Client client = new Client(socket);
+        clients.put(socket.getWampSessionId(), client);
     }
     
     @Override
-    public void onDisconnect(WampSocket socket) throws Exception 
+    public void onSessionEnd(WampSocket socket) 
     {
-        Client client = clients.get(socket.getSessionId());
+        Client client = clients.get(socket.getWampSessionId());
         if(client != null) {
             for(String gid : client.getGroups().keySet()) {
-                exitGroup(socket, gid);
+                try { exitGroup(socket, gid); }
+                catch(Exception ex) { }
             }
-            clients.remove(socket.getSessionId());
+            clients.remove(socket.getWampSessionId());
         }
-        super.onDisconnect(socket);
+        super.onSessionEnd(socket);
     }
-    
-
-    
 
     
     @WampRPC(name="register")
@@ -135,7 +127,7 @@ public class Module extends WampModule
     {
         boolean user_valid = false;
         
-        Client client = clients.get(socket.getSessionId());
+        Client client = clients.get(socket.getWampSessionId());
 
         String login = data.getText("user");
         User usr = UserRepository.findUserByLoginAndDomain(login, socket.getRealm());
@@ -165,14 +157,14 @@ public class Module extends WampModule
     public WampDict getUserInfo(WampSocket socket, WampDict data) throws Exception
     {
         boolean user_valid = false;
-        Client client = clients.get(socket.getSessionId());
+        Client client = clients.get(socket.getWampSessionId());
         
         User usr = client.getUser();
         if(usr == null) {
             usr = new User();
             usr.setUid(UUID.randomUUID().toString());
             usr.setDomain(socket.getRealm());
-            usr.setLogin("#anonymous-" + socket.getSessionId());
+            usr.setLogin("#anonymous-" + socket.getWampSessionId());
             usr.setName("Anonymous");
             usr.setPicture("images/anonymous.png");
         }
@@ -218,7 +210,7 @@ public class Module extends WampModule
         // TODO: check it doesn't exists
 
         boolean valid = false;
-        Client client = clients.get(socket.getSessionId());
+        Client client = clients.get(socket.getWampSessionId());
         if(socket.getState() != WampConnectionState.AUTHENTICATED) {
             System.err.println("The user hasn't logged in");
             throw new WampException(null, WGS_MODULE_NAME + ".unknown_user", null, null);
@@ -340,7 +332,7 @@ public class Module extends WampModule
         EntityManager manager = Storage.getEntityManager();
         manager.getTransaction().begin();
         
-        Client client = clients.get(socket.getSessionId());
+        Client client = clients.get(socket.getWampSessionId());
         
         if(gid != null) {
                 g = groups.get(gid);
@@ -694,7 +686,7 @@ public class Module extends WampModule
 
         WampDict response = new WampDict();
         response.put("cmd", "group_updated");
-        response.put("sid", socket.getSessionId());
+        response.put("sid", socket.getWampSessionId());
         
         
         Group g = groups.get(gid);
@@ -746,7 +738,7 @@ public class Module extends WampModule
                 if(g.getState() == GroupState.STARTED && node.has("ready") && node.getBoolean("ready") ) {
                     for(int slot = 0; slot < g.getNumSlots(); slot++) {
                         Member member = g.getMember(slot);
-                        if(member != null && member.getClient() != null && socket.getSessionId().equals(member.getClient().getSessionId())) {
+                        if(member != null && member.getClient() != null && socket.getWampSessionId().equals(member.getClient().getSessionId())) {
                             member.setState(MemberState.READY);
                             excludeMe = false;
                         }
@@ -807,7 +799,7 @@ public class Module extends WampModule
 
             WampDict response = new WampDict();
             response.put("cmd", "group_updated");
-            response.put("sid", socket.getSessionId());
+            response.put("sid", socket.getWampSessionId());
 
             Group g = groups.get(gid);
             if(g != null) synchronized(g) {
@@ -895,7 +887,7 @@ public class Module extends WampModule
                     
                 } else {
                     // UPDATE CLIENT STATE ("joined" <--> "ready")
-                    Long sid = socket.getSessionId();
+                    Long sid = socket.getWampSessionId();
                     WampList membersArray = new WampList();
                     String state = data.getText("state");
                     if(state != null) {
@@ -951,7 +943,7 @@ public class Module extends WampModule
                 Member member = g.getMember(slot);
                 if(member != null) {
                     Client c = member.getClient();
-                    if( (c != null) && (socket.getSessionId().equals(c.getSessionId())) ) {
+                    if( (c != null) && (socket.getWampSessionId().equals(c.getSessionId())) ) {
                         team = slot;
                         break;
                     }
@@ -986,7 +978,7 @@ public class Module extends WampModule
     @WampRPC(name="exit_group")
     public WampDict exitGroup(WampSocket socket, String gid) throws Exception
     {
-            Client client = clients.get(socket.getSessionId());
+            Client client = clients.get(socket.getWampSessionId());
             
             WampDict response = new WampDict();
             response.put("cmd", "user_detached");
@@ -1000,7 +992,7 @@ public class Module extends WampModule
                 logger.log(Level.FINE, "open_group: group found: " + gid);
 
                 response.put("valid", true);
-                response.put("sid", socket.getSessionId());
+                response.put("sid", socket.getWampSessionId());
 
                 int num_members = 0;
                 WampList membersArray = new WampList();
@@ -1036,7 +1028,7 @@ public class Module extends WampModule
 
                 WampTopic topic = WampBroker.getTopic(topicName);
                 for(WampSubscription subscription : topic.getSubscriptions()) {
-                    subscription.removeSocket(socket.getSessionId());
+                    subscription.removeSocket(socket.getWampSessionId());
                 }
                 
                 broadcastAppEventInfo(socket, g, "group_updated");                
@@ -1124,7 +1116,7 @@ public class Module extends WampModule
         event.put("members", getMembers(g,0));
 
         HashSet<Long> eligible = new HashSet<Long>();
-        eligible.add(socket.getSessionId());
+        eligible.add(socket.getWampSessionId());
         for(Member m : g.getMembers()) {
             if(m != null && m.getUser() != null) {
                 Set<Long> sessions = wampApp.getSessionsByUser(m.getUser());
@@ -1149,7 +1141,7 @@ public class Module extends WampModule
     @WampRPC(name = "list_groups")
     public WampDict listGroups(WampSocket socket, String appId, GroupState state, GroupFilter.Scope scope) throws Exception
     {
-        Client client = clients.get(socket.getSessionId());
+        Client client = clients.get(socket.getWampSessionId());
         GroupFilter filter = new GroupFilter(appId, state, scope, client.getUser());
                 
         WampList groupsArray = new WampList();

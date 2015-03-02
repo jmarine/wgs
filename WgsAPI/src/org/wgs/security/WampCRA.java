@@ -52,7 +52,7 @@ public class WampCRA
         info.put("authprovider", socket.getAuthProvider());
         info.put("nonce", UUID.randomUUID().toString());
         info.put("timestamp", sdf.format(new Date()));
-        info.put("session", socket.getSessionId());
+        info.put("session", socket.getSocketId());
         
         String infoser = WampEncoding.JSON.getSerializer().serialize(info).toString();
         String authSecret = getAuthSecret(usr);

@@ -85,7 +85,7 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         actx.addListener(this);
         
   
-        WampSocket socket = application.getWampSocket(socketId);
+        WampSocket socket = application.getSocketById(socketId);
         if(path.endsWith("/open")) {
             LinkedBlockingQueue<Object> queue = new LinkedBlockingQueue<Object>();
             socket = new WampLongPollingSocket(application, request, queue);
@@ -205,7 +205,7 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         
         Long transport = getWampTransport(req);
         Long socketId = socketIdByTransport.get(transport);
-        WampSocket socket = application.getWampSocket(socketId);
+        WampSocket socket = application.getSocketById(socketId);
         WampProtocol.sendHeartbeatMessage(socket, "**** long-poll timeout *****");
         Object msg = messageQueues.get(transport).poll();
         if(msg != null) sendMsg(transport, msg);

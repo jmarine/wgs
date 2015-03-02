@@ -74,7 +74,7 @@ public class WampClientAuthTest extends WampModule implements Runnable
 
     
     @Override
-    public void onSessionEstablished(WampSocket clientSocket, WampDict details) 
+    public void onWampSessionEstablished(WampSocket clientSocket, WampDict details) 
     { 
         System.out.println("Hello " + details.getText("authid"));
         // doWork(10);

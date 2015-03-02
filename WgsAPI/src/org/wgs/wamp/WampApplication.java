@@ -51,7 +51,7 @@ public class WampApplication
     
     private TreeMap<String,WampMethod> rpcsByName;
     private TreeMap<String,WampMethod> rpcsByPattern;
-    private Map<String,Set<Long>> sessionsByUserId = new ConcurrentHashMap<String,Set<Long>>();
+    private Map<String,Set<Long>> wampSessionsByUserId = new ConcurrentHashMap<String,Set<Long>>();
     private ConcurrentHashMap<Long, WampList> pendingClusterInvocations = new ConcurrentHashMap<Long, WampList>();
 
     
@@ -160,7 +160,7 @@ public class WampApplication
     }
 
 
-    public WampSocket getWampSocket(Long socketId)
+    public WampSocket getSocketById(Long socketId)
     {
         if(socketId == null) return null;
         else return sockets.get(socketId);
@@ -170,14 +170,6 @@ public class WampApplication
     public void onWampOpen(WampSocket clientSocket) 
     {
         sockets.put(clientSocket.getSocketId(), clientSocket);
-        
-        for(WampModule module : modules.values()) {
-            try { 
-                module.onConnect(clientSocket); 
-            } catch(Exception ex) {
-                logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
-            }
-        }                
     }
     
     
@@ -207,6 +199,7 @@ public class WampApplication
                 String authMethod = authMethods.getText(i);
                 if(authMethod.equalsIgnoreCase("anonymous")) {
                     clientSocket.setAuthMethod("anonymous");
+                    onUserLogon(clientSocket, null, WampConnectionState.ANONYMOUS);
                     onWampSessionEstablished(clientSocket, clientSocket.getHelloDetails());
                     break;
                 } else if(authMethod.equalsIgnoreCase("ticket")) {
@@ -307,12 +300,13 @@ public class WampApplication
     
     private void onWampSessionEstablished(WampSocket clientSocket, WampDict details) 
     {
+        clientSocket.setWampSessionId(clientSocket.getSocketId());        
         WampProtocol.sendWelcomeMessage(this, clientSocket);
 
         // Notify modules:
         for(WampModule module : modules.values()) {
             try { 
-                module.onSessionEstablished(clientSocket, details); 
+                module.onWampSessionEstablished(clientSocket, details); 
             } catch(Exception ex) {
                 logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
             }
@@ -453,19 +447,11 @@ public class WampApplication
             clientSocket.close(reason);
             clientSocket.setState(WampConnectionState.OFFLINE);
 
-            for(WampModule module : modules.values()) {
-                try { 
-                    module.onDisconnect(clientSocket); 
-                } catch(Exception ex) {
-                    logger.log(Level.SEVERE, "Error disconnecting client:", ex);
-                }
-            }
-            
             onWampSessionEnd(clientSocket);
 
             sockets.remove(clientSocket.getSocketId());
             
-            logger.log(Level.FINEST, "Socket disconnected: {0}", new Object[] {clientSocket.getSessionId()});
+            logger.log(Level.FINEST, "Socket disconnected: {0}", new Object[] {clientSocket.getSocketId()});
         }
 
     }
@@ -493,12 +479,12 @@ public class WampApplication
         socket.setUserPrincipal(user);
         socket.setState(state);
         if(user != null) {
-            Set<Long> sessions = sessionsByUserId.get(user.getUid());
+            Set<Long> sessions = wampSessionsByUserId.get(user.getUid());
             if(sessions == null) {
                 sessions = new HashSet<Long>();
-                sessionsByUserId.put(user.getUid(), sessions);
+                wampSessionsByUserId.put(user.getUid(), sessions);
             }
-            sessions.add(socket.getSessionId());
+            sessions.add(socket.getSocketId());
         }
     }
     
@@ -510,17 +496,17 @@ public class WampApplication
         
         if(principal != null && principal instanceof User) {
             User user = (User)principal;
-            Set<Long> sessions = sessionsByUserId.get(user.getUid());
-            sessions.remove(socket.getSessionId());
+            Set<Long> sessions = wampSessionsByUserId.get(user.getUid());
+            sessions.remove(socket.getSocketId());
             if(sessions.size() == 0) {
-                sessionsByUserId.remove(user);
+                wampSessionsByUserId.remove(user);
             }
         }
     }    
     
     public Set<Long> getSessionsByUser(User user)
     {
-        return sessionsByUserId.get(user.getUid());
+        return wampSessionsByUserId.get(user.getUid());
     }
     
     

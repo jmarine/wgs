@@ -63,7 +63,7 @@ public class WampCalleeRegistration
     
     public WampRemoteMethod removeRemoteMethod(WampSocket socket)
     {
-        return remoteMethods.remove(socket.getSessionId());
+        return remoteMethods.remove(socket.getWampSessionId());
     }
     
     public int getRemoteMethodsCount()
