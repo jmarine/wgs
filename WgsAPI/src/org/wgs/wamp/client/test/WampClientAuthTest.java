@@ -8,7 +8,7 @@ import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
-import org.wgs.wamp.annotation.WampSubscribed;
+import org.wgs.wamp.annotation.WampSubscribe;
 import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallOptions;
@@ -36,7 +36,7 @@ public class WampClientAuthTest extends WampModule implements Runnable
     }
 
     //@WampSubscribed(topic = "wamp.metaevent.session.on_join", match = WampMatchType.exact)
-    @WampSubscribed(topic = "test", match = WampMatchType.exact, metatopics = {"wamp.topic.on_subscribe","wamp.topic.on_unsubscribe"})
+    @WampSubscribe(topic = "test", match = WampMatchType.exact, metatopics = {"wamp.topic.on_subscribe","wamp.topic.on_unsubscribe"})
     public void onMyAppEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
         String topic = client.getTopicFromEventData(subscriptionId, details);

@@ -49,7 +49,7 @@ public class EmbeddedOpenMQ
         tcf.setProperty(ConnectionConfiguration.imqAddressList, serverConfig.getProperty("imq.tcf.imqAddressList", "mq://localhost/direct"));
 
         InitialContext jndi = new InitialContext();
-        jndi.bind("jms/CentralTopicConnectionFactory", tcf);
+        jndi.bind("jms/ClusterTopicConnectionFactory", tcf);
     }
     
 

@@ -193,22 +193,14 @@ public class WampBroker
             topicSubscriptionsByTopicURI.put(topicUriOrPattern, subscription);
             if(options.getMatchType() != WampMatchType.exact) topicPatterns.put(topicUriOrPattern, subscription);
         }        
-        
-        subscription.addSocket(clientSocket);
 
+        subscription.addSocket(clientSocket);
+            
         try {
             for(WampTopic topic : subscription.getTopics()) {
-                JmsServices.subscribeMessageListener(topic);
-            }
-        
-            for(WampTopic topic : subscription.getTopics()) {
-                try { 
-                    WampModule module = app.getWampModule(topic.getTopicName(), app.getDefaultWampModule());
-                    module.onSubscribe(clientSocket, topic, subscription, options);
-                } catch(Exception ex) {
-                    System.err.println("Error: " + ex.getClass().getName() + ": " + ex.getMessage());
-                    ex.printStackTrace();
-                }
+                if(topic.getSubscriptionCount() == 0) JmsServices.subscribeMessageListener(topic);
+                WampModule module = app.getWampModule(topic.getTopicName(), app.getDefaultWampModule());
+                module.onSubscribe(clientSocket, topic, subscription, options);
             }
 
             WampProtocol.sendSubscribedMessage(clientSocket, requestId, subscription.getId());

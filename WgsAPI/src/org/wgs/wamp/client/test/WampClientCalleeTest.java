@@ -3,7 +3,7 @@ package org.wgs.wamp.client.test;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
-import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.annotation.WampRegisterProcedure;
 import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallController;
@@ -31,7 +31,7 @@ public class WampClientCalleeTest extends WampModule implements Runnable
     }
     
     
-    @WampRPC(name = "add2")  // implicit RPC registration
+    @WampRegisterProcedure(name = "add2")  // implicit RPC registration
     public Long add2(Long p1, Long p2, WampCallOptions options, WampCallController task) 
     {
         System.out.println("Received invocation: " + task.getProcedureURI() + ": authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole() + ", caller session id=" + options.getCallerId() + ", invocation id=" + task.getCallID());

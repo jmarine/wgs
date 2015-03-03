@@ -44,7 +44,8 @@ public class JmsServices
     
     
     private static TopicConnection  reusableTopicConnection = null;
-    private static ConcurrentHashMap<WampTopic,TopicSubscriber> topicSubscriptions = new ConcurrentHashMap<WampTopic,TopicSubscriber>();
+    private static ConcurrentHashMap<WampTopic,TopicSubscriber> topicSubscribers = new ConcurrentHashMap<WampTopic,TopicSubscriber>();
+    private static ConcurrentHashMap<TopicConnection,TopicSession> topicSessionsByConnection = new ConcurrentHashMap<TopicConnection,TopicSession>();
    
     
     public static void start(Properties serverConfig) throws Exception
@@ -104,7 +105,7 @@ public class JmsServices
     {
         if(reusableTopicConnection == null) {
             InitialContext jndi = new InitialContext();
-            TopicConnectionFactory tcf = (TopicConnectionFactory)jndi.lookup("jms/CentralTopicConnectionFactory");
+            TopicConnectionFactory tcf = (TopicConnectionFactory)jndi.lookup("jms/ClusterTopicConnectionFactory");
             reusableTopicConnection = tcf.createTopicConnection();
         }
         return reusableTopicConnection;
@@ -135,28 +136,24 @@ public class JmsServices
     static void subscribeMessageListener(WampTopic wampTopic) throws Exception 
     {
         synchronized(wampTopic) {
-            if(isJmsBrokerAvailable() && !topicSubscriptions.containsKey(wampTopic)) {
+            if(isJmsBrokerAvailable() && !topicSubscribers.containsKey(wampTopic)) {
                 String topicName = wampTopic.getTopicName();
                 TopicConnection connection = getTopicConnectionFromPool();
 
-                TopicSession subSession = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
-                Topic jmsTopic = subSession.createTopic(normalizeTopicName(topicName));
-
-                String selector = "";
-                /*
-                if(sinceTime > 0L) selector = "JMSTimestamp >= " + sinceTime;
-                if(sinceN >= 0L) {
-                    if(selector.length() > 0) selector += " and ";
-                    selector = "id >= " + sinceN;
+                TopicSession subscriberSession = topicSessionsByConnection.get(connection);
+                if(subscriberSession == null) {
+                    subscriberSession = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
+                    topicSessionsByConnection.put(connection, subscriberSession);
                 }
-                */
-
+                
+                Topic jmsTopic = subscriberSession.createTopic(normalizeTopicName(topicName));
+                String selector = "";
                 synchronized(connection) {
                     connection.stop();
-                    TopicSubscriber subscriber = subSession.createSubscriber(jmsTopic, selector, false);
+                    TopicSubscriber subscriber = subscriberSession.createSubscriber(jmsTopic, selector, false);
                     subscriber.setMessageListener(new BrokerMessageListener());
                     connection.start();
-                    topicSubscriptions.put(wampTopic, subscriber);
+                    topicSubscribers.put(wampTopic, subscriber);
                 }
                 
                 releaseTopicConnectionToPool(connection);
@@ -171,8 +168,9 @@ public class JmsServices
     {
         if(isJmsBrokerAvailable()) {
             try {
-                TopicSubscriber subscriber = topicSubscriptions.remove(topic);
+                TopicSubscriber subscriber = topicSubscribers.remove(topic);
                 subscriber.close();
+                
             } catch(Exception ex) { }
         }
     }

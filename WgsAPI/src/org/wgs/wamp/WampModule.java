@@ -14,7 +14,7 @@ import org.jdeferred.ProgressCallback;
 import org.jdeferred.Promise;
 import org.jdeferred.impl.DeferredObject;
 import org.wgs.wamp.annotation.WampModuleName;
-import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.annotation.WampRegisterProcedure;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
@@ -46,7 +46,7 @@ public class WampModule
         this.eventListeners = new HashMap<Long,Collection<Method>>();
 
         for(Method method : this.getClass().getMethods()) {
-            WampRPC rpc = method.getAnnotation(WampRPC.class);
+            WampRegisterProcedure rpc = method.getAnnotation(WampRegisterProcedure.class);
             if(rpc != null) {
                 String name = rpc.name();
                 if(name.length() == 0) name = method.getName();

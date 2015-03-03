@@ -10,7 +10,7 @@ import org.wgs.wamp.type.WampMatchType;
 
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface WampRPC {
+public @interface WampRegisterProcedure {
     String name() default "";
     WampMatchType match() default WampMatchType.exact;
 }

@@ -27,7 +27,7 @@ import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampRealm;
 import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
-import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.annotation.WampRegisterProcedure;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
@@ -42,7 +42,7 @@ import org.wgs.wamp.transport.http.websocket.WampWebsocket;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampMatchType;
-import org.wgs.wamp.annotation.WampSubscribed;
+import org.wgs.wamp.annotation.WampSubscribe;
 import org.wgs.wamp.transport.http.websocket.WampEndpoint;
 import org.wgs.wamp.transport.raw.WampRawSocket;
 
@@ -526,7 +526,7 @@ public class WampClient
     private void processSubscribedAnnotations() {
         for(final WampModule module : wampApp.getWampModules()) {
             for(final Method method : module.getClass().getMethods()) {
-                WampSubscribed subscription = method.getAnnotation(WampSubscribed.class);
+                WampSubscribe subscription = method.getAnnotation(WampSubscribe.class);
                 if(subscription != null) {
                     WampSubscriptionOptions subOpt = new WampSubscriptionOptions(null);
                     subOpt.setMatchType(subscription.match());
@@ -548,7 +548,7 @@ public class WampClient
         for(final WampModule module : wampApp.getWampModules()) {
             String moduleName = module.getModuleName();
             for(final Method method : module.getClass().getMethods()) {
-                WampRPC registration = method.getAnnotation(WampRPC.class);
+                WampRegisterProcedure registration = method.getAnnotation(WampRegisterProcedure.class);
                 if(registration != null) {
                     WampDict options = new WampDict();
                     options.put("match", registration.match().toString());

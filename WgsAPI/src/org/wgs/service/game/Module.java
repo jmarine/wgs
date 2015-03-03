@@ -42,7 +42,7 @@ import org.wgs.wamp.type.WampObject;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
-import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.annotation.WampRegisterProcedure;
 import org.wgs.security.WampCRA;
 import org.wgs.util.Social;
 import org.wgs.wamp.topic.WampPublishOptions;
@@ -122,7 +122,7 @@ public class Module extends WampModule
     }
 
     
-    @WampRPC(name="register")
+    @WampRegisterProcedure(name="register")
     public WampDict registerUser(WampSocket socket, WampDict data) throws Exception
     {
         boolean user_valid = false;
@@ -153,7 +153,7 @@ public class Module extends WampModule
     }
     
     
-    @WampRPC(name="get_user_info")
+    @WampRegisterProcedure(name="get_user_info")
     public WampDict getUserInfo(WampSocket socket, WampDict data) throws Exception
     {
         boolean user_valid = false;
@@ -178,7 +178,7 @@ public class Module extends WampModule
     }
 
         
-    @WampRPC(name="list_apps")
+    @WampRegisterProcedure(name="list_apps")
     public WampDict listApps() throws Exception
     {
         // TODO: Filter by domain
@@ -204,7 +204,7 @@ public class Module extends WampModule
     }
     
 
-    @WampRPC(name="new_app")
+    @WampRegisterProcedure(name="new_app")
     public WampDict newApp(WampSocket socket, WampDict data) throws Exception
     {
         // TODO: check it doesn't exists
@@ -265,7 +265,7 @@ public class Module extends WampModule
     }
         
     
-    @WampRPC(name="delete_app")
+    @WampRegisterProcedure(name="delete_app")
     public WampDict deleteApp(WampSocket socket, WampDict param) throws Exception
     {
         // TODO: check user is administrator of app
@@ -315,7 +315,7 @@ public class Module extends WampModule
     }
 
     
-    @WampRPC(name="open_group")
+    @WampRegisterProcedure(name="open_group")
     public synchronized WampDict openGroup(WampSocket socket, String appId, String gid, WampDict options) throws Exception
     {
         Group   g = null;
@@ -673,7 +673,7 @@ public class Module extends WampModule
     }
     
 
-    @WampRPC(name="update_group")
+    @WampRegisterProcedure(name="update_group")
     public WampDict updateGroup(WampSocket socket, WampDict node) throws Exception
     {
         // TODO: change group properties (state, observable, etc)
@@ -761,7 +761,7 @@ public class Module extends WampModule
     }
     
     
-    @WampRPC(name="list_members")
+    @WampRegisterProcedure(name="list_members")
     public WampList getMembers(String gid, int team) throws Exception 
     {
         Group g = groups.get(gid);
@@ -791,7 +791,7 @@ public class Module extends WampModule
     }
     
     
-    @WampRPC(name="update_member")
+    @WampRegisterProcedure(name="update_member")
     public WampDict updateMember(WampSocket socket, WampDict data) throws Exception
     {
             boolean valid = false;
@@ -919,7 +919,7 @@ public class Module extends WampModule
     }
     
 
-    @WampRPC(name="send_group_message")
+    @WampRegisterProcedure(name="send_group_message")
     public void sendGroupMessage(WampSocket socket, String gid, WampObject data) throws Exception
     {
         Group g = groups.get(gid);
@@ -931,7 +931,7 @@ public class Module extends WampModule
         }
     }
     
-    @WampRPC(name="send_team_message")
+    @WampRegisterProcedure(name="send_team_message")
     public void sendTeamMessage(WampSocket socket, String gid, WampObject data) throws Exception
     {
         Group g = groups.get(gid);
@@ -975,7 +975,7 @@ public class Module extends WampModule
         }
     }
     
-    @WampRPC(name="exit_group")
+    @WampRegisterProcedure(name="exit_group")
     public WampDict exitGroup(WampSocket socket, String gid) throws Exception
     {
             Client client = clients.get(socket.getWampSessionId());
@@ -1039,7 +1039,7 @@ public class Module extends WampModule
     }
     
     
-    @WampRPC(name="delete_finished_groups")
+    @WampRegisterProcedure(name="delete_finished_groups")
     public void deleteFinishedGroups(WampSocket socket) throws Exception
     {   
         EntityManager manager = Storage.getEntityManager();
@@ -1138,7 +1138,7 @@ public class Module extends WampModule
     }    
     
     
-    @WampRPC(name = "list_groups")
+    @WampRegisterProcedure(name = "list_groups")
     public WampDict listGroups(WampSocket socket, String appId, GroupState state, GroupFilter.Scope scope) throws Exception
     {
         Client client = clients.get(socket.getWampSessionId());
@@ -1168,7 +1168,7 @@ public class Module extends WampModule
     }    
 
     
-    @WampRPC(name = "add_action")
+    @WampRegisterProcedure(name = "add_action")
     public boolean addAction(WampSocket socket, String gid, Long playerSlot, String actionName, String actionValue) throws Exception
     {
         Group g = groups.get(gid);
@@ -1217,7 +1217,7 @@ public class Module extends WampModule
     }
     
     
-    @WampRPC(name = "get_profile")
+    @WampRegisterProcedure(name = "get_profile")
     public WampDict getProfile(WampSocket socket, String opponentUid) throws Exception
     {
         EntityManager manager = null;

@@ -5,7 +5,7 @@ import org.wgs.util.Storage;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
-import org.wgs.wamp.annotation.WampRPC;
+import org.wgs.wamp.annotation.WampRegisterProcedure;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampSubscription;
@@ -32,13 +32,13 @@ public class WampAPI extends WampModule
     //wamp.reflection.procedure.describe
     //wamp.reflection.error.describe
     
-    @WampRPC(name="reflection.procedure.list")
+    @WampRegisterProcedure(name="reflection.procedure.list")
     public WampList getProcedureList(WampSocket socket) throws Exception
     {
         return this.getWampApplication().getAllRpcNames(socket.getRealm());
     }
     
-    @WampRPC(name="reflection.topic.list")
+    @WampRegisterProcedure(name="reflection.topic.list")
     public WampList getTopicList() throws Exception
     {
         WampList names = new WampList();
@@ -49,7 +49,7 @@ public class WampAPI extends WampModule
     }
 
     
-    @WampRPC(name="broker.subscriber.list")
+    @WampRegisterProcedure(name="broker.subscriber.list")
     public WampList getSubscribedSessions(WampSocket socket, Long subscriptionId) throws Exception
     {
         WampList retval = new WampList();
@@ -63,19 +63,19 @@ public class WampAPI extends WampModule
     }    
     
     
-    @WampRPC(name="topic.history.last")
+    @WampRegisterProcedure(name="topic.history.last")
     public WampList getLastTopicEvents(String topicName, int limit)
     {
         return null;
     }
     
-    @WampRPC(name="topic.history.since")
+    @WampRegisterProcedure(name="topic.history.since")
     public WampList getTopicEventsSinceTimestamp(String topicName, Long timestampInMillis)
     {
         return null;
     }
     
-    @WampRPC(name="topic.history.after")
+    @WampRegisterProcedure(name="topic.history.after")
     public WampList getTopicEventsAfterID(String topicName, Long id)
     {
         return null;

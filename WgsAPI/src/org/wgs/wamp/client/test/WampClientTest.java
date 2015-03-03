@@ -8,8 +8,8 @@ import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
-import org.wgs.wamp.annotation.WampRPC;
-import org.wgs.wamp.annotation.WampSubscribed;
+import org.wgs.wamp.annotation.WampRegisterProcedure;
+import org.wgs.wamp.annotation.WampSubscribe;
 import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallController;
@@ -40,7 +40,7 @@ public class WampClientTest extends WampModule implements Runnable
     }
     
     
-    @WampRPC(name = "add2")  // implicit RPC registration
+    @WampRegisterProcedure(name = "add2")  // implicit RPC registration
     public Long add2(Long p1, Long p2, WampCallOptions options, WampCallController task) 
     {
         System.out.println("Received invocation: " + task.getProcedureURI() + ": authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole() + ", caller session id=" + options.getCallerId() + ", invocation id=" + task.getCallID());
@@ -49,7 +49,7 @@ public class WampClientTest extends WampModule implements Runnable
     
 
     //FIXME: why this annotation generates deadlocks on JMS cluster, and programmatic subscriptions doesn't?
-    //@WampSubscribed(topic = "myapp", match = WampMatchType.prefix)
+    //@WampSubscribe(topic = "myapp", match = WampMatchType.prefix)
     //public void onMyAppEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     @Override
     public void onEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
@@ -89,20 +89,19 @@ public class WampClientTest extends WampModule implements Runnable
 
             doCalls(repeats);
             client.waitResponses();            
-            
+
             client.unsubscribe("myapp", subOpt);
             client.waitResponses();
             System.out.println("Publication after unsubscription.");
             doPublications(repeats);
             client.waitResponses();
-            
+ 
             System.out.println("Closing session");
             client.goodbye("wamp.close.normal");
             client.waitResponses();
 
             System.out.println("Disconnection");
             client.close();
-            
             
         } catch(Exception ex) {
 

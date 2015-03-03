@@ -10,7 +10,7 @@ import org.wgs.wamp.type.WampMatchType;
 
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface WampSubscribed {
+public @interface WampSubscribe {
     String topic() default "";
     WampMatchType match() default WampMatchType.exact;
     String[] metatopics() default {};
