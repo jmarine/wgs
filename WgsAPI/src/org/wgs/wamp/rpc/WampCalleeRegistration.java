@@ -84,7 +84,7 @@ public class WampCalleeRegistration
         else eligible.retainAll(remoteMethods.keySet());
 
         if(excluded == null) excluded = new HashSet<Long>();        
-        if(options == null || (options.hasExcludeMe() && callerId != null) ) {
+        if( (callerId != null) && (options == null || options.hasExcludeMe()) ) {
             excluded.add(callerId);
         }
 
