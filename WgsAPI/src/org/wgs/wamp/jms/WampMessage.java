@@ -22,12 +22,13 @@ public class WampMessage implements javax.jms.TextMessage
         this.props = new WampDict();
     }
 
-    public WampMessage(Long id, WampDict details, WampList payload, WampDict payloadKw) throws Exception
+    public WampMessage(Long id, Destination destination, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
         this.props = details;
         if(props == null) props = new WampDict();
         
         setJMSMessageID(id.toString());
+        setJMSDestination(destination);
         this.payload = payload;
         this.payloadKw = payloadKw;
     }
@@ -40,12 +41,12 @@ public class WampMessage implements javax.jms.TextMessage
     
     @Override
     public String getJMSMessageID() throws JMSException {
-        return props.getText("_jms_msgid");
+        return props.get("_jms_msgid").toString();
     }
 
     @Override
-    public void setJMSMessageID(String strID) throws JMSException {
-        props.put("_jms_msgid", strID);
+    public void setJMSMessageID(String msgId) throws JMSException {
+        props.put("_jms_msgid", new Long(msgId));
     }
 
     @Override

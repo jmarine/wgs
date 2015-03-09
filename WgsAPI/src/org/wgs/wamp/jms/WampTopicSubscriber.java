@@ -8,6 +8,7 @@ import org.jdeferred.DoneCallback;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.client.WampClient;
+import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.topic.WampTopic;
@@ -97,9 +98,11 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
     public void onEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
         if( messageListener != null
-                && subscriptionId.equals(this.subscriptionId)
+                //&& subscriptionId.equals(this.subscriptionId)
                 && !(noLocal && details.getLong("publisher").equals(((WampTopicConnection)session.getTopicConnection()).getWampClient().getWampSocket().getWampSessionId())) ) {
-            WampMessage msg = new WampMessage(publicationId, details, payload, payloadKw);
+            String topicName = client.getTopicFromEventData(subscriptionId, details);
+            WampTopic topic  = new WampTopic(topicName, null);
+            WampMessage msg = new WampMessage(publicationId, topic, details, payload, payloadKw);
             messageListener.onMessage(msg);
         }
     }            

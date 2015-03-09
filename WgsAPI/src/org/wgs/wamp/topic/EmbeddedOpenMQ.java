@@ -1,7 +1,6 @@
 package org.wgs.wamp.topic;
 
 import java.util.Properties;
-import javax.naming.InitialContext;
 
 import com.sun.messaging.AdminConnectionFactory;
 import com.sun.messaging.ConnectionConfiguration;
@@ -12,6 +11,7 @@ import com.sun.messaging.jmq.jmsservice.BrokerEventListener;
 import com.sun.messaging.jms.management.server.DestinationOperations;
 import com.sun.messaging.jms.management.server.DestinationType;
 import com.sun.messaging.jms.management.server.MQObjectName;
+import javax.jms.TopicConnectionFactory;
 import javax.management.MBeanServerConnection;
 import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
@@ -21,7 +21,7 @@ public class EmbeddedOpenMQ
 {
     private static BrokerInstance   brokerInstance = null;
     
-    public static void start(Properties serverConfig) throws Exception
+    public static TopicConnectionFactory start(Properties serverConfig) throws Exception
     {
         String imqHome = serverConfig.getProperty("imq.home");
         if(imqHome != null) {
@@ -48,8 +48,7 @@ public class EmbeddedOpenMQ
         tcf = new com.sun.messaging.TopicConnectionFactory();
         tcf.setProperty(ConnectionConfiguration.imqAddressList, serverConfig.getProperty("imq.tcf.imqAddressList", "mq://localhost/direct"));
 
-        InitialContext jndi = new InitialContext();
-        jndi.bind("jms/ClusterTopicConnectionFactory", tcf);
+        return tcf;
     }
     
 

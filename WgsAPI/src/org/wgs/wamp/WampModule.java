@@ -268,7 +268,8 @@ public class WampModule
         if(requestId != null) {
             WampList payload   = (request.size() >= 5)? (WampList)request.get(4) : null;
             WampDict payloadKw = (request.size() >= 6)? (WampDict)request.get(5) : null;;
-            WampPublishOptions options = new WampPublishOptions((WampDict)request.get(2));
+            WampDict publicationDetails = (WampDict)request.get(2);
+            WampPublishOptions options = new WampPublishOptions(publicationDetails);
             if(options.hasExcludeMe()) {
                 Set<Long> excludedSet = options.getExcluded();
                 if(excludedSet == null) excludedSet = new HashSet<Long>();
@@ -279,13 +280,20 @@ public class WampModule
             if(options.hasAck()) {
                 WampProtocol.sendPublishedMessage(clientSocket, requestId, publicationId);
             }
+            
+            WampDict eventDetails = options.toWampObject();
+            for(String name : publicationDetails.keySet()) {
+                if(name.startsWith("_")) eventDetails.put(name, publicationDetails.get(name));
+            }
+            
+            if(options.hasDiscloseMe()) {
+                eventDetails.put("publisher", clientSocket.getWampSessionId());
+                eventDetails.put("authid", clientSocket.getAuthId());
+                eventDetails.put("authprovider", clientSocket.getAuthProvider());
+                eventDetails.put("authrole", clientSocket.getAuthRole());
+            }      
         
-            WampBroker.publishEvent(clientSocket.getRealm(), publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), 
-                    (options.hasDiscloseMe()? clientSocket.getWampSessionId() : null),
-                    (options.hasDiscloseMe()? clientSocket.getAuthId() : null),
-                    (options.hasDiscloseMe()? clientSocket.getAuthProvider(): null),
-                    (options.hasDiscloseMe()? clientSocket.getAuthRole(): null)
-            );
+            WampBroker.publishEvent(clientSocket.getRealm(), publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), eventDetails);
         }
     }
     

@@ -464,7 +464,7 @@ public class WampClient
         WampDict subscriberFeatures = new WampDict();
         subscriberFeatures.put("publisher_identification", true);
         subscriberFeatures.put("pattern_based_subscription", true);
-        subscriberFeatures.put("subscriber_metaevents", true);
+        //subscriberFeatures.put("subscriber_metaevents", true);
         WampDict subscriberRole = new WampDict();
         subscriberRole.put("features", subscriberFeatures);
 
@@ -495,14 +495,14 @@ public class WampClient
 
     }
     
-    public Promise<Long, WampException, Long> publish(String topic, WampList payload, WampDict payloadKw, WampPublishOptions options)
+    public Promise<Long, WampException, Long> publish(String topic, WampList payload, WampDict payloadKw, WampDict options)
     {
         DeferredObject<Long, WampException, Long> deferred = new DeferredObject<Long, WampException, Long>();
         Long requestId = WampProtocol.newSessionScopeId(clientSocket);
         WampList list = new WampList();
         list.add(deferred);
-        if(options.hasAck()) createPendingMessage(requestId, list);
-        WampProtocol.sendPublishMessage(clientSocket, requestId, topic, payload, payloadKw, options.toWampObject());
+        if(options.has("acknowledge") && options.getBoolean("acknowledge")) createPendingMessage(requestId, list);
+        WampProtocol.sendPublishMessage(clientSocket, requestId, topic, payload, payloadKw, options);
         return deferred.promise();
     }
 

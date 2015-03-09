@@ -487,13 +487,17 @@ public abstract class WampSocket
         options.setExcludeMe(excludeMe);
         options.setExcluded(excludedSet);
         options.setDiscloseMe(identifyMe);
+        
+        WampDict eventDetails = options.toWampObject();
+        if(options.hasDiscloseMe()) {
+            eventDetails.put("publisher", this.getWampSessionId());
+            eventDetails.put("authid", this.getAuthId());
+            eventDetails.put("authprovider", this.getAuthProvider());
+            eventDetails.put("authrole", this.getAuthRole());
+        }           
 
-        WampBroker.publishEvent(this.getRealm(), WampProtocol.newGlobalScopeId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), 
-                (options.hasDiscloseMe()? this.getWampSessionId() : null),
-                (options.hasDiscloseMe()? this.getAuthId() : null),
-                (options.hasDiscloseMe()? this.getAuthProvider() : null),
-                (options.hasDiscloseMe()? this.getAuthRole() : null)
-            );
+        WampBroker.publishEvent(this.getRealm(), WampProtocol.newGlobalScopeId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), eventDetails);
+        
     }
 
     

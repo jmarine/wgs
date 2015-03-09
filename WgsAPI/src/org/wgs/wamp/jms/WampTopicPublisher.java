@@ -1,5 +1,6 @@
 package org.wgs.wamp.jms;
 
+import java.util.Enumeration;
 import javax.jms.CompletionListener;
 import javax.jms.Destination;
 import javax.jms.JMSException;
@@ -122,9 +123,7 @@ public class WampTopicPublisher implements javax.jms.TopicPublisher
 
     @Override
     public void close() throws JMSException {
-        if(session != null) {
-            session.close();
-        }
+        session = null;
     }
 
     @Override
@@ -145,16 +144,27 @@ public class WampTopicPublisher implements javax.jms.TopicPublisher
     @Override
     public void send(Destination destination, Message m, int deliveryMode, int priority, long timeToLive) throws JMSException {
         try {
+            m.setJMSDestination(destination);
             WampTopic topic = (WampTopic)destination;
             WampPublishOptions options = new WampPublishOptions();
             options.setAck(true);
             options.setExcludeMe(false);
             options.setDiscloseMe(true);
+
             WampTopicConnection tc = (WampTopicConnection)session.getTopicConnection();
             WampList payload = m.getBody(WampList.class);
             WampDict payloadKw = m.getBody(WampDict.class);
+            if(payloadKw == null) payloadKw = new WampDict();
+            
+            WampDict allOptions = options.toWampObject();
+            Enumeration e = m.getPropertyNames();
+            while(e.hasMoreElements()) {
+                String propName = (String)e.nextElement();
+                allOptions.put(propName, m.getObjectProperty(propName));
+            }
+            
             if(!tc.isOpen()) tc.connect();
-            tc.getWampClient().publish(topic.getTopicName(), payload, payloadKw, options);
+            tc.getWampClient().publish(topic.getTopicName(), payload, payloadKw, allOptions);
         } catch(Exception ex) {
             throw new JMSException(ex.getMessage());
         }

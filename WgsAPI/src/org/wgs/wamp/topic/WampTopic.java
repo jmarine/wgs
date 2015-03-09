@@ -112,5 +112,10 @@ public class WampTopic implements Topic, TemporaryTopic
         return false;
     }
     
+    @Override
+    public String toString()
+    {
+        return getTopicName();
+    }
 
 }

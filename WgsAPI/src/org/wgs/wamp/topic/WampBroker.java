@@ -159,16 +159,16 @@ public class WampBroker
         }  
     }
     
-    public static void publishEvent(String realm, Long id, WampTopic wampTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, Long publisherId, String publisherAuthId, String publisherAuthProvider, String publisherAuthRole) throws Exception
+    public static void publishEvent(String realm, Long id, WampTopic wampTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, WampDict eventDetails) throws Exception
     {
-        JmsServices.publishEvent(realm, id, wampTopic, null, payload, payloadKw, eligible, exclude, publisherId, publisherAuthId, publisherAuthProvider, publisherAuthRole);
+        JmsServices.publishEvent(realm, id, wampTopic, null, payload, payloadKw, eligible, exclude, eventDetails);
     }
 
     public static void publishMetaEvent(String realm, Long id, WampTopic wampTopic, String metatopic, WampDict metaEventDetails, Long toClient) throws Exception
     {
         JmsServices.publishMetaEvent(realm, id, wampTopic, metatopic, metaEventDetails, toClient);
     }
-    
+
     
     public static WampSubscription getSubscriptionById(Long subscriptionId)
     {

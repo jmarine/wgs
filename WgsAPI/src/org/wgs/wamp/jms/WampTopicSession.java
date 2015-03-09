@@ -1,8 +1,6 @@
 package org.wgs.wamp.jms;
 
 import java.io.Serializable;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import javax.jms.BytesMessage;
 import javax.jms.Destination;
 import javax.jms.JMSException;
@@ -124,12 +122,14 @@ public class WampTopicSession implements javax.jms.TopicSession
 
     @Override
     public TextMessage createTextMessage() throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return new WampMessage();
     }
 
     @Override
-    public TextMessage createTextMessage(String string) throws JMSException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public TextMessage createTextMessage(String text) throws JMSException {
+        WampMessage msg = new WampMessage();
+        if(text != null) msg.setText(text);
+        return msg;
     }
 
     @Override
@@ -154,7 +154,7 @@ public class WampTopicSession implements javax.jms.TopicSession
 
     @Override
     public void close() throws JMSException {
-        if(con != null) con.close();
+        con = null;
     }
 
     @Override

@@ -18,10 +18,10 @@ public class WampJmsTests
 {
     public static final void main(String args[]) throws Exception 
     {
-        String url = "ws://localhost:8080/ws";
+        String url = "ws://localhost:3000/wgs";
         String realm = "realm1";
-        String user = "joe";
-        String password = "test";
+        String user = null;
+        String password = null;
         boolean digestMD5 = false;
         
         String topicName = "myapp";
@@ -50,7 +50,9 @@ public class WampJmsTests
 
         
         TopicPublisher publisher = session.createPublisher(jmsTopic);
-        WampMessage msg = new WampMessage(0l, null, new WampList(1,2,3), (new WampDict()).put("arg1", "val1"));
+        WampDict details = new WampDict();
+        details.put("_test", "value");
+        WampMessage msg = new WampMessage(0l, jmsTopic, details, new WampList(1,2,3), (new WampDict()).put("arg1", "val1"));
         publisher.send(msg);
         
         System.out.println("Press a key to quit");

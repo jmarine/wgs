@@ -24,6 +24,7 @@ import javax.naming.InitialContext;
 
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.jms.WampTopicConnectionFactory;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 
@@ -33,7 +34,8 @@ public class JmsServices
 {
     private static final Logger logger = Logger.getLogger(JmsServices.class.getName());
 
-    private static String           imqEnabled = null;
+    private static String           clusterEnabled = null;
+    private static String           clusterType    = null;
     private static boolean          brokerTested = false;
     private static boolean          brokerAvailable = false;
     public  static String           brokerId = "wgs-" + UUID.randomUUID().toString();
@@ -50,12 +52,26 @@ public class JmsServices
     
     public static void start(Properties serverConfig) throws Exception
     {
-        imqEnabled = serverConfig.getProperty("imq.enabled");
-        if(imqEnabled != null && imqEnabled.equalsIgnoreCase("true")) {        
-            EmbeddedOpenMQ.start(serverConfig);
+        clusterEnabled = serverConfig.getProperty("cluster.enabled");
+        clusterType = serverConfig.getProperty("cluster.type");
+        if(clusterEnabled != null && clusterEnabled.equalsIgnoreCase("true")) {
+            TopicConnectionFactory tcf = null;
+            switch(clusterType) {
+                case "imq":
+                    tcf = EmbeddedOpenMQ.start(serverConfig);
+                    break;
+                case "wamp":
+                    String wampClusterUrl = serverConfig.getProperty("cluster.wamp.server_url");
+                    String wampClusterRealm = serverConfig.getProperty("cluster.wamp.realm");
+                    tcf = new WampTopicConnectionFactory(WampEncoding.MsgPack, wampClusterUrl, wampClusterRealm, false);
+                    break;
+            }
+            
+            InitialContext jndi = new InitialContext();
+            jndi.bind("jms/ClusterTopicConnectionFactory", tcf);
         }
 
-        wgsClusterNodeEndpoint = serverConfig.getProperty("wgsClusterNodeEndpoint");
+        wgsClusterNodeEndpoint = serverConfig.getProperty("cluster.wamp.node_url");
         WampDict metaData = new WampDict();
         metaData.put("_wgsClusterNodeEndpoint", wgsClusterNodeEndpoint);
         metaData.put("_wgsTicket", brokerId);  // TODO: use one time password.
@@ -79,7 +95,8 @@ public class JmsServices
             } catch(Exception ex) { }
         }
         
-        if(imqEnabled != null && imqEnabled.equalsIgnoreCase("true")) {        
+        if(clusterEnabled != null && clusterEnabled.equalsIgnoreCase("true") 
+                && clusterType != null && clusterType.equals("imq")) {
             EmbeddedOpenMQ.stop();
         }
     }
@@ -176,10 +193,14 @@ public class JmsServices
     }
     
     
-    static void publishEvent(String realm, Long id, WampTopic wampTopic, String metaTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, Long publisherId, String publisherAuthId, String publisherAuthProvider, String publisherAuthRole) throws Exception
+    static void publishEvent(String realm, Long id, WampTopic wampTopic, String metaTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, WampDict eventDetails) throws Exception
     {
+        if(eventDetails == null) {
+            eventDetails = new WampDict();
+        }
+        
         if(!isJmsBrokerAvailable()) {
-            broadcastClusterEventToLocalNodeClients(realm, id, wampTopic, metaTopic, payload, payloadKw, eligible, exclude, publisherId, publisherAuthId, publisherAuthProvider, publisherAuthRole);
+            broadcastClusterEventToLocalNodeClients(realm, id, wampTopic, metaTopic, payload, payloadKw, eligible, exclude, eventDetails);
         } else {
             String topicName = wampTopic.getTopicName();
             TopicConnection connection = getTopicConnectionFromPool();
@@ -196,19 +217,20 @@ public class JmsServices
             String eventPayLoad = (event != null)? (String)WampEncoding.JSON.getSerializer().serialize(event) : null;
             TextMessage msg = pubSession.createTextMessage(eventPayLoad);
             
-            msg.setLongProperty("id", id);
-            if(publisherId != null) msg.setLongProperty("publisherId", publisherId);
-            if(publisherAuthId != null) msg.setStringProperty("publisherAuthId", publisherAuthId);
-            if(publisherAuthProvider != null) msg.setStringProperty("publisherAuthProvider", publisherAuthProvider);
-            if(publisherAuthRole != null) msg.setStringProperty("publisherAuthRole", publisherAuthRole);
+            msg.setLongProperty("_jms_msgid", id);
+            msg.setStringProperty("_jms_destination", topicName);
+            
+            if(eventDetails.has("publisher")) msg.setLongProperty("publisher", eventDetails.getLong("publisher"));
+            if(eventDetails.has("authid")) msg.setStringProperty("authid", eventDetails.getText("authid"));
+            if(eventDetails.has("authprovider")) msg.setStringProperty("authprovider", eventDetails.getText("authprovider"));
+            if(eventDetails.has("authrole")) msg.setStringProperty("authrole", eventDetails.getText("authrole"));
 
-            msg.setStringProperty("topic", topicName);
-            if(realm != null)       msg.setStringProperty("realm", realm);
-            if(metaTopic != null)   msg.setStringProperty("metaTopic", metaTopic);
-            if(eligible != null)    msg.setStringProperty("eligible", serializeSessionIDs(eligible));
-            if(exclude != null)     msg.setStringProperty("exclude", serializeSessionIDs(exclude));
+            if(realm != null)       msg.setStringProperty("_realm", realm);
+            if(metaTopic != null)   msg.setStringProperty("_metaTopic", metaTopic);
+            if(eligible != null)    msg.setStringProperty("_eligible", serializeSessionIDs(eligible));
+            if(exclude != null)     msg.setStringProperty("_exclude", serializeSessionIDs(exclude));
 
-            msg.setStringProperty("brokerId", brokerId);
+            msg.setStringProperty("_brokerId", brokerId);
             
             publisher.send(msg);
 
@@ -232,15 +254,15 @@ public class JmsServices
             eligible.add(toClient);
         }
         
-        publishEvent(realm, publicationId, topic, metatopic, null, metaEventDetails, eligible, null, null, null, null, null);
+        publishEvent(realm, publicationId, topic, metatopic, null, metaEventDetails, eligible, null, metaEventDetails);
     } 
     
     
-    private static void broadcastClusterEventToLocalNodeClients(String realm, Long publicationId, WampTopic topic, String metaTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> excluded, Long publisherId, String publisherAuthId, String publisherAuthProvider, String publisherAuthRole) throws Exception 
+    private static void broadcastClusterEventToLocalNodeClients(String realm, Long publicationId, WampTopic topic, String metaTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> excluded, WampDict eventDetails) throws Exception 
     {
         if(metaTopic == null) {
             // EVENT data
-            WampProtocol.sendEvents(realm, publicationId, topic, payload, payloadKw, eligible, excluded, publisherId, publisherAuthId, publisherAuthProvider, publisherAuthRole);
+            WampProtocol.sendEvents(realm, publicationId, topic, payload, payloadKw, eligible, excluded, eventDetails);
         } else {
             // METAEVENT data (WAMP v2)
             WampDict metaEventDetails = payloadKw;
@@ -276,17 +298,17 @@ public class JmsServices
         @Override
         public void onMessage(Message receivedMessageFromBroker) {
             try {
-                String publisherBrokerId = receivedMessageFromBroker.getStringProperty("brokerId");
+                String publisherBrokerId = receivedMessageFromBroker.getStringProperty("_brokerId");
                 System.out.println ("Received message from broker: " + publisherBrokerId);
 
-                Long   publicationId = receivedMessageFromBroker.getLongProperty("id");
-                String topicName = receivedMessageFromBroker.getStringProperty("topic");
-                String realm     = receivedMessageFromBroker.propertyExists("realm") ? receivedMessageFromBroker.getStringProperty("realm") : null;
-                String metaTopic = receivedMessageFromBroker.propertyExists("metaTopic") ? receivedMessageFromBroker.getStringProperty("metaTopic") : null;
-                Long   publisherId = receivedMessageFromBroker.propertyExists("publisherId") ? receivedMessageFromBroker.getLongProperty("publisherId") : null;
-                String publisherAuthId = receivedMessageFromBroker.propertyExists("publisherAuthId") ? receivedMessageFromBroker.getStringProperty("publisherAuthId") : null;
-                String publisherAuthProvider = receivedMessageFromBroker.propertyExists("publisherAuthProvider") ? receivedMessageFromBroker.getStringProperty("publisherAuthProvider") : null;
-                String publisherAuthRole = receivedMessageFromBroker.propertyExists("publisherAuthRole") ? receivedMessageFromBroker.getStringProperty("publisherAuthRole") : null;
+                Long   publicationId = receivedMessageFromBroker.getLongProperty("_jms_msgid");
+                String topicName = receivedMessageFromBroker.getStringProperty("_jms_destination");
+                String realm     = receivedMessageFromBroker.propertyExists("_realm") ? receivedMessageFromBroker.getStringProperty("_realm") : null;
+                String metaTopic = receivedMessageFromBroker.propertyExists("_metaTopic") ? receivedMessageFromBroker.getStringProperty("_metaTopic") : null;
+                Long   publisherId = receivedMessageFromBroker.propertyExists("publisher") ? receivedMessageFromBroker.getLongProperty("publisher") : null;
+                String publisherAuthId = receivedMessageFromBroker.propertyExists("authid") ? receivedMessageFromBroker.getStringProperty("authid") : null;
+                String publisherAuthProvider = receivedMessageFromBroker.propertyExists("authprovider") ? receivedMessageFromBroker.getStringProperty("authprovider") : null;
+                String publisherAuthRole = receivedMessageFromBroker.propertyExists("authrole") ? receivedMessageFromBroker.getStringProperty("authrole") : null;
 
                 String eventData = ((TextMessage)receivedMessageFromBroker).getText();
                 //System.out.println ("Received message from topic " + topicName + ": " + eventData);
@@ -294,8 +316,8 @@ public class JmsServices
                 WampList event = (eventData!=null)? (WampList)WampEncoding.JSON.getSerializer().deserialize(eventData, 0, eventData.length()) : null;
                 WampList payload = (WampList)event.get(0);  // EVENT.payload|list or METAEVENT.MetaEvent|any
                 WampDict payloadKw = (WampDict)event.get(1);
-                Set<Long> eligible = receivedMessageFromBroker.propertyExists("eligible")? parseSessionIDs(receivedMessageFromBroker.getStringProperty("eligible")) : null;
-                Set<Long> exclude  = receivedMessageFromBroker.propertyExists("exclude")?  parseSessionIDs(receivedMessageFromBroker.getStringProperty("exclude"))  : null;
+                Set<Long> eligible = receivedMessageFromBroker.propertyExists("_eligible")? parseSessionIDs(receivedMessageFromBroker.getStringProperty("_eligible")) : null;
+                Set<Long> exclude  = receivedMessageFromBroker.propertyExists("_exclude")?  parseSessionIDs(receivedMessageFromBroker.getStringProperty("_exclude"))  : null;
 
                 if(topicName.startsWith(wgsClusterTopic.getTopicName())) {
 
@@ -323,7 +345,13 @@ public class JmsServices
                 } else {
                     WampTopic topic = WampBroker.getTopic(topicName);
                     if(topic != null) {
-                        broadcastClusterEventToLocalNodeClients(realm, publicationId, topic, metaTopic, payload, payloadKw, eligible, exclude, publisherId, publisherAuthId, publisherAuthProvider, publisherAuthRole);
+                        WampDict eventDetails = new WampDict();
+                        if(publisherId != null) eventDetails.put("publisher", publisherId);            
+                        if(publisherAuthId != null) eventDetails.put("authid", publisherAuthId);
+                        if(publisherAuthProvider != null) eventDetails.put("authprovider", publisherAuthProvider);
+                        if(publisherAuthRole != null) eventDetails.put("authrole", publisherAuthRole);
+                        
+                        broadcastClusterEventToLocalNodeClients(realm, publicationId, topic, metaTopic, payload, payloadKw, eligible, exclude, eventDetails);
                     }
                 }
 

@@ -125,7 +125,7 @@ public class WampClientTest extends WampModule implements Runnable
         pubOpt.setDiscloseMe(true);
         
         for(int i = 0; i < num; i++) {
-            client.publish("myapp.topic1", new WampList("Hello, world from Java!!!"), null, pubOpt)
+            client.publish("myapp.topic1", new WampList("Hello, world from Java!!!"), null, pubOpt.toWampObject())
                     .done(new DoneCallback<Long>() {
                         @Override
                         public void onDone(Long id) {

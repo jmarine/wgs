@@ -259,7 +259,7 @@ public class WampProtocol
         request.add( (options != null) ? options : new WampDict() );      
         request.add(topic);
         if( (payload != null && payload.size() > 0) || (payloadKw != null && payloadKw.size() > 0) ) {        
-            request.add(payload);
+            request.add((payload != null) ? payload : new WampList());
             if(payloadKw != null && payloadKw.size() > 0) request.add(payloadKw);
         }
         sendWampMessage(clientSocket, request);
@@ -276,14 +276,9 @@ public class WampProtocol
     }    
     
     
-    public static void sendEvents(String realm, Long publicationId, WampTopic topic, WampList payload, WampDict payloadKw, Set<Long> eligibleParam, Set<Long> excluded, Long publisherId, String publisherAuthId, String publisherAuthProvider, String publisherAuthRole) throws Exception 
+    public static void sendEvents(String realm, Long publicationId, WampTopic topic, WampList payload, WampDict payloadKw, Set<Long> eligibleParam, Set<Long> excluded, WampDict eventDetails) throws Exception 
     {
         // EVENT data
-        WampDict eventDetails = new WampDict();
-        if(publisherId != null) eventDetails.put("publisher", publisherId);            
-        if(publisherAuthId != null) eventDetails.put("authid", publisherAuthId);
-        if(publisherAuthProvider != null) eventDetails.put("authprovider", publisherAuthProvider);
-        if(publisherAuthRole != null) eventDetails.put("authrole", publisherAuthRole);
         
         for(WampSubscription subscription : topic.getSubscriptions()) {
             

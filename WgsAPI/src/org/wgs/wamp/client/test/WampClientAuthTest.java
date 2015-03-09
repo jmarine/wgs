@@ -20,10 +20,10 @@ import org.wgs.wamp.type.WampMatchType;
 @WampModuleName("com.myapp")
 public class WampClientAuthTest extends WampModule implements Runnable
 {
-    private static String  url = "tcp://localhost:8080/ws"; 
+    private static String  url = "ws://localhost:8080/ws"; 
     private static String  realm = "realm1";
     private static String  user = "joe";
-    private static String  password = "secret1";
+    private static String  password = "test";
     private static boolean digestPasswordMD5 = false;
 
     
