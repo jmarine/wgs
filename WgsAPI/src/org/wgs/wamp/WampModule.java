@@ -213,8 +213,8 @@ public class WampModule
     public void onRegister(WampSocket clientSocket, Long registrationId, String methodName, WampCalleeRegistration registration, WampMatchType matchType, String methodUriOrPattern, WampList request) throws Exception
     {
         WampDict options = (WampDict)request.get(2);
-        String calleeRealm = clientSocket.getRealm();
-        if(options.has("_cluster_peer_realm")) calleeRealm = options.getText("_cluster_peer_realm");
+        String calleeRealmName = clientSocket.getRealm();
+        if(options.has("_cluster_peer_realm")) calleeRealmName = options.getText("_cluster_peer_realm");
         Long calleeSessionId = options.getLong("_cluster_peer_sid");
 
         WampRemoteMethod remoteMethod = new WampRemoteMethod(registration.getId(), methodName, clientSocket, calleeSessionId, matchType, options);
@@ -223,7 +223,13 @@ public class WampModule
         clientSocket.addRpcRegistration(registration);
         
         if(!"cluster".equals(clientSocket.getRealm())) {
-            WampCluster.registerClusteredRPC(WampRealm.getRealm(calleeRealm), registration, remoteMethod);
+            WampRealm calleeRealm = WampRealm.getRealm(calleeRealmName);
+            for(WampCluster.Node node : WampCluster.getNodes()) {
+                WampCluster.Node.registerClusteredRPC(node.getWampClient(), calleeRealm, registration, remoteMethod);
+            }
+            for(WampCluster.Node node : WampCluster.getNodes()) {
+                node.getWampClient().waitResponses();
+            }            
         }
     }
     
@@ -241,7 +247,12 @@ public class WampModule
             //rpcsByName.remove(method.getProcedureURI());
             
             if(!"cluster".equals(clientSocket.getRealm())) {
-                WampCluster.unregisterClusteredRPC(realm, registration, remoteMethod);
+                for(WampCluster.Node node : WampCluster.getNodes()) {
+                    WampCluster.Node.unregisterClusteredRPC(node.getWampClient(), realm, registration, remoteMethod);
+                }   
+                for(WampCluster.Node node : WampCluster.getNodes()) {
+                    node.getWampClient().waitResponses();
+                }
             }
 
             synchronized(this.app)  // TODO: avoid synchronization by WampApplication

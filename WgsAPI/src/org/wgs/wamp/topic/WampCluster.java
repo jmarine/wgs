@@ -32,48 +32,13 @@ public class WampCluster
         node.stop();
     }
     
-    public static void registerClusteredRPC(WampRealm realm, WampCalleeRegistration registration, WampRemoteMethod remoteMethod) throws Exception
-    {
-        for(Node node : nodes.values()) {
-            WampCluster._registerClusteredRPC(node.getClient(), realm, registration, remoteMethod);
-        }
-        for(Node node : nodes.values()) {
-            node.getClient().waitResponses();
-        }
-    }    
-    
-    public static void unregisterClusteredRPC(WampRealm realm, WampCalleeRegistration registration, WampRemoteMethod remoteMethod) throws Exception
-    {
-        for(Node node : nodes.values()) {
-            WampCluster._unregisterClusteredRPC(node.getClient(), realm, registration, remoteMethod);
-        }   
-        for(Node node : nodes.values()) {
-            node.getClient().waitResponses();
-        }
-    }    
-    
-    
     public static Collection<Node> getNodes()
     {
         return nodes.values();
     }
        
-    public static void _registerClusteredRPC(WampClient client, WampRealm realm, WampCalleeRegistration registration, WampRemoteMethod remoteMethod)
-    {
-        WampDict options = new WampDict();
-        options.put("_cluster_peer_realm", realm.getRealmName());            
-        options.put("_cluster_peer_sid", remoteMethod.getRemotePeer().getWampSessionId());
-        options.put("match", registration.getMatchType().toString());
-        client.registerRPC(options, remoteMethod.getProcedureURI(), remoteMethod);
-    }
-
-    public static void _unregisterClusteredRPC(WampClient client, WampRealm realm, WampCalleeRegistration registration, WampRemoteMethod remoteMethod)
-    {
-        client.unregisterRPC(remoteMethod.getProcedureURI());
-    }        
     
-    
-    static class Node
+    public static class Node
     {
         private String brokerId;
         private String wgsClusterNodeEndpoint;
@@ -88,10 +53,24 @@ public class WampCluster
             this.wgsTicket = wgsTicket;
         }
         
-        public WampClient getClient()
+        public WampClient getWampClient()
         {
             return this.client;
         }
+        
+        public static void registerClusteredRPC(WampClient client, WampRealm realm, WampCalleeRegistration registration, WampRemoteMethod remoteMethod)
+        {
+            WampDict options = new WampDict();
+            options.put("_cluster_peer_realm", realm.getRealmName());            
+            options.put("_cluster_peer_sid", remoteMethod.getRemotePeer().getWampSessionId());
+            options.put("match", registration.getMatchType().toString());
+            client.registerRPC(options, remoteMethod.getProcedureURI(), remoteMethod);
+        }
+
+        public static void unregisterClusteredRPC(WampClient client, WampRealm realm, WampCalleeRegistration registration, WampRemoteMethod remoteMethod)
+        {
+            client.unregisterRPC(remoteMethod.getProcedureURI());
+        }        
         
         public void start() throws Exception
         {
@@ -108,8 +87,6 @@ public class WampCluster
             
             System.out.println("Cluster node is active!");
         }
-        
-
         
         public void stop() throws Exception
         {

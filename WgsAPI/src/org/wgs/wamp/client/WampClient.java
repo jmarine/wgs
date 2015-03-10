@@ -567,14 +567,14 @@ public class WampClient
                         WampCalleeRegistration registration = realm.getRegistration(registrationId);
                         for(WampRemoteMethod remoteMethod : registration.getRemoteMethods(null, null)) {
                             if(!"cluster".equals(remoteMethod.getRemotePeer().getRealm())) {
-                                WampCluster._registerClusteredRPC(this, realm, registration, remoteMethod);
+                                WampCluster.Node.registerClusteredRPC(this, realm, registration, remoteMethod);
                             }
                         }
                     }
                     for(WampCalleeRegistration registration : realm.getPatternRegistrations()) {                
                         for(WampRemoteMethod remoteMethod : registration.getRemoteMethods(null, null)) {
                             if(!"cluster".equals(remoteMethod.getRemotePeer().getRealm())) {
-                                WampCluster._registerClusteredRPC(this, realm, registration, remoteMethod);
+                                WampCluster.Node.registerClusteredRPC(this, realm, registration, remoteMethod);
                             }
                         }
                     }
