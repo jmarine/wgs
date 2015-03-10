@@ -1,5 +1,6 @@
 package org.wgs.wamp.topic;
 
+import org.wgs.wamp.WampCluster;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;

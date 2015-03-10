@@ -24,21 +24,15 @@ import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
-import org.wgs.wamp.WampRealm;
 import org.wgs.wamp.WampResult;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampRegisterProcedure;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
-import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampMethod;
-import org.wgs.wamp.rpc.WampRemoteMethod;
-import org.wgs.wamp.topic.WampCluster;
-import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.transport.http.websocket.WampEndpointConfig;
-import org.wgs.wamp.transport.http.websocket.WampWebsocket;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampMatchType;
@@ -300,6 +294,9 @@ public class WampClient
             public void onWampWelcome(WampSocket clientSocket, WampDict details) 
             {
                 clientSocket.setRealm(helloRealm);
+    
+                processRegisteredAnnotations();
+                processSubscribedAnnotations();  // FIXME: deadlocks?
                 
                 for(WampModule module : wampApp.getWampModules()) {
                     try { 
@@ -308,9 +305,6 @@ public class WampClient
                         logger.log(Level.SEVERE, "Error with wamp challenge:", ex);
                     }
                 }                
-                
-                processRegisteredAnnotations();
-                processSubscribedAnnotations();  // FIXME: deadlocks?
                 
             }            
 
@@ -557,31 +551,6 @@ public class WampClient
                 }
             }
         }
-
-        
-        if("cluster".equals(helloRealm)) {
-            for(String realmName : WampRealm.getRealmNames()) {
-                if(!"cluster".equals(realmName)) {
-                    WampRealm realm = WampRealm.getRealm(realmName);
-                    for(Long registrationId : realm.getRegistrationIds()) {
-                        WampCalleeRegistration registration = realm.getRegistration(registrationId);
-                        for(WampRemoteMethod remoteMethod : registration.getRemoteMethods(null, null)) {
-                            if(!"cluster".equals(remoteMethod.getRemotePeer().getRealm())) {
-                                WampCluster.Node.registerClusteredRPC(this, realm, registration, remoteMethod);
-                            }
-                        }
-                    }
-                    for(WampCalleeRegistration registration : realm.getPatternRegistrations()) {                
-                        for(WampRemoteMethod remoteMethod : registration.getRemoteMethods(null, null)) {
-                            if(!"cluster".equals(remoteMethod.getRemotePeer().getRealm())) {
-                                WampCluster.Node.registerClusteredRPC(this, realm, registration, remoteMethod);
-                            }
-                        }
-                    }
-                }
-            }    
-
-        }        
     }
     
     public Promise<Long, WampException, Long> registerRPC(WampDict options, String procedureURI, WampMethod implementation) 

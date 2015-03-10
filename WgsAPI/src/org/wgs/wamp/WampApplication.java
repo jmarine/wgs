@@ -24,7 +24,6 @@ import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.JmsServices;
 import org.wgs.wamp.topic.WampBroker;
-import org.wgs.wamp.topic.WampCluster;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.type.WampConnectionState;

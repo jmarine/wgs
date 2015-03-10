@@ -1,15 +1,12 @@
-package org.wgs.wamp.topic;
+package org.wgs.wamp;
 
 import java.util.Collection;
 import java.util.HashMap;
-import org.wgs.wamp.WampApplication;
-import org.wgs.wamp.WampModule;
-import org.wgs.wamp.WampProtocol;
-import org.wgs.wamp.WampRealm;
-import org.wgs.wamp.WampSocket;
+
 import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampRemoteMethod;
+import org.wgs.wamp.topic.JmsServices;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 
@@ -75,6 +72,36 @@ public class WampCluster
         public void start() throws Exception
         {
             client = new WampClient(wgsClusterNodeEndpoint);
+            client.getWampApplication().registerWampModule(new WampModule(client.getWampApplication()) {
+                @Override
+                public void onWampSessionEstablished(WampSocket clientSocket, WampDict details) 
+                { 
+                    super.onWampSessionEstablished(clientSocket, details);
+                    if("cluster".equals(clientSocket.getRealm())) {
+                        for(String realmName : WampRealm.getRealmNames()) {
+                            if(!"cluster".equals(realmName)) {
+                                WampRealm realm = WampRealm.getRealm(realmName);
+                                for(Long registrationId : realm.getRegistrationIds()) {
+                                    WampCalleeRegistration registration = realm.getRegistration(registrationId);
+                                    for(WampRemoteMethod remoteMethod : registration.getRemoteMethods(null, null)) {
+                                        if(!"cluster".equals(remoteMethod.getRemotePeer().getRealm())) {
+                                            WampCluster.Node.registerClusteredRPC(client, realm, registration, remoteMethod);
+                                        }
+                                    }
+                                }
+                                for(WampCalleeRegistration registration : realm.getPatternRegistrations()) {                
+                                    for(WampRemoteMethod remoteMethod : registration.getRemoteMethods(null, null)) {
+                                        if(!"cluster".equals(remoteMethod.getRemotePeer().getRealm())) {
+                                            WampCluster.Node.registerClusteredRPC(client, realm, registration, remoteMethod);
+                                        }
+                                    }
+                                }
+                            }
+                        }    
+
+                    }                    
+                }
+            });
             client.connect();
             
             WampDict authDetails = new WampDict();

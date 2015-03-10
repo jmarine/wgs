@@ -22,7 +22,6 @@ import org.wgs.wamp.rpc.WampLocalMethod;
 import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.rpc.WampRemoteMethod;
 import org.wgs.wamp.topic.WampBroker;
-import org.wgs.wamp.topic.WampCluster;
 import org.wgs.wamp.topic.WampMetaTopic;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscription;
