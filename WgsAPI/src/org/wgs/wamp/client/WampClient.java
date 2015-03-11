@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.security.MessageDigest;
 import java.util.List;
+import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -45,7 +46,7 @@ public class WampClient
 {
     private static final Logger logger = Logger.getLogger(WampClient.class.getName());    
     
-    private URI uri;
+    private String urls;
     private String password;
     private boolean open;
     private String helloRealm;
@@ -64,9 +65,9 @@ public class WampClient
     private ConcurrentHashMap<Long, WampCallController> pendingInvocations;
     
         
-    public WampClient(String uri) throws Exception
+    public WampClient(String urls) throws Exception
     {
-        this.uri = new URI(uri);
+        this.urls = urls;
         this.preferredEncoding = WampEncoding.JSON;
         this.pendingRequests = new ConcurrentHashMap<Long, WampList>();
         this.pendingInvocations = new ConcurrentHashMap<Long, WampCallController>();
@@ -379,29 +380,41 @@ public class WampClient
         this.open = false;
         this.taskCount = new AtomicInteger(0);        
         
-        switch(uri.getScheme()) {
-            case "ws":
-            case "wss":
-                ClientEndpointConfig config = ClientEndpointConfig.Builder.create().preferredSubprotocols(getPreferredSubprotocolOrder()).build();
-                config.getUserProperties().put(WampEndpointConfig.WAMP_ENDPOINTCONFIG_PROPERTY_NAME, 
-                                               new WampEndpointConfig(WampEndpoint.class, wampApp));
-                Session session = ContainerProvider.getWebSocketContainer().connectToServer(WampEndpoint.class, config, uri);
-                Long socketId = (Long)session.getUserProperties().get("_socketId");
-                clientSocket = wampApp.getSocketById(socketId);
-                break;
+        Exception lastError = null;
+        StringTokenizer stk = new StringTokenizer(urls, ",;");
+        while(!this.open && stk.hasMoreTokens()) {
+            try {
+                URI uri = new URI(stk.nextToken());
+                switch(uri.getScheme()) {
+                    case "ws":
+                    case "wss":
+                        ClientEndpointConfig config = ClientEndpointConfig.Builder.create().preferredSubprotocols(getPreferredSubprotocolOrder()).build();
+                        config.getUserProperties().put(WampEndpointConfig.WAMP_ENDPOINTCONFIG_PROPERTY_NAME, 
+                                                       new WampEndpointConfig(WampEndpoint.class, wampApp));
+                        Session session = ContainerProvider.getWebSocketContainer().connectToServer(WampEndpoint.class, config, uri);
+                        Long socketId = (Long)session.getUserProperties().get("_socketId");
+                        clientSocket = wampApp.getSocketById(socketId);
+                        break;
 
-            case "tcp":
-            case "ssl":
-                clientSocket = new WampRawSocket(wampApp, uri);
-                break;
+                    case "tcp":
+                    case "ssl":
+                        clientSocket = new WampRawSocket(wampApp, uri);
+                        break;
+
+                    case "http":
+                    case "https":
+                        throw new WampException(null, "wamp.error.protocol_not_implemented", null, null);
+
+                }
+
+                this.open = true;
                 
-            case "http":
-            case "https":
-                throw new WampException(null, "wamp.error.protocol_not_implemented", null, null);
-                
+            } catch(Exception ex) {
+                lastError = ex;
+            }
         }
         
-        this.open = true;
+        if(!this.open) throw lastError;
         
     }
     
