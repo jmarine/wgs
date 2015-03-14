@@ -67,9 +67,9 @@ public class WampDict extends WampObject
         }
     }
     
-    public void remove(String key)
+    public Object remove(String key)
     {
-        hashmap.remove(key);
+        return hashmap.remove(key);
     }
     
     public void clear()

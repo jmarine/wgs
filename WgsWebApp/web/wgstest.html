@@ -547,7 +547,7 @@ function list_groups(scope) {
             update_groups(id,details,errorURI,result,resultKw);
             $("#app_list").hide();
             $("#group_list fieldset legend").html("Groups: " + resultKw.app.name);
-            wgsclient.subscribe("wgs.app_event." + currentApp.appId, update_groups, app_metaevent, { "match": "exact", "metatopics": ["wamp.metatopic.subscriber.add", "wamp.metatopic.subscriber.remove"]} );
+            wgsclient.subscribe("wgs.app_event." + currentApp.appId, update_groups, app_metaevent, { "match": "exact", "metatopics": ["wamp.topic.on_subscribe", "wamp.topic.on_unsubscribe"]} );
         }
     });
 }
@@ -1222,7 +1222,7 @@ function on_mytopic_metaevents(topicURI, metatopic, metaevent)
 
 function test_subscribe()
 {
-    wgsclient.subscribe("myapp", on_mytopic_events, on_mytopic_metaevents, {"match": "prefix", "metatopics": ["wamp.metatopic.subscriber.current", "wamp.metatopic.subscriber.add", "wamp.metatopic.subscriber.remove"] })
+    wgsclient.subscribe("myapp", on_mytopic_events, on_mytopic_metaevents, {"match": "prefix", "metatopics": ["wamp.topic.on_subscribe", "wamp.topic.on_unsubscribe"] })
         .then(
             function(response) { alert("Subscribed: " + response); },
             function(response) { alert("Error: " + response); }

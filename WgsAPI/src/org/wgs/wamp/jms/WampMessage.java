@@ -5,7 +5,6 @@ import java.util.Enumeration;
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.topic.JmsServices;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;

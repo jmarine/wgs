@@ -22,7 +22,6 @@ import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampMethod;
-import org.wgs.wamp.topic.JmsServices;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
@@ -263,7 +262,7 @@ public class WampApplication
             if(authmethod.equals("anonymous")) {
                 onUserLogon(clientSocket, null, WampConnectionState.ANONYMOUS);
                 welcomed = true;
-            } else if(authmethod.equals("ticket") && signature.equals(JmsServices.brokerId)) {
+            } else if(authmethod.equals("ticket") && signature.equals(WampCluster.brokerId)) {
                 User clusterNodeUser = new User();
                 clusterNodeUser.setName("clusternode");
                 clusterNodeUser.setUid(clientSocket.getHelloDetails().getText("authid").substring(4));                

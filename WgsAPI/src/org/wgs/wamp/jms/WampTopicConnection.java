@@ -146,6 +146,8 @@ public class WampTopicConnection implements TopicConnection
                 }
             }
             
+            client.waitResponses();
+            
         } catch(Exception ex) {
             throw new JMSException(ex.getMessage());
         }

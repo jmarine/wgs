@@ -496,7 +496,7 @@ public abstract class WampSocket
             eventDetails.put("authrole", this.getAuthRole());
         }           
 
-        WampBroker.publishEvent(this.getRealm(), WampProtocol.newGlobalScopeId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), eventDetails);
+        WampBroker.publishEvent(this.getRealm(), WampProtocol.newGlobalScopeId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), eventDetails, true);
         
     }
 

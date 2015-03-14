@@ -7,7 +7,6 @@
 package org.wgs.util;
 
 import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
-import org.wgs.wamp.topic.JmsServices;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -27,6 +26,7 @@ import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 
 import org.wgs.wamp.WampApplication;
+import org.wgs.wamp.WampCluster;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.transport.http.longpolling.WampLongPollingServlet;
@@ -201,7 +201,7 @@ public class Server
 
             // Start WAMP applications:
             tyrusServerContainer = setupWampContexts(serverConfig);        
-            JmsServices.start(serverConfig);
+            WampCluster.start(serverConfig);
 
             // Wait manual termination:
             if(System.getenv("OPENSHIFT_APP_NAME") == null) {
@@ -242,7 +242,7 @@ public class Server
 
 
         try {
-            JmsServices.stop();
+            WampCluster.stop();
         } catch (Exception ex) {
             System.err.println("OpenMQ broker shutdown error: " + ex.getMessage());
             ex.printStackTrace();

@@ -177,12 +177,11 @@ public class WampModule
         long sinceN = 0L;       // options.getSinceN();
         long sinceTime = 0L;    // options.getSinceTime();
         topic.addSubscription(subscription);
-        clientSocket.addSubscription(subscription);
         if(options != null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_ADDED)) {
             if(options.hasEventsEnabled()) {
                 WampDict metaEvent = new WampDict();
                 metaEvent.put("session", clientSocket.getWampSessionId());
-                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null);
+                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null, true);
             }
         }
     }
@@ -194,7 +193,7 @@ public class WampModule
             if(options!=null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_REMOVED)) {
                 WampDict metaEvent = new WampDict();
                 metaEvent.put("session", clientSocket.getWampSessionId());                
-                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null);
+                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null, true);
             }
 
             subscription.removeSocket(clientSocket.getWampSessionId());
@@ -273,37 +272,58 @@ public class WampModule
     
     public void onPublish(WampSocket clientSocket, WampTopic topic, WampList request) throws Exception 
     {
-        Long publicationId = WampProtocol.newSessionScopeId(clientSocket);
+        boolean  fromClusterNode = "cluster".equals(clientSocket.getRealm());
+        WampDict publicationDetails = (WampDict)request.get(2);
+        Long publicationId = fromClusterNode? publicationDetails.getLong("_cluster_publication_id") : WampProtocol.newSessionScopeId(clientSocket);
         Long requestId = request.getLong(1);
         if(requestId != null) {
-            WampList payload   = (request.size() >= 5)? (WampList)request.get(4) : null;
-            WampDict payloadKw = (request.size() >= 6)? (WampDict)request.get(5) : null;;
-            WampDict publicationDetails = (WampDict)request.get(2);
-            WampPublishOptions options = new WampPublishOptions(publicationDetails);
-            if(options.hasExcludeMe()) {
-                Set<Long> excludedSet = options.getExcluded();
-                if(excludedSet == null) excludedSet = new HashSet<Long>();
-                excludedSet.add(clientSocket.getWampSessionId());
-                options.setExcluded(excludedSet);
-            }
+            String realm = fromClusterNode? publicationDetails.getText("_cluster_realm") : clientSocket.getRealm();
+            String metatopic = publicationDetails.getText("_cluster_metatopic");
+            publicationDetails.remove("_cluster_publication_id");
+            publicationDetails.remove("_cluster_realm");
+            
+            if(fromClusterNode && metatopic != null) {
+                Long toClient = publicationDetails.getLong("_cluster_eligible_client");
+                publicationDetails.remove("_cluster_metatopic");
+                publicationDetails.remove("_cluster_eligible_client");
+                WampBroker.publishMetaEvent(realm, publicationId, topic, metatopic, publicationDetails, toClient, !fromClusterNode);
+                
+            } else {
+                WampList payload   = (request.size() >= 5)? (WampList)request.get(4) : null;
+                WampDict payloadKw = (request.size() >= 6)? (WampDict)request.get(5) : null;;
+                WampPublishOptions options = new WampPublishOptions(publicationDetails);
+                if(options.hasExcludeMe()) {
+                    Set<Long> excludedSet = options.getExcluded();
+                    if(excludedSet == null) excludedSet = new HashSet<Long>();
+                    excludedSet.add(clientSocket.getWampSessionId());
+                    options.setExcluded(excludedSet);
+                }
 
-            if(options.hasAck()) {
-                WampProtocol.sendPublishedMessage(clientSocket, requestId, publicationId);
+                if(options.hasAck()) {
+                    WampProtocol.sendPublishedMessage(clientSocket, requestId, publicationId);
+                }
+
+                WampDict eventDetails = options.toWampObject();
+                for(String name : publicationDetails.keySet()) {
+                    if(name.startsWith("_")) eventDetails.put(name, publicationDetails.get(name));
+                }
+
+                if(options.hasDiscloseMe()) {
+                    if(fromClusterNode) {
+                        eventDetails.put("publisher", eventDetails.remove("_cluster_publisher"));
+                        eventDetails.put("authid", eventDetails.remove("_cluster_authid"));
+                        eventDetails.put("authprovider", eventDetails.remove("_cluster_authprovider"));
+                        eventDetails.put("authrole", eventDetails.remove("_cluster_authrole"));
+                    } else {
+                        eventDetails.put("publisher", clientSocket.getWampSessionId());
+                        eventDetails.put("authid", clientSocket.getAuthId());
+                        eventDetails.put("authprovider", clientSocket.getAuthProvider());
+                        eventDetails.put("authrole", clientSocket.getAuthRole());
+                    }
+                }      
+
+                WampBroker.publishEvent(realm, publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), eventDetails, !fromClusterNode);
             }
-            
-            WampDict eventDetails = options.toWampObject();
-            for(String name : publicationDetails.keySet()) {
-                if(name.startsWith("_")) eventDetails.put(name, publicationDetails.get(name));
-            }
-            
-            if(options.hasDiscloseMe()) {
-                eventDetails.put("publisher", clientSocket.getWampSessionId());
-                eventDetails.put("authid", clientSocket.getAuthId());
-                eventDetails.put("authprovider", clientSocket.getAuthProvider());
-                eventDetails.put("authrole", clientSocket.getAuthRole());
-            }      
-        
-            WampBroker.publishEvent(clientSocket.getRealm(), publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), eventDetails);
         }
     }
     

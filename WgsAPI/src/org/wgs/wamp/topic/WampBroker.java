@@ -2,14 +2,17 @@ package org.wgs.wamp.topic;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.NavigableMap;
 import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.wgs.util.Storage;
 
 import org.wgs.wamp.WampApplication;
+import org.wgs.wamp.WampCluster;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampProtocol;
 import org.wgs.wamp.WampSocket;
@@ -20,7 +23,7 @@ import org.wgs.wamp.type.WampMatchType;
 
 public class WampBroker 
 {
-    private static final Logger logger = Logger.getLogger(JmsServices.class.getName());
+    private static final Logger logger = Logger.getLogger(WampBroker.class.getName());
     
     private static TreeMap<String,WampTopic> topics = new TreeMap<String,WampTopic>();
     
@@ -49,7 +52,6 @@ public class WampBroker
                             exactTopicOpt.setEventsEnabled(subscription.getOptions().hasEventsEnabled());
                             exactTopicOpt.setMetaTopics(subscription.getOptions().getMetaTopics());
                             
-                            JmsServices.subscribeMessageListener(topic);                            
                             WampModule module = app.getWampModule(topic.getTopicName(), app.getDefaultWampModule());
                             module.onSubscribe(socket, topic, subscription, exactTopicOpt);
                         }
@@ -159,14 +161,53 @@ public class WampBroker
         }  
     }
     
-    public static void publishEvent(String realm, Long id, WampTopic wampTopic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, WampDict eventDetails) throws Exception
+
+    public static void publishEvent(String realm, Long id, WampTopic topic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, WampDict eventDetails, boolean broadcastToClusterNodes) throws Exception
     {
-        JmsServices.publishEvent(realm, id, wampTopic, null, payload, payloadKw, eligible, exclude, eventDetails);
+        if(broadcastToClusterNodes) {
+            if(eventDetails == null) eventDetails = new WampDict();
+            eventDetails.put("_cluster_publication_id", id);
+            eventDetails.put("_cluster_realm", realm);
+            eventDetails.put("_cluster_authid", eventDetails.getText("authid"));
+            eventDetails.put("_cluster_authprovider", eventDetails.getText("authprovider"));
+            eventDetails.put("_cluster_authrole", eventDetails.getText("authrole"));
+            
+            for(WampCluster.Node node : WampCluster.getNodes()) {
+                WampProtocol.sendPublishMessage(node.getWampClient().getWampSocket(), id, topic.getTopicName(), payload, payloadKw, eventDetails);
+            }
+            
+            eventDetails.remove("_cluster_publication_id");
+            eventDetails.remove("_cluster_realm");
+            eventDetails.remove("_cluster_authid");
+            eventDetails.remove("_cluster_authprovider");
+            eventDetails.remove("_cluster_authrole");
+        }
+        
+        WampProtocol.sendEvents(realm, id, topic, payload, payloadKw, eligible, exclude, eventDetails);        
+        
     }
 
-    public static void publishMetaEvent(String realm, Long id, WampTopic wampTopic, String metatopic, WampDict metaEventDetails, Long toClient) throws Exception
+    public static void publishMetaEvent(String realm, Long id, WampTopic topic, String metaTopic, WampDict metaEventDetails, Long toClient, boolean broadcastToClusterNodes) throws Exception
     {
-        JmsServices.publishMetaEvent(realm, id, wampTopic, metatopic, metaEventDetails, toClient);
+        if(broadcastToClusterNodes) {
+            if(metaEventDetails == null) metaEventDetails = new WampDict();
+            metaEventDetails.put("_cluster_publication_id", id);
+            metaEventDetails.put("_cluster_metatopic", metaTopic);
+            metaEventDetails.put("_cluster_realm", realm);
+            if(toClient != null) metaEventDetails.put("_cluster_eligible_client", toClient);
+            
+            for(WampCluster.Node node : WampCluster.getNodes()) {
+                WampProtocol.sendPublishMessage(node.getWampClient().getWampSocket(), id, topic.getTopicName(), null, null, metaEventDetails);
+            }
+            
+            metaEventDetails.remove("_cluster_publication_id");
+            metaEventDetails.remove("_cluster_metatopic");
+            metaEventDetails.remove("_cluster_realm");
+            metaEventDetails.remove("_cluster_eligible_client");
+        }        
+        
+        WampProtocol.sendMetaEvents(realm, id, topic, metaTopic, null, metaEventDetails);
+        
     }
 
     
@@ -195,15 +236,15 @@ public class WampBroker
         }        
 
         subscription.addSocket(clientSocket);
-            
+        clientSocket.addSubscription(subscription);
+        
         try {
+            WampProtocol.sendSubscribedMessage(clientSocket, requestId, subscription.getId());
+            
             for(WampTopic topic : subscription.getTopics()) {
-                if(topic.getSubscriptionCount() == 0) JmsServices.subscribeMessageListener(topic);
                 WampModule module = app.getWampModule(topic.getTopicName(), app.getDefaultWampModule());
                 module.onSubscribe(clientSocket, topic, subscription, options);
             }
-
-            WampProtocol.sendSubscribedMessage(clientSocket, requestId, subscription.getId());
             
         } catch(Exception ex) {
             WampProtocol.sendErrorMessage(clientSocket, WampProtocol.SUBSCRIBE, requestId, null, "wamp.error.subscription_error", null, null);
@@ -227,11 +268,7 @@ public class WampBroker
                     module.onUnsubscribe(clientSocket, subscriptionId, topic);
                 } catch(Exception ex) {
                     logger.log(Level.FINE, "Error in unsubscription to topic", ex);
-                } finally {      
-                    if(topic.getSubscriptionCount() == 0) {
-                        JmsServices.unsubscribeMessageListener(topic);
-                    }            
-                }
+                } 
             }
 
             clientSocket.removeSubscription(subscriptionId);
