@@ -55,6 +55,7 @@ public class WampSubscription
         
         RefCount<WampSocket> ref = sockets.get(socket.getWampSessionId());
         if(ref == null) {
+            socket.addSubscription(this);
             ref = new RefCount<WampSocket>(socket, 1);
             sockets.put(socket.getWampSessionId(), ref);
             realmSessions.add(socket.getWampSessionId());
@@ -65,20 +66,19 @@ public class WampSubscription
         }
     }
     
-    public synchronized WampSocket removeSocket(Long sessionId)
+    public synchronized boolean removeSocket(Long sessionId)
     {
         RefCount<WampSocket> ref = sockets.get(sessionId);
-        if(ref == null) {
-            return null;
+        if(ref != null && ref.refCount(-1) == 0) {
+            WampSocket socket = ref.getObject();
+            socket.removeSubscription(this.getId());
+            sockets.remove(sessionId);
+            HashSet<Long> realmSessions = sessionIdsByRealm.get(socket.getRealm());
+            if(realmSessions != null) realmSessions.remove(sessionId);
+            else System.out.println("WARN: no sessionId " + sessionId + " in realm " + socket.getRealm());
+            return true;
         } else {
-            if(ref.refCount(-1) == 0) {
-                WampSocket socket = ref.getObject();
-                sockets.remove(sessionId);
-                HashSet<Long> realmSessions = sessionIdsByRealm.get(socket.getRealm());
-                if(realmSessions != null) realmSessions.remove(sessionId);
-                else System.out.println("WARN: no sessionId " + sessionId + " in realm " + socket.getRealm());
-            }
-            return ref.getObject();
+            return false;
         }
     }
     

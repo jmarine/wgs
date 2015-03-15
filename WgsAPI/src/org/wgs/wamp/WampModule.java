@@ -177,35 +177,35 @@ public class WampModule
         long sinceN = 0L;       // options.getSinceN();
         long sinceTime = 0L;    // options.getSinceTime();
         topic.addSubscription(subscription);
+        
         if(options != null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_ADDED)) {
-            if(options.hasEventsEnabled()) {
-                WampDict metaEvent = new WampDict();
-                metaEvent.put("session", clientSocket.getWampSessionId());
-                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null, true);
-            }
+            WampDict metaEvent = new WampDict();
+            metaEvent.put("session", clientSocket.getWampSessionId());
+            WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_ADDED, metaEvent, null, true);
         }
     }
 
     public void onUnsubscribe(WampSocket clientSocket, Long subscriptionId, WampTopic topic) throws Exception { 
         WampSubscription subscription = topic.getSubscription(subscriptionId);
-        if(subscription.getSocket(clientSocket.getWampSessionId()) != null) {
-            WampSubscriptionOptions options = subscription.getOptions();
-            if(options!=null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_REMOVED)) {
-                WampDict metaEvent = new WampDict();
-                metaEvent.put("session", clientSocket.getWampSessionId());                
-                WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null, true);
-            }
 
+        WampSubscriptionOptions options = subscription.getOptions();
+        if(options!=null && options.hasEventsEnabled() && options.hasMetaTopic(WampMetaTopic.SUBSCRIBER_REMOVED)) {
+            subscription.addSocket(clientSocket);  // METAEVENT
+            WampDict metaEvent = new WampDict();
+            metaEvent.put("session", clientSocket.getWampSessionId());                
+            WampBroker.publishMetaEvent(clientSocket.getRealm(), WampProtocol.newGlobalScopeId(), topic, WampMetaTopic.SUBSCRIBER_REMOVED, metaEvent, null, true);
             subscription.removeSocket(clientSocket.getWampSessionId());
-            if(subscription.getSocketsCount() == 0) {
-                topic.removeSubscription(subscription.getId());
-                if(topic.getSubscriptionCount() == 0) {
-                    if(topic.getOptions() != null && topic.getOptions().isTemporary()) {
-                        WampBroker.removeTopic(null, topic.getTopicName());
-                    }
+        }
+
+        if(subscription.getSocketsCount() == 0) {
+            topic.removeSubscription(subscription.getId());
+            if(topic.getSubscriptionCount() == 0) {
+                if(topic.getOptions() != null && topic.getOptions().isTemporary()) {
+                    WampBroker.removeTopic(null, topic.getTopicName());
                 }
             }
         }
+        
     }
     
     public void onRegister(WampSocket clientSocket, Long registrationId, String methodName, WampCalleeRegistration registration, WampMatchType matchType, String methodUriOrPattern, WampList request) throws Exception
