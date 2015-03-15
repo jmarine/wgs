@@ -12,6 +12,10 @@ import org.wgs.wamp.type.WampObject;
 
 public class WampSerializerJSON extends WampObject implements WampSerializer
 {
+    private static JsonReaderFactory  readerFactory  = Json.createReaderFactory(null);
+    private static JsonBuilderFactory builderFactory = Json.createBuilderFactory(null);
+    
+    
     @Override
     public Object serialize(WampObject obj) throws Exception {
         return convertWampObjectToJsonValue(obj).toString();
@@ -39,7 +43,7 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
     {
         JsonValue retval = null;      
         if(dict != null) {
-            JsonObjectBuilder builder = Json.createObjectBuilder();
+            JsonObjectBuilder builder = builderFactory.createObjectBuilder();
             for(String key : dict.keySet()) {
                 Object val = dict.get(key);
                 if(val == null) {
@@ -71,7 +75,7 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
     {
         JsonValue retval = null;      
         if(arr != null) {
-            JsonArrayBuilder builder = Json.createArrayBuilder();                
+            JsonArrayBuilder builder = builderFactory.createArrayBuilder();                
 
             for(int i = 0; i < arr.size(); i++) {
                 Object val = arr.get(i);
@@ -106,7 +110,7 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
     public WampObject deserialize(Object obj, int offset, int len) throws Exception 
     {
         String str = (String)obj;
-        try(JsonReader jsonReader = Json.createReader(new StringReader(str.substring(offset, offset+len)))) {
+        try(JsonReader jsonReader = readerFactory.createReader(new StringReader(str.substring(offset, offset+len)))) {
             JsonStructure jsonStructure = jsonReader.read();     
             return (WampObject)castToWampObject(jsonStructure);
         }        
