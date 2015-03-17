@@ -58,8 +58,7 @@ public class WampClient
     private ConcurrentHashMap<Long, String> rpcRegistrationsById;
     private ConcurrentHashMap<String, Long> rpcRegistrationsByURI;
     private ConcurrentHashMap<Long, WampMethod> rpcHandlers;
-    private ConcurrentHashMap<Long, String> subscriptionsById;
-    private ConcurrentHashMap<String, Long> subscriptionsByTopicAndOptions;
+    private ConcurrentHashMap<Long, String> topicPatternsBySubscriptionId;
     
     private ConcurrentHashMap<Long, WampList> pendingRequests;
     private ConcurrentHashMap<Long, WampCallController> pendingInvocations;
@@ -74,8 +73,8 @@ public class WampClient
         this.rpcRegistrationsById = new ConcurrentHashMap<Long, String>();
         this.rpcRegistrationsByURI = new ConcurrentHashMap<String, Long>();
         this.rpcHandlers = new ConcurrentHashMap<Long, WampMethod>();
-        this.subscriptionsById = new ConcurrentHashMap<Long, String>();
-        this.subscriptionsByTopicAndOptions = new ConcurrentHashMap<String, Long>();
+        this.topicPatternsBySubscriptionId = new ConcurrentHashMap<Long, String>();
+
         
         this.wampApp = new WampApplication(WampApplication.WAMPv2, null) {
             @Override
@@ -248,9 +247,7 @@ public class WampClient
                             Long subscriptionId = request.getLong(2);
                             Deferred<Long, WampException, Long> subscribedPromise = getDeferredLong(subscribedParams);
                             String topicAndOptionsKey = subscribedParams.getText(1);
-                            WampSubscriptionOptions options = (WampSubscriptionOptions)subscribedParams.get(2);
-                            WampClient.this.subscriptionsById.put(subscriptionId, topicAndOptionsKey); 
-                            WampClient.this.subscriptionsByTopicAndOptions.put(topicAndOptionsKey, subscriptionId);
+                            WampClient.this.topicPatternsBySubscriptionId.put(subscriptionId, topicAndOptionsKey); 
                             if(subscribedPromise != null) subscribedPromise.resolve(subscriptionId);
                             removePendingMessage(subscribedRequestId);
                         }
@@ -265,7 +262,6 @@ public class WampClient
                             if(unsubscribedPromise != null) unsubscribedPromise.resolve(subscriptionId);
                             removePendingMessage(unsubscribedRequestId);
                             //delete client.subscriptionsById[subscriptionId];
-                            //delete client.subscriptionsByTopicAndOptions[topicAndOptionsKey];              
                         }
                         break;
                         
@@ -603,17 +599,13 @@ public class WampClient
         return deferred.promise();        
     }
 
-    private String getTopicAndOptionsKey(String topicPattern, WampSubscriptionOptions options)
+    private String getTopicPattern(String topicPattern, WampSubscriptionOptions options)
     {
         if(options == null) options = new WampSubscriptionOptions(null);
         if(options.getMatchType() == WampMatchType.prefix) topicPattern = topicPattern + "..";
         return topicPattern;
     }
     
-    private Long getSubscriptionIdByTopicAndOptions(String topicPattern, WampSubscriptionOptions options) {
-        String topicAndOptionsKey = getTopicAndOptionsKey(topicPattern, options);
-        return subscriptionsByTopicAndOptions.get(topicAndOptionsKey);
-    }
     
     public Promise<Long, WampException, Long> subscribe(String topicURI, WampSubscriptionOptions options) 
     {
@@ -623,7 +615,7 @@ public class WampClient
             options.setMatchType(WampMatchType.wildcard);
         }
         
-        String topicAndOptionsKey = getTopicAndOptionsKey(topicURI,options);        
+        String topicAndOptionsKey = getTopicPattern(topicURI,options);        
 
         Long requestId = WampProtocol.newSessionScopeId(clientSocket);
         WampList list = new WampList();
@@ -636,21 +628,15 @@ public class WampClient
         return deferred.promise();
     }
     
-    public Promise<Long, WampException, Long> unsubscribe(String topic, WampSubscriptionOptions options) 
+    public Promise<Long, WampException, Long> unsubscribe(Long subscriptionId) 
     {
         DeferredObject<Long, WampException, Long> deferred = new DeferredObject<Long, WampException, Long>();        
-        if(options == null) options = new WampSubscriptionOptions(null);
-        if(topic.indexOf("..") != -1) {
-            options.setMatchType(WampMatchType.wildcard);
-        }
 
         Long requestId = WampProtocol.newSessionScopeId(clientSocket);
-        Long subscriptionId = getSubscriptionIdByTopicAndOptions(topic,options);
         
         WampList list = new WampList();
         list.add(deferred);      
         list.add(subscriptionId);
-        list.add(getTopicAndOptionsKey(topic,options));
         
         createPendingMessage(requestId, list);
         WampProtocol.sendUnsubscribeMessage(clientSocket, requestId, subscriptionId);
@@ -687,9 +673,10 @@ public class WampClient
     public String getTopicFromEventData(Long subscriptionId, WampDict details) 
     {
         String topic = details.getText("topic");
-        if(topic == null) topic = this.subscriptionsById.get(subscriptionId);
+        if(topic == null) topic = this.topicPatternsBySubscriptionId.get(subscriptionId);
         return topic;
     }
+    
 
     public void close() throws Exception {
         //goodbye(null);

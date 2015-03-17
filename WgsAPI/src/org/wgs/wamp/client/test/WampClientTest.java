@@ -31,6 +31,7 @@ public class WampClientTest extends WampModule implements Runnable
     private static boolean digestPasswordMD5 = false;
 
     
+    private Long subscriptionId;
     private WampClient client;
     
     public WampClientTest(WampClient client) {
@@ -63,6 +64,7 @@ public class WampClientTest extends WampModule implements Runnable
     public void run()
     {
         try {
+            
             int repeats = 10;
            
             System.out.println("Connecting");
@@ -78,19 +80,26 @@ public class WampClientTest extends WampModule implements Runnable
             client.waitResponses();
 
             System.out.println("Subscription");
+            this.subscriptionId = null;
             WampSubscriptionOptions subOpt = new WampSubscriptionOptions(null);
             subOpt.setMatchType(WampMatchType.prefix);
-            client.subscribe("myapp", subOpt);  // received in onEvent method of registered modules
+            client.subscribe("myapp", subOpt).done(new DoneCallback<Long>() {
+                @Override
+                public void onDone(Long id) {
+                    WampClientTest.this.subscriptionId = id;
+                }
+            });  
+            // received in onEvent method of registered modules
             client.waitResponses();
             
-            System.out.println("Publication with annotated subscription.");
+            System.out.println("Publication with subscription.");
             doPublications(repeats);
             client.waitResponses();
 
             doCalls(repeats);
             client.waitResponses();            
 
-            client.unsubscribe("myapp", subOpt);
+            client.unsubscribe(this.subscriptionId);
             client.waitResponses();
             System.out.println("Publication after unsubscription.");
             doPublications(repeats);

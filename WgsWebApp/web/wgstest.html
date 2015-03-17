@@ -120,6 +120,8 @@ var wgsclient = null;
 var currentApp = null;
 var currentGroup = null;
 var notificationChannel = null;
+var appSubscriptionId = null;
+var groupSubscriptionId = null;
 
 $(document).ready(function(){
     $('#apps').click(function() {
@@ -530,7 +532,7 @@ function hide_group_list() {
     var appId = $("#apps").val();
     $("#group_list").hide();
     $("#app_list").slideDown(500);
-    wgsclient.unsubscribe("wgs.app_event." + appId, update_groups, app_metaevent, {});
+    wgsclient.unsubscribe(appSubscriptionId, update_groups, app_metaevent);
 }
 
 function list_groups(scope) {
@@ -547,7 +549,7 @@ function list_groups(scope) {
             update_groups(id,details,errorURI,result,resultKw);
             $("#app_list").hide();
             $("#group_list fieldset legend").html("Groups: " + resultKw.app.name);
-            wgsclient.subscribe("wgs.app_event." + currentApp.appId, update_groups, app_metaevent, { "match": "exact", "metatopics": ["wamp.topic.on_subscribe", "wamp.topic.on_unsubscribe"]} );
+            wgsclient.subscribe("wgs.app_event." + currentApp.appId, update_groups, app_metaevent, { "match": "exact", "metatopics": ["wamp.topic.on_subscribe", "wamp.topic.on_unsubscribe"]} ).then(function(id) { appSubscriptionId = id; });
         }
     });
 }
@@ -641,13 +643,17 @@ function open_group(gid, options) {
     $("#group_list").show();          
     adjustScrollTable("groups");
         
-    wgsclient.unsubscribe("wgs.app_event." + appId, update_groups, app_metaevent, {});
+    if(appSubscriptionId != null) {
+        wgsclient.unsubscribe(appSubscriptionId, update_groups, app_metaevent);
+        appSubscriptionId = null;
+    }
+    
     wgsclient.openGroup(appId, gid, options, function(id,details,errorURI,result,resultKw) {
        if(!errorURI) {
             if(!currentGroup) {
                 currentApp = resultKw.app;
                 currentGroup = resultKw;
-                wgsclient.subscribe("wgs.group_event." + resultKw.gid, update_group_callback, null, {} );
+                wgsclient.subscribe("wgs.group_event." + resultKw.gid, update_group_callback, null, {} ).then(function(id) { groupSubscriptionId = id; } );
                 show_group(resultKw);                 
             }                
 
@@ -970,7 +976,11 @@ function exit_group(toOfflineMode) {
     if(gid.length > 0) {
         wgsclient.exitGroup(gid, function(id,details,errorURI,result,resultKw) {
             currentGroup = null;
-            wgsclient.unsubscribe("wgs.group_event." + gid, update_group_callback, null, {});
+            if(groupSubscriptionId != null) {
+                wgsclient.unsubscribe(groupSubscriptionId, update_group_callback, null);
+                groupSubscriptionId = null;
+            }
+            
             //wgsclient.setSubscriptionStatus("wgs.app_event." + $("#apps").val(), null, null );        
             
             if(!toOfflineMode) {
@@ -1220,22 +1230,25 @@ function on_mytopic_metaevents(topicURI, metatopic, metaevent)
 }
 
 
+var myappSubscriptionId = null;
 function test_subscribe()
 {
     wgsclient.subscribe("myapp", on_mytopic_events, on_mytopic_metaevents, {"match": "prefix", "metatopics": ["wamp.topic.on_subscribe", "wamp.topic.on_unsubscribe"] })
         .then(
-            function(response) { alert("Subscribed: " + response); },
+            function(response) { myappSubscriptionId = response; alert("Subscribed: " + response); },
             function(response) { alert("Error: " + response); }
         );
 }
 
 function test_unsubscribe()
 {
-    wgsclient.unsubscribe("myapp", on_mytopic_events, on_mytopic_metaevents, {"match": "prefix"})
+    wgsclient.unsubscribe(myappSubscriptionId, on_mytopic_events, on_mytopic_metaevents)
         .then(
             function(response) { alert("Unsubscribed: " + response); },
             function(response) { alert("Error: " + response); }
         );
+
+    myappSubscriptionId = null;
 }
 
 function test_publish()

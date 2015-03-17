@@ -8,13 +8,9 @@ import org.jdeferred.DoneCallback;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.client.WampClient;
-import org.wgs.wamp.topic.WampBroker;
-import org.wgs.wamp.topic.WampSubscription;
-import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.topic.WampTopic;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
-import org.wgs.wamp.type.WampObject;
 
 
 public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSubscriber
@@ -62,8 +58,7 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
     public void stop() throws JMSException
     {
         if(subscribed) {
-            WampSubscriptionOptions options = new WampSubscriptionOptions(null);
-            if(client.isOpen()) this.client.unsubscribe(topic.getTopicName(), options);
+            if(client.isOpen()) close();
             subscribed = false;
         }
     }
@@ -83,7 +78,7 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
         this.subscribed = subscribed;
     }
     
-    public boolean getSubscribed()
+    public boolean isSubscribed()
     {
         return this.subscribed;
     }
@@ -145,7 +140,7 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
 
     @Override
     public void close() throws JMSException {
-        client.unsubscribe(topic.getTopicName(), null);
+        if(subscriptionId != null) client.unsubscribe(subscriptionId);
     }
     
 }
