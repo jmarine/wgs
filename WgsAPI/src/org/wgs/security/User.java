@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.security.Principal;
 import java.util.List;
 import javax.persistence.Column;
-import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
@@ -40,7 +39,7 @@ public class User implements Serializable, Principal
     @Column(name="login", nullable = false)    
     private String login;
     
-    @Column(name="name",nullable=false)
+    @Column(name="name", nullable=false)
     private String name;   
 
     @javax.persistence.Temporal(TemporalType.TIMESTAMP)
@@ -66,9 +65,6 @@ public class User implements Serializable, Principal
     @Column(name="picture")
     private String picture;    
 
-    @Column(name="notification_channel")
-    private String notificationChannel;  
-    
     @javax.persistence.Temporal(TemporalType.TIMESTAMP)
     @Column(name="token_caducity")
     private java.util.Calendar tokenCaducity;
@@ -81,13 +77,13 @@ public class User implements Serializable, Principal
     @Column(name="refresh_token")
     private String refreshToken;    
     
-    
     @ManyToMany(fetch = FetchType.LAZY)
     @OrderBy(value = "name")
     @JoinTable(name="USR_FRIEND", 
             joinColumns={@JoinColumn(name="uid", referencedColumnName = "uid")}, 
             inverseJoinColumns={@JoinColumn(name="friend_uid", referencedColumnName = "uid")})
     private List<User> friends;
+
     
     /**
      * @return the uid
@@ -247,20 +243,6 @@ public class User implements Serializable, Principal
         this.picture = picture;
     }    
 
-
-    /**
-     * @return the notificationChannel
-     */
-    public String getNotificationChannel() {
-        return notificationChannel;
-    }
-
-    /**
-     * @param notificationChannel the notificationChannel to set
-     */
-    public void setNotificationChannel(String notificationChannel) {
-        this.notificationChannel = notificationChannel;
-    }
 
     
     /**

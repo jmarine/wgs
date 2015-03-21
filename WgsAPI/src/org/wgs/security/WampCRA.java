@@ -73,7 +73,7 @@ public class WampCRA
     }
     
     
-    public static void verifySignature(WampApplication app, WampSocket socket, String signature) throws Exception
+    public static void verifySignature(WampApplication app, WampSocket socket, String signature, WampDict extra) throws Exception
     {
         if(socket.getState() == WampConnectionState.AUTHENTICATED) {
             throw new WampException(null, "wamp.cra.error.already_authenticated", null, null);
@@ -89,7 +89,7 @@ public class WampCRA
         if(clientPendingAuthSig == null) clientPendingAuthSig = "";
         
         if(signature == null) {
-            app.onUserLogon(socket, null, WampConnectionState.ANONYMOUS);
+            app.onUserLogon(socket, null, WampConnectionState.ANONYMOUS, extra);
         } else {
             if(!signature.equals(clientPendingAuthSig)) {
                 System.out.println("wamp.cra.error.authentication_failed: signature for authentication request is invalid");
@@ -101,7 +101,7 @@ public class WampCRA
             usr.setLastLoginTime(Calendar.getInstance());
             usr = Storage.saveEntity(usr);
 
-            app.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
+            app.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED, extra);
         }
 
     }

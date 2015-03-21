@@ -271,7 +271,6 @@ public class OpenIdConnectUtils
                         if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
                             // Use cached UserInfo from local database
                             logger.fine("Cached OIDC User: " + usr);
-                            wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
 
                         } else if(response.containsKey("access_token")) {
                             // Get UserInfo from OpenId Connect Provider
@@ -314,23 +313,15 @@ public class OpenIdConnectUtils
                         }
                     }
 
-                    if(usr!= null && data.has("notification_channel")) {
-                        String notificationChannel = data.getText("notification_channel");
-                        if(!notificationChannel.equals(usr.getNotificationChannel())) {
-                            usr.setNotificationChannel(notificationChannel);
-                        }
-                    }
-
                 }
             }
-            
             
             if(usr != null) {
                 Social.getFriends(usr);
                 Social.clearNotifications(oidcClient, usr);
                 usr.setLastLoginTime(now);
                 usr = Storage.saveEntity(usr);
-                wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);                           
+                wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED, data);                           
             }
             
             

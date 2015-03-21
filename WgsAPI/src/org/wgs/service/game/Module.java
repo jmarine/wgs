@@ -125,10 +125,6 @@ public class Module extends WampModule
     @WampRegisterProcedure(name="register")
     public WampDict registerUser(WampSocket socket, WampDict data) throws Exception
     {
-        boolean user_valid = false;
-        
-        Client client = clients.get(socket.getWampSessionId());
-
         String login = data.getText("user");
         User usr = UserRepository.findUserByLoginAndDomain(login, socket.getRealm());
         if(usr != null) throw new WampException(null, WGS_MODULE_NAME + ".user_already_exists", null, null);
@@ -147,7 +143,7 @@ public class Module extends WampModule
         usr.setLastLoginTime(Calendar.getInstance());
         usr = Storage.saveEntity(usr);
 
-        wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED);
+        wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED, data);
         
         return usr.toWampObject(true);
     }
@@ -1064,7 +1060,7 @@ public class Module extends WampModule
     }
 
     
-    private void notifyOfflineUsers(WampSocket socket, Group g, String msg) throws Exception    
+    private void notifyOfflineUsers(WampSocket fromClientSocket, Group g, String msg) throws Exception    
     {
         System.out.println("Starting OFFLINE notifications");
         if(g != null && msg != null) {
@@ -1073,7 +1069,8 @@ public class Module extends WampModule
                     Client c = m.getClient();
                     if(c == null) {
                         System.out.println("OFFLINE notifications to " + m.getUser().getName());
-                        Social.notifyUser(socket, m.getUser(), g.getGid(), msg);
+                        String clientName = fromClientSocket.getHelloDetails().getText("_oauth2_client_name");
+                        Social.notifyUser(clientName, fromClientSocket, m.getUser(), g.getGid(), msg);
                     }
                 }
             }

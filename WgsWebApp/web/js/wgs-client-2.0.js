@@ -18,9 +18,9 @@ WgsClient.prototype.getUserInfo = function(callback) {
     this.call("wgs.get_user_info").then(callback,callback);
 }
   
-WgsClient.prototype.login = function(realm, user, password, onstatechange) {
+WgsClient.prototype.login = function(realm, details, user, password, onstatechange) {
     var client = this;
-    Wamp2.prototype.login.call(this, realm, user, password, function(state, msg) {
+    Wamp2.prototype.login.call(this, realm, details, user, password, function(state, msg) {
         onstatechange(state, msg);
         if(state == ConnectionState.WELCOMED) {
             client.getUserInfo(function(id,details,errorURI,result,resultKw) {
@@ -46,9 +46,9 @@ WgsClient.prototype.getProfile = function(user, callback) {
 }
 
 
-WgsClient.prototype.registerUser = function(realm, user, password, email, onstatechange) {
+WgsClient.prototype.registerUser = function(appName, realm, user, password, email, notificationChannel, onstatechange) {
     var client = this;
-    var details = { "authmethods": ["anonymous"] };
+    var details = { "authmethods": ["anonymous"], "_oauth2_client_name": appName };
     client.connect(realm, details, function(state, msg) {
         onstatechange(state, msg);
         if(state == ConnectionState.WELCOMED) {
@@ -56,6 +56,7 @@ WgsClient.prototype.registerUser = function(realm, user, password, email, onstat
             msg.user = user;
             msg.password = CryptoJS.MD5(password).toString();
             msg.email = email;
+            msg._notification_channel = notificationChannel;
             client.call("wgs.register", msg).then(
                 function(id,details,errorURI,result,resultKw) {
                     client.authid = resultKw.authid;
@@ -107,6 +108,7 @@ WgsClient.prototype.openIdConnectAuthCode = function(realm, provider, clientName
     details.authprovider = provider;
     details._oauth2_client_name = clientName;
     details._oauth2_redirect_uri = redirectUri;
+    details._notification_channel = notificationChannel;
     
     // TODO: check client.url
     if(client.authmethod.indexOf("oauth2") != -1) {

@@ -21,6 +21,16 @@ import org.wgs.security.OpenIdConnectClient;
 import org.wgs.security.OpenIdConnectClientPK;
 import org.wgs.security.User;
 import org.wgs.wamp.WampSocket;
+import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.encoding.WampSerializer;
+import org.wgs.wamp.type.WampDict;
+
+import com.google.android.gcm.server.*;
+import java.io.File;
+import java.io.FileReader;
+import javax.persistence.NoResultException;
+import javax.persistence.TypedQuery;
+import org.wgs.security.UserPushChannel;
 
 
 public class Social 
@@ -136,30 +146,67 @@ public class Social
     }
 
     
-    public static void notifyUser(WampSocket fromClientSocket, User toUser, String gameGuid, String template) throws Exception
+    public static void notifyUser(String app, WampSocket fromClientSocket, User toUser, String gameGuid, String template) throws Exception
     {
         User fromUser = (User)fromClientSocket.getUserPrincipal();
+        template = template.replace("%me%", fromUser.getName()); // "@[" + fromUser.getLogin() + "]");
+
+        EntityManager manager = null;
+        try {
+            manager = Storage.getEntityManager();
         
-        if("facebook.com".equals(toUser.getDomain()) && fromUser.getDomain().equals(toUser.getDomain())) {
-            String clientName = fromClientSocket.getHelloDetails().getText("_oauth2_client_name");
-            template = template.replace("%me%", fromUser.getName()); // "@[" + fromUser.getLogin() + "]");
+            if("facebook.com".equals(toUser.getDomain()) && fromUser.getDomain().equals(toUser.getDomain())) {
                     
-            EntityManager manager = null;
-            try {
-                manager = Storage.getEntityManager();
-                OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(fromUser.getDomain(), clientName);
+                OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(toUser.getDomain(), app);
                 OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
                 notifyFacebookUser(oidcClient, toUser.getLogin(), "?provider=facebook.com&gid=" + gameGuid, template);
-            } finally {
-                if(manager != null) {
-                    try { manager.close(); }
-                    catch(Exception ex) { }
-                }
-            }
+
             
-        } else {
-            // SEND E-MAIL?  // but e-mail address are not verified, yet
+            } else {
+
+                TypedQuery<UserPushChannel> queryProvider = manager.createNamedQuery("UserPushChannel.findByAppAndUser", UserPushChannel.class);
+                queryProvider.setParameter(1, app);
+                queryProvider.setParameter(2, toUser);
+                
+                UserPushChannel userPushChannel = null;
+                try {
+                    userPushChannel = queryProvider.getSingleResult();
+                } catch(NoResultException noEx) { }
+
+                if(userPushChannel != null) {
+                    String notificationChannel = userPushChannel.getNotificationChannel();
+                    WampDict info = (WampDict)WampEncoding.JSON.getSerializer().deserialize(notificationChannel, 0, notificationChannel.length());
+                    if(info.has("endpoint") && info.getText("endpoint").equals("https://android.googleapis.com/gcm/send")) {
+                        notifyDeviceGCM(app, info.getText("subscriptionId"), "?gid=" + gameGuid, template);
+                    }        
+                    
+                } else {
+                    // SEND E-MAIL?  // but e-mail address are not verified, yet
+                }
+             }
+            
+                
+        } finally {
+            if(manager != null) {
+                try { manager.close(); }
+                catch(Exception ex) { }
+            }
         }
+    }
+    
+    
+    public static void notifyDeviceGCM(String app, String registrationId, String rel_link, String template) throws Exception
+    {
+        File gcmKeyFile = new File(new File(System.getProperty("user.dir")).getParentFile(), "GCM-" + app.replace(' ', '_') + ".key");
+        System.out.println("Searching GCM key in: " + gcmKeyFile.getAbsolutePath());
+        try(BufferedReader reader = new BufferedReader(new FileReader(gcmKeyFile))) {
+            String gcmKey = reader.readLine();
+            Sender sender = new Sender(gcmKey);
+            Message msg = new Message.Builder().addData("data", template).build();
+            Result result = sender.send(msg, registrationId, 3);
+            System.out.println("GCM: Sent message to one device: " + result);
+        } 
+        
     }
     
     public static void notifyFacebookUser(OpenIdConnectClient oidcClient, String to_user_id, String rel_link, String template) throws Exception

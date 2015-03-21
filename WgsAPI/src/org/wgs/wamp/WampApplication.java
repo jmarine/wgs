@@ -16,7 +16,9 @@ import javax.websocket.CloseReason;
 import org.jdeferred.Deferred;
 import org.wgs.security.OpenIdConnectUtils;
 import org.wgs.security.User;
+import org.wgs.security.UserPushChannel;
 import org.wgs.security.WampCRA;
+import org.wgs.util.Storage;
 import org.wgs.wamp.api.WampAPI;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
@@ -197,7 +199,7 @@ public class WampApplication
                 String authMethod = authMethods.getText(i);
                 if(authMethod.equalsIgnoreCase("anonymous")) {
                     clientSocket.setAuthMethod("anonymous");
-                    onUserLogon(clientSocket, null, WampConnectionState.ANONYMOUS);
+                    onUserLogon(clientSocket, null, WampConnectionState.ANONYMOUS, helloDetails);
                     onWampSessionEstablished(clientSocket, clientSocket.getHelloDetails());
                     break;
                 } else if(authMethod.equalsIgnoreCase("ticket")) {
@@ -260,7 +262,7 @@ public class WampApplication
         
         try {
             if(authmethod.equals("anonymous")) {
-                onUserLogon(clientSocket, null, WampConnectionState.ANONYMOUS);
+                onUserLogon(clientSocket, null, WampConnectionState.ANONYMOUS, extra);
                 welcomed = true;
             } else if(authmethod.equals("ticket") && signature.equals(WampCluster.brokerId)) {
                 User clusterNodeUser = new User();
@@ -268,12 +270,12 @@ public class WampApplication
                 clusterNodeUser.setUid(clientSocket.getHelloDetails().getText("authid").substring(4));                
                 clientSocket.setAuthMethod("ticket");
                 clientSocket.setAuthProvider("jms-cluster");
-                onUserLogon(clientSocket, clusterNodeUser, WampConnectionState.AUTHENTICATED);                                               
+                onUserLogon(clientSocket, clusterNodeUser, WampConnectionState.AUTHENTICATED, extra);
                 welcomed = true;
             } else if(authmethod.equals("cookie")) {
                 // TODO
             } else if(authmethod.equals("wampcra")) {
-                WampCRA.verifySignature(this, clientSocket, signature);
+                WampCRA.verifySignature(this, clientSocket, signature, extra);
                 welcomed = true;
             } else if(authmethod.equals("oauth2")) {
                 String code = signature;
@@ -472,10 +474,23 @@ public class WampApplication
     }
     
     
-    public void onUserLogon(WampSocket socket, User user, WampConnectionState state)
+    public void onUserLogon(WampSocket socket, User user, WampConnectionState state, WampDict data)
     {
         socket.setUserPrincipal(user);
         socket.setState(state);
+        
+        if(user!= null && data.has("_notification_channel")) {
+            String appClientName = data.getText("_oauth2_client_name");
+            String notificationChannel = data.getText("_notification_channel");
+            if(appClientName != null && notificationChannel != null) {
+                UserPushChannel channel = new UserPushChannel();
+                channel.setAppClientName(appClientName);
+                channel.setUser(user);
+                channel.setNotificationChannel(notificationChannel);
+                Storage.saveEntity(channel);
+            }
+        }        
+        
         if(user != null) {
             Set<Long> sessions = wampSessionsByUserId.get(user.getUid());
             if(sessions == null) {

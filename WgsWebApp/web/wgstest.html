@@ -1141,13 +1141,14 @@ function toggle_connect(create_user) {
         
         wgsclient = getWgsClient();
         var realm = wgsclient.getDefaultRealm();
+        var details = { "_notification_channel": notificationChannel, "_oauth2_client_name": getOAuth2ClientName() };
         if(create_user) {
             var email = prompt("Enter e-mail:");
-            if(email) wgsclient.registerUser(realm, user, pass, email, authentication);
+            if(email) wgsclient.registerUser(realm, user, pass, email, notificationChannel, authentication);
         } else if(user.length > 0) {
-            wgsclient.login(realm, user, pass, authentication);
+            wgsclient.login(realm, details, user, pass, authentication);
         } else {
-            wgsclient.login(realm, null, null, authentication);
+            wgsclient.login(realm, details, null, null, authentication);
         }
     } else {
         wgsclient.goodbye("wamp.close.normal");
