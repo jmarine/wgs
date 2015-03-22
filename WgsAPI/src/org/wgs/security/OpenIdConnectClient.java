@@ -199,9 +199,7 @@ public class OpenIdConnectClient implements Serializable
         out.write("grant_type=authorization_code&code=" + URLEncoder.encode(authorization_code,"utf8") + "&client_id=" + URLEncoder.encode(getClientId(),"utf8") + "&client_secret=" + URLEncoder.encode(getClientSecret(),"utf8") + "&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8") );
         out.close();
 
-        BufferedReader in = new BufferedReader(
-                                    new InputStreamReader(
-                                    connection.getInputStream()));
+        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"));
         String decodedString;
         StringBuffer data = new StringBuffer();
         while ((decodedString = in.readLine()) != null) {
