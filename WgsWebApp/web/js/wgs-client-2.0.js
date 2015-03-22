@@ -45,10 +45,13 @@ WgsClient.prototype.getProfile = function(user, callback) {
     this.call("wgs.get_profile", [user], {}).then(callback, callback);
 }
 
+WgsClient.prototype.setUserPushChannel = function(appName, notificationChannel) {
+    this.call("wgs.set_user_push_channel", [appName, notificationChannel]);
+}
 
 WgsClient.prototype.registerUser = function(appName, realm, user, password, email, notificationChannel, onstatechange) {
     var client = this;
-    var details = { "authmethods": ["anonymous"], "_oauth2_client_name": appName };
+    var details = { "authmethods": ["anonymous"] };
     client.connect(realm, details, function(state, msg) {
         onstatechange(state, msg);
         if(state == ConnectionState.WELCOMED) {
@@ -56,8 +59,10 @@ WgsClient.prototype.registerUser = function(appName, realm, user, password, emai
             msg.user = user;
             msg.password = CryptoJS.MD5(password).toString();
             msg.email = email;
+            msg._oauth2_client_name = appName;            
             msg._notification_channel = notificationChannel;
-            client.call("wgs.register", msg).then(
+
+            client.call("wgs.register", null, msg).then(
                 function(id,details,errorURI,result,resultKw) {
                     client.authid = resultKw.authid;
                     client.authrole = resultKw.authrole;
