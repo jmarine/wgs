@@ -7,14 +7,13 @@
     <class>org.wgs.security.OpenIdConnectProvider</class>
     <class>org.wgs.security.OpenIdConnectClient</class>
     <class>org.wgs.security.User</class>
-    <class>org.wgs.security.UserPushChannel</class>    
     <class>org.wgs.service.game.Application</class>
     <class>org.wgs.service.game.GroupAction</class>
     <class>org.wgs.service.game.Group</class>
     <class>org.wgs.service.game.Member</class>
     <class>org.wgs.service.game.Role</class>
     <class>org.wgs.service.game.Achievement</class>
-
+    <class>org.wgs.security.UserPushChannel</class>
     <properties>
       <property name="eclipselink.ddl-generation" value="create-tables"/>
       <property name="eclipselink.logging.level.sql" value="FINE"/>

@@ -1,36 +1,29 @@
 package org.wgs.util;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.StringReader;
+import java.io.File;
+import java.io.FileReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.UUID;
+
 import javax.json.*;
-import javax.naming.Context;
-import javax.naming.InitialContext;
 import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
+import javax.persistence.TypedQuery;
 
 import org.wgs.security.OpenIdConnectClient;
 import org.wgs.security.OpenIdConnectClientPK;
 import org.wgs.security.User;
+import org.wgs.security.UserPushChannel;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
-import org.wgs.wamp.encoding.WampSerializer;
 import org.wgs.wamp.type.WampDict;
 
 import com.google.android.gcm.server.*;
-import java.io.File;
-import java.io.FileReader;
-import javax.persistence.NoResultException;
-import javax.persistence.TypedQuery;
-import org.wgs.security.UserPushChannel;
 
 
 public class Social 
@@ -146,44 +139,56 @@ public class Social
     }
 
     
+    public static void setUserPushChannel(User user, String appClientName, String notificationChannel)
+    {
+        UserPushChannel channel = new UserPushChannel();
+        channel.setAppClientName(appClientName);
+        channel.setUser(user);
+        channel.setNotificationChannel(notificationChannel);
+        if(notificationChannel != null) {
+            Storage.saveEntity(channel);        
+        } else {
+            Storage.removeEntity(channel);
+        }
+    }
+    
     public static void notifyUser(String app, WampSocket fromClientSocket, User toUser, String gameGuid, String template) throws Exception
     {
         User fromUser = (User)fromClientSocket.getUserPrincipal();
-        template = template.replace("%me%", fromUser.getName()); // "@[" + fromUser.getLogin() + "]");
+        template = template.replace("%me%", fromUser.getName());
 
         EntityManager manager = null;
         try {
+
             manager = Storage.getEntityManager();
-        
+
+            TypedQuery<UserPushChannel> queryProvider = manager.createNamedQuery("UserPushChannel.findByAppAndUser", UserPushChannel.class);
+            queryProvider.setParameter(1, app);
+            queryProvider.setParameter(2, toUser);
+
+            UserPushChannel userPushChannel = null;
+            try {
+                userPushChannel = queryProvider.getSingleResult();
+            } catch(NoResultException noEx) { }
+
+            if(userPushChannel != null) {
+                String notificationChannel = userPushChannel.getNotificationChannel();
+                WampDict info = (WampDict)WampEncoding.JSON.getSerializer().deserialize(notificationChannel, 0, notificationChannel.length());
+                if(info.has("endpoint") && info.getText("endpoint").equals("https://android.googleapis.com/gcm/send")) {
+                    notifyGCM(app, info.getText("subscriptionId"), "{ \"provider\": \""+toUser.getDomain()+"\", \"gid\": \"" + gameGuid + "\"}", template);
+                }        
+
+            } else {
+                // SEND E-MAIL?  // but e-mail address are not verified, yet
+            }
+
             if("facebook.com".equals(toUser.getDomain()) && fromUser.getDomain().equals(toUser.getDomain())) {
                     
                 OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(toUser.getDomain(), app);
                 OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
-                notifyFacebookUser(oidcClient, toUser.getLogin(), "?provider=facebook.com&gid=" + gameGuid, template);
-
+                notifyFacebook(oidcClient, toUser.getLogin(), "?provider=facebook.com&gid=" + gameGuid, template);
             
-            } else {
-
-                TypedQuery<UserPushChannel> queryProvider = manager.createNamedQuery("UserPushChannel.findByAppAndUser", UserPushChannel.class);
-                queryProvider.setParameter(1, app);
-                queryProvider.setParameter(2, toUser);
-                
-                UserPushChannel userPushChannel = null;
-                try {
-                    userPushChannel = queryProvider.getSingleResult();
-                } catch(NoResultException noEx) { }
-
-                if(userPushChannel != null) {
-                    String notificationChannel = userPushChannel.getNotificationChannel();
-                    WampDict info = (WampDict)WampEncoding.JSON.getSerializer().deserialize(notificationChannel, 0, notificationChannel.length());
-                    if(info.has("endpoint") && info.getText("endpoint").equals("https://android.googleapis.com/gcm/send")) {
-                        notifyDeviceGCM(app, info.getText("subscriptionId"), "?gid=" + gameGuid, template);
-                    }        
-                    
-                } else {
-                    // SEND E-MAIL?  // but e-mail address are not verified, yet
-                }
-             }
+            } 
             
                 
         } finally {
@@ -195,7 +200,7 @@ public class Social
     }
     
     
-    public static void notifyDeviceGCM(String app, String registrationId, String rel_link, String template) throws Exception
+    public static void notifyGCM(String app, String registrationId, String rel_link, String template) throws Exception
     {
         File gcmKeyFile = new File(new File(System.getProperty("user.dir")).getParentFile(), "GCM-" + app.replace(' ', '_') + ".key");
         System.out.println("Searching GCM key in: " + gcmKeyFile.getAbsolutePath());
@@ -209,7 +214,7 @@ public class Social
         
     }
     
-    public static void notifyFacebookUser(OpenIdConnectClient oidcClient, String to_user_id, String rel_link, String template) throws Exception
+    public static void notifyFacebook(OpenIdConnectClient oidcClient, String to_user_id, String rel_link, String template) throws Exception
     {
         String appToken = getFacebookAppAccessToken(oidcClient.getClientId(), oidcClient.getClientSecret());
         URL url = new URL("https://graph.facebook.com/v2.1/" + to_user_id + "/apprequests?access_token="+ appToken + "&message=" + URLEncoder.encode(template,"utf8") + "&data=" + URLEncoder.encode(rel_link,"utf8")); 
@@ -273,7 +278,7 @@ public class Social
     {
             OpenIdConnectClientPK oidcClientPK = new OpenIdConnectClientPK("facebook.com", "WebGL 8x8 board games");
             OpenIdConnectClient oidcClient = Storage.findEntity(OpenIdConnectClient.class, oidcClientPK);
-            notifyFacebookUser(oidcClient, "", "?1234", "It's your turn");  
+            notifyFacebook(oidcClient, "", "?1234", "It's your turn");  
     }
     
 }

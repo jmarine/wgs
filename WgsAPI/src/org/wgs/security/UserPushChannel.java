@@ -10,6 +10,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import org.wgs.security.User;
+import org.wgs.security.User;
+import org.wgs.security.User;
 
 
 @Entity

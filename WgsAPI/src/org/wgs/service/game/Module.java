@@ -152,7 +152,6 @@ public class Module extends WampModule
     @WampRegisterProcedure(name="get_user_info")
     public WampDict getUserInfo(WampSocket socket, WampDict data) throws Exception
     {
-        boolean user_valid = false;
         Client client = clients.get(socket.getWampSessionId());
         
         User usr = client.getUser();
@@ -171,6 +170,16 @@ public class Module extends WampModule
             return usr.toWampObject(true);
         }
         
+    }
+    
+    @WampRegisterProcedure(name="set_user_push_channel")
+    public void setUserPushChannel(WampSocket socket, String appClientName, String notificationChannel)
+    {
+        Client client = clients.get(socket.getWampSessionId());
+        if(client != null) {
+            User usr = client.getUser();
+            if(usr != null) Social.setUserPushChannel(usr, appClientName, notificationChannel);        
+        }
     }
 
         

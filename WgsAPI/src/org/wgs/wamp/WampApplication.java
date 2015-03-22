@@ -16,9 +16,10 @@ import javax.websocket.CloseReason;
 import org.jdeferred.Deferred;
 import org.wgs.security.OpenIdConnectUtils;
 import org.wgs.security.User;
-import org.wgs.security.UserPushChannel;
 import org.wgs.security.WampCRA;
 import org.wgs.util.Storage;
+import org.wgs.security.UserPushChannel;
+import org.wgs.util.Social;
 import org.wgs.wamp.api.WampAPI;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
@@ -479,18 +480,6 @@ public class WampApplication
         socket.setUserPrincipal(user);
         socket.setState(state);
         
-        if(user!= null && data.has("_notification_channel")) {
-            String appClientName = data.getText("_oauth2_client_name");
-            String notificationChannel = data.getText("_notification_channel");
-            if(appClientName != null && notificationChannel != null) {
-                UserPushChannel channel = new UserPushChannel();
-                channel.setAppClientName(appClientName);
-                channel.setUser(user);
-                channel.setNotificationChannel(notificationChannel);
-                Storage.saveEntity(channel);
-            }
-        }        
-        
         if(user != null) {
             Set<Long> sessions = wampSessionsByUserId.get(user.getUid());
             if(sessions == null) {
@@ -499,6 +488,14 @@ public class WampApplication
             }
             sessions.add(socket.getSocketId());
         }
+        
+        if(user!= null && data.has("_notification_channel")) {
+            String appClientName = data.getText("_oauth2_client_name");
+            String notificationChannel = data.getText("_notification_channel");
+            if(appClientName != null && notificationChannel != null) {
+                Social.setUserPushChannel(user, appClientName, notificationChannel);
+            }
+        }          
     }
     
     public void onUserLogout(WampSocket socket)
