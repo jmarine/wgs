@@ -143,9 +143,7 @@ public class OpenIdConnectProvider implements Serializable
         connection.setRequestProperty("Authorization", "Bearer " + accessToken);
         connection.setDoOutput(false);
 
-        BufferedReader in = new BufferedReader(
-                                    new InputStreamReader(
-                                    connection.getInputStream()));
+        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"));
         String decodedString;
         while ((decodedString = in.readLine()) != null) {
             retval.append(decodedString);
