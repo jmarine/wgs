@@ -207,7 +207,7 @@ public class Social
         try(BufferedReader reader = new BufferedReader(new FileReader(gcmKeyFile))) {
             String gcmKey = reader.readLine();
             Sender sender = new Sender(gcmKey);
-            Message msg = new Message.Builder().delayWhileIdle(true).addData("data", template).build();
+            Message msg = new Message.Builder().addData("data", template).build();
             Result result = sender.send(msg, registrationId, 3);
             System.out.println("GCM: Sent message to one device: " + result);
         } 
