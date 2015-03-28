@@ -145,7 +145,7 @@ public class WampRealm
     {
         Long requestId = request.getLong(1);
         WampDict options = (WampDict) request.get(2);
-        String methodUriOrPattern = clientSocket.normalizeURI(request.getText(3));
+        String methodUriOrPattern = request.getText(3);
         WampMatchType matchType = WampMatchType.exact;
         if (options != null && options.has("match")) {
             matchType = WampMatchType.valueOf(options.getText("match").toLowerCase());

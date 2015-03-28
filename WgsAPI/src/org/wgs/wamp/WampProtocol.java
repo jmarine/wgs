@@ -25,7 +25,6 @@ public class WampProtocol
     public static final int CHALLENGE = 4;
     public static final int AUTHENTICATE = 5;
     public static final int GOODBYE = 6;
-    public static final int HEARTBEAT = 7;    
     public static final int ERROR = 8;
     public static final int PUBLISH = 16;
     public static final int PUBLISHED = 17;
@@ -186,17 +185,6 @@ public class WampProtocol
             sendWampMessage(clientSocket, response);
         }
     }
-    
-    public static void sendHeartbeatMessage(WampSocket clientSocket, String discard)
-    {
-        WampList response = new WampList();
-        response.add(HEARTBEAT);
-        response.add(clientSocket.getIncomingHeartbeat());
-        response.add(clientSocket.getNextOutgoingHeartbeatSeq());
-        response.add(discard);
-        sendWampMessage(clientSocket, response);
-    }
-    
     
     public static void sendResultMessage(WampSocket clientSocket, Long requestId, WampDict details, WampList args, WampDict argsKw)
     {

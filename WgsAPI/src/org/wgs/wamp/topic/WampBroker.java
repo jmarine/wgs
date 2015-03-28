@@ -149,7 +149,7 @@ public class WampBroker
     
     public static void processPublishMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception 
     {
-        String topicName = clientSocket.normalizeURI(request.getText(3));
+        String topicName = request.getText(3);
         WampTopic topic = WampBroker.getTopic(topicName);
         if(topic == null) topic = WampBroker.createTopic(app, topicName, null);
         
@@ -219,7 +219,6 @@ public class WampBroker
     
     public static Collection<WampTopic> subscribeClientWithTopic(WampApplication app, WampSocket clientSocket, Long requestId, String topicUriOrPattern, WampSubscriptionOptions options)
     {
-        topicUriOrPattern = clientSocket.normalizeURI(topicUriOrPattern);
         if(options == null) options = new WampSubscriptionOptions(null);
         if(options.getMatchType() == WampMatchType.prefix && !topicUriOrPattern.endsWith("..")) {
             topicUriOrPattern = topicUriOrPattern + "..";

@@ -36,15 +36,12 @@ public abstract class WampSocket
     
     private Long    socketId;
     private Long    sessionId;
-    private Map<String,String> prefixes;
     private Map<Long,WampSubscription> subscriptions;
     private Map<Long,WampCallController> callControllers;
     private Map<Long,WampCallController> invocationControllers;
     private Map<Long,Deferred<WampResult, WampException, WampResult>> invocationAsyncCallbacks;
     private Map<Long,WampCalleeRegistration> rpcRegistrations;
     private WampConnectionState state;
-    private long incomingHeartbeatSeq;
-    private AtomicLong outgoingHeartbeatSeq;
     private int versionSupport;
     private WampEncoding wampEncoding;
     private WampDict helloDetails;
@@ -58,15 +55,12 @@ public abstract class WampSocket
     public WampSocket() 
     {
         this.authMethod = "anonymous";
-        this.incomingHeartbeatSeq = 0L;
-        this.outgoingHeartbeatSeq = new AtomicLong(0L);
         this.versionSupport = 1;
         this.connected = true;
         this.nextRequestId = new AtomicLong(0L);
         
         socketId = WampProtocol.newGlobalScopeId();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
-        prefixes = new HashMap<String,String>();
         invocationAsyncCallbacks = new ConcurrentHashMap<Long,Deferred<WampResult, WampException, WampResult>>();
         callControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         invocationControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
@@ -282,18 +276,6 @@ public abstract class WampSocket
     }    
     
     
-    public void registerPrefixURL(String prefix, String url)
-    {
-        prefixes.put(prefix, url);	
-    }
-    
-    public String getPrefixURL(String prefix)
-    {
-        return prefixes.get(prefix);
-    }
-
-
-
     public void addSubscription(WampSubscription subscription)
     {
         subscriptions.put(subscription.getId(), subscription);
@@ -370,17 +352,6 @@ public abstract class WampSocket
     }
     
     
-    public String normalizeURI(String curie) {
-        int curiePos = curie.indexOf(":");
-        if(curiePos != -1) {
-            String prefix = curie.substring(0, curiePos);
-            String baseURI = getPrefixURL(prefix);
-            if(baseURI != null) curie = baseURI + curie.substring(curiePos+1);
-        }
-        return curie;
-    }    
-    
-    
     public abstract void sendObject(Object msg);
    
     
@@ -439,27 +410,6 @@ public abstract class WampSocket
     }
     
 
-    public long getIncomingHeartbeat()
-    {
-        return this.incomingHeartbeatSeq;
-    }
-    
-    public void setIncomingHeartbeat(long heartbeatSequenceNo) 
-    {
-        this.incomingHeartbeatSeq = heartbeatSequenceNo;
-    }   
-    
-    public long getNextOutgoingHeartbeatSeq()
-    {
-        return outgoingHeartbeatSeq.incrementAndGet();
-    }
-    
-    public void sendHeartbeatMessage(String discard)
-    {
-        WampProtocol.sendHeartbeatMessage(this, discard);
-    }
-    
-    
     public void addRpcRegistration(WampCalleeRegistration registration)
     {
         rpcRegistrations.put(registration.getId(), registration);

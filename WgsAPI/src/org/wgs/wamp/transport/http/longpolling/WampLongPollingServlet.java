@@ -25,18 +25,14 @@ import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 
 
-
-//TODO: COMPLETE LONG-POLLING SERVLET IMPLEMENTATION
-//@WebServlet(urlPatterns = "/wamp2servlet", displayName = "wamp2servlet", asyncSupported = true)
 public class WampLongPollingServlet extends HttpServlet implements AsyncListener
 {
-    private static final  int  POLLING_TIMEOUT = 15000;
-   
     private static ConcurrentHashMap<Long, AsyncContext> asyncContexts = new ConcurrentHashMap<Long, AsyncContext>();
     private static ConcurrentHashMap<Long, LinkedBlockingQueue<Object>> messageQueues = new ConcurrentHashMap<Long, LinkedBlockingQueue<Object>>();
     private static ConcurrentHashMap<Long, Long> socketIdByTransport = new ConcurrentHashMap<Long, Long>();
 
     private WampApplication application;
+    private long pollTimeoutMillis;
     
     
     @Override
@@ -50,6 +46,9 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
             contextPath = config.getServletContext().getContextPath();
             if(contextPath.endsWith("-longpoll")) contextPath = contextPath.substring(0, contextPath.length() - 9);  // without "-longpoll"
         }
+        
+        String timeout = config.getInitParameter("wgs.longpoll.timeoutMilliseconds");
+        pollTimeoutMillis = (timeout != null) ? Long.parseLong(timeout) : 15000; 
         
         application = WampApplication.getInstance(WampApplication.WAMPv2, contextPath);
         if(application.start()) onApplicationStart(application);
@@ -118,7 +117,7 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         } else if(path.endsWith("/receive")) {
             
             asyncContexts.put(transport, actx);
-            actx.setTimeout(POLLING_TIMEOUT);
+            actx.setTimeout(pollTimeoutMillis);
             actx.start(new MessageSender(transport, actx, messageQueues.get(transport)));
             
         } else if(path.endsWith("/send")) {
@@ -160,9 +159,15 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
             System.out.println("WampLongPollingServlet: sendmsg (" + req.getPathInfo() + ")");
             
             HttpServletResponse res = (HttpServletResponse)actx.getResponse();
-            res.setStatus(HttpServletResponse.SC_OK);  // 200
-            res.setContentType("application/json");
-            res.getWriter().print(msg);
+            if(msg == null) {
+                res.setStatus(HttpServletResponse.SC_ACCEPTED);  // 202
+                res.setContentType("text/plain");
+                
+            } else {
+                res.setStatus(HttpServletResponse.SC_OK);  // 200
+                res.setContentType("application/json");
+                res.getWriter().print(msg);
+            }
             actx.complete();
             
         } catch(Exception ex) {
@@ -204,11 +209,8 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         System.out.println("WampLongPollingServlet: timeout (" + req.getPathInfo() + ")");
         
         Long transport = getWampTransport(req);
-        Long socketId = socketIdByTransport.get(transport);
-        WampSocket socket = application.getSocketById(socketId);
-        WampProtocol.sendHeartbeatMessage(socket, "**** long-poll timeout *****");
         Object msg = messageQueues.get(transport).poll();
-        if(msg != null) sendMsg(transport, msg);
+        sendMsg(transport, msg);
     }
 
     
@@ -285,12 +287,11 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
                 asyncContext.complete();
             } 
             
-            
-            
         }
         
     }    
     
+
     class MessageSender implements Runnable
     {
         private Long transport;
@@ -309,10 +310,8 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         @Override
         public void run() {
             try {
-                Object obj = queue.poll(POLLING_TIMEOUT, TimeUnit.MILLISECONDS);
-                if(obj != null) {
-                    sendMsg(transport, obj);
-                } 
+                Object obj = queue.poll(pollTimeoutMillis, TimeUnit.MILLISECONDS);
+                sendMsg(transport, obj);
             } catch (Exception ex) {
                 Logger.getLogger(WampLongPollingServlet.class.getName()).log(Level.SEVERE, "Poll/send error", ex);
             }

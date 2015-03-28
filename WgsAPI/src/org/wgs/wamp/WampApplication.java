@@ -381,9 +381,6 @@ public class WampApplication
                 onWampSessionEnd(clientSocket);
                 WampProtocol.sendGoodbyeMessage(clientSocket, "wamp.close.normal", null);
                 break;
-            case WampProtocol.HEARTBEAT:
-                processHeartbeatMessage(clientSocket, request);
-                break;                
             case WampProtocol.ERROR:
                 // FIXME: the current implementation only expects invocation errors
                 processInvocationError(clientSocket, request);
@@ -579,26 +576,6 @@ public class WampApplication
     }
 
     
-    private void processHeartbeatMessage(WampSocket clientSocket, WampList request) throws Exception
-    {
-        Long incomingHeartbeatSeq = request.getLong(1);
-        Long outgoingHeartbeatSeq = request.getLong(2);
-        clientSocket.setIncomingHeartbeat(outgoingHeartbeatSeq);        
-    }
-    
-    private void processPrefixMessage(WampSocket clientSocket, WampList request) throws Exception
-    {
-        String prefix = request.getText(1);
-        String url = request.getText(2);
-	clientSocket.registerPrefixURL(prefix, url);
-    }
-
-    private void processHeartBeat(WampSocket clientSocket, WampList request) throws Exception
-    {
-        Long heartbeatSequenceNo = request.getLong(1);
-        clientSocket.setIncomingHeartbeat(heartbeatSequenceNo);
-    }
-
     public void processEventMessage(WampApplication app, WampSocket clientSocket, WampList request) throws Exception
     {
         Long subscriptionId = request.getLong(1);        
@@ -626,7 +603,7 @@ public class WampApplication
     {
         Long callID = request.getLong(1);
         WampCallOptions options = new WampCallOptions((WampDict)request.get(2));
-        String procedureURI = clientSocket.normalizeURI(request.getText(3));
+        String procedureURI = request.getText(3);
         WampList arguments = new WampList();
         WampDict argumentsKw = new WampDict();
         if(request.size()>4) {
