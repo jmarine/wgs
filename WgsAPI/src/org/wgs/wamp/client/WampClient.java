@@ -6,7 +6,6 @@ import java.security.MessageDigest;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.websocket.ClientEndpointConfig;
@@ -48,13 +47,13 @@ public class WampClient
     
     private String urls;
     private String password;
-    private boolean open;
     private String helloRealm;
     private WampEncoding preferredEncoding;
     private WampEncoding encoding;
     private WampApplication wampApp;
     private WampSocket clientSocket;
-    private AtomicInteger taskCount;
+    private int taskCount;
+
     private ConcurrentHashMap<Long, String> rpcRegistrationsById;
     private ConcurrentHashMap<String, Long> rpcRegistrationsByURI;
     private ConcurrentHashMap<Long, WampMethod> rpcHandlers;
@@ -111,8 +110,7 @@ public class WampClient
                         
                     case WampProtocol.WELCOME:
                         WampDict welcomeDetails = (request.size() > 2) ? (WampDict)request.get(2) : null;
-                        clientSocket.setWampSessionId(request.getLong(1));
-                        onWampWelcome(clientSocket, welcomeDetails);
+                        onWampSessionEstablished(clientSocket, request.getLong(1), welcomeDetails);
                         removePendingMessage(null);
                         break;     
                         
@@ -288,21 +286,14 @@ public class WampClient
                 }                
             }
             
-            public void onWampWelcome(WampSocket clientSocket, WampDict details) 
+            public void onWampSessionEstablished(WampSocket clientSocket, Long sessionId, WampDict details) 
             {
                 clientSocket.setRealm(helloRealm);
-    
+
+                super.onWampSessionEstablished(clientSocket, sessionId, details);
+                
                 processRegisteredAnnotations();
-                processSubscribedAnnotations();  // FIXME: deadlocks?
-                
-                for(WampModule module : wampApp.getWampModules()) {
-                    try { 
-                        module.onWampSessionEstablished(clientSocket, details); 
-                    } catch(Exception ex) {
-                        logger.log(Level.SEVERE, "Error with wamp challenge:", ex);
-                    }
-                }                
-                
+                processSubscribedAnnotations();
             }            
 
         };
@@ -320,9 +311,8 @@ public class WampClient
     
     public boolean isOpen()
     {
-        return open;
+        return clientSocket.isOpen();
     }
-    
     
     @SuppressWarnings("unchecked")
     private Deferred<Long, WampException, Long> getDeferredLong(WampList request)
@@ -373,12 +363,10 @@ public class WampClient
     
     public void connect() throws Exception
     {
-        this.open = false;
-        this.taskCount = new AtomicInteger(0);        
-        
+        boolean opened = false;
         Exception lastError = null;
         StringTokenizer stk = new StringTokenizer(urls, ",;");
-        while(!this.open && stk.hasMoreTokens()) {
+        while(!opened && stk.hasMoreTokens()) {
             try {
                 URI uri = new URI(stk.nextToken());
                 switch(uri.getScheme()) {
@@ -403,15 +391,15 @@ public class WampClient
 
                 }
 
-                this.open = true;
-                
+                opened = true;
+
             } catch(Exception ex) {
                 lastError = ex;
             }
         }
-        
-        if(!this.open) throw lastError;
-        
+
+        if(!opened) throw lastError;
+
     }
     
 
@@ -646,25 +634,29 @@ public class WampClient
     
     private void createPendingMessage(Long requestId, WampList requestData)
     {
-        if(requestId != null) pendingRequests.put(requestId, requestData);
-        taskCount.incrementAndGet();
+        synchronized(pendingRequests) {
+            if(requestId != null) pendingRequests.put(requestId, requestData);
+            taskCount++;
+        }
     }
     
     private void removePendingMessage(Long requestId) 
     {
-        if(requestId != null) pendingRequests.remove(requestId);
-        if(taskCount.decrementAndGet() <= 0) {
-            synchronized(taskCount) {             
-                taskCount.notifyAll();
+        synchronized(pendingRequests) {
+            if(requestId != null) pendingRequests.remove(requestId);
+            taskCount--;
+        
+            if(taskCount <= 0) {
+                pendingRequests.notifyAll();
             }
         }
     }
     
     public void waitResponses() throws Exception
     {
-        while(taskCount.get() > 0) {
-            synchronized(taskCount) {            
-                taskCount.wait();
+        synchronized(pendingRequests) {
+            while(taskCount > 0) {
+                pendingRequests.wait();
             }
         }
     }
@@ -679,9 +671,8 @@ public class WampClient
     
 
     public void close() throws Exception {
-        //goodbye(null);
-        open = false;
-        this.clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
+        clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
+        waitResponses();
     }
     
     

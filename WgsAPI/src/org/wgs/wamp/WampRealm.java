@@ -181,7 +181,7 @@ public class WampRealm
                 WampProtocol.sendRegisteredMessage(clientSocket, requestId, registration.getId());
             }
         } catch (Exception ex) {
-            logger.log(Level.FINE, "Error registering method", ex);
+            logger.log(Level.SEVERE, "Error registering method", ex);
             if (requestId != null) {
                 WampProtocol.sendErrorMessage(clientSocket, WampProtocol.REGISTER, requestId, null, "wamp.error.not_authorized", null, null);
             }

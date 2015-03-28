@@ -83,21 +83,23 @@ public class WampCallController implements Runnable
     
     
 
-    public synchronized void addRemoteInvocation(Long sessionId, Long remoteInvocationId, Deferred<WampResult,WampException,WampResult> asyncCall)
+    public synchronized void addRemoteInvocation(Long socketId, Long remoteInvocationId, Deferred<WampResult,WampException,WampResult> asyncCall)
     {
-        remoteInvocations.put(new AbstractMap.SimpleEntry<Long,Long>(sessionId, remoteInvocationId), asyncCall);
+        remoteInvocations.put(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId), asyncCall);
     }
     
-    public synchronized Deferred<WampResult,WampException,WampResult> getRemoteInvocation(Long sessionId, Long remoteInvocationId)    
+    public synchronized Deferred<WampResult,WampException,WampResult> getRemoteInvocation(Long socketId, Long remoteInvocationId)    
     {
-        return remoteInvocations.get(new AbstractMap.SimpleEntry<Long,Long>(sessionId, remoteInvocationId));
+        return remoteInvocations.get(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId));
     }
-        
     
-    public Deferred<WampResult,WampException,WampResult> removeRemoteInvocation(Long sessionId, Long remoteInvocationId)    
+    public Deferred<WampResult,WampException,WampResult> removeRemoteInvocation(Long socketId, Long remoteInvocationId)    
     {
         WampResult wampResult = null;
-        Deferred<WampResult,WampException,WampResult> retval = remoteInvocations.remove(new AbstractMap.SimpleEntry<Long,Long>(sessionId, remoteInvocationId));
+        if(socketId == null) {
+            socketId = null;
+        }
+        Deferred<WampResult,WampException,WampResult> retval = remoteInvocations.remove(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId));
         synchronized(this) {
             if(!done && !cancelled && pendingInvocationCount <= 0 && remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
                 done = true;
@@ -253,9 +255,9 @@ public class WampCallController implements Runnable
             
             if(remoteInvocations != null) {
                 for(AbstractMap.SimpleEntry<Long,Long> sessionInvocationPair : getRemoteInvocations()) {
-                    Long sessionId = sessionInvocationPair.getKey();
+                    Long socketId = sessionInvocationPair.getKey();
                     Long remoteInvocationId = sessionInvocationPair.getValue();
-                    Deferred<WampResult,WampException,WampResult> invocation = removeRemoteInvocation(sessionId, remoteInvocationId);
+                    Deferred<WampResult,WampException,WampResult> invocation = removeRemoteInvocation(socketId, remoteInvocationId);
                     WampException cancelException = new WampException(remoteInvocationId, cancelOptions, "wgs.cancel_invocation", null, null);
                     if(invocation != null && !invocation.isRejected()) {
                         try { invocation.reject(cancelException); }

@@ -126,9 +126,9 @@ public class WampCluster extends WampModule
     
     public static void addNode(String uri, Node node) throws Exception
     {
+        node.start();
         nodes.put(uri, node);
         System.out.println("Cluster node added: " + uri);
-        node.start();
     }
     
     
@@ -214,12 +214,13 @@ public class WampCluster extends WampModule
                     }                    
                 }
             });
-            client.connect();
             
             WampDict authDetails = new WampDict();
             authDetails.put("authmethods", new WampList("ticket"));
             authDetails.put("authid", brokerId);
             authDetails.put("ticket", wgsTicket);
+
+            client.connect();
             
             client.hello("cluster", authDetails);
             client.waitResponses();
@@ -233,7 +234,5 @@ public class WampCluster extends WampModule
         }
     }
     
-    
-
     
 }

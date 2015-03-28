@@ -56,14 +56,22 @@ public class WampCalleeRegistration
     }
     
     
-    public void addRemoteMethod(Long sessionId, WampRemoteMethod remoteMethod)
+    public void addRemoteMethod(WampSocket socket, WampRemoteMethod remoteMethod)
     {
+        Long sessionId = socket.getWampSessionId();
+        if(sessionId == null) {
+            sessionId = socket.getSocketId();
+        }
         remoteMethods.put(sessionId, remoteMethod);                    
     }
     
     public WampRemoteMethod removeRemoteMethod(WampSocket socket)
     {
-        return remoteMethods.remove(socket.getWampSessionId());
+        Long sessionId = socket.getWampSessionId();
+        if(sessionId == null) {
+            sessionId = socket.getSocketId();
+        }        
+        return remoteMethods.remove(sessionId);
     }
     
     public int getRemoteMethodsCount()

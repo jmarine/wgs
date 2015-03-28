@@ -244,7 +244,7 @@ public class Server
         try {
             WampCluster.stop();
         } catch (Exception ex) {
-            System.err.println("OpenMQ broker shutdown error: " + ex.getMessage());
+            System.err.println("Cluster shutdown error: " + ex.getMessage());
             ex.printStackTrace();
         }
 

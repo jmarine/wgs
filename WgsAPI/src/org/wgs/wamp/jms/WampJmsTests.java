@@ -18,8 +18,8 @@ public class WampJmsTests
 {
     public static final void main(String args[]) throws Exception 
     {
-        String url = "ws://localhost:3000/ws";
-        String realm = "realm1";
+        String url = "ws://localhost:8080/wgs";
+        String realm = "localhost";
         String user = null;
         String password = null;
         boolean digestMD5 = false;

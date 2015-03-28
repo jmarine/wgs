@@ -134,7 +134,7 @@ public class WampModule
                                 deferred.notify(wampResult);
                             }
 
-                            task.removeRemoteInvocation(remoteMethod.getRemotePeer().getWampSessionId(), wampResult.getRequestId());
+                            task.removeRemoteInvocation(remoteMethod.getRemotePeer().getSocketId(), wampResult.getRequestId());
                         }
                     });
 
@@ -218,7 +218,7 @@ public class WampModule
         Long calleeSessionId = options.getLong("_cluster_peer_sid");
 
         WampRemoteMethod remoteMethod = new WampRemoteMethod(registration.getId(), methodName, clientSocket, calleeSessionId, matchType, options);
-        registration.addRemoteMethod(clientSocket.getWampSessionId(), remoteMethod);
+        registration.addRemoteMethod(clientSocket, remoteMethod);
         
         clientSocket.addRpcRegistration(registration);
         
@@ -260,7 +260,7 @@ public class WampModule
                 WampDict interruptDetails = new WampDict();
                 for(Long invocationId : clientSocket.getInvocationIDs()) {  // critical section
                     WampCallController task = clientSocket.removeInvocationController(invocationId);
-                    task.removeRemoteInvocation(clientSocket.getWampSessionId(), invocationId);
+                    task.removeRemoteInvocation(clientSocket.getSocketId(), invocationId);
                     try { 
                         WampProtocol.sendInterruptMessage(clientSocket, invocationId, interruptDetails); 
                     } catch(Exception ex) { 

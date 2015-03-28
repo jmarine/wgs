@@ -60,6 +60,9 @@ public class WampProtocol
     
     public static long newSessionScopeId(WampSocket clientSocket)
     {
+        if(clientSocket == null) {
+            clientSocket = null;
+        }
         return clientSocket.getNextRequestId();
     }    
 

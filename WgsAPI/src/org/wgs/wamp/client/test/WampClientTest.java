@@ -49,14 +49,11 @@ public class WampClientTest extends WampModule implements Runnable
     }   
     
 
-    //FIXME: why this annotation generates deadlocks on JMS cluster, and programmatic subscriptions doesn't?
-    //@WampSubscribe(topic = "myapp", match = WampMatchType.prefix)
-    //public void onMyAppEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
-    @Override
-    public void onEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
+    @WampSubscribe(topic = "myapp", match = WampMatchType.prefix)
+    public void onMyAppEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
         String topic = client.getTopicFromEventData(subscriptionId, details);
-        System.out.println("OnEvent: topic=" + topic + ", publicationId=" + publicationId + ", payload=" + payload + ", payloadKw=" + payloadKw + ", " + details);
+        System.out.println("OnMyAppEvent: topic=" + topic + ", publicationId=" + publicationId + ", payload=" + payload + ", payloadKw=" + payloadKw + ", " + details);
     }
  
     
@@ -65,7 +62,7 @@ public class WampClientTest extends WampModule implements Runnable
     {
         try {
             
-            int repeats = 10;
+            int repeats = 5;
            
             System.out.println("Connecting");
             client.connect();
@@ -75,6 +72,7 @@ public class WampClientTest extends WampModule implements Runnable
             client.hello(realm, user, password, digestPasswordMD5);
             client.waitResponses();
 
+/*
             System.out.println("Publication without subscription.");
             doPublications(repeats);
             client.waitResponses();
@@ -91,27 +89,33 @@ public class WampClientTest extends WampModule implements Runnable
             });  
             // received in onEvent method of registered modules
             client.waitResponses();
-            
+
             System.out.println("Publication with subscription.");
             doPublications(repeats);
             client.waitResponses();
+*/            
+            
 
             doCalls(repeats);
-            client.waitResponses();            
+            client.waitResponses();
+
+/*        
 
             client.unsubscribe(this.subscriptionId);
             client.waitResponses();
             System.out.println("Publication after unsubscription.");
             doPublications(repeats);
             client.waitResponses();
- 
+
+*/        
             System.out.println("Closing session");
             client.goodbye("wamp.close.normal");
             client.waitResponses();
-
+                      
             System.out.println("Disconnection");
             client.close();
-            
+
+        
         } catch(Exception ex) {
 
             System.err.println("Error: " + ex.getMessage());
