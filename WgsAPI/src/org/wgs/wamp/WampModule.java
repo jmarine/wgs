@@ -227,9 +227,9 @@ public class WampModule
             for(WampCluster.Node node : WampCluster.getNodes()) {
                 WampCluster.Node.registerClusteredRPC(node.getWampClient(), calleeRealm, registration, remoteMethod);
             }
-            for(WampCluster.Node node : WampCluster.getNodes()) {
-                node.getWampClient().waitResponses();
-            }            
+            //for(WampCluster.Node node : WampCluster.getNodes()) {
+            //    node.getWampClient().waitResponses();
+            //}            
         }
     }
     
@@ -250,9 +250,9 @@ public class WampModule
                 for(WampCluster.Node node : WampCluster.getNodes()) {
                     WampCluster.Node.unregisterClusteredRPC(node.getWampClient(), realm, registration, remoteMethod);
                 }   
-                for(WampCluster.Node node : WampCluster.getNodes()) {
-                    node.getWampClient().waitResponses();
-                }
+                //for(WampCluster.Node node : WampCluster.getNodes()) {
+                //    node.getWampClient().waitResponses();
+                //}
             }
 
             synchronized(this.app)  // TODO: avoid synchronization by WampApplication
