@@ -90,11 +90,10 @@ public class WampClientTest extends WampModule implements Runnable
             // received in onEvent method of registered modules
             client.waitResponses();
 
+*/                 
             System.out.println("Publication with subscription.");
             doPublications(repeats);
             client.waitResponses();
-*/            
-            
 
             doCalls(repeats);
             client.waitResponses();

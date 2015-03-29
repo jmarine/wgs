@@ -133,7 +133,7 @@ public abstract class WampSocket
      * 
      * @return a request ID.
      */
-    public synchronized long getNextRequestId()
+    public long getNextRequestId()
     {
         return nextRequestId.incrementAndGet();
     }
