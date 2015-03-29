@@ -407,7 +407,7 @@ public class WampClient
     {
         if(clientSocket.getWampSessionId() != null) {
             for(WampModule module : wampApp.getWampModules()) {
-                module.onSessionEnd(clientSocket); 
+                module.onWampSessionEnd(clientSocket); 
             }
 
             WampProtocol.sendGoodbyeMessage(clientSocket, reason, null);

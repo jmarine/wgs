@@ -18,6 +18,7 @@ import org.wgs.security.WampCRA;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
+import org.wgs.wamp.rpc.WampInvocation;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscription;
@@ -38,8 +39,7 @@ public abstract class WampSocket
     private Long    sessionId;
     private Map<Long,WampSubscription> subscriptions;
     private Map<Long,WampCallController> callControllers;
-    private Map<Long,WampCallController> invocationControllers;
-    private Map<Long,Deferred<WampResult, WampException, WampResult>> invocationAsyncCallbacks;
+    private Map<Long,WampInvocation> invocations;
     private Map<Long,WampCalleeRegistration> rpcRegistrations;
     private WampConnectionState state;
     private int versionSupport;
@@ -61,9 +61,8 @@ public abstract class WampSocket
         
         socketId = WampProtocol.newGlobalScopeId();
         subscriptions = new ConcurrentHashMap<Long,WampSubscription>();        
-        invocationAsyncCallbacks = new ConcurrentHashMap<Long,Deferred<WampResult, WampException, WampResult>>();
+        invocations = new ConcurrentHashMap<Long,WampInvocation>();
         callControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
-        invocationControllers = new java.util.concurrent.ConcurrentHashMap<Long,WampCallController>();
         rpcRegistrations = new java.util.concurrent.ConcurrentHashMap<Long,WampCalleeRegistration>();
     }
     
@@ -297,23 +296,6 @@ public abstract class WampSocket
     }
 
     
-
-    public void addInvocationAsyncCallback(Long callID, Deferred<WampResult, WampException, WampResult> rpcAsyncCallback)
-    {
-        invocationAsyncCallbacks.put(callID, rpcAsyncCallback);
-    }
-    
-    public Deferred<WampResult, WampException, WampResult> getInvocationAsyncCallback(Long callID)
-    {
-        return invocationAsyncCallbacks.get(callID);
-    }    
-    
-    public Deferred<WampResult, WampException, WampResult> removeInvocationAsyncCallback(Long callID) 
-    {
-        return invocationAsyncCallbacks.remove(callID);
-    }
-
-    
     
     public void addCallController(Long callID, WampCallController controller)
     {
@@ -330,25 +312,27 @@ public abstract class WampSocket
         return callControllers.remove(callID);
     }    
     
-
-    public void addInvocationController(Long callID, WampCallController controller)
+    
+    
+    
+    public void addInvocation(Long invocationId,  WampCallController controller, Deferred<WampResult, WampException, WampResult> rpcAsyncCallback)
     {
-        invocationControllers.put(callID, controller);
+        invocations.put(invocationId, new WampInvocation(invocationId, controller, rpcAsyncCallback));
     }
     
-    public WampCallController getInvocationController(Long callID)
+    public WampInvocation getInvocation(Long invocationId)
     {
-        return invocationControllers.get(callID);
+        return invocations.get(invocationId);
     }    
     
-    public WampCallController removeInvocationController(Long callID) 
+    public WampInvocation removeInvocation(Long invocationId) 
     {
-        return invocationControllers.remove(callID);
-    }    
-    
+        return invocations.remove(invocationId);
+    }
+
     public Set<Long> getInvocationIDs()
     {
-        return invocationControllers.keySet();
+        return invocations.keySet();
     }
     
     

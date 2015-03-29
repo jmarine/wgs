@@ -66,22 +66,21 @@ public class WampRemoteMethod extends WampMethod
         promise.done(new DoneCallback<WampResult>() {
             @Override
             public void onDone(WampResult d) {
-                remotePeer.removeInvocationAsyncCallback(invocationId);
-                remotePeer.removeInvocationController(invocationId);
+                remotePeer.removeInvocation(invocationId);
             }
         });
         promise.fail(new FailCallback<WampException>() {
             @Override
             public void onFail(WampException f) {
+                remotePeer.removeInvocation(invocationId);
                 if(f.getErrorURI().equals("wgs.cancel_invocation")) {
                     WampProtocol.sendInterruptMessage(remotePeer, f.getInvocationId(), f.getDetails());
                 }
             }
         });
-        
+
         task.addRemoteInvocation(remotePeer.getSocketId(), invocationId, deferred);
-        remotePeer.addInvocationController(invocationId, task);
-        remotePeer.addInvocationAsyncCallback(invocationId, deferred);
+        remotePeer.addInvocation(invocationId, task, deferred);
 
         WampDict invocationOptions = new WampDict();
         if(matchType != WampMatchType.exact) invocationOptions.put("procedure", task.getProcedureURI());

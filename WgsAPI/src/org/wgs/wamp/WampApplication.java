@@ -22,6 +22,7 @@ import org.wgs.wamp.api.WampAPI;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
+import org.wgs.wamp.rpc.WampInvocation;
 import org.wgs.wamp.rpc.WampMethod;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampSubscription;
@@ -320,7 +321,7 @@ public class WampApplication
             // Notify modules:
             for(WampModule module : modules.values()) {
                 try { 
-                    module.onSessionEnd(clientSocket); 
+                    module.onWampSessionEnd(clientSocket); 
                 } catch(Exception ex) {
                     logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
                 }
@@ -636,16 +637,20 @@ public class WampApplication
         result.setArgs((request.size() > 3) ? (WampList)request.get(3) : null);
         result.setArgsKw((request.size() > 4) ? (WampDict)request.get(4) : null);
 
-        Deferred<WampResult, WampException, WampResult> deferred = providerSocket.getInvocationAsyncCallback(invocationId);
-        if(deferred != null) synchronized(this) {
-            if(result.isProgressResult()) {
-                deferred.notify(result);
-            } else {
-                try {
+        WampInvocation invocation = providerSocket.getInvocation(invocationId);        
+        if(invocation != null) 
+            // synchronized(this)
+        {
+            Deferred<WampResult, WampException, WampResult> deferred = invocation.getAsyncCallback();
+            try {
+                if(result.isProgressResult()) {
+                    deferred.notify(result);
+                } else {
                     deferred.resolve(result);
-                } catch(Exception ex) {
-                    throw ex;
                 }
+                
+            } catch(Exception ex) {
+                throw ex;
             }
         }
 
@@ -661,10 +666,10 @@ public class WampApplication
         WampList args = (request.size() > 5) ? (WampList)request.get(5) : null;
         WampDict argsKw = (request.size() > 6) ? (WampDict)request.get(6) : null;
         WampException error = new WampException(invocationId, options, errorURI, args, argsKw);
-        Deferred<WampResult, WampException, WampResult> callback = providerSocket.getInvocationAsyncCallback(invocationId);
+        WampInvocation invocation = providerSocket.getInvocation(invocationId);        
+        Deferred<WampResult, WampException, WampResult> callback = invocation.getAsyncCallback();
         if(!callback.isRejected()) callback.reject(error); 
-        providerSocket.removeInvocationAsyncCallback(invocationId);
-        providerSocket.removeInvocationController(invocationId);
+        providerSocket.removeInvocation(invocationId);
     }
     
 

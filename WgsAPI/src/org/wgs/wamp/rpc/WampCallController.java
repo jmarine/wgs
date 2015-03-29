@@ -83,12 +83,12 @@ public class WampCallController implements Runnable
     
     
 
-    public synchronized void addRemoteInvocation(Long socketId, Long remoteInvocationId, Deferred<WampResult,WampException,WampResult> asyncCall)
+    public void addRemoteInvocation(Long socketId, Long remoteInvocationId, Deferred<WampResult,WampException,WampResult> asyncCall)
     {
         remoteInvocations.put(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId), asyncCall);
     }
     
-    public synchronized Deferred<WampResult,WampException,WampResult> getRemoteInvocation(Long socketId, Long remoteInvocationId)    
+    public Deferred<WampResult,WampException,WampResult> getRemoteInvocation(Long socketId, Long remoteInvocationId)    
     {
         return remoteInvocations.get(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId));
     }
@@ -96,20 +96,20 @@ public class WampCallController implements Runnable
     public Deferred<WampResult,WampException,WampResult> removeRemoteInvocation(Long socketId, Long remoteInvocationId)    
     {
         WampResult wampResult = null;
-
         Deferred<WampResult,WampException,WampResult> retval = remoteInvocations.remove(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId));
-        synchronized(this) {
+        synchronized(remoteInvocations) {
+
             if(!done && !cancelled && pendingInvocationCount <= 0 && remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
                 done = true;
-                
+
                 wampResult = new WampResult(callID);
                 wampResult.setArgs(getResult());
                 wampResult.setArgsKw(getResultKw());
             }              
-        }
-        
-        if(wampResult != null) {
-            remoteInvocationsCompletionCallback.resolve(wampResult);
+
+            if(wampResult != null) {
+                remoteInvocationsCompletionCallback.resolve(wampResult);
+            }
         }
         
         return retval;
@@ -186,12 +186,9 @@ public class WampCallController implements Runnable
                             details.put("progress", true);
                             WampProtocol.sendResultMessage(clientSocket, getCallID(), details, progress.getArgs(), progress.getArgsKw());
                         } else {
-                            synchronized(WampCallController.this)
-                            {
-                                getResultKw().putAll(progress.getArgsKw());
-                                if(progress.getArgs() != null) {
-                                    getResult().add(progress.getArgs());
-                                }
+                            getResultKw().putAll(progress.getArgsKw());
+                            if(progress.getArgs() != null) {
+                                getResult().add(progress.getArgs());
                             }
                         }
                     }

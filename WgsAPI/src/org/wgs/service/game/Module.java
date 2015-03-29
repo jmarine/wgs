@@ -108,17 +108,22 @@ public class Module extends WampModule
     }
     
     @Override
-    public void onSessionEnd(WampSocket socket) 
+    public void onWampSessionEnd(WampSocket socket) 
     {
-        Client client = clients.get(socket.getWampSessionId());
-        if(client != null) {
-            for(String gid : client.getGroups().keySet()) {
-                try { exitGroup(socket, gid); }
-                catch(Exception ex) { }
+        Long sessionId = socket.getWampSessionId();
+        if(sessionId == null) {
+            sessionId = null;
+        } else {
+            Client client = clients.get(sessionId);
+            if(client != null) {
+                for(String gid : client.getGroups().keySet()) {
+                    try { exitGroup(socket, gid); }
+                    catch(Exception ex) { }
+                }
+                clients.remove(sessionId);
             }
-            clients.remove(socket.getWampSessionId());
         }
-        super.onSessionEnd(socket);
+        super.onWampSessionEnd(socket);        
     }
 
     

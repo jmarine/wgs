@@ -92,7 +92,7 @@ public class WampModule
     }
     
     
-    public void onSessionEnd(WampSocket clientSocket) 
+    public void onWampSessionEnd(WampSocket clientSocket) 
     { 
     }
     
@@ -104,7 +104,7 @@ public class WampModule
         if(method != null) {
             return method.invoke(task,clientSocket,args,argsKw,options);
             
-        } else {  
+        } else synchronized(app) {  
             
             final WampRealm realm = WampRealm.getRealm(clientSocket.getRealm());
             final List<WampRemoteMethod> remoteMethods = realm.getRemoteRPCs(clientSocket.getRealm(), methodName, options, clientSocket.getWampSessionId());
@@ -141,11 +141,8 @@ public class WampModule
                     remoteInvocation.progress(new ProgressCallback<WampResult>() {
                         @Override
                         public void onProgress(WampResult progress) {
-                            //synchronized(task) 
-                            {
-                                if(!task.isCancelled()) {
-                                    deferred.notify(progress);
-                                }
+                            if(!task.isCancelled()) {
+                                deferred.notify(progress);
                             }
                         }
                     });
@@ -153,11 +150,8 @@ public class WampModule
                     remoteInvocation.fail(new FailCallback<WampException>() {
                         @Override
                         public void onFail(WampException error) {
-                            //synchronized(task) 
-                            {
-                                if(!task.isCancelled()) {
-                                    task.cancel(null);
-                                }
+                            if(!task.isCancelled()) {
+                                task.cancel(null);
                             }
                         }
                      });
@@ -255,11 +249,11 @@ public class WampModule
                 //}
             }
 
-            synchronized(this.app)  // TODO: avoid synchronization by WampApplication
+            synchronized(app)  // TODO: avoid synchronization by WampApplication
             {
                 WampDict interruptDetails = new WampDict();
                 for(Long invocationId : clientSocket.getInvocationIDs()) {  // critical section
-                    WampCallController task = clientSocket.removeInvocationController(invocationId);
+                    WampCallController task = clientSocket.removeInvocation(invocationId).getWampCallController();
                     task.removeRemoteInvocation(clientSocket.getSocketId(), invocationId);
                     try { 
                         WampProtocol.sendInterruptMessage(clientSocket, invocationId, interruptDetails); 
