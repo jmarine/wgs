@@ -643,8 +643,6 @@ public class WampApplication
             } else {
                 try {
                     deferred.resolve(result);
-                    providerSocket.removeInvocationAsyncCallback(invocationId);
-                    providerSocket.removeInvocationController(invocationId);
                 } catch(Exception ex) {
                     throw ex;
                 }

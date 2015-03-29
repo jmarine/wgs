@@ -96,9 +96,7 @@ public class WampCallController implements Runnable
     public Deferred<WampResult,WampException,WampResult> removeRemoteInvocation(Long socketId, Long remoteInvocationId)    
     {
         WampResult wampResult = null;
-        if(socketId == null) {
-            socketId = null;
-        }
+
         Deferred<WampResult,WampException,WampResult> retval = remoteInvocations.remove(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId));
         synchronized(this) {
             if(!done && !cancelled && pendingInvocationCount <= 0 && remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {

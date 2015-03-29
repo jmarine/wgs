@@ -3,6 +3,7 @@ package org.wgs.wamp.rpc;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jdeferred.Deferred;
+import org.jdeferred.DoneCallback;
 import org.jdeferred.FailCallback;
 import org.jdeferred.Promise;
 import org.jdeferred.impl.DeferredObject;
@@ -58,8 +59,17 @@ public class WampRemoteMethod extends WampMethod
     @Override
     public Promise<WampResult, WampException, WampResult> invoke(final WampCallController task, final WampSocket clientSocket, final WampList args, final WampDict argsKw, final WampCallOptions callOptions) throws Exception
     {
+        final Long invocationId = WampProtocol.newSessionScopeId(remotePeer);
+        
         DeferredObject<WampResult,WampException,WampResult> deferred = new DeferredObject<WampResult,WampException,WampResult>();
         Promise<WampResult,WampException,WampResult> promise = deferred.promise();
+        promise.done(new DoneCallback<WampResult>() {
+            @Override
+            public void onDone(WampResult d) {
+                remotePeer.removeInvocationAsyncCallback(invocationId);
+                remotePeer.removeInvocationController(invocationId);
+            }
+        });
         promise.fail(new FailCallback<WampException>() {
             @Override
             public void onFail(WampException f) {
@@ -69,7 +79,6 @@ public class WampRemoteMethod extends WampMethod
             }
         });
         
-        final Long invocationId = WampProtocol.newSessionScopeId(remotePeer);
         task.addRemoteInvocation(remotePeer.getSocketId(), invocationId, deferred);
         remotePeer.addInvocationController(invocationId, task);
         remotePeer.addInvocationAsyncCallback(invocationId, deferred);
