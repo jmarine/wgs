@@ -83,6 +83,8 @@ public class WampTopicConnectionFactory implements TopicConnectionFactory
             case "enc":
                 this.enc = WampEncoding.valueOf(propValue);
                 break;
+            default:
+                throw new IllegalArgumentException("Incorrect property name");
         }
     }
     

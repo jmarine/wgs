@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import javax.net.SocketFactory;
 import javax.websocket.CloseReason;
@@ -19,7 +20,6 @@ public class WampRawSocket extends WampSocket implements Runnable
     private static final int DEFAULT_PORT = 8080;
     
     private boolean handshake;
-    private URI url;
     private WampApplication app;
     private Socket socket;
     private InputStream is;
@@ -32,7 +32,6 @@ public class WampRawSocket extends WampSocket implements Runnable
         setEncoding(WampEncoding.MsgPack);
         
         this.app = app;
-        this.url = url;
         
         int port = url.getPort();
         if(port == 0) port = DEFAULT_PORT;
@@ -135,7 +134,7 @@ public class WampRawSocket extends WampSocket implements Runnable
                 byte[] buf = null;
                 switch(getEncoding()) {
                     case JSON:
-                        buf = msg.toString().getBytes("UTF-8");
+                        buf = msg.toString().getBytes(StandardCharsets.UTF_8);
                         break;
                     case MsgPack:
                         buf = (byte[])msg;
@@ -176,24 +175,22 @@ public class WampRawSocket extends WampSocket implements Runnable
 
     @Override
     public Object getSessionData(String key) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return sessionData.get(key);
     }
 
     @Override
     public void putSessionData(String key, Object val) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        sessionData.put(key, val);
     }
 
     @Override
     public Object removeSessionData(String key) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return sessionData.remove(key);
     }
 
     @Override
     public boolean containsSessionData(String key) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-
-    
+        return sessionData.containsKey(key);
     }
 
     

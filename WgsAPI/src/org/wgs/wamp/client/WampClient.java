@@ -2,6 +2,7 @@ package org.wgs.wamp.client;
 
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -153,7 +154,6 @@ public class WampClient
                         WampList unregistrationParams = WampClient.this.pendingRequests.get(unregisteredRequestId);
                         if(unregistrationParams != null) {
                             Deferred<Long, WampException, Long> unregistrationPromise = getDeferredLong(unregistrationParams);
-                            String procedureURI = unregistrationParams.getText(1);
                             Long unregistrationId = unregistrationParams.getLong(2);
                             if(unregistrationPromise != null) unregistrationPromise.resolve(unregistrationId);
                             WampClient.this.rpcHandlers.remove(unregistrationId);
@@ -342,19 +342,7 @@ public class WampClient
         }
     }
     
-    private WampEncoding getWampEncodingByName(String subprotocol)
-    {
-        if(subprotocol != null && subprotocol.equals("wamp.2.msgpack")) {
-            return WampEncoding.MsgPack;        
-        } else if(subprotocol != null && subprotocol.equals("wamp.2.msgpack.batched")) {
-            return WampEncoding.BatchedMsgPack;
-        } else if(subprotocol != null && subprotocol.equals("wamp.2.json.batched")) {
-            return WampEncoding.BatchedJSON;
-        } else {
-            return WampEncoding.JSON;
-        }
-    }
-   
+  
    
     public void setPreferredWampEncoding(WampEncoding preferredEncoding)
     {
@@ -429,7 +417,7 @@ public class WampClient
 
         if(password != null && digestPasswordMD5) {
             MessageDigest md5 = MessageDigest.getInstance("MD5");
-            this.password = HexUtils.byteArrayToHexString(md5.digest(password.getBytes("UTF-8")));
+            this.password = HexUtils.byteArrayToHexString(md5.digest(password.getBytes(StandardCharsets.UTF_8)));
         } else {
             this.password = password;
         }

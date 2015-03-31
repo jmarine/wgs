@@ -45,7 +45,7 @@ public class WampMessage implements javax.jms.TextMessage
 
     @Override
     public void setJMSMessageID(String msgId) throws JMSException {
-        props.put("_jms_msgid", new Long(msgId));
+        props.put("_jms_msgid", Long.valueOf(msgId));
     }
 
     @Override
@@ -55,7 +55,7 @@ public class WampMessage implements javax.jms.TextMessage
 
     @Override
     public void setJMSTimestamp(long t) throws JMSException {
-        props.put("_jms_timestamp", new Long(t));
+        props.put("_jms_timestamp", Long.valueOf(t));
     }
 
     @Override

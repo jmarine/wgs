@@ -3,6 +3,8 @@ package org.wgs.security;
 
 public class OpenIdConnectClientPK implements java.io.Serializable
 {
+    private static final long serialVersionUID = 0L;
+
     private String provider;
     private String clientName = "";    
     

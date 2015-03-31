@@ -4,6 +4,7 @@ import java.io.StringReader;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.UUID;
@@ -35,7 +36,6 @@ public class OpenIdConnectUtils
         WampDict retval = new WampDict();
         WampList providers = new WampList();
 
-        Calendar now = Calendar.getInstance();        
         ArrayList<String> domains = new ArrayList<String>();
         EntityManager manager = null;
         
@@ -98,7 +98,7 @@ public class OpenIdConnectUtils
         }
         
         
-        redirectUri = redirectUri + ((redirectUri.indexOf("?") == -1)?"?":"&") + "provider=" + URLEncoder.encode(providerDomain,"utf8");
+        redirectUri = redirectUri + ((redirectUri.indexOf('?') == -1)?"?":"&") + "provider=" + URLEncoder.encode(providerDomain,StandardCharsets.UTF_8.toString());
         
         
         EntityManager manager = null;
@@ -157,7 +157,7 @@ public class OpenIdConnectUtils
                 
                 String oidcAuthEndpointUrl = oidcClient.getProvider().getAuthEndpointUrl();
                 String clientId = oidcClient.getClientId();
-                retval = oidcAuthEndpointUrl + "?response_type=code&access_type=offline&scope=" + URLEncoder.encode(oidcClient.getProvider().getScopes(),"utf8") + "&client_id=" + URLEncoder.encode(clientId,"utf8") + "&approval_prompt=force&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8");
+                retval = oidcAuthEndpointUrl + "?response_type=code&access_type=offline&scope=" + URLEncoder.encode(oidcClient.getProvider().getScopes(),StandardCharsets.UTF_8.toString()) + "&client_id=" + URLEncoder.encode(clientId,StandardCharsets.UTF_8.toString()) + "&approval_prompt=force&redirect_uri=" + URLEncoder.encode(redirectUri,StandardCharsets.UTF_8.toString());
             }
             
             if(retval == null) {
@@ -175,7 +175,7 @@ public class OpenIdConnectUtils
             }            
         }
         
-        if(state != null) retval = retval + "&state=" + URLEncoder.encode(state, "utf8");
+        if(state != null) retval = retval + "&state=" + URLEncoder.encode(state,StandardCharsets.UTF_8.toString());
         return retval;
     }    
     
@@ -206,8 +206,8 @@ public class OpenIdConnectUtils
             
             if(providerDomain.endsWith("facebook.com")) {
                 
-                int pos = accessTokenResponse.indexOf("&");
-                String accessToken = URLDecoder.decode(accessTokenResponse.substring("access_token=".length(), pos), "utf8");
+                int pos = accessTokenResponse.indexOf('&');
+                String accessToken = URLDecoder.decode(accessTokenResponse.substring("access_token=".length(), pos), StandardCharsets.UTF_8.toString());
                 String expires = accessTokenResponse.substring(pos + "&expires=".length());
                 Calendar expiration = Calendar.getInstance();
                 expiration.add(Calendar.SECOND, Integer.parseInt(expires));
@@ -248,16 +248,15 @@ public class OpenIdConnectUtils
                     String idTokenJWT = response.getString("id_token");
                     //System.out.println("Encoded id_token: " + idToken);
 
-                    int pos1 = idTokenJWT.indexOf(".")+1;
-                    int pos2 = idTokenJWT.indexOf(".", pos1);
+                    int pos1 = idTokenJWT.indexOf('.')+1;
+                    int pos2 = idTokenJWT.indexOf('.', pos1);
                     String idTokenData = idTokenJWT.substring(pos1, pos2);
                     while((idTokenData.length() % 4) != 0) idTokenData = idTokenData + "=";
-                    idTokenData = new String(Base64.decodeBase64ToByteArray(idTokenData));
+                    idTokenData = new String(Base64.decodeBase64ToByteArray(idTokenData), StandardCharsets.UTF_8);
                     logger.fine("Decoded id_token: " + idTokenData);
 
                     try(JsonReader idTokenJsonReader = Json.createReader(new StringReader(idTokenData))) {
                         JsonObject idTokenNode = idTokenJsonReader.readObject();
-                        String issuer = idTokenNode.getString("iss");
                         String login = idTokenNode.getString("sub");
                         usr = UserRepository.findUserByLoginAndDomain(login, providerDomain);
                         if(usr == null) {
@@ -268,7 +267,7 @@ public class OpenIdConnectUtils
                             usr.setAdministrator(false);
                         }
                                       
-                        if( (usr != null) && (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
+                        if( (usr.getProfileCaducity() != null) && (usr.getProfileCaducity().after(now)) )  {
                             // Use cached UserInfo from local database
                             logger.fine("Cached OIDC User: " + usr);
 

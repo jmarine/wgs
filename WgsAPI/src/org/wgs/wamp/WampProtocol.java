@@ -60,9 +60,6 @@ public class WampProtocol
     
     public static long newSessionScopeId(WampSocket clientSocket)
     {
-        if(clientSocket == null) {
-            clientSocket = null;
-        }
         return clientSocket.getNextRequestId();
     }    
 
@@ -306,7 +303,7 @@ public class WampProtocol
                         WampSocket socket = subscription.getSocket(sid);
                         if(socket != null) {
                           synchronized(socket) {
-                            if(socket != null && socket.isOpen() && realm.equals(socket.getRealm()) ) {
+                            if(socket.isOpen() && realm.equals(socket.getRealm()) ) {
                                 WampEncoding enc = socket.getEncoding();                            
                                 if(msg[enc.ordinal()] == null) {
                                     msg[enc.ordinal()] = enc.getSerializer().serialize(response);

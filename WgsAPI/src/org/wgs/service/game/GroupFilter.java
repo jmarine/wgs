@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map.Entry;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 
@@ -87,9 +88,9 @@ public class GroupFilter
         
         EntityManager manager = Storage.getEntityManager();
         TypedQuery<Group> query = manager.createQuery(ejbql, Group.class);        
-        for(String key : params.keySet()) 
+        for(Entry<String,Object> entry : params.entrySet()) 
         {
-            query.setParameter(key, params.get(key));
+            query.setParameter(entry.getKey(), entry.getValue());
         }
         
         List<Group> groups = query.getResultList();

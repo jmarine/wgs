@@ -17,6 +17,8 @@ import org.wgs.wamp.type.WampDict;
 @Table(name="APP_ROLE")
 public class Role implements Serializable 
 {
+    private static final long serialVersionUID = 0L;
+    
     @Id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="app")

@@ -143,7 +143,7 @@ public class WampApplication
         while(module == null && moduleName != null) {
             module = modules.get(normalizeModuleName(moduleName));
             if(module == null) {
-                int pos = moduleName.lastIndexOf(".");
+                int pos = moduleName.lastIndexOf('.');
                 if(pos != -1) moduleName = moduleName.substring(0, pos);
                 else moduleName = null;
             }
@@ -190,7 +190,7 @@ public class WampApplication
             }
         }
         
-        if(authMethods == null || authMethods.size() == 0) {
+        if(authMethods.size() == 0) {
             authMethods.add("anonymous");
         } 
         
@@ -454,7 +454,7 @@ public class WampApplication
     
     public String normalizeModuleName(String moduleName) 
     {
-        int schemaPos = moduleName.indexOf(":");
+        int schemaPos = moduleName.indexOf(':');
         if(schemaPos != -1) moduleName = moduleName.substring(schemaPos+1);
         if(!moduleName.endsWith(".")) moduleName = moduleName + ".";
         return moduleName;
@@ -504,7 +504,7 @@ public class WampApplication
             Set<Long> sessions = wampSessionsByUserId.get(user.getUid());
             sessions.remove(socket.getSocketId());
             if(sessions.size() == 0) {
-                wampSessionsByUserId.remove(user);
+                wampSessionsByUserId.remove(user.getUid());
             }
         }
     }    
@@ -659,7 +659,6 @@ public class WampApplication
     
     private void processInvocationError(WampSocket providerSocket, WampList request) throws Exception
     {
-        Long requestType = request.getLong(1);
         Long invocationId = request.getLong(2);
         WampDict options = new WampDict();
         String errorURI = request.getText(4);

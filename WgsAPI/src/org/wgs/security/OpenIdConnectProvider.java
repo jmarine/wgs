@@ -1,7 +1,14 @@
 package org.wgs.security;
 
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Serializable;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -22,6 +29,8 @@ import javax.persistence.Table;
 })
 public class OpenIdConnectProvider implements Serializable
 {
+    private static final long serialVersionUID = 0L;    
+    
     @Id
     @Column(name="provider_domain")
     private String domain;
@@ -138,18 +147,22 @@ public class OpenIdConnectProvider implements Serializable
         StringBuffer retval = new StringBuffer();
         String url = getUserInfoEndpointUrl();
         if(!getDomain().equalsIgnoreCase("www.facebook.com")) url = url + "?schema=openid";
-        else url = url + "?access_token=" + URLEncoder.encode(accessToken, "utf-8");
+        else url = url + "?access_token=" + URLEncoder.encode(accessToken, StandardCharsets.UTF_8.toString());
+        
         HttpURLConnection connection = (HttpURLConnection)(new URL(url)).openConnection();
         connection.setRequestProperty("Authorization", "Bearer " + accessToken);
         connection.setDoOutput(false);
-
-        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"));
-        String decodedString;
-        while ((decodedString = in.readLine()) != null) {
-            retval.append(decodedString);
+        
+        try(BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+            String decodedString;
+            while ((decodedString = in.readLine()) != null) {
+                retval.append(decodedString);
+            }
+            in.close();
+            
+        } finally {
+            connection.disconnect(); 
         }
-        in.close();
-        connection.disconnect();
         
         return retval.toString();
     }    
@@ -158,39 +171,38 @@ public class OpenIdConnectProvider implements Serializable
     {
         JsonObject retval = null;
         HttpURLConnection connection = null;
-        if(principal.indexOf("#") != -1) principal = principal.substring(0, principal.indexOf("#"));
-        if(principal.indexOf("?") != -1) principal = principal.substring(0, principal.indexOf("?"));
+        if(principal.indexOf('#') != -1) principal = principal.substring(0, principal.indexOf('#'));
+        if(principal.indexOf('?') != -1) principal = principal.substring(0, principal.indexOf('?'));
         int endSchemaPos = principal.indexOf("://");
-        if(endSchemaPos!=-1 && principal.indexOf("/", endSchemaPos+3) == -1) {
+        if(endSchemaPos!=-1 && principal.indexOf('/', endSchemaPos+3) == -1) {
             // Append slash to HOSTNAME[:PORT] resources
             principal = principal + "/";
         }
         
         String principalUrl = principal;
         if(principal.indexOf("://") == -1) {
-            if(principal.indexOf("@") == -1) {
+            if(principal.indexOf('@') == -1) {
                 principalUrl = "https://" + principal;
             } else {
                 principal = "acct:" + principal;
-                principalUrl = "https://" + principal.substring(1+principal.indexOf("@"));
+                principalUrl = "https://" + principal.substring(1+principal.indexOf('@'));
             }
         }
 
         String webfingerPath = "/.well-known/webfinger";
-        webfingerPath += "?resource=" + URLEncoder.encode(principal,"utf8");
-        webfingerPath += "&rel=" + URLEncoder.encode("http://openid.net/specs/connect/1.0/issuer","utf8");
+        webfingerPath += "?resource=" + URLEncoder.encode(principal,StandardCharsets.UTF_8.toString());
+        webfingerPath += "&rel=" + URLEncoder.encode("http://openid.net/specs/connect/1.0/issuer",StandardCharsets.UTF_8.toString());
 
         URL webfingerUrl = new URL(new URL(principalUrl), webfingerPath);
         connection = (HttpURLConnection)webfingerUrl.openConnection();
         connection.setInstanceFollowRedirects(true);
         connection.setDoOutput(false);
 
-        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+        try(JsonReader jsonReader = Json.createReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
             
             JsonObject webfingerResponse = jsonReader.readObject();        
             
             if(webfingerResponse.containsKey("links")) {
-                StringBuffer oidcConfig = new StringBuffer();
                 JsonArray links = webfingerResponse.getJsonArray("links");
                 for(int index = 0; index < links.size(); index++) {
                     JsonObject link = (JsonObject)links.get(index);
@@ -201,7 +213,7 @@ public class OpenIdConnectProvider implements Serializable
                         HttpURLConnection connection2 = (HttpURLConnection)webfingerUrl.openConnection();
                         connection2.setDoOutput(false);
 
-                        try(JsonReader jsonReader2 = Json.createReader(connection2.getInputStream())) {
+                        try(JsonReader jsonReader2 = Json.createReader(new InputStreamReader(connection2.getInputStream(),StandardCharsets.UTF_8))) {
                             retval = jsonReader2.readObject();
                         } finally {
                             connection2.disconnect();
@@ -222,6 +234,7 @@ public class OpenIdConnectProvider implements Serializable
     {
         JsonObject retval = null;
         URL url = new URL(getRegistrationEndpointUrl());
+        
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json");
@@ -233,17 +246,19 @@ public class OpenIdConnectProvider implements Serializable
                 .add("client_name", appName)
                 .build();
                 
-        
-        OutputStreamWriter out = new OutputStreamWriter(
-                                         connection.getOutputStream());
-        out.write(req.toString());
-        out.close();
+        JsonReader jsonReader = null;
+        try(OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream(), StandardCharsets.UTF_8)) {
+            out.write(req.toString());
+            out.close();
 
-        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
-            
+            jsonReader = Json.createReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
             retval = jsonReader.readObject();
             
         } finally {
+            if(jsonReader != null) {
+                jsonReader.close();
+            }
+            
             connection.disconnect();
         }
 

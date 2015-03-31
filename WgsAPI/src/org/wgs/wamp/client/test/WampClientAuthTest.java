@@ -20,7 +20,7 @@ import org.wgs.wamp.type.WampMatchType;
 @WampModuleName("com.myapp")
 public class WampClientAuthTest extends WampModule implements Runnable
 {
-    private static String  url = "ws://localhost:8080/ws"; 
+    private static String  url = "tcp://localhost:8080"; 
     private static String  realm = "realm1";
     private static String  user = "joe";
     private static String  password = "test";
@@ -114,7 +114,7 @@ public class WampClientAuthTest extends WampModule implements Runnable
     public static final void main(String args[]) throws Exception
     {
         WampClient client = new WampClient(url);
-        client.setPreferredWampEncoding(WampEncoding.JSON);
+        client.setPreferredWampEncoding(WampEncoding.MsgPack);
         WampClientAuthTest test = new WampClientAuthTest(client);
         test.run();
     }

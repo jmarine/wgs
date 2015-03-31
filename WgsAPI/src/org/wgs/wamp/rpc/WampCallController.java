@@ -166,7 +166,7 @@ public class WampCallController implements Runnable
             setResult(new WampList());
             setResultKw(new WampDict());
             
-            Promise<WampResult, WampException, WampResult> promise = (Promise<WampResult, WampException, WampResult>)module.onCall(this, clientSocket, procedureURI, arguments, argumentsKw, callOptions);
+            Promise<WampResult, WampException, WampResult> promise = module.onCall(this, clientSocket, procedureURI, arguments, argumentsKw, callOptions);
             promise.done(new DoneCallback<WampResult>() {
                 @Override
                 public void onDone(WampResult wampResult) {

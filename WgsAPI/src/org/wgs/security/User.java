@@ -29,6 +29,8 @@ import org.wgs.wamp.type.WampList;
 })
 public class User implements Serializable, Principal
 {
+    private static final long serialVersionUID = 0L;
+    
     @Id
     @Column(name="uid", nullable = false, length=36)
     private String uid;
@@ -315,7 +317,7 @@ public class User implements Serializable, Principal
     @Override
     public String toString()
     {   
-        return uid.toString();
+        return uid;
     }
     
     @Override
@@ -327,7 +329,7 @@ public class User implements Serializable, Principal
     public WampDict toWampObject(boolean includeFriends) 
     {
         WampDict retval = new WampDict();
-        retval.put("user", uid.toString());
+        retval.put("user", uid);
         retval.put("name", getName());
         retval.put("picture", getPicture());    
 

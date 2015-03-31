@@ -1,5 +1,6 @@
 package org.wgs.security;
 
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -137,7 +138,7 @@ public class WampCRA
         Mac hmac = Mac.getInstance("HmacSHA256");
         hmac.init(keyspec);
         
-        byte[] h = hmac.doFinal(authChallenge.getBytes("UTF8"));
+        byte[] h = hmac.doFinal(authChallenge.getBytes(StandardCharsets.UTF_8));
         return Base64.encodeByteArrayToBase64(h);
     }
     
@@ -145,15 +146,15 @@ public class WampCRA
     private static byte[] deriveKey(String secret, WampDict extra) throws Exception
     {
         if(extra != null && extra.has("salt")) {
-            byte[] salt = extra.getText("salt").getBytes("UTF8");
+            byte[] salt = extra.getText("salt").getBytes(StandardCharsets.UTF_8);
             int iterations = extra.has("iterations")? extra.getLong("iterations").intValue() : 10000;
             int keylen = extra.has("keylen")? extra.getLong("keylen").intValue() : 32;
 
             PBKDF2 pbkdf2 = new PBKDF2("HmacSHA256");
-            //return pbkdf2.deriveKey(secret.getBytes("UTF8"), salt, iterations, keylen);
-            return Base64.encodeByteArrayToBase64(pbkdf2.deriveKey(secret.getBytes("UTF8"), salt, iterations, keylen)).getBytes("UTF8");
+            //return pbkdf2.deriveKey(secret.getBytes(StandardCharsets.UTF_8), salt, iterations, keylen);
+            return Base64.encodeByteArrayToBase64(pbkdf2.deriveKey(secret.getBytes(StandardCharsets.UTF_8), salt, iterations, keylen)).getBytes(StandardCharsets.UTF_8);
         } else {
-            return secret.getBytes("UTF8");
+            return secret.getBytes(StandardCharsets.UTF_8);
         }
     }    
     

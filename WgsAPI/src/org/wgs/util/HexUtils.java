@@ -14,13 +14,17 @@ public class HexUtils
     
     public static String byteArrayToHexString(byte[] bytes)
     {
-        StringBuffer retval = new StringBuffer((bytes!=null)? bytes.length*2 : 0);
-        for (int n = 0; n < bytes.length; n++) {
-            String hex = (java.lang.Integer.toHexString(bytes[n] & 0XFF));
-            if (hex.length() == 1) retval.append("0");
-            retval.append(hex);
-        }
-        return retval.toString();
+        if(bytes == null) {
+            return "";
+        } else {
+            StringBuffer retval = new StringBuffer(bytes.length*2);
+            for (int n = 0; n < bytes.length; n++) {
+                String hex = (java.lang.Integer.toHexString(bytes[n] & 0XFF));
+                if (hex.length() == 1) retval.append("0");
+                retval.append(hex);
+            }
+            return retval.toString();
+        } 
     }    
     
 }

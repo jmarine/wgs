@@ -1,6 +1,7 @@
 package org.wgs.service.game;
 
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -90,6 +91,8 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                         case "RETRACT_ACCEPTED":
                             ruleEngine.eval("game.initFromStateStr('"+action.getActionValue()+"');");
                             break;
+                        default:
+                            break;
                     }
 
                   }
@@ -126,7 +129,8 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                         //g.setWinner(actionSlot);
                         Member m0 = g.getMember(2-actionSlot.intValue()-1);
                         Member m1 = g.getMember(actionSlot.intValue());
-                        if(m0 != null && m1 != null) {
+                        if(m0 != null && m0.getUser() != null 
+                                && m1 != null && m1.getUser() != null) {
                             saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
                             saveAchievement(g, m1.getRole(), m1.getUser(), "RESIGN", m0.getUser().getUid());
                         }
@@ -240,8 +244,8 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
             ruleEngine = factory.getEngineByName("JavaScript");
 
             ClassLoader cl = this.getClass().getClassLoader();
-            ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/move.js")));
-            ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/game.js")));
+            ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/move.js"),StandardCharsets.UTF_8));
+            ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/game.js"),StandardCharsets.UTF_8));
 
             ArrayList<Application> appsToLoad = new ArrayList<Application>();
             appsToLoad.addAll(apps);                
@@ -250,7 +254,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                 while(iter.hasNext()) {
                     try { 
                         Application app = iter.next();
-                        ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/" + app.getName() +".js"))); 
+                        ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/" + app.getName() +".js"),StandardCharsets.UTF_8)); 
                         iter.remove();
                     } catch(Exception ex) { }
                 }

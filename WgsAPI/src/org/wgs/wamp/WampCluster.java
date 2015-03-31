@@ -19,7 +19,7 @@ import org.wgs.wamp.type.WampMatchType;
 
 public class WampCluster extends WampModule
 {
-    public  static String   brokerId = "wgs-" + UUID.randomUUID().toString();
+    public  static final    String brokerId = "wgs-" + UUID.randomUUID().toString();
 
     private static Logger   logger = Logger.getLogger(WampCluster.class.getName());
     
@@ -42,7 +42,7 @@ public class WampCluster extends WampModule
     @WampSubscribe(topic = wgsClusterTopicName, match = WampMatchType.exact)
     public void onClusterEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
-        String topic = masterConnection.getTopicFromEventData(subscriptionId, details);
+        //String topic = masterConnection.getTopicFromEventData(subscriptionId, details);
 
         try {
             String publisherBrokerId = payloadKw.getText("wgsBrokerId");
@@ -63,7 +63,9 @@ public class WampCluster extends WampModule
                         break;
                     case "wgs.cluster.node_detached":
                         WampCluster.removeNode(wgsRemoteClusterNodeEndpoint);
-                        break;                                
+                        break;    
+                    default:
+                        break;
                 }
             }
 
@@ -230,7 +232,9 @@ public class WampCluster extends WampModule
         
         public void stop() throws Exception
         {
-            client.close();
+            if(client != null) {
+                client.close();
+            }
         }
     }
     

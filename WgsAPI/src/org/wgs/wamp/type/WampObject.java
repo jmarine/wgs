@@ -1,6 +1,7 @@
 package org.wgs.wamp.type;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.WampException;
@@ -19,14 +20,16 @@ public class WampObject
         if(obj == null) {
             return null;
         } else if(obj instanceof Integer) {
-            return new Long(((Integer)obj).longValue());
+            return ((Integer)obj).longValue();
         } else if(obj instanceof Float) {
-            return new Double(((Float)obj).doubleValue());
+            return ((Float)obj).doubleValue();
         } else if(obj instanceof Map) {
             WampDict dict = new WampDict();
             Map map = (Map)obj;
-            for(Object key : map.keySet()) {
-                dict.put(key.toString(), castToWampObject(map.get(key)));
+            Iterator iterator = map.entrySet().iterator();
+            while(iterator.hasNext()) {
+                Map.Entry mapEntry = (Map.Entry) iterator.next();
+                dict.put(mapEntry.getKey().toString(), castToWampObject(mapEntry.getValue()));
             }
             return dict;
         } else if(obj instanceof Collection) {

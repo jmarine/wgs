@@ -30,7 +30,9 @@ import org.wgs.wamp.type.WampList;
     @NamedQuery(name="wgs.findAppByName",query="SELECT OBJECT(a) FROM Application a WHERE a.name = ?1 ORDER BY a.version DESC")
 
 })
-public class Application implements Serializable {
+public class Application implements Serializable 
+{
+    private static final long serialVersionUID = 0L;
     
     @Id
     @Column(name="id", length=36)
@@ -382,15 +384,13 @@ public class Application implements Serializable {
     public WampDict toWampObject()
     {
         WampDict obj = new WampDict();
-        try {
-            obj.put("appId", getAppId());
-            obj.put("name", getName());
-            obj.put("domain", getDomain());
-            obj.put("ai", isAIavailable());
-            obj.put("version", getVersion());
-            obj.put("roles", getRolesNode());
-            
-        } catch(Exception ex) { }
+        obj.put("appId",    getAppId());
+        obj.put("name",     getName());
+        obj.put("domain",   getDomain());
+        obj.put("ai",       isAIavailable());
+        obj.put("version",  getVersion());
+        obj.put("roles",    getRolesNode());
+
         return obj;
     }
 

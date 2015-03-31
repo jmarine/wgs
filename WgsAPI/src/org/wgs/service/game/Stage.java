@@ -6,8 +6,9 @@ import java.util.List;
 import java.util.Map;
 
 
-public class Stage {
-    
+public class Stage 
+{
+/*    
     int stageType;  // KNOCKOUT = 1, BEST = 2
     int numSets;
     int numPlayersBySetForNextStage;
@@ -18,19 +19,13 @@ public class Stage {
     Calendar start;
     
     List<User> stagePlayers[];
-    Map<User,UserStat> stats;
+    Map<User,WampDict> stats;
     
     List<User> winners[];
 
     // List<gameGroup> gameGroups;
-
+*/
 }
 
 
-class UserStat 
-{
-    int  wins;
-    int  losses;
-    int  stalled;
-}
         

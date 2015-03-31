@@ -54,7 +54,6 @@ public class WampTopicSession implements javax.jms.TopicSession
 
     @Override
     public TopicSubscriber createSubscriber(Topic topic, String messageSelector, boolean noLocal) throws JMSException {
-        Long id = WampProtocol.newGlobalScopeId();
         WampTopicSubscriber subscriber = new WampTopicSubscriber(this, topic, messageSelector, noLocal);
         con.getWampClient().getWampApplication().registerWampModule(subscriber);
         con.requestSubscription(subscriber);

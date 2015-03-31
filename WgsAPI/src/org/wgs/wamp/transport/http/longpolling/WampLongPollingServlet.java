@@ -145,30 +145,28 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         
     }
     
-    public AsyncContext getAsyncContext(String transport)
-    {
-        return asyncContexts.get(transport);
-    }
-
     
-    public void sendMsg(Long transport, Object msg) {
+    public void sendMsg(Long transport, Object msg) 
+    {
         try {
             System.out.println("About to sending: " + msg);
             AsyncContext actx = asyncContexts.get(transport);
-            HttpServletRequest req = (HttpServletRequest)actx.getRequest();
-            System.out.println("WampLongPollingServlet: sendmsg (" + req.getPathInfo() + ")");
-            
-            HttpServletResponse res = (HttpServletResponse)actx.getResponse();
-            if(msg == null) {
-                res.setStatus(HttpServletResponse.SC_ACCEPTED);  // 202
-                res.setContentType("text/plain");
-                
-            } else {
-                res.setStatus(HttpServletResponse.SC_OK);  // 200
-                res.setContentType("application/json");
-                res.getWriter().print(msg);
+            if(actx != null) {
+                HttpServletRequest req = (HttpServletRequest)actx.getRequest();
+                System.out.println("WampLongPollingServlet: sendmsg (" + req.getPathInfo() + ")");
+
+                HttpServletResponse res = (HttpServletResponse)actx.getResponse();
+                if(msg == null) {
+                    res.setStatus(HttpServletResponse.SC_ACCEPTED);  // 202
+                    res.setContentType("text/plain");
+
+                } else {
+                    res.setStatus(HttpServletResponse.SC_OK);  // 200
+                    res.setContentType("application/json");
+                    res.getWriter().print(msg);
+                }
+                actx.complete();
             }
-            actx.complete();
             
         } catch(Exception ex) {
             System.err.println("Error: " + ex.getClass().getName() + ": " + ex.getLocalizedMessage());
@@ -224,8 +222,8 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         Long transport = (Long)request.getAttribute("wampTransport");
         if(transport == null) {
             String pathInfo = request.getPathInfo();
-            int sessionIdPos = pathInfo.indexOf("/", 1);
-            if(sessionIdPos != -1) transport = new Long(pathInfo.substring(1,sessionIdPos));
+            int sessionIdPos = pathInfo.indexOf('/', 1);
+            if(sessionIdPos != -1) transport = Long.valueOf(pathInfo.substring(1,sessionIdPos));
             setWampTransport(request, transport);
         }
         return transport;
@@ -295,14 +293,12 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
     class MessageSender implements Runnable
     {
         private Long transport;
-        private AsyncContext asyncContext;
         private LinkedBlockingQueue<Object> queue;
         
         
         MessageSender(Long transport, AsyncContext asyncContext, LinkedBlockingQueue<Object> queue)
         {
             this.transport = transport;
-            this.asyncContext = asyncContext;
             this.queue = queue;
         }
         

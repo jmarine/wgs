@@ -111,9 +111,7 @@ public class Module extends WampModule
     public void onWampSessionEnd(WampSocket socket) 
     {
         Long sessionId = socket.getWampSessionId();
-        if(sessionId == null) {
-            sessionId = null;
-        } else {
+        if(sessionId != null) {
             Client client = clients.get(sessionId);
             if(client != null) {
                 for(String gid : client.getGroups().keySet()) {
@@ -169,11 +167,7 @@ public class Module extends WampModule
             usr.setPicture("images/anonymous.png");
         }
         
-        if(usr == null) {
-            return null;
-        } else {
-            return usr.toWampObject(true);
-        }
+        return usr.toWampObject(true);
         
     }
     
@@ -292,15 +286,15 @@ public class Module extends WampModule
             
             Query query1 = manager.createQuery("DELETE FROM GroupAction a WHERE a.applicationGroup.application = :app");
             query1.setParameter("app", app);
-            int rows1 = query1.executeUpdate();
+            query1.executeUpdate();
             
             Query query2 = manager.createQuery("DELETE FROM GroupMember m WHERE m.applicationGroup.application = :app");
             query2.setParameter("app", app);
-            int rows2 = query2.executeUpdate();
+            query2.executeUpdate();
             
             Query query3 = manager.createQuery("DELETE FROM AppGroup g WHERE g.application = :app");
             query3.setParameter("app", app);
-            int rows3 = query3.executeUpdate();
+            query3.executeUpdate();
             
             tx.commit();
             manager.close();
@@ -691,8 +685,7 @@ public class Module extends WampModule
         boolean excludeMe = true;
         boolean broadcastAppInfo = false;
         boolean broadcastGroupInfo = false;
-        String appId = node.getText("app");
-        String gid = node.getText("gid");
+        String  gid = node.getText("gid");
 
         WampDict response = new WampDict();
         response.put("cmd", "group_updated");
@@ -828,10 +821,7 @@ public class Module extends WampModule
                         slot = 0;
                         for(int numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                             Member member = g.getMember(slot);
-                            if(member != null) {
-                                WampDict obj = new WampDict();
-                                membersArray.add(member.toWampObject());
-                            }
+                            membersArray.add((member != null) ? member.toWampObject() : null);
                         }
                         response.put("members", membersArray);
                         
@@ -906,8 +896,7 @@ public class Module extends WampModule
                             if( (member != null) && (member.getClient() != null) && (member.getClient().getSessionId().equals(sid)) ) {
                                 member.setState(MemberState.valueOf(state));
                             }
-                            WampDict obj = member.toWampObject();
-                            membersArray.add(obj);
+                            membersArray.add((member != null) ? member.toWampObject() : null);
                         }
                         response.put("members", membersArray);
                     }
@@ -998,7 +987,6 @@ public class Module extends WampModule
             Group g = groups.get(gid);
 
             if(g != null) synchronized(g) {
-                String appId = g.getApplication().getAppId();
                 logger.log(Level.FINE, "open_group: group found: " + gid);
 
                 response.put("valid", true);
@@ -1076,20 +1064,17 @@ public class Module extends WampModule
     
     private void notifyOfflineUsers(WampSocket fromClientSocket, Group g, String msg) throws Exception    
     {
-        System.out.println("Starting OFFLINE notifications");
         if(g != null && msg != null) {
             for(Member m : g.getMembers()) {
                 if(m != null && m.getUser() != null) {
                     Client c = m.getClient();
                     if(c == null) {
-                        System.out.println("OFFLINE notifications to " + m.getUser().getName());
                         String clientName = fromClientSocket.getHelloDetails().getText("_oauth2_client_name");
                         Social.notifyUser(clientName, fromClientSocket, m.getUser(), g.getGid(), msg);
                     }
                 }
             }
         }
-        System.out.println("Finished OFFLINE notifications");
     }
     
     
@@ -1139,14 +1124,6 @@ public class Module extends WampModule
         
         socket.publishEvent(WampBroker.getTopic(getFQtopicURI("app_event." + g.getApplication().getAppId())), null, event, false, false);     // broadcasts to all application subscribers
     }
-    
-    private void broadcastGroupEventInfo(WampSocket socket, Group g, String cmd, boolean excludeMe) throws Exception
-    {
-        WampDict event = g.toWampObject(true);
-        event.put("cmd", cmd);
-        event.put("members", getMembers(g,0));
-        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, excludeMe, false);
-    }    
     
     
     @WampRegisterProcedure(name = "list_groups")

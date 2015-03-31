@@ -2,6 +2,8 @@ package org.wgs.wamp.encoding;
 
 import java.io.StringReader;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.json.*;
 import org.wgs.util.Base64;
@@ -130,9 +132,9 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
             } else if(obj instanceof JsonNumber) {
                 JsonNumber num = (JsonNumber)obj;
                 if(num.isIntegral()) {
-                    retval = new Long(num.longValue());
+                    retval = num.longValue();
                 } else {
-                    retval = new Double(num.doubleValue());
+                    retval = num.doubleValue();
                 }
             } else if(obj instanceof JsonString) {
                 String str = ((JsonString)obj).getString();
@@ -165,10 +167,8 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
     private WampDict createWampDict(JsonObject node)
     {
         WampDict dict = new WampDict();
-        Iterator<String> iter = node.keySet().iterator();
-        while(iter.hasNext()) {
-            String key = iter.next();
-            dict.put(key, castToWampObject(node.get(key)));
+        for(Entry<String,JsonValue> entry : node.entrySet()) {
+            dict.put(entry.getKey(), castToWampObject(entry.getValue()));
         }
         return dict;
     }            

@@ -31,7 +31,7 @@ public class WampLongPollingSocket extends WampSocket
 
         List<String> supportedSubprotocols = getSupportedSubprotocols();
         this.negotiatedSubprotocol = supportedSubprotocols.get(0);  // "wamp.2.json" by default
-        try(JsonReader jsonReader = Json.createReader(request.getInputStream())) {
+        try(JsonReader jsonReader = Json.createReader(request.getReader())) {
             JsonObject negotiationInfo = jsonReader.readObject();
             JsonArray  subprotocols = negotiationInfo.getJsonArray("protocols");
             if(subprotocols != null && subprotocols.size() > 0) {

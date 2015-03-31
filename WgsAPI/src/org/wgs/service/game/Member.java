@@ -20,6 +20,8 @@ import org.wgs.wamp.type.WampDict;
 @Table(name="APP_GROUP_MEMBER")
 public class Member implements java.io.Serializable
 {
+    private static final long serialVersionUID = 0L;
+    
     @Id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="gid", referencedColumnName="gid")
@@ -53,7 +55,7 @@ public class Member implements java.io.Serializable
     private MemberState state;
 
     @Transient
-    private Client client;
+    private transient Client client;
     
     
     public Member()

@@ -83,7 +83,7 @@ public class WampEndpointConfig
                         if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "onWampMessage (deserialized request): " + request);
                         wampApp.onWampMessage(clientSocket, request);
                     } catch(Exception ex) { 
-                        logger.log(Level.SEVERE, "Error processing message: "+message, ex);
+                        logger.log(Level.SEVERE, "WampEndpointConfig.onMessage: Error processing received message (wamp.2.msgpack)", ex);
                     }
                 }
 
@@ -104,7 +104,7 @@ public class WampEndpointConfig
                             offset = offset + 4 + partLen;
                         }
                     } catch(Exception ex) { 
-                        logger.log(Level.SEVERE, "Error processing message: "+message, ex);
+                        logger.log(Level.SEVERE, "WampEndpointConfig.onMessage: Error processing received message (wamp.2.msgpack.batched)", ex);
                     }
                 }
 
@@ -239,8 +239,8 @@ public class WampEndpointConfig
                 StringTokenizer st = new StringTokenizer(cookies, ";");
                 while(st.hasMoreTokens()) {
                     String token  = st.nextToken();
-                    String name = token.substring(0, token.indexOf("="));
-                    String value = token.substring(token.indexOf("=")+1, token.length());
+                    String name = token.substring(0, token.indexOf('='));
+                    String value = token.substring(token.indexOf('=')+1, token.length());
                     System.out.println("Cookie received: " + name  + "=" + value);
 
                     if(name.equalsIgnoreCase(WAMP_AUTH_COOKIE_NAME)) {
@@ -286,7 +286,7 @@ public class WampEndpointConfig
     
     private String extractAuthIdFromWampCookie(String cookieValue) 
     {
-        int pos = cookieValue.indexOf(":");        
+        int pos = cookieValue.indexOf(':');        
         if(pos == -1) {
             return null;
         } else {

@@ -72,36 +72,26 @@ public abstract class WampSocket
         String subprotocol = getNegotiatedSubprotocol();
         if(subprotocol != null) {
             switch(subprotocol) {
-                case "wamp":
-                    setVersionSupport(WampApplication.WAMPv1);
-                    setEncoding(WampEncoding.JSON);
-                    break;
+                case "wamp.2.msgpack.batched":
+                    setVersionSupport(WampApplication.WAMPv2);
+                    setEncoding(WampEncoding.BatchedMsgPack);
+                    break; 
                     
                 case "wamp.2.msgpack":
                     setVersionSupport(WampApplication.WAMPv2);
                     setEncoding(WampEncoding.MsgPack);
                     break;                    
                     
-                case "wamp.2.msgpack.batched":
-                    setVersionSupport(WampApplication.WAMPv2);
-                    setEncoding(WampEncoding.BatchedMsgPack);
-                    break;                    
-                    
-                case "wamp.2.json":
-                    setVersionSupport(WampApplication.WAMPv2);
-                    setEncoding(WampEncoding.JSON);
-                    break;
-                    
                 case "wamp.2.json.batched":
                     setVersionSupport(WampApplication.WAMPv2);
                     setEncoding(WampEncoding.BatchedJSON);
                     break;
 
-                default:  // use "wamp.2.json" by default (fix for WildFly 8.0.0)
+                case "wamp.2.json":
+                default:
                     setVersionSupport(WampApplication.WAMPv2);
                     setEncoding(WampEncoding.JSON);
                     break;
-                    
             }        
         }
         

@@ -2,6 +2,7 @@ package org.wgs.security;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -24,6 +25,8 @@ import javax.persistence.TemporalType;
 @IdClass(OpenIdConnectClientPK.class)
 public class OpenIdConnectClient implements Serializable
 {
+    private static final long serialVersionUID = 0L;
+    
     @ManyToOne
     @Id
     @JoinColumn(name="provider_domain", referencedColumnName="provider_domain")
@@ -190,23 +193,31 @@ public class OpenIdConnectClient implements Serializable
     
     public String getAccessTokenResponse(String authorization_code, String redirectUri) throws Exception
     {
+        StringBuffer data = new StringBuffer();        
         URL url = new URL(provider.getAccessTokenEndpointUrl());
+
+        BufferedReader in = null;
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setDoOutput(true);
+        
+        try(OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream(), StandardCharsets.UTF_8)) {
+            out.write("grant_type=authorization_code&code=" + URLEncoder.encode(authorization_code,StandardCharsets.UTF_8.toString()) + "&client_id=" + URLEncoder.encode(getClientId(),StandardCharsets.UTF_8.toString()) + "&client_secret=" + URLEncoder.encode(getClientSecret(),StandardCharsets.UTF_8.toString()) + "&redirect_uri=" + URLEncoder.encode(redirectUri,StandardCharsets.UTF_8.toString()) );
+            out.close();
 
-        OutputStreamWriter out = new OutputStreamWriter(
-                                         connection.getOutputStream());
-        out.write("grant_type=authorization_code&code=" + URLEncoder.encode(authorization_code,"utf8") + "&client_id=" + URLEncoder.encode(getClientId(),"utf8") + "&client_secret=" + URLEncoder.encode(getClientSecret(),"utf8") + "&redirect_uri=" + URLEncoder.encode(redirectUri,"utf8") );
-        out.close();
-
-        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"));
-        String decodedString;
-        StringBuffer data = new StringBuffer();
-        while ((decodedString = in.readLine()) != null) {
-	    data.append(decodedString);
+            in = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
+            String decodedString;
+            while ((decodedString = in.readLine()) != null) {
+                data.append(decodedString);
+            }
+            
+        } finally {
+            if(in != null) {
+                try { in.close(); } 
+                catch(IOException ex) { }
+            }
+            
+            connection.disconnect();
         }
-        in.close();
-        connection.disconnect();
 
         return data.toString();
     }
@@ -217,9 +228,8 @@ public class OpenIdConnectClient implements Serializable
         URL url = new URL(this.getRegistrationClientUri());
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setRequestProperty("Authorization", "Bearer " + this.getRegistrationAccessToken());
-        
 
-        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+        try(JsonReader jsonReader = Json.createReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
             
             JsonObject oidcClient = jsonReader.readObject();
 

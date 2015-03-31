@@ -23,6 +23,8 @@ import org.wgs.security.User;
 @Table(name="APP_ACHIEVEMENT")
 public class Achievement implements Serializable
 {
+    private static final long serialVersionUID = 0L;
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

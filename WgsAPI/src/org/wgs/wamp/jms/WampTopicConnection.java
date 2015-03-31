@@ -117,7 +117,9 @@ public class WampTopicConnection implements TopicConnection
 
     
     public boolean isStarted() {
-        return startDelivery;
+        synchronized(this) {
+            return startDelivery;
+        }
     }
     
     public void waitDeliveryStart() throws Exception

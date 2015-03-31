@@ -7,6 +7,7 @@ import java.util.List;
 
 public class Tournament 
 {
+/*
     GroupState  state;  // OPEN, STARTED, FINISHED
     Calendar   creation;
     Calendar   start;
@@ -18,5 +19,5 @@ public class Tournament
 
     int currentStage;
     List<Stage> stages;
-    
+*/    
 }

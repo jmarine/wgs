@@ -7,7 +7,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 
 import javax.json.*;
@@ -24,6 +23,8 @@ import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.type.WampDict;
 
 import com.google.android.gcm.server.*;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 
 public class Social 
@@ -53,17 +54,17 @@ public class Social
 
         // Google Plus
         String accessToken = usr.getAccessToken();
-        if(usr.getTokenCaducity().before(Calendar.getInstance())) {
-            // accessToken = refreshToken(usr);
-        }
+        //if(usr.getTokenCaducity().before(Calendar.getInstance())) {
+        //    accessToken = refreshToken(usr);
+        //}
 
 
-        URL url = new URL("https://www.googleapis.com/plus/v1/people/"+URLEncoder.encode(usr.getLogin(),"utf8")+"/people/visible");
+        URL url = new URL("https://www.googleapis.com/plus/v1/people/"+URLEncoder.encode(usr.getLogin(),StandardCharsets.UTF_8.toString())+"/people/visible");
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setRequestProperty("Authorization", "Bearer " + accessToken);
         connection.setDoOutput(false);
 
-        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+        try(JsonReader jsonReader = Json.createReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
             
             JsonObject dataNode = jsonReader.readObject();
             
@@ -96,16 +97,16 @@ public class Social
 
         // Google Plus
         String accessToken = usr.getAccessToken();
-        if(usr.getTokenCaducity().before(Calendar.getInstance())) {
-            // accessToken = refreshToken(usr);
-        }
+        //if(usr.getTokenCaducity().before(Calendar.getInstance())) {
+        //    accessToken = refreshToken(usr);
+        //}
 
 
-        URL url = new URL("https://graph.facebook.com/" + usr.getLogin() + "/friends?access_token="+URLEncoder.encode(accessToken,"utf8"));
+        URL url = new URL("https://graph.facebook.com/" + usr.getLogin() + "/friends?access_token="+URLEncoder.encode(accessToken,StandardCharsets.UTF_8.toString()));
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setDoOutput(false);
 
-        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+        try(JsonReader jsonReader = Json.createReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
             
             JsonObject dataNode = jsonReader.readObject();
 
@@ -172,6 +173,7 @@ public class Social
             } catch(NoResultException noEx) { }
 
             if(userPushChannel != null) {
+                System.out.println("Sending GCM notification to " + toUser.getName());
                 String notificationChannel = userPushChannel.getNotificationChannel();
                 WampDict info = (WampDict)WampEncoding.JSON.getSerializer().deserialize(notificationChannel, 0, notificationChannel.length());
                 if(info.has("endpoint") && info.getText("endpoint").equals("https://android.googleapis.com/gcm/send")) {
@@ -183,11 +185,10 @@ public class Social
             }
 
             if("facebook.com".equals(toUser.getDomain()) && fromUser.getDomain().equals(toUser.getDomain())) {
-                    
+                System.out.println("Sending Facebook game activity to " + toUser.getName());
                 OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(toUser.getDomain(), app);
                 OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
                 notifyFacebook(oidcClient, toUser.getLogin(), "?provider=facebook.com&gid=" + gameGuid, template);
-            
             } 
             
                 
@@ -217,12 +218,12 @@ public class Social
     public static void notifyFacebook(OpenIdConnectClient oidcClient, String to_user_id, String rel_link, String template) throws Exception
     {
         String appToken = getFacebookAppAccessToken(oidcClient.getClientId(), oidcClient.getClientSecret());
-        URL url = new URL("https://graph.facebook.com/v2.1/" + to_user_id + "/apprequests?access_token="+ appToken + "&message=" + URLEncoder.encode(template,"utf8") + "&data=" + URLEncoder.encode(rel_link,"utf8")); 
+        URL url = new URL("https://graph.facebook.com/v2.1/" + to_user_id + "/apprequests?access_token="+ appToken + "&message=" + URLEncoder.encode(template,StandardCharsets.UTF_8.toString()) + "&data=" + URLEncoder.encode(rel_link,StandardCharsets.UTF_8.toString())); 
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setRequestMethod("POST");
         connection.setDoOutput(false);
         
-        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+        try(JsonReader jsonReader = Json.createReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
             JsonObject dataNode = jsonReader.readObject();       
             System.out.println("Notification result: " + dataNode.toString());
         } finally {
@@ -241,11 +242,11 @@ public class Social
     
     public static void clearFacebookNotifications(OpenIdConnectClient oidcClient, User usr) throws Exception
     {
-        URL url = new URL("https://graph.facebook.com/v2.1/me/apprequests?access_token="+ URLEncoder.encode(usr.getAccessToken(), "utf8"));
+        URL url = new URL("https://graph.facebook.com/v2.1/me/apprequests?access_token="+ URLEncoder.encode(usr.getAccessToken(),StandardCharsets.UTF_8.toString()));
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setDoOutput(false);
         
-        try(JsonReader jsonReader = Json.createReader(connection.getInputStream())) {
+        try(JsonReader jsonReader = Json.createReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
             JsonObject dataNode = jsonReader.readObject();  
             System.out.println("Notification result: " + dataNode.toString());
             
@@ -257,12 +258,12 @@ public class Social
                 if(application.getString("id").equalsIgnoreCase(oidcClient.getClientId())) {
                 
                     System.out.println("Deleting : " + id);
-                    url = new URL("https://graph.facebook.com/v2.1/" + id + "?access_token="+ URLEncoder.encode(usr.getAccessToken(), "utf8"));
+                    url = new URL("https://graph.facebook.com/v2.1/" + id + "?access_token="+ URLEncoder.encode(usr.getAccessToken(),StandardCharsets.UTF_8.toString()));
                     HttpURLConnection connection2 = (HttpURLConnection)url.openConnection();
                     connection2.setRequestMethod("DELETE");
                     connection2.setDoOutput(false);
 
-                    try(JsonReader jsonReader2 = Json.createReader(connection2.getInputStream())) {
+                    try(JsonReader jsonReader2 = Json.createReader(new InputStreamReader(connection2.getInputStream(), StandardCharsets.UTF_8))) {
                         JsonObject success = jsonReader2.readObject();
                         System.out.println("Readed: " + success.toString());
                     } catch(Exception ex) { }

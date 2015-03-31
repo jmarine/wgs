@@ -76,7 +76,6 @@ public class Server
                     ds.setCreateDatabase("create");
                     ctx.bind(jndi, ds);
                 } else {
-                    String password = serverConfig.getProperty("database." + db + ".password");
                     org.apache.derby.jdbc.ClientConnectionPoolDataSource40 ds = new org.apache.derby.jdbc.ClientConnectionPoolDataSource40();
                     ds.setServerName(host);
                     ds.setPortNumber(Integer.parseInt(serverConfig.getProperty("database." + db + ".port")));
@@ -212,7 +211,7 @@ public class Server
                         try { 
                             System.in.read(); 
                             synchronized(Server.class) {
-                                Server.class.notify();
+                                Server.class.notifyAll();
                             }
                         } catch(IOException ex) { }
                     }
@@ -280,9 +279,9 @@ public class Server
         String wgsDbPath = serverConfig.getProperty("database.WgsDB.path");
         if(wgsDbPath != null) {
             try { 
-                int paramsOffset = wgsDbPath.indexOf(";");
+                int paramsOffset = wgsDbPath.indexOf(';');
                 String params = (paramsOffset != -1) ? wgsDbPath.substring(paramsOffset) : "";
-                DriverManager.getConnection("jdbc:derby:" + params + ";shutdown=true");
+                DriverManager.getConnection("jdbc:derby:" + params + ";shutdown=true").close();
             } catch (SQLException se) {
                 if (( (se.getErrorCode() == 50000) && ("XJ015".equals(se.getSQLState()) ))) {
                     System.out.println("Derby has been shut down normally");

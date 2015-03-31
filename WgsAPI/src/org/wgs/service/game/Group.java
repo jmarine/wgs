@@ -32,6 +32,8 @@ import org.wgs.wamp.type.WampList;
 // @org.eclipse.persistence.annotations.Index(name="APP_GROUP_STATE_IDX", columnNames={"STATE"})
 public class Group implements java.io.Serializable
 {
+    private static final long serialVersionUID = 0L;
+    
     @Id
     @Column(name="gid", nullable = false, length=36)
     private String gid;

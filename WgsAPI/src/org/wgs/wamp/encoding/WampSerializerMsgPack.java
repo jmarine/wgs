@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import org.msgpack.core.MessageFormat;
 
 import org.msgpack.core.MessagePack;
@@ -87,15 +88,15 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
         if(obj instanceof NilValue) {
             retval = null;
         } else if(obj instanceof BooleanValue) {
-            retval = new Boolean(((BooleanValue)obj).toBoolean());
+            retval = ((BooleanValue)obj).toBoolean();
         } else if(obj instanceof IntegerValue) {
-            retval = new Long(((IntegerValue)obj).toLong());
+            retval = ((IntegerValue)obj).toLong();
         } else if(obj instanceof FloatValue) {
-            retval = new Double(((FloatValue)obj).toDouble());
+            retval = ((FloatValue)obj).toDouble();
         } else if(obj instanceof String) {
-            retval = (String)obj;
+            retval = obj;
         } else if(obj instanceof RawValue) {
-            retval = ((RawValue)obj).toString();
+            retval = obj.toString();
         } else if(obj instanceof ArrayValue) {
             retval = createWampList((ArrayValue)obj);
         } else if(obj instanceof MapValue) {
@@ -119,10 +120,8 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
     {
         WampDict dict = new WampDict();
         Map<Value,Value> map = node.toMap();
-        Iterator<Value> iter = map.keySet().iterator();
-        while(iter.hasNext()) {
-            Value key = iter.next();
-            dict.put(castToWampObject(key).toString(), castToWampObject(map.get(key)));
+        for(Entry<Value,Value> entry : map.entrySet()) {
+            dict.put(castToWampObject(entry.getKey()).toString(), castToWampObject(entry.getValue()));
         }
         return dict;
     }          

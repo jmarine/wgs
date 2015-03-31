@@ -24,6 +24,8 @@ import org.wgs.wamp.type.WampDict;
 
 public class GroupAction implements java.io.Serializable
 {
+    private static final long serialVersionUID = 0L;
+    
     @Id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="gid", referencedColumnName="gid")
