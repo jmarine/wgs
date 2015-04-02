@@ -1,9 +1,5 @@
 package org.wgs.service.game;
 
-import org.wgs.security.User;
-import java.util.Calendar;
-import java.util.List;
-
 
 public class Tournament 
 {
