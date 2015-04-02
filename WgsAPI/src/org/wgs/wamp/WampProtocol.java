@@ -301,16 +301,12 @@ public class WampProtocol
                     WampSubscriptionOptions subOptions = subscription.getOptions();
                     if(subOptions != null && subOptions.hasEventsEnabled() && subOptions.isEligibleForEvent(sid, subscription, payload, payloadKw)) {
                         WampSocket socket = subscription.getSocket(sid);
-                        if(socket != null) {
-                          synchronized(socket) {
-                            if(socket.isOpen() && realm.equals(socket.getRealm()) ) {
-                                WampEncoding enc = socket.getEncoding();                            
-                                if(msg[enc.ordinal()] == null) {
-                                    msg[enc.ordinal()] = enc.getSerializer().serialize(response);
-                                }
-                                socket.sendObject(msg[enc.ordinal()]);
+                        if(socket != null && socket.isOpen() && realm.equals(socket.getRealm()) ) {
+                            WampEncoding enc = socket.getEncoding();                            
+                            if(msg[enc.ordinal()] == null) {
+                                msg[enc.ordinal()] = enc.getSerializer().serialize(response);
                             }
-                          }
+                            socket.sendObject(msg[enc.ordinal()]);
                         }
                     }
                 }

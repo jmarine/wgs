@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.naming.InitialContext;
@@ -43,7 +44,7 @@ public class WampApplication
 
     private int     wampVersion;
     private String  path;
-    private boolean started;
+    private AtomicBoolean started;
     private Map<String,WampModule> modules;
     private WampModule defaultModule;
     private ExecutorService executorService;
@@ -52,7 +53,6 @@ public class WampApplication
     private TreeMap<String,WampMethod> rpcsByName;
     private TreeMap<String,WampMethod> rpcsByPattern;
     private Map<String,Set<Long>> wampSessionsByUserId = new ConcurrentHashMap<String,Set<Long>>();
-    private ConcurrentHashMap<Long, WampList> pendingClusterInvocations = new ConcurrentHashMap<Long, WampList>();
 
     
     public static void registerWampApplication(int version, String path, WampApplication app)
@@ -84,6 +84,7 @@ public class WampApplication
             executorService = (ExecutorService)ctx.lookup("concurrent/WampRpcExecutorService");
         } catch(Exception ex) { }
         
+        this.started = new AtomicBoolean(false);
         this.wampVersion = version;
         this.path = path;
         
@@ -119,10 +120,8 @@ public class WampApplication
         this.wampVersion = version;
     }
     
-    public synchronized boolean start() {
-        boolean val = started;
-        started = true;
-        return !val;
+    public boolean start() {
+        return !started.getAndSet(true);
     }
     
 
