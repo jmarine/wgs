@@ -175,9 +175,11 @@ public class WampCluster extends WampModule
             options.put("_cluster_peer_realm", realm.getRealmName());            
             options.put("_cluster_peer_sid", remoteMethod.getRemotePeer().getWampSessionId());
             options.put("match", registration.getMatchType().toString());
-            try { client.registerRPC(options, remoteMethod.getProcedureURI(), remoteMethod); }
-            catch(Exception ex) {
+            try { 
+                client.registerRPC(options, remoteMethod.getProcedureURI(), remoteMethod); 
+            } catch(Exception ex) {
                 System.out.println("Error: registerClusteredRPC: " + ex.getMessage());
+                ex.printStackTrace();
             }
         }
 
