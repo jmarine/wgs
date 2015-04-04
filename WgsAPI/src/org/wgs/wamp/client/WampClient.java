@@ -341,7 +341,7 @@ public class WampClient
     
     public boolean isOpen()
     {
-        return clientSocket.isOpen();
+        return clientSocket != null && clientSocket.isOpen();
     }
     
     @SuppressWarnings("unchecked")
