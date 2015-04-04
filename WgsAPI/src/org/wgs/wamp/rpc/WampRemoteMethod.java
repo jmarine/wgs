@@ -79,8 +79,8 @@ public class WampRemoteMethod extends WampMethod
             }
         });
 
-        task.addRemoteInvocation(remotePeer.getSocketId(), invocationId, deferred);
-        remotePeer.addInvocation(invocationId, task, deferred);
+        
+        task.addRemoteInvocation(remotePeer.getSocketId(), invocationId, remotePeer.addInvocation(invocationId, this, task, deferred));
 
         WampDict invocationOptions = new WampDict();
         if(matchType != WampMatchType.exact) invocationOptions.put("procedure", task.getProcedureURI());
@@ -102,7 +102,11 @@ public class WampRemoteMethod extends WampMethod
         if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "CALL " + task.getCallID() + ": SENDING INVOCATION ID: " + invocationId + " (" + clientSocket.getWampSessionId() + " --> " + remotePeer.getWampSessionId() + ")");
         try {
             task.decrementPendingInvocationCount();
-            WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
+            if(remotePeer.getWampSessionId() != null) {
+                WampProtocol.sendInvocationMessage(remotePeer, invocationId, registrationId, invocationOptions, args, argsKw);
+            } else {
+                throw new Exception("session closed");
+            }
             
             /* DEBUG: skip-invocations 
             { 
@@ -112,9 +116,9 @@ public class WampRemoteMethod extends WampMethod
             }
             */
 
-            if(!remotePeer.isOpen()) throw new Exception();
         } catch(Exception ex) {
             task.removeRemoteInvocation(remotePeer.getSocketId(), invocationId);
+            remotePeer.removeInvocation(invocationId);
         }
 
         return promise;

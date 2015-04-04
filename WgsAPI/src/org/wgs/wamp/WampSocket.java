@@ -1,13 +1,13 @@
 package org.wgs.wamp;
 
-import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -19,6 +19,7 @@ import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCalleeRegistration;
 import org.wgs.wamp.rpc.WampInvocation;
+import org.wgs.wamp.rpc.WampRemoteMethod;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscription;
@@ -33,7 +34,7 @@ public abstract class WampSocket
     private static final Logger logger = Logger.getLogger(WampSocket.class.toString());
 
     protected Principal principal;
-    protected boolean connected;
+    protected AtomicBoolean connected;
     
     private Long    socketId;
     private Long    sessionId;
@@ -56,7 +57,7 @@ public abstract class WampSocket
     {
         this.authMethod = "anonymous";
         this.versionSupport = 1;
-        this.connected = true;
+        this.connected = new AtomicBoolean(true);
         this.nextRequestId = new AtomicLong(0L);
         
         socketId = WampProtocol.newGlobalScopeId();
@@ -305,9 +306,11 @@ public abstract class WampSocket
     
     
     
-    public void addInvocation(Long invocationId,  WampCallController controller, Deferred<WampResult, WampException, WampResult> rpcAsyncCallback)
+    public WampInvocation addInvocation(Long invocationId, WampRemoteMethod remoteMethod,  WampCallController controller, Deferred<WampResult, WampException, WampResult> rpcAsyncCallback)
     {
-        invocations.put(invocationId, new WampInvocation(invocationId, controller, rpcAsyncCallback));
+        WampInvocation invocation = new WampInvocation(invocationId, remoteMethod, controller, rpcAsyncCallback);
+        invocations.put(invocationId, invocation);
+        return invocation;
     }
     
     public WampInvocation getInvocation(Long invocationId)
@@ -325,16 +328,27 @@ public abstract class WampSocket
         return invocations.keySet();
     }
     
+    public void clearInvocations() {
+        while(invocations.size() > 0) {
+            for(Entry<Long,WampInvocation> entry : invocations.entrySet()) {
+                Long invocationId = entry.getKey();
+                WampCallController task = entry.getValue().getWampCallController();
+                task.removeRemoteInvocation(getSocketId(), invocationId);
+                removeInvocation(invocationId);
+            }
+        }
+    }
     
-    public abstract void sendObject(Object msg);
+    
+    public abstract void sendObject(Object msg) throws Exception;
    
     
     public boolean close(CloseReason reason)
     {
         if(isOpen()) {
+            this.connected.set(false);
+            
             WampProtocol.sendGoodbyeMessage(this, null, reason.getReasonPhrase());
-
-            this.connected = false;
             
             return true;
         } else {
@@ -344,7 +358,7 @@ public abstract class WampSocket
     
     public boolean isOpen() 
     {
-        return connected;
+        return connected.get();
     }
     
     

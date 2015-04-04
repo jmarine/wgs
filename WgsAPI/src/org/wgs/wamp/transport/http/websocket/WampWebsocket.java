@@ -52,24 +52,17 @@ public class WampWebsocket extends WampSocket
     }
     
     @Override
-    public void sendObject(Object msg) 
+    public void sendObject(Object msg) throws Exception
     {
-        try {
-            if(isOpen()) {
-                switch(getEncoding()) {
-                    case JSON:
-                        session.getBasicRemote().sendText(msg.toString());
-                        break;
-                    case MsgPack:
-                        session.getBasicRemote().sendBinary(ByteBuffer.wrap((byte[])msg));
-                        break;
-                    default:
-                        session.getBasicRemote().sendObject(msg);
-                }
-            }
-
-        } catch(Exception e) {
-            //close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "wamp.close.error"));
+        switch(getEncoding()) {
+            case JSON:
+                session.getBasicRemote().sendText(msg.toString());
+                break;
+            case MsgPack:
+                session.getBasicRemote().sendBinary(ByteBuffer.wrap((byte[])msg));
+                break;
+            default:
+                session.getBasicRemote().sendObject(msg);
         }
     }
     

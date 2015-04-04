@@ -274,7 +274,12 @@ public class WampBroker
                 }
             }
                         
-            if(requestId != null) WampProtocol.sendUnsubscribedMessage(clientSocket, requestId);
+            if(requestId != null) {
+                try { WampProtocol.sendUnsubscribedMessage(clientSocket, requestId); }
+                catch(Exception ex) {
+                    System.out.println("WampBroker: unsubscribe error: " + ex.getMessage());
+                }
+            }
         }
         
         return matchingTopics;

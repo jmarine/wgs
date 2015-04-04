@@ -63,21 +63,14 @@ public class WampProtocol
         return clientSocket.getNextRequestId();
     }    
 
-    private static void sendWampMessage(WampSocket socket, WampList args)
+    private static void sendWampMessage(WampSocket socket, WampList args) throws Exception
     {
-        try {        
-            if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "sendWampMessage: " + args);
-            Object msg = socket.getEncoding().getSerializer().serialize(args);
-            socket.sendObject(msg);
-
-        } catch(Exception ex) {
-            logger.log(Level.FINE, "Serialization error '" + ex.getClass().getName() + "': " + ex.getMessage(), ex);
-            ex.printStackTrace();
-        }
-
+        if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "sendWampMessage: " + args);
+        Object msg = socket.getEncoding().getSerializer().serialize(args);
+        socket.sendObject(msg);
     }    
     
-    public static void sendHelloMessage(WampSocket clientSocket, String realm, WampDict options)
+    public static void sendHelloMessage(WampSocket clientSocket, String realm, WampDict options) throws Exception
     {
         WampList response = new WampList();
         response.add(HELLO);
@@ -87,7 +80,7 @@ public class WampProtocol
     }
     
     
-    public static void sendWelcomeMessage(WampApplication app, WampSocket clientSocket)
+    public static void sendWelcomeMessage(WampApplication app, WampSocket clientSocket) throws Exception
     {
         // Send WELCOME message to client:
         WampList response = new WampList();
@@ -138,7 +131,7 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }
     
-    public static void sendChallengeMessage(WampSocket clientSocket, String authMethod, WampDict extra)
+    public static void sendChallengeMessage(WampSocket clientSocket, String authMethod, WampDict extra) throws Exception
     {
         if(extra == null) extra = new WampDict();
         
@@ -151,7 +144,7 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }
     
-    public static void sendAuthenticationMessage(WampSocket clientSocket, String signature, WampDict extra) 
+    public static void sendAuthenticationMessage(WampSocket clientSocket, String signature, WampDict extra) throws Exception
     {
         if(extra == null || extra.size() == 0) extra = new WampDict();
         WampList response = new WampList();
@@ -161,7 +154,7 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }
 
-    public static void sendAbortMessage(WampSocket clientSocket, String reason, String message)
+    public static void sendAbortMessage(WampSocket clientSocket, String reason, String message) 
     {
         WampDict details = new WampDict();
         if(message != null) details.put("message", message);
@@ -169,7 +162,8 @@ public class WampProtocol
         response.add(ABORT);
         response.add(details);
         response.add(reason);
-        sendWampMessage(clientSocket, response);
+        try { sendWampMessage(clientSocket, response); }
+        catch(Exception discardedException) { }
     }
     
     public static void sendGoodbyeMessage(WampSocket clientSocket, String reason, String message)
@@ -182,11 +176,12 @@ public class WampProtocol
             response.add(GOODBYE);
             response.add(details);
             response.add(reason);
-            sendWampMessage(clientSocket, response);
+            try { sendWampMessage(clientSocket, response); }
+            catch(Exception discardedException) { }
         }
     }
     
-    public static void sendResultMessage(WampSocket clientSocket, Long requestId, WampDict details, WampList args, WampDict argsKw)
+    public static void sendResultMessage(WampSocket clientSocket, Long requestId, WampDict details, WampList args, WampDict argsKw) throws Exception
     {
         WampList response = new WampList();
         response.add(CALL_RESULT);
@@ -200,7 +195,7 @@ public class WampProtocol
     }    
     
     
-    public static void sendSubscribeMessage(WampSocket clientSocket, Long requestId, String topicURI, WampSubscriptionOptions options)
+    public static void sendSubscribeMessage(WampSocket clientSocket, Long requestId, String topicURI, WampSubscriptionOptions options) throws Exception
     {
         WampList response = new WampList();
         response.add(SUBSCRIBE);
@@ -210,7 +205,7 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }
     
-    public static void sendSubscribedMessage(WampSocket clientSocket, Long requestId, Long subscriptionId)
+    public static void sendSubscribedMessage(WampSocket clientSocket, Long requestId, Long subscriptionId) throws Exception
     {    
         WampList response = new WampList();
         response.add(SUBSCRIBED);
@@ -220,7 +215,7 @@ public class WampProtocol
     }
     
     
-    public static void sendUnsubscribeMessage(WampSocket clientSocket, Long requestId, Long unsubscriptionId)
+    public static void sendUnsubscribeMessage(WampSocket clientSocket, Long requestId, Long unsubscriptionId) throws Exception
     {
         WampList response = new WampList();
         response.add(UNSUBSCRIBE);
@@ -230,7 +225,7 @@ public class WampProtocol
     }
     
     
-    public static void sendUnsubscribedMessage(WampSocket clientSocket, Long requestId)
+    public static void sendUnsubscribedMessage(WampSocket clientSocket, Long requestId) throws Exception
     {    
         WampList response = new WampList();
         response.add(UNSUBSCRIBED);
@@ -239,7 +234,7 @@ public class WampProtocol
     }
     
 
-    public static void sendPublishMessage(WampSocket clientSocket, Long requestId, String topic, WampList payload, WampDict payloadKw, WampDict details)
+    public static void sendPublishMessage(WampSocket clientSocket, Long requestId, String topic, WampList payload, WampDict payloadKw, WampDict details) throws Exception
     {
         WampList request = new WampList();
         request.add(PUBLISH);
@@ -254,7 +249,7 @@ public class WampProtocol
     }
     
     
-    public static void sendPublishedMessage(WampSocket clientSocket, Long requestId, Long publicationId)
+    public static void sendPublishedMessage(WampSocket clientSocket, Long requestId, Long publicationId) throws Exception
     {    
         WampList response = new WampList();
         response.add(PUBLISHED);
@@ -264,7 +259,7 @@ public class WampProtocol
     }    
     
     
-    public static void sendEvents(String realm, Long publicationId, WampTopic topic, WampList payload, WampDict payloadKw, Set<Long> eligibleParam, Set<Long> excluded, WampDict eventDetails) throws Exception 
+    public static void sendEvents(String realm, Long publicationId, WampTopic topic, WampList payload, WampDict payloadKw, Set<Long> eligibleParam, Set<Long> excluded, WampDict eventDetails) throws Exception
     {
         // EVENT data
         if(eventDetails == null) eventDetails = new WampDict();
@@ -360,7 +355,7 @@ public class WampProtocol
     }
 
     
-    public static void sendErrorMessage(WampSocket clientSocket, int requestType, Long requestId, WampDict details, String errorUri, WampList args, WampDict argsKw)
+    public static void sendErrorMessage(WampSocket clientSocket, int requestType, Long requestId, WampDict details, String errorUri, WampList args, WampDict argsKw) 
     {    
         WampList response = new WampList();
         response.add(ERROR);
@@ -372,11 +367,16 @@ public class WampProtocol
             response.add((args != null)? args : new WampList());
             if(argsKw != null) response.add(argsKw);
         }
-        sendWampMessage(clientSocket, response);
+        
+        try { 
+            sendWampMessage(clientSocket, response); 
+        } catch(Exception ex) {
+            System.out.println("WampProtocol.sendErrorMessage: error: " + ex.getMessage());
+        }
     }    
     
     
-    public static void sendCallMessage(WampSocket clientSocket, Long requestId, WampDict options, String procedureURI, WampList args, WampDict argsKw)
+    public static void sendCallMessage(WampSocket clientSocket, Long requestId, WampDict options, String procedureURI, WampList args, WampDict argsKw) throws Exception
     {
         WampList response = new WampList();
         response.add(CALL);
@@ -388,7 +388,7 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }
     
-    public static void sendCancelCallMessage(WampSocket clientSocket, Long callId, WampDict options)
+    public static void sendCancelCallMessage(WampSocket clientSocket, Long callId, WampDict options) throws Exception
     {
         WampList response = new WampList();
         response.add(CANCEL_CALL);
@@ -397,7 +397,7 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }
     
-    public static void sendRegisterMessage(WampSocket clientSocket, Long requestId, WampDict options, String procedureURI)
+    public static void sendRegisterMessage(WampSocket clientSocket, Long requestId, WampDict options, String procedureURI) throws Exception
     {
         WampList response = new WampList();
         response.add(REGISTER);
@@ -407,7 +407,7 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);        
     }
     
-    public static void sendRegisteredMessage(WampSocket clientSocket, Long requestId, Long registrationId)
+    public static void sendRegisteredMessage(WampSocket clientSocket, Long requestId, Long registrationId) throws Exception
     {    
         WampList response = new WampList();
         response.add(REGISTERED);
@@ -416,7 +416,7 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }      
     
-    public static void sendUnregisterMessage(WampSocket clientSocket, Long requestId, Long registrationId)
+    public static void sendUnregisterMessage(WampSocket clientSocket, Long requestId, Long registrationId) throws Exception
     {
         WampList response = new WampList();
         response.add(UNREGISTER);
@@ -425,7 +425,7 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);        
     }    
         
-    public static void sendUnregisteredMessage(WampSocket clientSocket, Long requestId)
+    public static void sendUnregisteredMessage(WampSocket clientSocket, Long requestId) throws Exception
     {    
         WampList response = new WampList();
         response.add(UNREGISTERED);
@@ -434,7 +434,7 @@ public class WampProtocol
     }      
 
     
-    public static void sendInvocationMessage(WampSocket remotePeer, Long invocationId, Long registrationId, WampDict details, WampList args, WampDict argsKw) 
+    public static void sendInvocationMessage(WampSocket remotePeer, Long invocationId, Long registrationId, WampDict details, WampList args, WampDict argsKw) throws Exception
     {
         WampList msg = new WampList();
         msg.add(INVOCATION);
@@ -449,7 +449,7 @@ public class WampProtocol
     }
     
     
-    public static void sendInvocationResultMessage(WampSocket clientSocket, Long invocationRequestId, WampDict invocationResultOptions, WampList result, WampDict resultKw) 
+    public static void sendInvocationResultMessage(WampSocket clientSocket, Long invocationRequestId, WampDict invocationResultOptions, WampList result, WampDict resultKw) throws Exception
     {
         WampList msg = new WampList();
         msg.add(YIELD);
@@ -462,13 +462,14 @@ public class WampProtocol
         sendWampMessage(clientSocket, msg);        
     }
     
-    public static void sendInterruptMessage(WampSocket remotePeer, Long invocationId, WampDict cancelOptions) 
+    public static void sendInterruptMessage(WampSocket remotePeer, Long invocationId, WampDict cancelOptions)
     {
         WampList msg = new WampList();
         msg.add(INTERRUPT);
         msg.add(invocationId);
         msg.add((cancelOptions != null) ? cancelOptions : new WampDict());
-        sendWampMessage(remotePeer, msg);        
+        try { sendWampMessage(remotePeer, msg); }
+        catch(Exception discardedException) { }
     }
     
 }

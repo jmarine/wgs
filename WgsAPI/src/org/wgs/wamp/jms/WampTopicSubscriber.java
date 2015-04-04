@@ -44,14 +44,18 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
     
     public void start() throws JMSException 
     {
-        if(client.isOpen()) {
-            this.client.subscribe(topic.getTopicName(), null).done(new DoneCallback<Long>() {
-                @Override
-                public void onDone(Long id) {
-                    WampTopicSubscriber.this.setSubscriptionId(id);
-                }
-            });
-            subscribed = true;
+        try {
+            if(client.isOpen()) {
+                this.client.subscribe(topic.getTopicName(), null).done(new DoneCallback<Long>() {
+                    @Override
+                    public void onDone(Long id) {
+                        WampTopicSubscriber.this.setSubscriptionId(id);
+                    }
+                });
+                subscribed = true;
+            }
+        } catch(Exception ex) {
+            throw new JMSException("WAMP subscription error");
         }
     }
     
@@ -140,7 +144,12 @@ public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSu
 
     @Override
     public void close() throws JMSException {
-        if(subscriptionId != null) client.unsubscribe(subscriptionId);
+        if(subscriptionId != null) {
+            try { client.unsubscribe(subscriptionId); }
+            catch(Exception ex) {
+                throw new JMSException("WAMP close error");
+            }
+        }
     }
     
 }

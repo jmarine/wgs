@@ -72,7 +72,7 @@ public class WampClientCallerTest extends WampModule implements Runnable
     
 
     
-    public void doCalls(int num) {
+    public void doCalls(int num) throws Exception {
         WampCallOptions callOptions = new WampCallOptions(null);
         callOptions.setRunOn(WampCallOptions.RunOnEnum.all);
         callOptions.setRunMode(WampCallOptions.RunModeEnum.gather);

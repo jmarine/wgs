@@ -25,6 +25,7 @@ public class WampRawSocket extends WampSocket implements Runnable
     private InputStream is;
     private OutputStream os;
     private HashMap<String,Object> sessionData = new HashMap<String,Object>();
+    private Thread listener;
     
 
     public WampRawSocket(WampApplication app, URI url) throws Exception
@@ -45,12 +46,12 @@ public class WampRawSocket extends WampSocket implements Runnable
         
         socket = sf.createSocket(url.getHost(), port);
         
-        Thread listener = new Thread(this);
+        listener = new Thread(this);
         listener.start();
         
-        synchronized(this) {
+        synchronized(listener) {
             while(!handshake) {
-                this.wait();
+                listener.wait();
             }
         }
 
@@ -93,9 +94,9 @@ public class WampRawSocket extends WampSocket implements Runnable
             
 
             this.init();
-            synchronized(this) {
+            synchronized(listener) {
                 handshake = true;
-                this.notifyAll();
+                listener.notifyAll();
             }
             
             while( isOpen() && (len = is.read(msg,0,4)) == 4 ) {

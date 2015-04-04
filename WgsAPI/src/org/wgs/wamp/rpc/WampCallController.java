@@ -1,6 +1,8 @@
 package org.wgs.wamp.rpc;
 
 import java.util.AbstractMap;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -39,7 +41,7 @@ public class WampCallController implements Runnable
 
     private int pendingInvocationCount;
     private int remoteInvocationResults;
-    private ConcurrentHashMap<AbstractMap.SimpleEntry<Long,Long>, Deferred<WampResult,WampException,WampResult>> remoteInvocations;
+    private ConcurrentHashMap<AbstractMap.SimpleEntry<Long,Long>, WampInvocation> remoteInvocations;
     private Deferred<WampResult, WampException, WampResult> remoteInvocationsCompletionCallback;
     
     
@@ -53,7 +55,7 @@ public class WampCallController implements Runnable
         this.callOptions = options;
         this.arguments = arguments;
         this.argumentsKw = argumentsKw;
-        this.remoteInvocations = new ConcurrentHashMap<AbstractMap.SimpleEntry<Long,Long>, Deferred<WampResult,WampException,WampResult>>();
+        this.remoteInvocations = new ConcurrentHashMap<AbstractMap.SimpleEntry<Long,Long>, WampInvocation>();
     }
     
     public synchronized void incrementRemoteInvocationResults()
@@ -83,43 +85,43 @@ public class WampCallController implements Runnable
     
     
 
-    public void addRemoteInvocation(Long socketId, Long remoteInvocationId, Deferred<WampResult,WampException,WampResult> asyncCall)
+    public void addRemoteInvocation(Long socketId, Long remoteInvocationId, WampInvocation invocation)
     {
-        remoteInvocations.put(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId), asyncCall);
+        remoteInvocations.put(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId), invocation);
     }
     
-    public Deferred<WampResult,WampException,WampResult> getRemoteInvocation(Long socketId, Long remoteInvocationId)    
+    public WampInvocation getRemoteInvocation(Long socketId, Long remoteInvocationId)    
     {
         return remoteInvocations.get(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId));
     }
     
-    public Deferred<WampResult,WampException,WampResult> removeRemoteInvocation(Long socketId, Long remoteInvocationId)    
+    public synchronized WampInvocation removeRemoteInvocation(Long socketId, Long remoteInvocationId)    
     {
         WampResult wampResult = null;
-        Deferred<WampResult,WampException,WampResult> retval = remoteInvocations.remove(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId));
-        synchronized(remoteInvocations) {
+        WampInvocation retval = remoteInvocations.remove(new AbstractMap.SimpleEntry<Long,Long>(socketId, remoteInvocationId));
 
-            if(!done && !cancelled && pendingInvocationCount <= 0 && remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
-                done = true;
+        if(!done && !cancelled && pendingInvocationCount <= 0 && remoteInvocations.size() <= 0 && remoteInvocationsCompletionCallback != null) {
+            done = true;
 
-                wampResult = new WampResult(callID);
-                wampResult.setArgs(getResult());
-                wampResult.setArgsKw(getResultKw());
-            }              
+            wampResult = new WampResult(callID);
+            wampResult.setArgs(getResult());
+            wampResult.setArgsKw(getResultKw());
+        }              
 
-            if(wampResult != null) {
-                remoteInvocationsCompletionCallback.resolve(wampResult);
-            }
+        if(wampResult != null) {
+            remoteInvocationsCompletionCallback.resolve(wampResult);
         }
         
         return retval;
     }
     
     
+    /*
     public Set<AbstractMap.SimpleEntry<Long,Long>> getRemoteInvocations()
     {
         return remoteInvocations.keySet();
     }
+    */
 
     
     public WampSocket getClientSocket()
@@ -181,10 +183,14 @@ public class WampCallController implements Runnable
                 public void onProgress(WampResult progress) {
                     if(!isCancelled()) {
                         if(clientSocket.supportsProgressiveCallResults() && callOptions.getRunMode() == WampCallOptions.RunModeEnum.progressive) {
-                            WampDict details = progress.getDetails();
-                            if(details == null) details = new WampDict();
-                            details.put("progress", true);
-                            WampProtocol.sendResultMessage(clientSocket, getCallID(), details, progress.getArgs(), progress.getArgsKw());
+                            try {
+                                WampDict details = progress.getDetails();
+                                if(details == null) details = new WampDict();
+                                details.put("progress", true);
+                                WampProtocol.sendResultMessage(clientSocket, getCallID(), details, progress.getArgs(), progress.getArgsKw());
+                            } catch(Exception ex) { 
+                                System.out.println("SEVERE: WampCallController.sendResultMessage: " + ex.getMessage());
+                            }
                         } else {
                             getResultKw().putAll(progress.getArgsKw());
                             if(progress.getArgs() != null) {
@@ -231,7 +237,11 @@ public class WampCallController implements Runnable
             System.out.println("RPC cancelled by caller: " + callID);
             WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CALL, callID, null, WampException.ERROR_PREFIX + ".CanceledByCaller", null, null);
         } else {
-            WampProtocol.sendResultMessage(clientSocket, callID, null, getResult(), getResultKw());
+            try {
+                WampProtocol.sendResultMessage(clientSocket, callID, null, getResult(), getResultKw());
+            } catch(Exception ex) {
+                System.out.println("WARN: WampCallController.sendCallResults: error: " + ex.getMessage());
+            }
         }
 
         clientSocket.removeCallController(callID);
@@ -249,14 +259,20 @@ public class WampCallController implements Runnable
             }          
             
             if(remoteInvocations != null) {
-                for(AbstractMap.SimpleEntry<Long,Long> sessionInvocationPair : getRemoteInvocations()) {
-                    Long socketId = sessionInvocationPair.getKey();
-                    Long remoteInvocationId = sessionInvocationPair.getValue();
-                    Deferred<WampResult,WampException,WampResult> invocation = removeRemoteInvocation(socketId, remoteInvocationId);
-                    WampException cancelException = new WampException(remoteInvocationId, cancelOptions, "wgs.cancel_invocation", null, null);
-                    if(invocation != null && !invocation.isRejected()) {
-                        try { invocation.reject(cancelException); }
-                        catch(Exception ex) { }
+                for(Entry<SimpleEntry<Long,Long>,WampInvocation> entry : remoteInvocations.entrySet()) {
+                    Long socketId = entry.getKey().getKey();
+                    Long remoteInvocationId = entry.getKey().getValue();
+                    WampInvocation invocation = entry.getValue();
+                    if(invocation != null) {
+                        Deferred<WampResult,WampException,WampResult> deferred = invocation.getAsyncCallback();
+                        WampException cancelException = new WampException(remoteInvocationId, cancelOptions, "wgs.cancel_invocation", null, null);
+                        if(deferred != null && !deferred.isRejected()) {
+                            try { deferred.reject(cancelException); }
+                            catch(Exception ex) { }
+                            finally {
+                                removeRemoteInvocation(socketId, remoteInvocationId);
+                            }
+                        }
                     }
                 }            
             }

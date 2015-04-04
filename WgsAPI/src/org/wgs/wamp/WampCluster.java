@@ -169,18 +169,24 @@ public class WampCluster extends WampModule
             return this.client;
         }
         
-        public static void registerClusteredRPC(WampClient client, WampRealm realm, WampCalleeRegistration registration, WampRemoteMethod remoteMethod)
+        public static void registerClusteredRPC(WampClient client, WampRealm realm, WampCalleeRegistration registration, WampRemoteMethod remoteMethod) 
         {
             WampDict options = new WampDict();
             options.put("_cluster_peer_realm", realm.getRealmName());            
             options.put("_cluster_peer_sid", remoteMethod.getRemotePeer().getWampSessionId());
             options.put("match", registration.getMatchType().toString());
-            client.registerRPC(options, remoteMethod.getProcedureURI(), remoteMethod);
+            try { client.registerRPC(options, remoteMethod.getProcedureURI(), remoteMethod); }
+            catch(Exception ex) {
+                System.out.println("Error: registerClusteredRPC: " + ex.getMessage());
+            }
         }
 
-        public static void unregisterClusteredRPC(WampClient client, WampRealm realm, WampCalleeRegistration registration, WampRemoteMethod remoteMethod)
+        public static void unregisterClusteredRPC(WampClient client, WampRealm realm, WampCalleeRegistration registration, WampRemoteMethod remoteMethod) 
         {
-            client.unregisterRPC(remoteMethod.getProcedureURI());
+            try { client.unregisterRPC(remoteMethod.getProcedureURI()); }
+            catch(Exception ex) {
+                System.out.println("Error: unregisterClusteredRPC: " + ex.getMessage());
+            }
         }        
         
         public void start() throws Exception

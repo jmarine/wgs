@@ -166,7 +166,7 @@ public class WampApplication
     }        
     
     
-    public synchronized void onWampOpen(WampSocket clientSocket) 
+    public void onWampOpen(WampSocket clientSocket) 
     {
         sockets.put(clientSocket.getSocketId(), clientSocket);
     }
@@ -285,17 +285,19 @@ public class WampApplication
                 welcomed = true;
             } 
             
+            if(!welcomed) {
+                throw new Exception("authentication failed");
+            } else {
+                onWampSessionEstablished(clientSocket, clientSocket.getSocketId(), clientSocket.getHelloDetails());
+                WampProtocol.sendWelcomeMessage(this, clientSocket);
+            } 
+            
         } catch(Exception ex) {
             logger.warning("WampApplication.processAuthenticationMessage: challenge error: " + ex.getMessage());
-            welcomed = false;
-        }
-        
-        if(welcomed) {
-            onWampSessionEstablished(clientSocket, clientSocket.getSocketId(), clientSocket.getHelloDetails());
-            WampProtocol.sendWelcomeMessage(this, clientSocket);
-        } else {
             WampProtocol.sendAbortMessage(clientSocket, "wamp.error.authentication_failed", "error verifying authentication challege");
         }
+        
+
     }
     
     
@@ -317,15 +319,7 @@ public class WampApplication
     public void onWampSessionEnd(WampSocket clientSocket) 
     {
         if(clientSocket.getWampSessionId() != null) {
-            // Notify modules:
-            for(WampModule module : modules.values()) {
-                try { 
-                    module.onWampSessionEnd(clientSocket); 
-                } catch(Exception ex) {
-                    logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
-                }
-            }         
-
+            
             // First remove subscriptions to topic patterns:
             for(WampSubscription subscription : clientSocket.getSubscriptions()) {
                 if(subscription.getOptions().getMatchType() != WampMatchType.exact) {  // prefix or wildcards
@@ -338,24 +332,42 @@ public class WampApplication
                 WampBroker.unsubscribeClientFromTopic(this, clientSocket, null, subscription.getId());
             }      
 
+            // Notify modules:
+            for(WampModule m : modules.values()) {
+                try { 
+                    m.onWampSessionEnd(clientSocket); 
+                } catch(Exception ex) {
+                    logger.log(Level.SEVERE, "Error disconnecting socket:", ex);
+                }
+            }         
+
             // Remove RPC registrations
+            clientSocket.setWampSessionId(null);
+            
+
             WampModule module = getDefaultWampModule();            
             for(WampCalleeRegistration registration : clientSocket.getRpcRegistrations()) {
                 try {
                     module.onUnregister(clientSocket, registration);
                 } catch(Exception ex) { }
-            } 
+            }
 
+
+            if(clientSocket.getInvocationIDs().size() > 0) {
+                clientSocket.clearInvocations();
+            }
+
+            
             onUserLogout(clientSocket);
         }
         
         clientSocket.setRealm(null);
-        clientSocket.setWampSessionId(null);
+        
     }
     
     
     
-    public synchronized void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
+    public void onWampMessage(WampSocket clientSocket, WampList request) throws Exception
     {
         Long requestType = request.getLong(0);
         if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "RECEIVED MESSAGE TYPE: " + requestType);
@@ -435,7 +447,7 @@ public class WampApplication
     }
     
     
-    public synchronized void onWampClose(WampSocket clientSocket, CloseReason reason) 
+    public void onWampClose(WampSocket clientSocket, CloseReason reason) 
     {
         if(clientSocket != null) {
 
@@ -638,7 +650,6 @@ public class WampApplication
 
         WampInvocation invocation = providerSocket.getInvocation(invocationId);        
         if(invocation != null) 
-            // synchronized(this)
         {
             Deferred<WampResult, WampException, WampResult> deferred = invocation.getAsyncCallback();
             try {
@@ -665,9 +676,11 @@ public class WampApplication
         WampDict argsKw = (request.size() > 6) ? (WampDict)request.get(6) : null;
         WampException error = new WampException(invocationId, options, errorURI, args, argsKw);
         WampInvocation invocation = providerSocket.getInvocation(invocationId);        
-        Deferred<WampResult, WampException, WampResult> callback = invocation.getAsyncCallback();
-        if(!callback.isRejected()) callback.reject(error); 
-        providerSocket.removeInvocation(invocationId);
+        if(invocation != null) {
+            Deferred<WampResult, WampException, WampResult> callback = invocation.getAsyncCallback();
+            if(!callback.isRejected()) callback.reject(error); 
+            providerSocket.removeInvocation(invocationId);
+        }
     }
     
 

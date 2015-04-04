@@ -96,16 +96,9 @@ public class WampLongPollingSocket extends WampSocket
     
     
     @Override
-    public void sendObject(Object msg) 
+    public void sendObject(Object msg) throws Exception
     {
-        try {
-            if(isOpen()) {
-                queue.add(msg);
-            }
-
-        } catch(Exception e) {
-            //close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "wamp.close.error"));
-        }
+        queue.add(msg);
     }
     
     

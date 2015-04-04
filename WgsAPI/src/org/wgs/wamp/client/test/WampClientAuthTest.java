@@ -82,7 +82,7 @@ public class WampClientAuthTest extends WampModule implements Runnable
     
 
     
-    public void listSessions() {
+    public void listSessions() throws Exception {
         WampCallOptions callOptions = new WampCallOptions(null);
         callOptions.setRunOn(WampCallOptions.RunOnEnum.all);
         callOptions.setRunMode(WampCallOptions.RunModeEnum.gather);

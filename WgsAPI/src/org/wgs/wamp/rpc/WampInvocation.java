@@ -9,12 +9,15 @@ public class WampInvocation
 {
     private Long invocationId;
     private WampCallController controller;
+    private WampRemoteMethod method;
     private Deferred<WampResult, WampException, WampResult> asyncCallback;
     
     public WampInvocation(Long invocationId,
+                            WampRemoteMethod method,
                               WampCallController controller,
                               Deferred<WampResult, WampException, WampResult> asyncCallback)
     {
+        this.method = method;
         this.invocationId = invocationId;
         this.controller = controller;
         this.asyncCallback = asyncCallback;

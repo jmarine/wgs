@@ -44,7 +44,7 @@ public class WampClientTest extends WampModule implements Runnable
     @WampRegisterProcedure(name = "add2")  // implicit RPC registration
     public Long add2(Long p1, Long p2, WampCallOptions options, WampCallController task) 
     {
-        System.out.println("Received invocation: " + task.getProcedureURI() + ": authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole() + ", caller session id=" + options.getCallerId() + ", invocation id=" + task.getCallID());
+        //System.out.println("Received invocation: " + task.getProcedureURI() + ": authid=" + options.getAuthId() + ", authprovider=" + options.getAuthProvider() + ", authrole=" + options.getAuthRole() + ", caller session id=" + options.getCallerId() + ", invocation id=" + task.getCallID());
         return p1+p2;
     }   
     
@@ -126,10 +126,10 @@ public class WampClientTest extends WampModule implements Runnable
     public void onWampSessionEstablished(WampSocket clientSocket, WampDict details) 
     { 
         super.onWampSessionEstablished(clientSocket, details);
-        System.out.println("Hello " + details.getText("authid"));        
+        System.out.println("Hello " + details.getText("authid") + " (sid=" + clientSocket.getWampSessionId() + ")");
     }
     
-    public void doPublications(int num)
+    public void doPublications(int num) throws Exception
     {
         WampPublishOptions pubOpt = new WampPublishOptions();
         pubOpt.setAck(true);
@@ -151,7 +151,7 @@ public class WampClientTest extends WampModule implements Runnable
         }
     }
     
-    public void doCalls(int num) {
+    public void doCalls(int num) throws Exception {
         WampCallOptions callOptions = new WampCallOptions(null);
         callOptions.setRunOn(WampCallOptions.RunOnEnum.all);
         callOptions.setRunMode(WampCallOptions.RunModeEnum.gather);
