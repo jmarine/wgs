@@ -183,9 +183,11 @@ public class WampCluster extends WampModule
 
         public static void unregisterClusteredRPC(WampClient client, WampRealm realm, WampCalleeRegistration registration, WampRemoteMethod remoteMethod) 
         {
-            try { client.unregisterRPC(remoteMethod.getProcedureURI()); }
-            catch(Exception ex) {
-                System.out.println("Error: unregisterClusteredRPC: " + ex.getMessage());
+            try { 
+                client.unregisterRPC(remoteMethod.getProcedureURI()); 
+            } catch(Exception ex) {
+                System.out.println("WampCluster.unregisterClusteredRPC: error: " + ex.getMessage());
+                ex.printStackTrace();
             }
         }        
         

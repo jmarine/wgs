@@ -690,7 +690,6 @@ public class WampClient
 
     public void close() throws Exception {
         clientSocket.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "wamp.close.normal"));
-        waitResponses();
     }
     
     
