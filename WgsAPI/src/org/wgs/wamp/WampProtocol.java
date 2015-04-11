@@ -1,10 +1,13 @@
 package org.wgs.wamp;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
@@ -266,44 +269,51 @@ public class WampProtocol
         
         for(WampSubscription subscription : topic.getSubscriptions()) {
             
-            Object[] msg = new Object[WampEncoding.values().length];
-            
-            if(subscription.getOptions().getMatchType() == WampMatchType.exact) {
-                eventDetails.remove("topic");
-            } else {
-                eventDetails.put("topic", topic.getTopicName());
-            }
-            
-            WampList response = new WampList();
-            response.add(EVENT);
-            response.add(subscription.getId());
-            response.add(publicationId);
-            response.add(eventDetails);
-            if( (payload != null && payload.size() > 0) || (payloadKw != null && payloadKw.size() > 0) ) {
-                response.add((payload!=null) ? payload : new WampList());
-                if(payloadKw != null && payloadKw.size() > 0) response.add(payloadKw);
-            }
-                                    
-            Set<Long> eligible = (eligibleParam != null) ? new HashSet<Long>(eligibleParam) : null;
-            if(eligible == null) eligible = subscription.getSessionIds(realm);
-            else eligible.retainAll(subscription.getSessionIds(realm));
+            WampSubscriptionOptions subOptions = subscription.getOptions();
+            if(subOptions != null && subOptions.hasEventsEnabled()) {     
+                
+                Set<Long> eligible = (eligibleParam != null) ? new HashSet<Long>(eligibleParam) : null;
+                if(eligible == null) eligible = subscription.getSessionIds(realm);
+                else eligible.retainAll(subscription.getSessionIds(realm));
 
-            
-            if(excluded == null) excluded = new HashSet<Long>();        
-
-            for (Long sid : eligible) {
-                if(!excluded.contains(sid)) {
-                    WampSubscriptionOptions subOptions = subscription.getOptions();
-                    if(subOptions != null && subOptions.hasEventsEnabled() && subOptions.isEligibleForEvent(sid, subscription, payload, payloadKw)) {
-                        WampSocket socket = subscription.getSocket(sid);
-                        if(socket != null && socket.isOpen() && realm.equals(socket.getRealm()) ) {
-                            WampEncoding enc = socket.getEncoding();                            
-                            if(msg[enc.ordinal()] == null) {
-                                msg[enc.ordinal()] = enc.getSerializer().serialize(response);
-                            }
-                            socket.sendObject(msg[enc.ordinal()]);
-                        }
+                final Set<Long> excludedImmutable = (excluded != null)? excluded : new HashSet<Long>();
+                List<Long> sids = java.util.Arrays.asList(eligible.parallelStream().filter(sid -> !excludedImmutable.contains(sid) && subscription.getSocket(sid) != null && subOptions.isEligibleForEvent(sid, subscription, payload, payloadKw)).toArray(Long[]::new));
+                if(sids.size() > 0) {
+                    
+                    if(subscription.getOptions().getMatchType() == WampMatchType.exact) {
+                        eventDetails.remove("topic");
+                    } else {
+                        eventDetails.put("topic", topic.getTopicName());
                     }
+
+                    WampList response = new WampList();
+                    response.add(EVENT);
+                    response.add(subscription.getId());
+                    response.add(publicationId);
+                    response.add(eventDetails);
+                    if( (payload != null && payload.size() > 0) || (payloadKw != null && payloadKw.size() > 0) ) {
+                        response.add((payload!=null) ? payload : new WampList());
+                        if(payloadKw != null && payloadKw.size() > 0) response.add(payloadKw);
+                    }                    
+                    
+                    Object[] msg = new Object[WampEncoding.values().length];
+                    sids.parallelStream().map(sid -> subscription.getSocket(sid).getEncoding()).collect(Collectors.toSet()).forEach(enc -> {
+                        try { 
+                            msg[enc.ordinal()] = enc.getSerializer().serialize(response);
+                        } catch(Exception ex) {
+                            System.out.println("WampProtocol.sendEvent: " + enc + " encoding error: " + ex.getClass() + ":" + ex.getMessage());
+                            ex.printStackTrace();
+                        }
+                    });
+
+                    sids.parallelStream().forEach(sid -> {
+                        WampSocket socket = subscription.getSocket(sid);
+                        if(socket != null && socket.isOpen() && socket.getWampSessionId() != null) {
+                            WampEncoding enc = socket.getEncoding();                            
+                            try { socket.sendObject(msg[enc.ordinal()]); }
+                            catch(Exception discardedException) { }
+                        }
+                    });
                 }
             }
         }
@@ -338,16 +348,25 @@ public class WampProtocol
             } else {
                 if(subscription.getOptions() != null && subscription.getOptions().hasMetaTopic(metaTopic)) {
                     Object[] msg = new Object[WampEncoding.values().length];
-                    for(Long sid : subscription.getSessionIds(realm)) {  // FIXME: concurrent modification exceptions
-                        WampSocket remoteSocket = subscription.getSocket(sid);
-                        if(remoteSocket != null && realm.equals(remoteSocket.getRealm()) && remoteSocket.supportVersion(WampApplication.WAMPv2)) {
-                            WampEncoding enc = remoteSocket.getEncoding();
-                            if(msg[enc.ordinal()] == null) {
-                                msg[enc.ordinal()] = enc.getSerializer().serialize(response);
-                            }
-                            remoteSocket.sendObject(msg[enc.ordinal()]);
+                    Set<Long> sids = subscription.getSessionIds(realm);
+                    
+                    sids.parallelStream().map(sid -> subscription.getSocket(sid).getEncoding()).collect(Collectors.toSet()).forEach(enc -> {
+                        try { 
+                            msg[enc.ordinal()] = enc.getSerializer().serialize(response);
+                        } catch(Exception ex) {
+                            System.out.println("WampProtocol.sendMetaEvents: " + enc + " encoding error: " + ex.getClass() + ":" + ex.getMessage());
+                            ex.printStackTrace();
                         }
-                    }
+                    });
+                    
+                    sids.parallelStream().forEach(sid -> {
+                        WampSocket socket = subscription.getSocket(sid);
+                        if(socket != null && socket.isOpen() && socket.getWampSessionId() != null) {
+                            WampEncoding enc = socket.getEncoding();
+                            try { socket.sendObject(msg[enc.ordinal()]); }
+                            catch(Exception discardedException) { }
+                        }
+                    });
                 }
             }
         }

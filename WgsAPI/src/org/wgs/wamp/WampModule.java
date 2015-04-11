@@ -119,45 +119,47 @@ public class WampModule
                 task.setPendingInvocationCount(remoteMethods.size());
                 task.setRemoteInvocationsCompletionCallback(deferred);
                  
-                for(final WampRemoteMethod remoteMethod : remoteMethods) {
-                    Promise<WampResult,WampException,WampResult> remoteInvocation = remoteMethod.invoke(task,clientSocket,args,argsKw,options);
-                    remoteInvocation.done(new DoneCallback<WampResult>() {
-                        @Override
-                        public void onDone(WampResult wampResult) {
-                            if(!clientSocket.supportsProgressiveCallResults() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive || remoteMethods.size() <= 1) {
-                                synchronized(task) {
-                                    task.incrementRemoteInvocationResults();
-                                    task.getResultKw().putAll(wampResult.getArgsKw());
-                                    task.getResult().add(wampResult.getArgs());
+                remoteMethods.parallelStream().forEach(remoteMethod -> {
+                    try {
+                        Promise<WampResult,WampException,WampResult> remoteInvocation = remoteMethod.invoke(task,clientSocket,args,argsKw,options);
+                        remoteInvocation.done(new DoneCallback<WampResult>() {
+                            @Override
+                            public void onDone(WampResult wampResult) {
+                                if(!clientSocket.supportsProgressiveCallResults() || options.getRunMode() != WampCallOptions.RunModeEnum.progressive || remoteMethods.size() <= 1) {
+                                    synchronized(task) {
+                                        task.incrementRemoteInvocationResults();
+                                        task.getResultKw().putAll(wampResult.getArgsKw());
+                                        task.getResult().add(wampResult.getArgs());
+                                    }
+                                } else {
+                                    deferred.notify(wampResult);
                                 }
-                            } else {
-                                deferred.notify(wampResult);
+
+                                task.removeRemoteInvocation(remoteMethod.getRemotePeer().getSocketId(), wampResult.getRequestId());
                             }
+                        });
 
-                            task.removeRemoteInvocation(remoteMethod.getRemotePeer().getSocketId(), wampResult.getRequestId());
-                        }
-                    });
-
-                    remoteInvocation.progress(new ProgressCallback<WampResult>() {
-                        @Override
-                        public void onProgress(WampResult progress) {
-                            if(!task.isCancelled()) {
-                                deferred.notify(progress);
+                        remoteInvocation.progress(new ProgressCallback<WampResult>() {
+                            @Override
+                            public void onProgress(WampResult progress) {
+                                if(!task.isCancelled()) {
+                                    deferred.notify(progress);
+                                }
                             }
-                        }
-                    });
+                        });
 
-                    remoteInvocation.fail(new FailCallback<WampException>() {
-                        @Override
-                        public void onFail(WampException error) {
-                            if(!task.isCancelled()) {
-                                task.cancel(null);
+                        remoteInvocation.fail(new FailCallback<WampException>() {
+                            @Override
+                            public void onFail(WampException error) {
+                                if(!task.isCancelled()) {
+                                    task.cancel(null);
+                                }
                             }
-                        }
-                     });
+                         });
 
-                }
-
+                    } catch(Exception discardedException) { }
+                  
+                });
 
                 return deferred.promise();
                
@@ -165,9 +167,8 @@ public class WampModule
             
         }
         
-
-        
     }
+    
     
     public void onSubscribe(WampSocket clientSocket, WampTopic topic, WampSubscription subscription, WampSubscriptionOptions options) throws Exception { 
         long sinceN = 0L;       // options.getSinceN();
@@ -181,6 +182,7 @@ public class WampModule
         }
     }
 
+    
     public void onUnsubscribe(WampSocket clientSocket, Long subscriptionId, WampTopic topic) throws Exception { 
         WampSubscription subscription = topic.getSubscription(subscriptionId);
 
@@ -204,6 +206,7 @@ public class WampModule
         
     }
     
+    
     public void onRegister(WampSocket clientSocket, Long registrationId, String methodName, WampCalleeRegistration registration, WampMatchType matchType, String methodUriOrPattern, WampList request) throws Exception
     {
         WampDict options = (WampDict)request.get(2);
@@ -226,6 +229,7 @@ public class WampModule
             //}            
         }
     }
+    
     
     public void onUnregister(WampSocket clientSocket, WampCalleeRegistration calleeRegistration) throws Exception
     {
@@ -253,6 +257,7 @@ public class WampModule
             
         }
     }    
+    
     
     public void onPublish(WampSocket clientSocket, WampTopic topic, WampList request) throws Exception 
     {
@@ -310,6 +315,7 @@ public class WampModule
             }
         }
     }
+    
     
     public void onEvent(WampSocket serverSocket, Long subscriptionId, Long publicationId, WampDict details, WampList payload, WampDict payloadKw) throws Exception
     {
