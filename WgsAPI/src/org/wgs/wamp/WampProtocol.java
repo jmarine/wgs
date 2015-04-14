@@ -96,8 +96,8 @@ public class WampProtocol
         brokerFeatures.put("publisher_identification", true);
         //brokerFeatures.put("publication_trustlevels", false);
         brokerFeatures.put("pattern_based_subscription", true);
-        brokerFeatures.put("partitioned_pubsub", true);
-        brokerFeatures.put("subscriber_metaevents", true);
+        //brokerFeatures.put("partitioned_pubsub", true);
+        //brokerFeatures.put("subscriber_metaevents", true);
         //brokerFeatures.put("subscriber_list", false);
         //brokerFeatures.put("event_history", false);
 
