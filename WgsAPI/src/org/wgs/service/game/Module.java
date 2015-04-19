@@ -29,7 +29,6 @@ import javax.persistence.criteria.Expression;
 import javax.persistence.criteria.Root;
 import org.wgs.util.Storage;
 import org.wgs.security.User;
-import org.wgs.security.OpenIdConnectUtils;
 import org.wgs.security.UserRepository;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.type.WampConnectionState;
@@ -43,7 +42,6 @@ import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRegisterProcedure;
-import org.wgs.security.WampCRA;
 import org.wgs.util.Social;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscription;
@@ -1222,7 +1220,6 @@ public class Module extends WampModule
                 appStat.put("win", 0);
                 appStat.put("draw", 0);
                 appStat.put("lose", 0);
-                appStat.put("resign", 0);
                 appStats.put(app.getName(), appStat);
             }
     

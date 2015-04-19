@@ -1,7 +1,6 @@
 package org.wgs.security;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Serializable;
@@ -24,8 +23,8 @@ import javax.persistence.Table;
 @Entity
 @Table(name="OIDC_PROVIDER")
 @NamedQueries({
-  @NamedQuery(name="OpenIdConnectProvider.findAll", query="SELECT OBJECT(p) FROM OpenIdConnectProvider p"),
-  @NamedQuery(name="OpenIdConnectProvider.findDynamic", query="SELECT OBJECT(p) FROM OpenIdConnectProvider p WHERE p.dynamic = true")
+    @NamedQuery(name="OpenIdConnectProvider.findAll", query="SELECT OBJECT(p) FROM OpenIdConnectProvider p"),
+    @NamedQuery(name="OpenIdConnectProvider.findDynamic", query="SELECT OBJECT(p) FROM OpenIdConnectProvider p WHERE p.dynamic = true")
 })
 public class OpenIdConnectProvider implements Serializable
 {
@@ -52,19 +51,20 @@ public class OpenIdConnectProvider implements Serializable
     
 
     /**
-     * @return the id
+     * @return the domain
      */
     public String getDomain() {
         return domain;
     }
 
     /**
-     * @param id the id to set
+     * @param domain the domain to set
      */
     public void setDomain(String domain) {
         this.domain = domain;
     }
 
+    
     public boolean getDynamic() 
     {
         return dynamic;
@@ -137,14 +137,14 @@ public class OpenIdConnectProvider implements Serializable
     {
         String scopes = "openid profile email";
         if(domain.endsWith("facebook.com")) scopes = "email,publish_actions,manage_notifications";        
-        if(domain.endsWith("google.com"))   scopes = "https://www.googleapis.com/auth/plus.login https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gcm_for_chrome";
+        if(domain.endsWith("google.com"))   scopes = "https://www.googleapis.com/auth/plus.login https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email";
         return scopes;
     }
     
 
     public String getUserInfo(String accessToken) throws Exception
     {
-        StringBuffer retval = new StringBuffer();
+        StringBuilder retval = new StringBuilder();
         String url = getUserInfoEndpointUrl();
         if(!getDomain().equalsIgnoreCase("www.facebook.com")) url = url + "?schema=openid";
         else url = url + "?access_token=" + URLEncoder.encode(accessToken, StandardCharsets.UTF_8.toString());
@@ -170,7 +170,6 @@ public class OpenIdConnectProvider implements Serializable
     public static JsonObject discover(String principal) throws Exception
     {
         JsonObject retval = null;
-        HttpURLConnection connection = null;
         if(principal.indexOf('#') != -1) principal = principal.substring(0, principal.indexOf('#'));
         if(principal.indexOf('?') != -1) principal = principal.substring(0, principal.indexOf('?'));
         int endSchemaPos = principal.indexOf("://");
@@ -180,7 +179,7 @@ public class OpenIdConnectProvider implements Serializable
         }
         
         String principalUrl = principal;
-        if(principal.indexOf("://") == -1) {
+        if(!principal.contains("://")) {
             if(principal.indexOf('@') == -1) {
                 principalUrl = "https://" + principal;
             } else {
@@ -194,7 +193,7 @@ public class OpenIdConnectProvider implements Serializable
         webfingerPath += "&rel=" + URLEncoder.encode("http://openid.net/specs/connect/1.0/issuer",StandardCharsets.UTF_8.toString());
 
         URL webfingerUrl = new URL(new URL(principalUrl), webfingerPath);
-        connection = (HttpURLConnection)webfingerUrl.openConnection();
+        HttpURLConnection connection = (HttpURLConnection)webfingerUrl.openConnection();
         connection.setInstanceFollowRedirects(true);
         connection.setDoOutput(false);
 
@@ -241,10 +240,10 @@ public class OpenIdConnectProvider implements Serializable
         connection.setRequestProperty("Accept", "application/json");
 
         JsonObject req = Json.createObjectBuilder()
-                .add("application_type", "web")
-                .add("redirect_uris", Json.createArrayBuilder().add(redirectUri))
-                .add("client_name", appName)
-                .build();
+            .add("application_type", "web")
+            .add("redirect_uris", Json.createArrayBuilder().add(redirectUri))
+            .add("client_name", appName)
+            .build();
                 
         JsonReader jsonReader = null;
         try(OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream(), StandardCharsets.UTF_8)) {

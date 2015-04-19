@@ -132,7 +132,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                         if(m0 != null && m0.getUser() != null 
                                 && m1 != null && m1.getUser() != null) {
                             saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
-                            saveAchievement(g, m1.getRole(), m1.getUser(), "RESIGN", m0.getUser().getUid());
+                            saveAchievement(g, m1.getRole(), m1.getUser(), "LOSE", m0.getUser().getUid());
                         }
                     }
 
