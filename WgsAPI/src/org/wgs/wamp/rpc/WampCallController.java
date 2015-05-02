@@ -248,13 +248,13 @@ public class WampCallController implements Runnable
     }
     
     
-    public void cancel(WampDict cancelOptions) {
+    public void cancel(WampDict cancelOptions, WampException error) {
         if(!done) {
             cancelled = true;
 
             if(remoteInvocationsCompletionCallback != null && !remoteInvocationsCompletionCallback.isRejected()) {
-                WampException cancelException = new WampException(cancelOptions, "wgs.cancel_invocation", null, null);                
-                try { remoteInvocationsCompletionCallback.reject(cancelException); }
+                if(error == null) error = new WampException(cancelOptions, "wgs.cancel_invocation", null, null);                
+                try { remoteInvocationsCompletionCallback.reject(error); }
                 catch(Exception ex) { }
             }          
             

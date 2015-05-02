@@ -164,7 +164,7 @@ public class WampBroker
 
     public static void publishEvent(String realm, Long id, WampTopic topic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, WampDict eventDetails, boolean broadcastToClusterNodes) throws Exception
     {
-        if(broadcastToClusterNodes) {
+        if(broadcastToClusterNodes && WampCluster.getNodes().size() > 0) {
             if(eventDetails == null) eventDetails = new WampDict();
             eventDetails.put("_cluster_publication_id", id);
             eventDetails.put("_cluster_realm", realm);

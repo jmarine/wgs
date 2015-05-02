@@ -170,7 +170,7 @@ public class WampClient
                             WampCallController task = WampClient.this.pendingInvocations.remove(interruptedInvocationId);                        
                             if(task != null) {
                                 WampDict interruptOptions = (WampDict)request.get(2);
-                                task.cancel(interruptOptions);
+                                task.cancel(interruptOptions, null);
                                 removePendingMessage(null);
                             }
                         }

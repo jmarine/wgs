@@ -129,7 +129,11 @@ public class WampModule
                                     synchronized(task) {
                                         task.incrementRemoteInvocationResults();
                                         task.getResultKw().putAll(wampResult.getArgsKw());
-                                        task.getResult().add(wampResult.getArgs());
+                                        if(options.getRunOn() == WampCallOptions.RunOnEnum.any) {
+                                            task.setResult(wampResult.getArgs());
+                                        } else {
+                                            task.getResult().add(wampResult.getArgs());
+                                        }
                                     }
                                 } else {
                                     deferred.notify(wampResult);
@@ -152,7 +156,7 @@ public class WampModule
                             @Override
                             public void onFail(WampException error) {
                                 if(!task.isCancelled()) {
-                                    task.cancel(null);
+                                    task.cancel(error.getArgsKw(), error);
                                 }
                             }
                          });
@@ -292,7 +296,7 @@ public class WampModule
                     WampProtocol.sendPublishedMessage(clientSocket, requestId, publicationId);
                 }
 
-                WampDict eventDetails = options.toWampObject();
+                WampDict eventDetails = new WampDict();
                 for(String name : publicationDetails.keySet()) {
                     if(name.startsWith("_")) eventDetails.put(name, publicationDetails.get(name));
                 }

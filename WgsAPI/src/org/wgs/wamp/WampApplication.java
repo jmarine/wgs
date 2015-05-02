@@ -604,7 +604,7 @@ public class WampApplication
         Long callID  = request.getLong(1);
         WampDict cancelOptions = (WampDict)request.get(2);
         WampCallController call = clientSocket.getCallController(callID);
-        if(call != null) call.cancel(cancelOptions);
+        if(call != null) call.cancel(cancelOptions, null);
         else WampProtocol.sendErrorMessage(clientSocket, WampProtocol.CANCEL_CALL, callID, null, "wamp.error.unknown_call", null, null);
     }
     
