@@ -1,8 +1,6 @@
 package org.wgs.wamp.encoding;
 
 import java.io.StringReader;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.json.*;

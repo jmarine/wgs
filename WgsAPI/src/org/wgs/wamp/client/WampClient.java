@@ -400,7 +400,7 @@ public class WampClient
 
                     case "tcp":
                     case "ssl":
-                        clientSocket = new WampRawSocket(wampApp, uri);
+                        clientSocket = new WampRawSocket(wampApp, uri, preferredEncoding);
                         break;
 
                     case "http":

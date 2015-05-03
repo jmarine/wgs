@@ -10,6 +10,7 @@ import java.util.HashMap;
 import javax.net.SocketFactory;
 import javax.websocket.CloseReason;
 import org.wgs.wamp.WampApplication;
+import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.type.WampList;
@@ -26,13 +27,14 @@ public class WampRawSocket extends WampSocket implements Runnable
     private OutputStream os;
     private HashMap<String,Object> sessionData = new HashMap<String,Object>();
     private Thread listener;
+    private WampEncoding preferredEncoding;
+    private long maxMsgLen;
     
 
-    public WampRawSocket(WampApplication app, URI url) throws Exception
+    public WampRawSocket(WampApplication app, URI url, WampEncoding enc) throws Exception
     {
-        setEncoding(WampEncoding.MsgPack);
-        
         this.app = app;
+        this.preferredEncoding = enc;
         
         int port = url.getPort();
         if(port == 0) port = DEFAULT_PORT;
@@ -58,29 +60,43 @@ public class WampRawSocket extends WampSocket implements Runnable
     }
     
     
+    private byte getRawSocketEncoding(WampEncoding enc)
+    {
+        switch(enc) {
+            case JSON:
+            case BatchedJSON:
+                return 1;
+                
+            case MsgPack:
+            case BatchedMsgPack:
+                return 2;
+            
+            default:
+                return 0;
+        }
+    }
     
     
     @Override
     public void run() {
         try { 
-            int len = 0;
             byte[] msg = new byte[256*256];
             
             is = socket.getInputStream();
             os = socket.getOutputStream();
             
 
-            /*
             // WAMP V2:
-            msg[0] = 0x7F;
-            msg[1] = 0x72;
+            msg[0] = 0x7F;  // WAMP V2 magic number
+            msg[1] = (byte)(0x70 | getRawSocketEncoding(preferredEncoding)); // Max message length 2^16 + preferred encoding
             msg[2] = 0x00;
             msg[3] = 0x00;
-            os.write(msg, 0, 4);  // WAMP V2 magic number, Max message length 2^16 and MsgPack
+            os.write(msg, 0, 4);  // start handshake
             os.flush();
 
             int len = is.read(msg, 0, 4);  // read bufflen and encoding
             if(len == 4) {
+                maxMsgLen = (long) Math.pow(2, (msg[1] >> 4 & 0x0F) + 9);
                 switch(msg[1] & 0x0F) {
                     case 1: 
                         setEncoding(WampEncoding.JSON);
@@ -90,7 +106,6 @@ public class WampRawSocket extends WampSocket implements Runnable
                         break;
                 }
             }
-            */
             
 
             this.init();
@@ -102,7 +117,16 @@ public class WampRawSocket extends WampSocket implements Runnable
             while( isOpen() && (len = is.read(msg,0,4)) == 4 ) {
                 len = ntohs(msg, 0, 4);
                 len = is.read(msg, 0, len);
-                WampList request = (WampList)WampEncoding.MsgPack.getSerializer().deserialize(msg, 0, msg.length);
+                WampList request = null;
+                switch(getEncoding()) {
+                    case JSON:
+                        String json = new String(msg, 0, len, StandardCharsets.UTF_8);
+                        request = (WampList)getEncoding().getSerializer().deserialize(json, 0, json.length());
+                        break;
+                    default:
+                        request = (WampList)getEncoding().getSerializer().deserialize(msg, 0, len);
+                        break;
+                }
                 app.onWampMessage(this, request);
             }
             
@@ -144,8 +168,13 @@ public class WampRawSocket extends WampSocket implements Runnable
                         // not supported.
                 }
                 
-                os.write(htons(buf.length));
-                os.write(buf, 0, buf.length);
+                if(buf.length > maxMsgLen) {
+                    System.out.println("WampRawSocket.sendObject: message length overflow");
+                    throw new WampException(null, "wgs.error.message_length_overflow", null, null);
+                } else {
+                    os.write(htons(buf.length));
+                    os.write(buf, 0, buf.length);
+                }
             }
 
         } catch(Exception e) {
@@ -170,8 +199,12 @@ public class WampRawSocket extends WampSocket implements Runnable
     
     @Override
     public String getNegotiatedSubprotocol() {
-        // FIXME: obtain negotiatiated subprotocol
-        return "wamp.2.msgpack";
+        switch(getEncoding()) {
+            case JSON:
+                return "wamp.2.json";
+            default:
+                return "wamp.2.msgpack";
+        }
     }
 
     @Override
