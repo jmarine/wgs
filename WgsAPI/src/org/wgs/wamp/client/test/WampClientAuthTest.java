@@ -115,7 +115,7 @@ public class WampClientAuthTest extends WampModule implements Runnable
     {
         WampClient client = new WampClient(url);
         client.setPreferredWampEncoding(WampEncoding.MsgPack);
-        //client.setPreferredWampEncoding(WampEncoding.JSON);
+        // client.setPreferredWampEncoding(WampEncoding.JSON);
         WampClientAuthTest test = new WampClientAuthTest(client);
         test.run();
     }

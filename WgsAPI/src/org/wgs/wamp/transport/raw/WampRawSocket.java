@@ -152,37 +152,25 @@ public class WampRawSocket extends WampSocket implements Runnable
     
     
     @Override
-    public void sendObject(Object msg) 
+    public void sendObject(Object msg) throws Exception
     {
-        try {
-            if(isOpen()) {
-                byte[] buf = null;
-                switch(getEncoding()) {
-                    case JSON:
-                        buf = msg.toString().getBytes(StandardCharsets.UTF_8);
-                        break;
-                    case MsgPack:
-                        buf = (byte[])msg;
-                        break;
-                    default:
-                        // not supported.
-                }
-                
-                if(buf.length > maxMsgLen) {
-                    System.out.println("WampRawSocket.sendObject: message length overflow");
-                    throw new WampException(null, "wgs.error.message_length_overflow", null, null);
-                } else {
-                    os.write(htons(buf.length));
-                    os.write(buf, 0, buf.length);
-                }
-            }
+        byte[] buf = null;
+        switch(getEncoding()) {
+            case JSON:
+                buf = msg.toString().getBytes(StandardCharsets.UTF_8);
+                break;
+            default:
+                buf = (byte[])msg;
+                break;
+        }
 
-        } catch(Exception e) {
-            //close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "wamp.close.error"));
+        if(buf.length > maxMsgLen) {
+            throw new WampException(null, "wgs.error.rawsocket_send_message_overflow", null, null);
+        } else {
+            os.write(htons(buf.length));
+            os.write(buf, 0, buf.length);
         }
     }    
-
-    
 
     
     @Override
