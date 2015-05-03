@@ -145,9 +145,9 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                     String gameState = lastAction.getActionValue();
                     if(gameState.equals(actionValue)) {
                         ruleEngine.eval("game.initFromStateStr('"+gameState+"');");
+                        g.setData(gameState);
                         if(g.getState() == GroupState.FINISHED) {
                             g.setState(GroupState.STARTED);
-                            g.setData(gameState);
                         }
                         isValid = true;
                     }
