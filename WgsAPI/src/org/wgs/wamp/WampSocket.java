@@ -348,7 +348,7 @@ public abstract class WampSocket
         if(isOpen()) {
             this.connected.set(false);
             
-            WampProtocol.sendGoodbyeMessage(this, null, reason.getReasonPhrase());
+            WampProtocol.sendGoodbyeMessage(this, reason.getReasonPhrase(), null);
             
             return true;
         } else {
