@@ -24,6 +24,7 @@ import org.wgs.wamp.type.WampDict;
 
 import com.google.android.gcm.server.*;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 
 
@@ -173,12 +174,25 @@ public class Social
             } catch(NoResultException noEx) { }
 
             if(userPushChannel != null) {
-                System.out.println("Sending GCM notification to " + toUser.getName());
+                System.out.println("Sending notification to " + toUser.getName());
                 String notificationChannel = userPushChannel.getNotificationChannel();
                 WampDict info = (WampDict)WampEncoding.JSON.getSerializer().deserialize(notificationChannel, 0, notificationChannel.length());
-                if(info.has("endpoint") && info.getText("endpoint").equals("https://android.googleapis.com/gcm/send")) {
-                    notifyGCM(app, info.getText("subscriptionId"), "{ \"provider\": \""+toUser.getDomain()+"\", \"gid\": \"" + gameGuid + "\"}", template);
-                }        
+                String endpoint = info.getText("endpoint");
+                if(endpoint != null) {
+                    if(endpoint.startsWith("https://updates.push.services.mozilla.com/push")) {
+                        
+                        notifyWithMozillaPushService(app, endpoint, "{ \"provider\": \""+toUser.getDomain()+"\", \"gid\": \"" + gameGuid + "\"}", template);
+                        
+                    } else if(endpoint.startsWith("https://android.googleapis.com/gcm/send")) {
+                        
+                        String subscriptionId = info.getText("subscriptionId");
+                        if(subscriptionId == null) {
+                            subscriptionId = endpoint.substring(endpoint.lastIndexOf("/")+1);
+                        }
+                        notifyWithGCM(app, subscriptionId, "{ \"provider\": \""+toUser.getDomain()+"\", \"gid\": \"" + gameGuid + "\"}", template);
+                        
+                    }
+                }
 
             } else {
                 // SEND E-MAIL?  // but e-mail address are not verified, yet
@@ -188,7 +202,7 @@ public class Social
                 System.out.println("Sending Facebook game activity to " + toUser.getName());
                 OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(toUser.getDomain(), app);
                 OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
-                notifyFacebook(oidcClient, toUser.getLogin(), "?provider=facebook.com&gid=" + gameGuid, template);
+                notifyWithFacebook(oidcClient, toUser.getLogin(), "?provider=facebook.com&gid=" + gameGuid, template);
             } 
             
                 
@@ -201,7 +215,22 @@ public class Social
     }
     
     
-    public static void notifyGCM(String app, String registrationId, String rel_link, String template) throws Exception
+    public static void notifyWithMozillaPushService(String app, String endpoint, String rel_link, String template) throws Exception
+    {
+        URL url = new URL(endpoint); 
+        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        connection.setRequestMethod("PUT");
+        connection.setDoOutput(false);
+
+        try(BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+            String line = null;
+            while((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        }
+    }
+    
+    public static void notifyWithGCM(String app, String registrationId, String rel_link, String template) throws Exception
     {
         File gcmKeyFile = new File(new File(System.getProperty("user.dir")).getParentFile(), "GCM-" + app.replace(' ', '_') + ".key");
         System.out.println("Searching GCM key in: " + gcmKeyFile.getAbsolutePath());
@@ -215,7 +244,7 @@ public class Social
         
     }
     
-    public static void notifyFacebook(OpenIdConnectClient oidcClient, String to_user_id, String rel_link, String template) throws Exception
+    public static void notifyWithFacebook(OpenIdConnectClient oidcClient, String to_user_id, String rel_link, String template) throws Exception
     {
         String appToken = getFacebookAppAccessToken(oidcClient.getClientId(), oidcClient.getClientSecret());
         URL url = new URL("https://graph.facebook.com/v2.1/" + to_user_id + "/apprequests?access_token="+ appToken + "&message=" + URLEncoder.encode(template,StandardCharsets.UTF_8.toString()) + "&data=" + URLEncoder.encode(rel_link,StandardCharsets.UTF_8.toString())); 
@@ -279,7 +308,7 @@ public class Social
     {
             OpenIdConnectClientPK oidcClientPK = new OpenIdConnectClientPK("facebook.com", "WebGL 8x8 board games");
             OpenIdConnectClient oidcClient = Storage.findEntity(OpenIdConnectClient.class, oidcClientPK);
-            notifyFacebook(oidcClient, "", "?1234", "It's your turn");  
+            notifyWithFacebook(oidcClient, "", "?1234", "It's your turn");  
     }
     
 }
