@@ -26,7 +26,10 @@ import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
+import javax.persistence.criteria.Subquery;
 import org.wgs.util.Storage;
 import org.wgs.security.User;
 import org.wgs.security.UserRepository;
@@ -1209,11 +1212,14 @@ public class Module extends WampModule
         EntityManager manager = null;
         WampDict stats = new WampDict();
         WampDict appStats = new WampDict();
+        WampList opponents = new WampList();
         stats.put("apps", appStats);
+        stats.put("opponents", opponents);
         if(opponentUid != null && opponentUid.length() > 0) stats.put("opponent", opponentUid);
                 
         User user = (User)socket.getUserPrincipal();
         if(user != null) {
+            
             for(Application app : applications.values()) {
                 WampDict appStat = new WampDict();
                 appStat.put("active", 0);
@@ -1227,21 +1233,34 @@ public class Module extends WampModule
                 manager = Storage.getEntityManager();
 
                 CriteriaBuilder cb = manager.getCriteriaBuilder();
-                CriteriaQuery<Tuple> q = cb.createTupleQuery();
-                Root<Achievement> achievement = q.from(Achievement.class);
+                
+                // Search opponents list
+                CriteriaQuery<User> opponentsQuery = cb.createQuery(User.class);
+                Root<Achievement> achievementRoot = opponentsQuery.from(Achievement.class);
+                CriteriaQuery<User> select = opponentsQuery.select(achievementRoot.get("sourceUser")).distinct(true);
+                select.where(cb.equal(achievementRoot.get("value"), user.getUid()));
+                select.orderBy(cb.asc(achievementRoot.get("sourceUser").get("name")));
+ 
+                TypedQuery<User> opponentsTypedQuery = manager.createQuery(select);
+                for (User u : opponentsTypedQuery.getResultList()) {
+                    opponents.add(u.toWampObject(false));
+                }         
+                
+                // Search achievements stats
+                CriteriaQuery<Tuple> achievementsQuery = cb.createTupleQuery();
+                Root<Achievement> achievement = achievementsQuery.from(Achievement.class);
                 Expression<Application> appExpr = achievement.get("sourceRole").get("application");
                 Expression<String> nameExpr = achievement.get("name");
-                q.multiselect(appExpr.alias("app"), nameExpr.alias("name"), cb.count(nameExpr).alias("count"));
+                achievementsQuery.multiselect(appExpr.alias("app"), nameExpr.alias("name"), cb.count(nameExpr).alias("count"));
                 if(opponentUid == null || opponentUid.length() == 0) {
-                    q.where(cb.equal(achievement.get("sourceUser"), user));
+                    achievementsQuery.where(cb.equal(achievement.get("sourceUser"), user));
                 } else {
-                    q.where(cb.and(cb.equal(achievement.get("sourceUser"), user), cb.equal(achievement.get("value"), opponentUid)));
+                    achievementsQuery.where(cb.and(cb.equal(achievement.get("sourceUser"), user), cb.equal(achievement.get("value"), opponentUid)));
                 }
-                q.groupBy(appExpr, achievement.get("name"));
+                achievementsQuery.groupBy(appExpr, achievement.get("name"));
 
-                TypedQuery<Tuple> tq = manager.createQuery(q);
-                List<Tuple> results = tq.getResultList();
-                for (Tuple t : results) {
+                TypedQuery<Tuple> achievementsTypedQuery = manager.createQuery(achievementsQuery);
+                for (Tuple t : achievementsTypedQuery.getResultList()) {
                     Application a = (Application)t.get("app");
                     String name = (String)t.get("name");
                     Object count = t.get("count");
@@ -1250,26 +1269,24 @@ public class Module extends WampModule
                 }
                 
 
-                q = cb.createTupleQuery();
-                Root<Group> group = q.from(Group.class);
+                // Search active groups stats
+                CriteriaQuery<Tuple> activeGroupsQuery = cb.createTupleQuery();
+                Root<Group> group = activeGroupsQuery.from(Group.class);
                 Expression<String> gidExpr = group.get("gid");
                 Expression<GroupState> stateExpr = group.get("state");
                 appExpr = group.get("application");
                 Expression<Collection<String>> usersExpr = group.get("members").get("user").get("uid");
-                q.multiselect(appExpr.alias("app"), cb.countDistinct(gidExpr).alias("count"));
+                activeGroupsQuery.multiselect(appExpr.alias("app"), cb.countDistinct(gidExpr).alias("count"));
                 if(opponentUid == null || opponentUid.length() == 0) {
-                    q.where(cb.and(cb.notEqual(stateExpr, GroupState.FINISHED), cb.isMember(user.getUid(), usersExpr)));
+                    activeGroupsQuery.where(cb.and(cb.notEqual(stateExpr, GroupState.FINISHED), cb.isMember(user.getUid(), usersExpr)));
                 } else {
                     Expression<Collection<String>> usersExpr2 = group.get("members").get("user").get("uid");
-                    q.where(cb.and(cb.notEqual(stateExpr, GroupState.FINISHED), cb.isMember(user.getUid(), usersExpr), cb.isMember(opponentUid, usersExpr2)));
+                    activeGroupsQuery.where(cb.and(cb.notEqual(stateExpr, GroupState.FINISHED), cb.isMember(user.getUid(), usersExpr), cb.isMember(opponentUid, usersExpr2)));
                 }
-                q.groupBy(appExpr);
+                activeGroupsQuery.groupBy(appExpr);
                 
-                
-                
-                tq = manager.createQuery(q);
-                results = tq.getResultList();
-                for (Tuple t : results) {
+                TypedQuery<Tuple> activeGroupsTypedQuery = manager.createQuery(activeGroupsQuery);
+                for (Tuple t : activeGroupsTypedQuery.getResultList()) {
                     Application a = (Application)t.get("app");
                     Object count = t.get("count");
                     WampDict appStat = (WampDict)appStats.get(a.getName());
