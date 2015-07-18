@@ -32,7 +32,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
             gameType = Character.toUpperCase(gameType.charAt(0)) + gameType.substring(1);
 
             ruleEngine = getRuleEngine(apps);
-            ruleEngine.eval("var game = new "+gameType+"();");
+            ruleEngine.eval("var game = app.model.GameFactory.createGame('" + gameType+ "');");
             
             if(actionName.equalsIgnoreCase("MOVE") && !g.getData().equals(g.getInitialData())) {
                 // Optimization: only evaluate from latest game data
