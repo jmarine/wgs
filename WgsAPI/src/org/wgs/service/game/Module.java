@@ -76,6 +76,9 @@ public class Module extends WampModule
             for(Application a : apps) {
                 System.out.println("Application found in DB: " + a.getName());
                 registerApplication(a);
+                
+                Ranking ranking = Ranking.getInstance(a);
+                System.out.println("TOP 5: " + ranking.getTopRatings(5));
             }
         } catch(Exception ex) {
             System.out.println("Error loading WGS applications: " + ex.getMessage());
@@ -1204,6 +1207,33 @@ public class Module extends WampModule
         }
         return false;
     }
+
+    
+    @WampRegisterProcedure(name = "get_ranking")
+    public WampList getRanking(WampSocket socket, String appId, Long min) throws Exception
+    {
+        min = Math.max(5l, min);
+        WampList retval = new WampList();
+        Application app = applications.get(appId);
+        if(app == null) {
+            List<Application> list = Storage.findEntities(Application.class, "wgs.findAppByName", appId );
+            if(list.size() > 0) app = list.get(0);
+        }
+        
+        if(app != null) {
+            int order = 0;
+            Ranking ranking = Ranking.getInstance(app);
+            for(Glicko2.Rating rating : ranking.getTopRatings(min.intValue())) {
+                order++;
+                WampDict item = new WampDict();
+                item.put("order", order);
+                item.put("user", rating.getPlayer().toWampObject(false));
+                item.put("rating", rating.toString());
+                retval.add(item);
+            }
+        }
+        return retval;
+    }
     
     
     @WampRegisterProcedure(name = "get_profile")
@@ -1221,11 +1251,13 @@ public class Module extends WampModule
         if(user != null) {
             
             for(Application app : applications.values()) {
+                Ranking ranking = Ranking.getInstance(app);
                 WampDict appStat = new WampDict();
                 appStat.put("active", 0);
                 appStat.put("win", 0);
                 appStat.put("draw", 0);
                 appStat.put("lose", 0);
+                appStat.put("ranking", ranking.getUserRankingPosition(user));
                 appStats.put(app.getName(), appStat);
             }
     

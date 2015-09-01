@@ -13,6 +13,8 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinColumns;
 import javax.persistence.ManyToOne;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import javax.persistence.TemporalType;
 
@@ -21,6 +23,9 @@ import org.wgs.security.User;
 
 @Entity
 @Table(name="APP_ACHIEVEMENT")
+@NamedQueries({
+    @NamedQuery(name="wgs.findAppUserAchievement",query="SELECT DISTINCT OBJECT(a) FROM Achievement a WHERE a.app = ?1 and a.sourceUser = ?2 and a.name = ?3")
+})
 public class Achievement implements Serializable
 {
     private static final long serialVersionUID = 0L;

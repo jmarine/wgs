@@ -62,6 +62,10 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                             Member m1 = g.getMember(2-winner);
                             saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
                             saveAchievement(g, m1.getRole(), m1.getUser(), "LOSE", m0.getUser().getUid());
+
+                            Ranking ranking = Ranking.getInstance(g.getApplication());
+                            ranking.addResult(m0.getUser(), m1.getUser(), 1.0); 
+                            ranking.updateRatings();
                         }
                         
                     }
@@ -114,6 +118,10 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                     Member m1 = g.getMember(1);
                     saveAchievement(g, m0.getRole(), m0.getUser(), "DRAW", m1.getUser().getUid());
                     saveAchievement(g, m1.getRole(), m1.getUser(), "DRAW", m0.getUser().getUid());
+                    
+                    Ranking ranking = Ranking.getInstance(g.getApplication());
+                    ranking.addResult(m0.getUser(), m1.getUser(), 0.5); 
+                    ranking.updateRatings();
 
                     isValid = true;                  
 
@@ -133,6 +141,10 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                                 && m1 != null && m1.getUser() != null) {
                             saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
                             saveAchievement(g, m1.getRole(), m1.getUser(), "LOSE", m0.getUser().getUid());
+                            
+                            Ranking ranking = Ranking.getInstance(g.getApplication());
+                            ranking.addResult(m0.getUser(), m1.getUser(), 1.0);                            
+                            ranking.updateRatings();
                         }
                     }
 
@@ -188,6 +200,10 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                                 Member m1 = g.getMember(2-winner);
                                 saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
                                 saveAchievement(g, m1.getRole(), m1.getUser(), "LOSE", m0.getUser().getUid());
+                                
+                                Ranking ranking = Ranking.getInstance(g.getApplication());
+                                ranking.addResult(m0.getUser(), m1.getUser(), 1.0);
+                                ranking.updateRatings();
                             }
 
                         }

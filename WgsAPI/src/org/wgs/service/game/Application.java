@@ -405,6 +405,21 @@ public class Application implements Serializable
         }
         return array;
     }    
+    
+    
+    @Override
+    public boolean equals(Object o)
+    {
+        Application app = (Application)o;
+        return (id.equals(app.getAppId()));
+    }
+    
+    
+    @Override
+    public int hashCode()
+    {
+        return id.hashCode();
+    }
 
     
 }
