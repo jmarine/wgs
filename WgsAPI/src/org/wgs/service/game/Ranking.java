@@ -2,18 +2,15 @@ package org.wgs.service.game;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
-import org.apache.naming.java.javaURLContextFactory;
 import org.wgs.security.User;
 import org.wgs.util.Storage;
 
@@ -171,8 +168,10 @@ public class Ranking extends Glicko2
             for(User player : updatedRatingsByUser.keySet()) {
                 Rating updatedRating = updatedRatingsByUser.get(player);
                 saveUserRating(app, player, updatedRating);
+                
+                Rating old = ratingsByUser.put(player, updatedRating);
+                if(old != null) ratingsInOrder.remove(old);
                 ratingsInOrder.add(updatedRating);
-                ratingsByUser.put(player, updatedRating);
             }
 
             tx.commit();
