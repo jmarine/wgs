@@ -558,7 +558,7 @@ function delete_app() {
     var appId = $("#apps").val();
     if(confirm("Do you really want to delete the application?")) {
         wgsclient.deleteApp(appId, function(id,details,errorURI,result,resultKw) {
-            if(!errorURI) {
+            if(errorURI) {
                 alert("Error deleting application:"+response.errorDesc);
             } else {
                 $('#btn_automatch_group').attr("disabled", "true");
@@ -587,7 +587,7 @@ function create_app() {
     $("#app_roles option").each(function() { roles[roles.length] = $(this).attr("value"); });
     
     wgsclient.newApp(name, domain, version, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, function(id,details,errorURI,result,resultKw) {
-        if(!errorURI) {
+        if(errorURI) {
             alert("Error creating application:"+response.errorDesc);
         } else {
             update_apps(id,details,errorURI,result,resultKw);
@@ -883,7 +883,7 @@ function remove_last_member(memberId) {
     var gid = $("#group_gid").val();
     var slot = $("#group_params table[id='members'] tbody tr").size();
     wgsclient.updateMember(appId, gid, "", -slot, false, false, false, false, false, function(id,details,errorURI,result,resultKw) {
-        if(!errorURI) {
+        if(errorURI) {
             alert("error while removing slot");
         } else {
             $("button.remove_member").each(function(index, item) { 
