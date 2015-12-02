@@ -197,6 +197,7 @@ public class Server
 
             setupDataSources(ctx, serverConfig);
 
+            
             // Start WAMP applications:
             tyrusServerContainer = setupWampContexts(serverConfig);        
             WampCluster.start(serverConfig);
