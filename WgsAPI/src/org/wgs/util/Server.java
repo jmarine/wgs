@@ -196,7 +196,6 @@ public class Server
             ctx.bind("java:comp/DefaultManagedScheduledExecutorService", scheduledExecService);
 
             setupDataSources(ctx, serverConfig);
-            
 
             // Start WAMP applications:
             tyrusServerContainer = setupWampContexts(serverConfig);        
