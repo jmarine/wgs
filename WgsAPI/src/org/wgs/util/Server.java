@@ -201,6 +201,7 @@ public class Server
             // Start WAMP applications:
             tyrusServerContainer = setupWampContexts(serverConfig);        
             WampCluster.start(serverConfig);
+            System.out.println("WGS server started.");
 
             // Wait manual termination:
             if(System.getenv("OPENSHIFT_APP_NAME") == null) {
