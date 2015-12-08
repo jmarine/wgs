@@ -1,0 +1,573 @@
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+		<title>Web game services client</title>
+                <link rel="stylesheet" href="css2/jquery-ui.css" />
+		<script type="text/javascript" src="js/jquery-1.8.3.js"></script>
+		<script type="text/javascript" src="js/jquery-ui-1.9.2.js"></script>
+                <script type="text/javascript" src="js/mustache-0.7.2.js"></script>
+                <script type="text/javascript" src="js/md5.js"></script>
+                <script type="text/javascript" src="js/hmac-sha256.js"></script>
+                <script type="text/javascript" src="js/pbkdf2.js"></script>
+                <script type="text/javascript" src="js/enc-base64-min.js"></script>
+                <script type="text/javascript" src="js/wamp2.js"></script>
+		<script type="text/javascript" src="js/wgs-client-2.0.js"></script>
+<style type="text/css">
+
+* {
+  font-family: Verdana, sans-serif;
+  font-size: 12px;
+  color: #6c3000;
+}
+
+body {
+  background: #f7e3a4; 
+}
+
+button, input, select, option {
+  background: #fff0c0; 
+}
+
+.scrollTableData {
+  background: #fff0c0; 
+  border: 1px #6c3000 solid;
+}
+
+.scrollTableHeader {
+  background: #dac394;
+  border: 1px #6c3000 solid; border-top-left-radius: 6px; border-top-right-radius: 6px;
+}
+
+.scrollTableRow > td {
+  border-bottom: 1px #6c3000 solid; 
+}
+
+button, input, select {
+  border: 1px #6c3000 solid;
+  margin-bottom: 2px;
+  /* margin-top: 1px; */  
+}
+
+
+button {
+  border-radius: 6px;
+  margin-top: 5px;
+}
+
+.ui-buttonset { 
+  alignment-baseline: central;
+}
+
+.ui-corner-all { border-radius: 4px; }
+.ui-menu { list-style:none; padding: 2px; margin: 0; display:block; outline: none; }
+.ui-menu .ui-menu-item { margin: 0; padding: 0; zoom: 1; width: 100%; background-color: #fff0c0; }
+.ui-menu .ui-menu-item a { text-decoration: none; display: block; padding: 2px 1px; line-height: 1.5; zoom: 1;  }
+.ui-menu .ui-menu-item a.ui-state-focus,
+.ui-menu .ui-menu-item a.ui-state-active { background:#dac394; }
+
+#tests_section {
+    display: none;
+}
+
+#openid_providers_menu {
+    border: 1px #6c3000 solid;
+    border-radius: 6px; 
+    margin-top: 2px;
+}
+
+#toggle_connect {
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+#oic_connect {
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    margin-left: -5px;
+    padding-left: 0px;
+    padding-right: 0px;
+    background-image: url(images/oic.png);
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: 14px,14px;
+    width: 20px;
+}
+
+button:active {
+  background: #dac394;
+}
+
+button:disabled, input:disabled {
+  background: #f7e3a4;
+  color: #777777;
+}
+
+option:active {
+  background-color: #dac394;
+}
+
+fieldset { border: 1px #6c3000 solid; border-radius: 10px; }
+legend { border: 1px #6c3000 solid; margin-left: 0.5em; padding: 0.2em 0.8em; border-radius: 10px; font-weight: bold; color: #6c3000; background:#dac394 }
+
+label { /*display: block;*/ float: left; width: 90px; clear: left; }
+
+.section { clear: both; width: 100%; padding-bottom: 10px; padding-right: 20px; }
+.right { float: left; clear: right; }
+
+.hidden { display: none; }
+
+</style>
+
+<script language="javascript">
+var wgsclient = null;
+var notificationChannel = null;
+var appSubscriptionId = null;
+var groupSubscriptionId = null;
+
+
+function initApp() {
+    enable_network();
+    
+    $( "#toggle_connect" )
+            .button()
+            .click(function() {
+                toggle_connect(false);
+            })
+            .next()
+                .button({
+                    text: false,
+                    icons: {
+                        primary: "ui-icon-triangle-1-s"
+                    }
+                })
+                .click(function() {
+                    openid_connect_menu(this);
+                    return false;
+                })
+                .parent()
+                    .buttonset()
+                    .next()
+                        .hide()
+                        .menu();    
+}
+
+function enable_network() {
+    notificationChannel = get_url_param(document.location.href,"gcmChannelId");
+    if(notificationChannel == null) notificationChannel = get_url_param(document.location.href,"state");
+    
+    $("#group_params").hide();
+    $("#login").slideDown(500);
+    $("#tests_section").hide();
+    
+    $("#server_url").removeAttr("disabled");
+    $("#user").removeAttr("disabled");
+    $("#password").removeAttr("disabled");
+    $("#register").removeAttr("disabled");
+    
+    $("#user").val("");
+    $("#password").val("");
+    $("#user_picture").width(0).height(0);    
+    $("#password").show();
+    $("#lbl_password").show();
+}
+
+
+function onUserChange(user) {
+    //var old = $("#toggle_connect").html();
+    if(user.length > 0) {
+        $("#toggle_connect").html("Log in");  
+    } else if(wgsclient!=null && wgsclient.getState() != ConnectionState.AUTHENTICATED) {
+        $("#toggle_connect").html("Disconnect");  
+    } else {
+        $("#toggle_connect").html("Connect");
+    }
+}
+
+function authentication(state, msg) {
+    console.log("authentication state: " + state);
+
+    if(state == ConnectionState.ERROR) {
+        if(wgsclient != null && wgsclient.getState() != ConnectionState.AUTHENTICATED) {
+            $("#toggle_connect").html("Disconnect");  
+        } else {
+            $("#toggle_connect").html("Connect");
+        }
+        alert(msg);
+        
+    } else if(state == ConnectionState.CONNECTED) {
+        $("#server_url").attr("disabled", "disabled");
+        
+    } else if(state == ConnectionState.CHALLENGED) {        
+        console.log("Challenge: " + msg);
+        
+        if(msg._oauth2_provider_url) {
+            window.open(msg._oauth2_provider_url + "&state=" + escape(notificationChannel), '_blank');
+            
+        } else if(msg._oauth2_providers) {  
+            // OAuth 2.0 / OpenID Connect selector
+            var providers = $("#openid_providers_menu");
+            providers.find("li:gt(0)").each(function(){
+                $(this).remove();
+            });
+            
+            msg._oauth2_providers.forEach(function(provider) {
+                var link = $("<a>");
+                link.text(provider.name);
+                link.attr("class", "ui-corner-all")
+                if(provider.url) link.attr("onclick", "javascript:window.open('" + provider.url + "&state=" + escape(notificationChannel) + "','_blank')");
+                // else link.attr("onclick", "javascript:wgsclient.openIdConnectFromSubject('"+realm+"','"+provider.registrationEndpoint+"', get_openid_connect_callback_url(), notificationChannel, authentication);");
+
+                var item = $("<li>");
+                item.attr("class", "ui-menu-item").append(link)
+                providers.append(item);
+            });
+
+        
+            var menu = $( "#oic_connect" ).parent().next().show().position({
+                            my: "left top",
+                            at: "left bottom",
+                            offset: "0 2",
+                            of: "#toggle_connect"
+                        });
+            $( document ).one( "click", function() {
+                menu.hide();
+                //wgsclient.close();
+                //wgsclient = null;
+            });
+        }
+
+
+    } else if(state == ConnectionState.WELCOMED) {
+        console.log("WAMP session established.");
+        
+    } else if(state == ConnectionState.AUTHENTICATED) {
+        $("#register").attr("disabled", "disabled");
+        $("#oic_connect").attr("disabled", "disabled");
+        $("#toggle_connect").html("Disconnect");
+        $("#tests_section").show();
+
+        if(msg && msg.picture) {
+            $("#user_picture").attr("src", msg.picture).width(48).height(48);
+        } else {
+            $("#user_picture").attr("src", "images/anonymous.png").width(48).height(48);
+        }
+            
+        $("#user").attr("disabled", "disabled");
+        $("#password").attr("disabled", "disabled");
+
+        if(msg.name) $("#user").val(msg.name);
+        $("#lbl_password").hide();
+        $("#password").hide();            
+
+    } else if(state == ConnectionState.DISCONNECTED || state == ConnectionState.CLOSED) {
+        disconnect();
+    }
+        
+}
+
+
+function getWgsClient() {
+    var url = $("#server_url").val();
+    if(!wgsclient || (url != wgsclient.url)) {
+        if(wgsclient) {
+            try { wgsclient.close(); } 
+            catch(e) { }
+        }
+        wgsclient = new WgsClient(url);
+    }
+    return wgsclient;
+}
+
+
+function getOAuth2ClientName()
+{
+    return "WebGL 8x8 board games";
+}
+
+
+function openid_connect(redirectUri) {
+    
+    if(!wgsclient) wgsclient = getWgsClient();
+    var realm = wgsclient.getDefaultRealm();
+    if(!redirectUri) {
+        redirectUri = get_openid_connect_callback_url();
+        var user = $("#user").val();
+        if(user.length == 0) {
+            alert("User name is empty");
+        } else {
+            wgsclient = getWgsClient();
+            wgsclient.openIdConnectFromSubject(realm, user, getOAuth2ClientName(), redirectUri, notificationChannel, authentication);
+        }
+        
+    } else {
+        var code = get_url_param(redirectUri, "code");
+        if(code != null) {
+            var url = $("#server_url").val();
+            var provider = get_url_param(redirectUri, "provider");
+            redirectUri = clear_openid_connect_params(redirectUri, false);
+            
+            if(!wgsclient) wgsclient = new WgsClient(url);
+            wgsclient.openIdConnectAuthCode(realm, provider, getOAuth2ClientName(), redirectUri, code, notificationChannel, authentication);
+        } else {
+            var error = get_url_param(redirectUri, "error");
+            disconnect();
+        }
+    }
+}
+
+function get_url_param(url, param) {
+    var value = null;
+    var pos = url.indexOf("&"+param+"=");
+    if(pos == -1) pos = url.indexOf("?"+param+"=");
+    if(pos != -1) {
+        value = url.substring(pos+param.length+2);
+        pos = value.indexOf("&");
+        if(pos != -1) value = value.substring(0, pos);
+    }
+    return value;
+}
+
+function get_openid_connect_callback_url() {
+    var url = "http://localhost:8080/webgl8x8boardgames/oauth2callback.html";
+    return url;
+}
+
+function clear_openid_connect_params(url,clearProvider) {
+    // Clear OpenId Connect's parameters
+    var oicParams = ["code","state","error","error_description","authuser","prompt","session_state","num_sessions"];
+    if(clearProvider) oicParams = ["provider", "code","state","error","error_description","authuser","prompt","session_state","gcmChannelId","num_sessions"];
+    oicParams.forEach(function(param) {
+        var paramPos = url.indexOf("&"+param+"=");
+        if(paramPos == -1) paramPos = url.indexOf("?"+param+"=");
+        if(paramPos != -1) {
+            var paramEnd = url.indexOf("&", paramPos+1);
+            var otherParams = (paramEnd != -1)? url.substring(paramEnd+1) : "";
+            var offset = (otherParams.length==0)? 0 : 1;
+            url = url.substring(0, paramPos+offset) + otherParams;
+        }
+    });
+
+    return url;
+}
+
+
+
+function disconnect() {
+    if(wgsclient != null) {
+        wgsclient.close();
+        wgsclient = null;
+    }
+    
+    $("#server_url").removeAttr("disabled");
+    $("#user").removeAttr("disabled");
+    $("#password").removeAttr("disabled");
+    $("#user_picture").width(0).height(0);    
+
+    $("#register").removeAttr("disabled");
+    $("#oic_connect").removeAttr("disabled");
+    $("#toggle_connect").html("Connect");
+    $("#participants").html("");
+    
+    $("#login").hide();
+    $("#tests_section").hide();    
+    
+    enable_network();
+}
+
+
+function toggle_connect(create_user) {
+    if($("#toggle_connect").html() != "Disconnect") {
+        var user = $("#user").val();
+        var pass = $("#password").val();
+        $("#user").val("");
+        $("#password").val("");
+        $("#user_picture").width(0).height(0);
+        
+        wgsclient = getWgsClient();
+        var realm = wgsclient.getDefaultRealm();
+        var details = { "_notification_channel": notificationChannel, "_oauth2_client_name": getOAuth2ClientName() };
+        if(create_user) {
+            var email = prompt("Enter e-mail:");
+            if(email) wgsclient.registerUser(getOAuth2ClientName(), realm, user, pass, email, notificationChannel, authentication);
+        } else if(user.length > 0) {
+            wgsclient.login(realm, details, user, pass, authentication);
+        } else {
+            wgsclient.login(realm, details, null, null, authentication);
+        }
+    } else {
+        wgsclient.goodbye("wamp.close.normal");
+    }
+}
+
+function openid_connect_menu(self) {
+    var url = $("#server_url").val();
+    var redirectUri = get_openid_connect_callback_url();
+    wgsclient = getWgsClient();
+    var user = $("#user").val();    
+    var realm = wgsclient.getDefaultRealm();
+    
+    wgsclient.openIdConnectProviders(user, realm, getOAuth2ClientName(), redirectUri, authentication);
+}
+
+
+function test_rpc_func(args,argsKw,opts)
+{
+    return [3,2,1];
+}
+
+function test_register_rcp()
+{
+    wgsclient.registerRPC({"match": "exact"}, "mymodule.myfunc", test_rpc_func).then(function() { alert("registered"); } );
+}
+
+function test_unregister_rcp()
+{
+    wgsclient.unregisterRPC({"match": "exact"}, "mymodule.myfunc", test_rpc_func).then(function() { alert("unregistered"); } );
+}
+
+function test_call_rcp()
+{
+    wgsclient.call("mymodule.myfunc", [1,2,3], {}, {"runon": "all", "runmode": "progressive", "disclose_me": 1, "exclude_me": 0})
+        .then(
+            function(id,details,errorURI,result,resultKw) { append_message("Result: " + JSON.stringify(result))} ,
+            function(id,details,errorURI,result,resultKw) { append_message("Error: " + errorURI)},
+            function(id,details,errorURI,progress,progressKw) { append_message("Progress: " + JSON.stringify(progress)) }
+        );
+}
+
+function list_rpcs()
+{
+    wgsclient.call("wamp.reflection.procedure.list", [], {}, {"runon": "any", "runmode": "gather", "disclose_me": 1})
+        .then(
+            function(id,details,errorURI,result,resultKw) { append_message("Result: " + JSON.stringify(result))} ,
+            function(id,details,errorURI,result,resultKw) { append_message("Error: " + errorURI)},
+            function(id,details,errorURI,progress,progressKw) { append_message("Progress: " + JSON.stringify(progress)) }
+        );
+}
+
+
+function list_topics()
+{
+    wgsclient.call("wamp.reflection.topic.list", [], {}, {"runon": "any", "runmode": "gather", "disclose_me": 1})
+        .then(
+            function(id,details,errorURI,result,resultKw) { append_message("Result: " + JSON.stringify(result))} ,
+            function(id,details,errorURI,result,resultKw) { append_message("Error: " + errorURI)},
+            function(id,details,errorURI,progress,progressKw) { append_message("Progress: " + JSON.stringify(progress)) }
+        );
+}
+
+function on_mytopic_events(publicationId, details, errorURI, payload, payloadKw, topicURI)
+{
+    append_message("TopicURI: " + JSON.stringify(topicURI));
+    append_message("Payload: " + JSON.stringify(payload));
+    append_message("PayloadKw: " + JSON.stringify(payloadKw));
+    append_message("");
+}
+
+function on_mytopic_metaevents(topicURI, metatopic, metaevent)
+{
+    append_message("Topic URI: " + JSON.stringify(topicURI));
+    append_message("Metatopic: " + JSON.stringify(metatopic));
+    append_message("Metaevent: " + JSON.stringify(metaevent));
+    append_message("");
+}
+
+
+var myappSubscriptionId = null;
+function test_subscribe()
+{
+    wgsclient.subscribe("myapp", on_mytopic_events, on_mytopic_metaevents, {"match": "prefix", "metatopics": ["wamp.topic.on_subscribe", "wamp.topic.on_unsubscribe"] })
+        .then(
+            function(response) { myappSubscriptionId = response; alert("Subscribed: " + response); },
+            function(response) { alert("Error: " + response); }
+        );
+}
+
+function test_unsubscribe()
+{
+    wgsclient.unsubscribe(myappSubscriptionId, on_mytopic_events, on_mytopic_metaevents)
+        .then(
+            function(response) { alert("Unsubscribed: " + response); },
+            function(response) { alert("Error: " + response); }
+        );
+
+    myappSubscriptionId = null;
+}
+
+function test_publish()
+{
+    wgsclient.publish("myapp.topic1", [1,"data2"], { "item1" : 1 }, { "exclude_me": false });
+}
+
+function clear_messages()
+{
+    $("#messages").empty();
+}
+
+function append_message(text)
+{
+    $("#messages").append(text + "<br>");
+}
+
+</script>
+
+</head>
+<body onload="javascript:initApp();">
+<div id="wrapper" style="width: 370px">
+  <div id="login" class="section hidden">
+    <fieldset>
+      <legend>Login</legend>
+      
+    <table>
+    <tr>
+        <td><label for="server_url">Service:</label></td><td><input type="text" name="server_url" id="server_url" value="ws://localhost:8080/wgs" /></td>
+        <td rowspan="3" valign="top">
+            <img id="user_picture" width="0" height="0">
+        </td>
+    </tr>
+    <tr><td><label for="user">User:</label></td><td><input type="text" name="user" id="user" value="guest" onkeyup="javascript:onUserChange(this.value)" /></td></tr>
+    <tr><td><label for="password" id="lbl_password">Password:</label></td><td><input type="password" name="password" id="password" value="" /></td></tr>
+    </table>
+      
+    <div class="ui-buttonset">
+      <button id="toggle_connect">Connect</button>
+      <button id="oic_connect">&nbsp;</button>
+      <button id="register" onclick="toggle_connect(true);">Register</button>
+    </div>
+    
+    <ul id="openid_providers_menu" style="display: none">
+        <li><a href="javascript:openid_connect(false);">OpenID Connect provider</a></li>
+    </ul>    
+    
+    </fieldset>
+  </div>
+    
+
+
+  <div id="tests_section" class="section">
+    <fieldset>
+        <legend>WAMP tests</legend>
+        <button onclick="test_register_rcp();">Register RPC</button>
+        <button onclick="test_unregister_rcp();">Unregister RPC</button>          
+        <button onclick="test_call_rcp();">Call RPC</button>
+        <br>  
+        <button onclick="test_subscribe();">Subscribe</button>
+        <button onclick="test_unsubscribe();">Unsubscribe</button>          
+        <button onclick="test_publish();">Publish</button>
+        <br>          
+        <button onclick="list_topics()">List topics</button>
+        <button onclick="list_rpcs()">List RPCs</button>
+        <button onclick="clear_messages();">Clear messages</button>        
+        <br>          
+    </fieldset>
+
+    <fieldset>
+      <legend>Messages</legend>
+      <div id="messages">
+      </div>
+    </fieldset>
+      
+  </div>
+</div>
+</body>
+</html>

@@ -322,10 +322,15 @@ function authentication(state, msg) {
         }
 
 
-    } else if(state == ConnectionState.WELCOMED || state == ConnectionState.AUTHENTICATED) {
+    } else if(state == ConnectionState.WELCOMED) {
+        console.log("WAMP session established.");
+        list_apps();        
+        
+    } else if(state == ConnectionState.AUTHENTICATED) {
         $("#register").attr("disabled", "disabled");
         $("#oic_connect").attr("disabled", "disabled");
         $("#toggle_connect").html("Disconnect");
+        
 
         if(msg && msg.picture) {
             $("#user_picture").attr("src", msg.picture).width(48).height(48);
@@ -333,18 +338,12 @@ function authentication(state, msg) {
             $("#user_picture").attr("src", "images/anonymous.png").width(48).height(48);
         }
             
-        if(state == ConnectionState.AUTHENTICATED) {
-            $("#user").attr("disabled", "disabled");
-            $("#password").attr("disabled", "disabled");
-            
-            if(msg.name) $("#user").val(msg.name);
-            $("#lbl_password").hide();
-            $("#password").hide();            
-            
-        } else {
-            list_apps();
-        }
+        $("#user").attr("disabled", "disabled");
+        $("#password").attr("disabled", "disabled");
 
+        if(msg.name) $("#user").val(msg.name);
+        $("#lbl_password").hide();
+        $("#password").hide();            
 
     } else if(state == ConnectionState.DISCONNECTED || state == ConnectionState.CLOSED) {
         disconnect();
@@ -612,10 +611,10 @@ function delete_role() {
     $("#app_roles option:selected").remove();
 }
 
-function new_group() {
-    var gid = $("#new_grp_automatch").is(":checked") ? "automatch" : "";
+function new_group(automatch) {
+    var gid = null;
     var options = new Object();
-    options.automatch = $("#new_grp_automatch").is(":checked");
+    options.automatch = automatch || $("#new_grp_automatch").is(":checked");
     options.observable = $("#new_grp_observable").is(":checked");
     options.hidden = $("#new_grp_hidden").is(":checked");
     options.password = $("#new_grp_password").val();
@@ -1101,7 +1100,6 @@ function clear_openid_connect_params(url,clearProvider) {
 
 function disconnect() {
     if(wgsclient != null) {
-        //if(wgsclient.getState() >= ConnectionState.WELCOMED) exit_group(true);
         wgsclient.close();
         wgsclient = null;
     }
@@ -1159,102 +1157,10 @@ function openid_connect_menu(self) {
     var url = $("#server_url").val();
     var redirectUri = get_openid_connect_callback_url();
     wgsclient = getWgsClient();
+    var user = $("#user").val();  
     var realm = wgsclient.getDefaultRealm();
     
-    wgsclient.openIdConnectProviders(realm, getOAuth2ClientName(), redirectUri, authentication);
-}
-
-
-function test_rpc_func(args,argsKw,opts)
-{
-    return [3,2,1];
-}
-
-function test_register_rcp()
-{
-    wgsclient.registerRPC({"match": "exact"}, "mymodule.myfunc", test_rpc_func).then(function() { alert("registered"); } );
-}
-
-function test_unregister_rcp()
-{
-    wgsclient.unregisterRPC({"match": "exact"}, "mymodule.myfunc", test_rpc_func).then(function() { alert("unregistered"); } );
-}
-
-function test_call_rcp()
-{
-    clear_messages();
-    wgsclient.call("mymodule.myfunc", [1,2,3], {}, {"runon": "all", "runmode": "progressive", "disclose_me": 1, "exclude_me": 0})
-        .then(
-            function(id,details,errorURI,result,resultKw) { append_message("Result: " + JSON.stringify(result))} ,
-            function(id,details,errorURI,result,resultKw) { append_message("Error: " + errorURI)},
-            function(id,details,errorURI,progress,progressKw) { append_message("Progress: " + JSON.stringify(progress)) }
-        );
-}
-
-function list_rpcs()
-{
-    clear_messages();
-    wgsclient.call("wamp.reflection.procedure.list", [], {}, {"runon": "any", "runmode": "gather", "disclose_me": 1})
-        .then(
-            function(id,details,errorURI,result,resultKw) { append_message("Result: " + JSON.stringify(result))} ,
-            function(id,details,errorURI,result,resultKw) { append_message("Error: " + errorURI)},
-            function(id,details,errorURI,progress,progressKw) { append_message("Progress: " + JSON.stringify(progress)) }
-        );
-}
-
-
-function list_topics()
-{
-    clear_messages();
-    wgsclient.call("wamp.reflection.topic.list", [], {}, {"runon": "any", "runmode": "gather", "disclose_me": 1})
-        .then(
-            function(id,details,errorURI,result,resultKw) { append_message("Result: " + JSON.stringify(result))} ,
-            function(id,details,errorURI,result,resultKw) { append_message("Error: " + errorURI)},
-            function(id,details,errorURI,progress,progressKw) { append_message("Progress: " + JSON.stringify(progress)) }
-        );
-}
-
-function on_mytopic_events(publicationId, details, errorURI, payload, payloadKw, topicURI)
-{
-    append_message("TopicURI: " + JSON.stringify(topicURI));
-    append_message("Payload: " + JSON.stringify(payload));
-    append_message("PayloadKw: " + JSON.stringify(payloadKw));
-    append_message("");
-}
-
-function on_mytopic_metaevents(topicURI, metatopic, metaevent)
-{
-    append_message("Topic URI: " + JSON.stringify(topicURI));
-    append_message("Metatopic: " + JSON.stringify(metatopic));
-    append_message("Metaevent: " + JSON.stringify(metaevent));
-    append_message("");
-}
-
-
-var myappSubscriptionId = null;
-function test_subscribe()
-{
-    wgsclient.subscribe("myapp", on_mytopic_events, on_mytopic_metaevents, {"match": "prefix", "metatopics": ["wamp.topic.on_subscribe", "wamp.topic.on_unsubscribe"] })
-        .then(
-            function(response) { myappSubscriptionId = response; alert("Subscribed: " + response); },
-            function(response) { alert("Error: " + response); }
-        );
-}
-
-function test_unsubscribe()
-{
-    wgsclient.unsubscribe(myappSubscriptionId, on_mytopic_events, on_mytopic_metaevents)
-        .then(
-            function(response) { alert("Unsubscribed: " + response); },
-            function(response) { alert("Error: " + response); }
-        );
-
-    myappSubscriptionId = null;
-}
-
-function test_publish()
-{
-    wgsclient.publish("myapp.topic1", [1,"data2"], { "item1" : 1 }, { "exclude_me": false });
+    wgsclient.openIdConnectProviders(user, realm, getOAuth2ClientName(), redirectUri, authentication);
 }
 
 function clear_messages()
@@ -1381,7 +1287,7 @@ function append_message(text)
       </div>
     <br>
 
-    <button id="btn_automatch_group_list" onclick="open_group('automatch');">Auto-Match</button>
+    <button id="btn_automatch_group_list" onclick="new_group(true);">Auto-Match</button>
     <button id="btn_new_group" onclick="show_new_group_params();">New</button>
     <button id="btn_hide_group" onclick="hide_group_list();">Exit</button>
     </fieldset>
@@ -1395,7 +1301,7 @@ function append_message(text)
       <label for="new_grp_observable">Observable</label><input type="checkbox" name="new_grp_observable" id="new_grp_observable" /><br/>
       <label for="new_grp_hidden">Hidden:</label><input type="checkbox" name="new_grp_hidden" id="new_grp_hidden" /><br/>
       <label for="new_grp_password">Password:</label><input type="password" name="new_grp_password" id="new_grp_password" /><br/>
-      <button id="new_group" onclick="new_group();">Create</button>
+      <button id="new_group" onclick="new_group(false);">Create</button>
       <button id="hide_group" onclick="hide_new_group_params();">Exit</button>
     </fieldset>
   </div>
@@ -1437,25 +1343,6 @@ function append_message(text)
     </fieldset>
   </div>
 
-
-  <div id="dev_section" class="section">
-    <fieldset>
-        <legend>WAMP tests</legend>
-        <button onclick="test_register_rcp();">Register RPC</button>
-        <button onclick="test_unregister_rcp();">Unregister RPC</button>          
-        <button onclick="test_call_rcp();">Call RPC</button>
-        <br>  
-        <button onclick="test_subscribe();">Subscribe</button>
-        <button onclick="test_unsubscribe();">Unsubscribe</button>          
-        <button onclick="test_publish();">Publish</button>
-        <br>          
-        <button onclick="list_topics()">List topics</button>
-        <button onclick="list_rpcs()">List RPCs</button>
-        <button onclick="clear_messages();">Clear messages</button>        
-        <br>          
-    </fieldset>
-  </div>
-    
   <div id="dev_section" class="section">
     <fieldset>
       <legend>Messages</legend>
