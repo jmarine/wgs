@@ -47,7 +47,37 @@ public class Server
         if(args.length > 0) configFileName = args[0];
 
         FileReader configReader = null;
-        Properties serverConfig = new Properties();
+        Properties serverConfig = new Properties() {
+            
+            private boolean isValidEnvChar(char ch)
+            {
+                if(Character.isLetterOrDigit(ch)) return true;
+                else if(ch == '_') return true;
+                else return false;
+            }
+            
+            public String getProperty(String key) {
+                String val = super.getProperty(key);
+                if(val == null) {
+                    return null;
+                } else {
+                    int ini=0, pos = 0;
+                    StringBuffer retval = new StringBuffer();
+                    while( (pos = val.indexOf("$", ini)) != -1) {
+                        retval.append(val.substring(ini, pos));
+                        int end = pos+1;
+                        while(end<val.length() && isValidEnvChar(val.charAt(end))) end = end+1;
+                        
+                        retval.append(System.getenv(val.substring(pos+1,end)));
+                        ini = end;
+                    }
+                    retval.append(val.substring(ini));
+                    // System.out.println("Value for key=" + key + " = " + retval.toString());
+                    return retval.toString();
+                }
+            }
+        };
+                
         try {
             configReader = new FileReader(configFileName);
             serverConfig.load(configReader);
