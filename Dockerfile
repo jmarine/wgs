@@ -50,3 +50,4 @@ WORKDIR /var/opt/wgs
 # Define default command.
 CMD java -Xmx128m -Djava.util.logging.config.file=/etc/opt/wgs/logging.properties -Dderby.drda.startNetworkServer=true -Dderby.drda.host=0.0.0.0 -Dderby.drda.portNumber=15270 -jar /opt/wgs/dist/WgsAPI.jar /etc/opt/wgs/wgs_$WGS_NODE_TYPE.properties
 
+
