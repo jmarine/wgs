@@ -44,12 +44,11 @@ public class OpenIdConnectUtils
             TypedQuery<OpenIdConnectProvider> queryProviders = manager.createNamedQuery("OpenIdConnectProvider.findAll", OpenIdConnectProvider.class);
             for(OpenIdConnectProvider provider : queryProviders.getResultList()) {
                 String domain = provider.getDomain();
-                if(!domains.contains(domain) && !"defaultProvider".equals(domain)) {
-                    WampDict node = new WampDict();
+                if(!domains.contains(domain)) {
                     try {
                         String url = getAuthURL(clientName, redirectUri, domain, null);  // Auto registration with OpenID Connect provider
 
-                        //node.put("registrationEndpoint", provider.getRegistrationEndpointUrl());
+                        WampDict node = new WampDict();
                         node.put("name", domain);
                         node.put("url", url);  
                         providers.add(node);
@@ -82,7 +81,7 @@ public class OpenIdConnectUtils
         String providerDomain = null;
         
         if(principal == null || principal.length() == 0) {
-            providerDomain = "defaultProvider";            
+            providerDomain = "";            
         } else {
             try { 
                 String normalizedIdentityURL = principal;
@@ -106,7 +105,7 @@ public class OpenIdConnectUtils
             manager = Storage.getEntityManager();
             OpenIdConnectClientPK oidcId = new OpenIdConnectClientPK(providerDomain, clientName);
             OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcId);
-            if(oidcClient == null && !providerDomain.equals("defaultProvider")) {
+            if(oidcClient == null && providerDomain.length() > 0) {
                 OpenIdConnectProvider provider = manager.find(OpenIdConnectProvider.class, providerDomain);
                 if(provider == null) {
                     JsonObject oidcConfig = OpenIdConnectProvider.discover(principal);

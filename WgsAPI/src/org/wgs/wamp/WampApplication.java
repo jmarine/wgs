@@ -54,7 +54,7 @@ public class WampApplication
     private TreeMap<String,WampMethod> rpcsByPattern;
     private Map<String,Set<Long>> wampSessionsByUserId = new ConcurrentHashMap<String,Set<Long>>();
 
-    
+
     public static void registerWampApplication(int version, String path, WampApplication app)
     {
         apps.put(getAppKey(version, path), app);
@@ -97,7 +97,7 @@ public class WampApplication
         registerWampModules();
         
         this.defaultModule = new WampModule(this);
-        //WampServices.registerApplication(path, this);
+        
     }
 
     

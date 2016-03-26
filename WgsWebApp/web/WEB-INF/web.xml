@@ -14,14 +14,11 @@
             30
         </session-timeout>
     </session-config>
+    
     <!--
     <resource-env-ref>
-        <resource-env-ref-name>
-          concurrent/WampRPC
-        </resource-env-ref-name>
-        <resource-env-ref-type>
-          javax.enterprise.concurrent.ManagedExecutorService
-        </resource-env-ref-type>
+        <resource-env-ref-name>concurrent/WampRpcExecutorService</resource-env-ref-name>
+        <resource-env-ref-type>javax.enterprise.concurrent.ManagedExecutorService</resource-env-ref-type>
     <resource-env-ref>
     -->
     <resource-ref>
@@ -30,4 +27,29 @@
         <res-auth>Container</res-auth>
         <res-sharing-scope>Shareable</res-sharing-scope>
     </resource-ref>
+    
+    <env-entry>
+        <env-entry-name>cluster/enabled</env-entry-name>
+        <env-entry-type>java.lang.String</env-entry-type>
+        <env-entry-value>true</env-entry-value>
+    </env-entry>
+
+    <env-entry>
+        <env-entry-name>cluster/wamp_realm</env-entry-name>
+        <env-entry-type>java.lang.String</env-entry-type>
+        <env-entry-value>realm1</env-entry-value>
+    </env-entry>            
+            
+    <env-entry>
+        <env-entry-name>cluster/wamp_node_url</env-entry-name>
+        <env-entry-type>java.lang.String</env-entry-type>
+        <env-entry-value>ws://localhost:8080/wgs</env-entry-value>
+    </env-entry>    
+    
+    <env-entry>
+        <env-entry-name>cluster/wamp_server_url</env-entry-name>
+        <env-entry-type>java.lang.String</env-entry-type>
+        <env-entry-value>ws://localhost:8080/wgs</env-entry-value>
+    </env-entry>        
+    
 </web-app>

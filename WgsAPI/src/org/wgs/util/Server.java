@@ -90,6 +90,19 @@ public class Server
         return serverConfig;
     }
     
+    private static void setupJndiEnvironment(InitialContext ctx, Properties serverConfig) throws NamingException
+    {
+        if(serverConfig != null) {
+            for(String propName : serverConfig.stringPropertyNames()) {
+                if(propName.startsWith("env.")) {
+                    String key = propName.substring(4).replace(".", "/");
+                    String jndi = "java:comp/env/" + key;
+                    String value = serverConfig.getProperty(propName);
+                    ctx.bind(jndi, value);
+                } 
+            }    
+        }
+    }
     
     private static void setupDataSources(InitialContext ctx, Properties serverConfig) throws NamingException
     {
@@ -144,6 +157,7 @@ public class Server
 
                 int wampVersion = Integer.parseInt(serverConfig.getProperty("context." + context + ".wampVersion", "2"));
                 WampApplication wampApplication = WampApplication.getInstance(wampVersion, uri);
+
                 //tyrusServerConfig = tyrusServerConfig.endpoint(WampEndpoint.class, uri);
                 //server.publishServer(WampEndpoint.class  /* , uri */ );
 
@@ -199,14 +213,11 @@ public class Server
         
         InitialContext ctx = new InitialContext();
         ctx.createSubcontext("concurrent");
-        ctx.createSubcontext("jms");
-        ctx.createSubcontext("jdbc");
-        ctx.createSubcontext("java:");
         ctx.createSubcontext("java:comp");
-        ctx.createSubcontext("java:/comp");
-        ctx.createSubcontext("java:/comp/env");
-        ctx.createSubcontext("java:/comp/env/jdbc");
-        
+        ctx.createSubcontext("java:comp/env");
+        ctx.createSubcontext("java:comp/env/jdbc");
+        ctx.createSubcontext("java:comp/env/cluster");
+       
         
         Runtime.getRuntime().addShutdownHook(new Thread() {
            @Override
@@ -225,12 +236,13 @@ public class Server
             ctx.bind("java:comp/DefaultManagedExecutorService", execService);
             ctx.bind("java:comp/DefaultManagedScheduledExecutorService", scheduledExecService);
 
+            setupJndiEnvironment(ctx, serverConfig);
             setupDataSources(ctx, serverConfig);
 
             
             // Start WAMP applications:
             tyrusServerContainer = setupWampContexts(serverConfig);        
-            WampCluster.start(serverConfig);
+            WampCluster.start();
             System.out.println("WGS server started.");
 
             // Wait manual termination:

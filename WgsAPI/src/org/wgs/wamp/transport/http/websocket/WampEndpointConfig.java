@@ -165,13 +165,24 @@ public class WampEndpointConfig
         }
     }
     
-
     
+    /*
+    @Override
+    public <T> T getEndpointInstance(Class<T> endpointClass) throws InstantiationException
+    {
+        T endpoint = super.getEndpointInstance(endpointClass);
+        if(endpoint instanceof WampEndpoint) {
+            ((WampEndpoint)endpoint).setup();
+        }
+        return endpoint;
+    }    
+    */
+
     @Override
     public Class<?> getEndpointClass() {
         return endpointClass;
     }
-
+    
     @Override
     public String getPath() {
         return application.getPath();

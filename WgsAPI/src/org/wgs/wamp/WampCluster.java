@@ -6,6 +6,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.naming.InitialContext;
 
 import org.wgs.wamp.annotation.WampSubscribe;
 import org.wgs.wamp.client.WampClient;
@@ -23,6 +24,7 @@ public class WampCluster extends WampModule
 
     private static Logger   logger = Logger.getLogger(WampCluster.class.getName());
     
+    private static WampCluster cluster = null;
     private static String   clusterEnabled = null;
     private static String   wgsClusterNodeEndpoint = null;
     
@@ -34,7 +36,7 @@ public class WampCluster extends WampModule
 
     
 
-    public WampCluster(WampApplication app) {
+    private WampCluster(WampApplication app) {
         super(app);
     }
     
@@ -80,23 +82,31 @@ public class WampCluster extends WampModule
     
     
     
-    public static void start(Properties serverConfig) throws Exception
+    public static synchronized WampCluster start() 
     {
-        clusterEnabled = serverConfig.getProperty("cluster.enabled");
-        if(clusterEnabled != null && !"false".equals(clusterEnabled.toLowerCase())) {
-            wgsClusterNodeEndpoint = serverConfig.getProperty("cluster.wamp.node_url");
+        if(cluster == null) {
+            try {
+                InitialContext ctx = new InitialContext();
+                clusterEnabled = (String)ctx.lookup("java:comp/env/cluster/enabled");
+                if(clusterEnabled != null && !"false".equals(clusterEnabled.toLowerCase())) {
+                    String wampClusterRealm = (String)ctx.lookup("java:comp/env/cluster/wamp_realm");
+                    String wampClusterUrl   = (String)ctx.lookup("java:comp/env/cluster/wamp_server_url");
+                    wgsClusterNodeEndpoint  = (String)ctx.lookup("java:comp/env/cluster/wamp_node_url");
 
-            String wampClusterUrl = serverConfig.getProperty("cluster.wamp.server_url");
-            String wampClusterRealm = serverConfig.getProperty("cluster.wamp.realm");
+                    masterConnection = new WampClient(wampClusterUrl);
+                    cluster = new WampCluster(masterConnection.getWampApplication());
+                    masterConnection.getWampApplication().registerWampModule(cluster);
+                    masterConnection.connect();
+                    masterConnection.hello(wampClusterRealm, null, null, false);
+                    masterConnection.waitResponses();
 
-            masterConnection = new WampClient(wampClusterUrl);
-            masterConnection.getWampApplication().registerWampModule(new WampCluster(masterConnection.getWampApplication()));
-            masterConnection.connect();
-            masterConnection.hello(wampClusterRealm, null, null, false);
-            masterConnection.waitResponses();
-
-            publishClusterNodeEvent(null, "wgs.cluster.node_attached");
+                    publishClusterNodeEvent(null, "wgs.cluster.node_attached");
+                }
+            } catch(Exception ex) {
+                cluster = null;
+            }                
         }
+        return cluster;
     }    
     
     private static void publishClusterNodeEvent(Long toNode, String wgsClusterEventType) throws Exception
