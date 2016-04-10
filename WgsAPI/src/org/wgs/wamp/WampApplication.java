@@ -121,7 +121,12 @@ public class WampApplication
     }
     
     public boolean start() {
-        return !started.getAndSet(true);
+        if(!started.getAndSet(true)) {
+            WampCluster.startApplicationNode();
+            return true;
+        } else {
+            return false;
+        }
     }
     
 

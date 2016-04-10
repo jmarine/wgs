@@ -20,21 +20,28 @@ import org.wgs.wamp.type.WampMatchType;
 
 public class WampCluster extends WampModule
 {
-    public  static final    String brokerId = "wgs-" + UUID.randomUUID().toString();
-
-    private static Logger   logger = Logger.getLogger(WampCluster.class.getName());
+    public  static String       brokerId = "wgs-" + UUID.randomUUID().toString();
+    private static Logger       logger = Logger.getLogger(WampCluster.class.getName());
     
-    private static WampCluster cluster = null;
-    private static String   clusterEnabled = null;
-    private static String   wgsClusterNodeEndpoint = null;
+    private static WampCluster  cluster = null;
+    private static String       clusterEnabled = null;
+    private static String       wgsClusterNodeEndpoint = null;
     
     private static final String wgsClusterTopicName = "wgs.cluster";
     
-    private static WampClient masterConnection = null;
+    private static WampClient   masterConnection = null;
+    public  static int          clusterNodeListSyncMaxMillis = 100;
+    
     
     private static HashMap<String, Node> nodes = new HashMap<String, Node>();
 
-    
+    static {
+        String maxMillis = System.getProperty("WGS_CLUSTER_NODE_LIST_SYNC_MAX_MILLIS");
+        if(maxMillis != null) {
+            try { clusterNodeListSyncMaxMillis = Integer.parseInt(maxMillis); }
+            catch(Exception ex) { }
+        }
+    }
 
     private WampCluster(WampApplication app) {
         super(app);
@@ -82,7 +89,7 @@ public class WampCluster extends WampModule
     
     
     
-    public static synchronized WampCluster start() 
+    public static synchronized WampCluster startApplicationNode() 
     {
         if(cluster == null) {
             try {
@@ -101,6 +108,7 @@ public class WampCluster extends WampModule
                     masterConnection.waitResponses();
 
                     publishClusterNodeEvent(null, "wgs.cluster.node_attached");
+                    Thread.sleep(clusterNodeListSyncMaxMillis);  // FIXME: wait for cluster node list synchronization
                 }
             } catch(Exception ex) {
                 cluster = null;

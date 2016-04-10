@@ -7,6 +7,7 @@ import java.security.MessageDigest;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.websocket.ClientEndpointConfig;
@@ -77,8 +78,16 @@ public class WampClient
 
         
         this.wampApp = new WampApplication(WampApplication.WAMPv2, null) {
+            
+            private AtomicBoolean started = new AtomicBoolean(false);
+            
             @Override
-            public void registerWampModules() { }         
+            public void registerWampModules() { }   
+            
+            @Override
+            public boolean start() {
+                return !started.getAndSet(true);  // disable router-to-router clustering registration
+            }
             
             @Override
             public void onWampMessage(final WampSocket clientSocket, WampList request) throws Exception

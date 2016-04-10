@@ -51,7 +51,6 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
         pollTimeoutMillis = (timeout != null) ? Long.parseLong(timeout) : 15000; 
         
         application = WampApplication.getInstance(WampApplication.WAMPv2, contextPath);
-        if(application.start()) onApplicationStart(application);
         System.out.println("WampLongPollingServlet: initialized on " + contextPath);
     }
 
@@ -70,6 +69,8 @@ public class WampLongPollingServlet extends HttpServlet implements AsyncListener
     @Override
     public void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException 
     {
+        if(application.start()) onApplicationStart(application);
+        
         String path = request.getPathInfo();
         System.out.println("WampLongPollingServlet: service: path info = " + path);
         

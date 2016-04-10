@@ -242,7 +242,7 @@ public class Server
             
             // Start WAMP applications:
             tyrusServerContainer = setupWampContexts(serverConfig);        
-            WampCluster.start();
+            //WampCluster.startApplicationNode();
             System.out.println("WGS server started.");
 
             // Wait manual termination:
