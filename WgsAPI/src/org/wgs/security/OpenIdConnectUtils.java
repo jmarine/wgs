@@ -230,7 +230,7 @@ public class OpenIdConnectUtils
 
                     usr.setName(userInfoNode.getString("name"));
                     if(userInfoNode.containsKey("email")) usr.setEmail(userInfoNode.getString("email"));
-                    usr.setPicture("https://graph.facebook.com/"+id+"/picture");
+                    usr.setPicture("https://graph.facebook.com/v2.1/"+id+"/picture");
                     usr.setTokenCaducity(expiration);                
                     usr.setAccessToken(accessToken);
                 }
