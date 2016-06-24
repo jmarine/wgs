@@ -103,29 +103,50 @@ public class Social
         //}
 
 
-        URL url = new URL("https://graph.facebook.com/" + usr.getLogin() + "/friends?access_token="+URLEncoder.encode(accessToken,StandardCharsets.UTF_8.toString()));
-        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-        connection.setDoOutput(false);
-
-        try(JsonReader jsonReader = Json.createReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
-            
-            JsonObject dataNode = jsonReader.readObject();
-
-            JsonArray items = dataNode.getJsonArray("data");
-            for(int index = 0; index < items.size(); index++) {
-                JsonObject item = items.getJsonObject(index);
-                String login = item.getString("id");
-                List<User> found = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", login, domain);
-                User friend = (found != null && found.size() > 0)? found.get(0) : null;
-                if(friend != null && !friends.contains(friend)) {
-                    friends.add(friend);
-                }
+        String nextPage = "https://graph.facebook.com/v2.1/" + usr.getLogin() + "/friends";
+        do {
+            if(!nextPage.contains("access_token")) {
+                if(!nextPage.contains("?")) nextPage += "?";
+                else nextPage += "&";
+                nextPage = nextPage + "access_token="+URLEncoder.encode(accessToken,StandardCharsets.UTF_8.toString());
             }
             
-        } finally {
-            connection.disconnect();
-        }
+            System.out.println("Facebook CALL: " + nextPage);
+            URL url = new URL(nextPage);
+            nextPage = null;
+            
+            HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+            connection.setDoOutput(false);
 
+            try(JsonReader jsonReader = Json.createReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+
+                JsonObject friendsNode = jsonReader.readObject();
+                System.out.println(friendsNode.toString());
+
+                JsonArray items = friendsNode.getJsonArray("data");
+                for(int index = 0; index < items.size(); index++) {
+                    JsonObject item = items.getJsonObject(index);
+                    String login = item.getString("id");
+                    List<User> found = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", login, domain);
+                    User friend = (found != null && found.size() > 0)? found.get(0) : null;
+                    if(friend != null && !friends.contains(friend)) {
+                        friends.add(friend);
+                    }
+                }
+                
+                JsonObject pagingNode = friendsNode.getJsonObject("paging");
+                nextPage = (pagingNode.containsKey("next")) ? pagingNode.getString("next") : null;
+                
+            } catch(Exception e) {
+                
+                System.err.println("Social.getFacebookFriends: Error: " + e.getClass().getName() + ":" + e.getMessage());
+                e.printStackTrace();
+
+            } finally {
+                connection.disconnect();
+            }
+        
+        } while(nextPage != null);
 
         usr.setFriends(friends);
         usr = Storage.saveEntity(usr);
