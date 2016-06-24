@@ -121,7 +121,6 @@ public class Social
             try(JsonReader jsonReader = Json.createReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
 
                 JsonObject friendsNode = jsonReader.readObject();
-                System.out.println(friendsNode.toString());
 
                 JsonArray items = friendsNode.getJsonArray("data");
                 for(int index = 0; index < items.size(); index++) {
