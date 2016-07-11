@@ -24,11 +24,11 @@ COPY WgsAPI/logging.properties /etc/opt/wgs/logging.properties
 WORKDIR /opt/wgs
 RUN ant -f build.xml jar
 
-# Create application directories with their special permissions
+# Define application directories/permissions and data volume
 RUN chown -R www-data:www-data /etc/opt/wgs
 RUN chown -R www-data:www-data /var/www/html
 RUN mkdir -p /var/opt/wgs && chown -R www-data:www-data /var/opt/wgs
-
+VOLUME /var/opt/wgs
 
 # Run WGS server
 # (we don't want to exit on key press, like in OpenShift environments)
