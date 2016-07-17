@@ -31,6 +31,7 @@ public class WampCluster extends WampModule
     
     private static WampClient   masterConnection = null;
     public  static int          clusterNodeListSyncMaxMillis = 100;
+    public  static int          masterNodeReconnectionDelayMillis = 1000;
     
     
     private static HashMap<String, Node> nodes = new HashMap<String, Node>();
@@ -88,7 +89,6 @@ public class WampCluster extends WampModule
     }
     
     
-    
     public static synchronized WampCluster startApplicationNode() 
     {
         if(cluster == null) {
@@ -96,52 +96,61 @@ public class WampCluster extends WampModule
                 InitialContext ctx = new InitialContext();
                 clusterEnabled = (String)ctx.lookup("java:comp/env/cluster/enabled");
                 if(clusterEnabled != null && !"false".equals(clusterEnabled.toLowerCase())) {
-                    final String wampClusterRealm = (String)ctx.lookup("java:comp/env/cluster/wamp_realm");
                     final String wampClusterUrl   = (String)ctx.lookup("java:comp/env/cluster/wamp_server_url");
                     wgsClusterNodeEndpoint  = (String)ctx.lookup("java:comp/env/cluster/wamp_node_url");
 
-                    masterConnection = new WampClient(wampClusterUrl) {
-
-                        @Override
-                        public void onWampSessionEnd(WampSocket clientSocket) {
-                            int error = 0;
-                            System.out.println("Cluster session ended");
-                            super.onWampSessionEnd(clientSocket);
-                            
-                            if(clusterEnabled != null && !"false".equals(clusterEnabled.toLowerCase())) {                            
-                                do {
-                                    try {
-                                        Thread.sleep(1000);
-                                        masterConnection.connect();
-                                        masterConnection.hello(wampClusterRealm, null, null, false);
-                                        masterConnection.waitResponses();
-                                        System.out.println("Cluster session restablished");
-
-                                        publishClusterNodeEvent(null, "wgs.cluster.node_attached");
-                                        error = 0;
-                                    } catch(Exception ex) {
-                                        error++;
-                                        System.out.println("Cluster session error: " + ex.getClass().getName() + ": " + ex.getMessage());
-                                    }
-                                } while(error > 0);
-                            }
-                        }
-                    };
+                    masterConnection = new WampClient(wampClusterUrl);
                     cluster = new WampCluster(masterConnection.getWampApplication());
                     masterConnection.getWampApplication().registerWampModule(cluster);
-                    masterConnection.connect();
-                    masterConnection.hello(wampClusterRealm, null, null, false);
-                    masterConnection.waitResponses();
-
-                    publishClusterNodeEvent(null, "wgs.cluster.node_attached");
-                    Thread.sleep(clusterNodeListSyncMaxMillis);  // FIXME: wait for cluster node list synchronization
+                    connectToMasterNode();
                 }
             } catch(Exception ex) {
                 cluster = null;
             }                
         }
         return cluster;
-    }    
+    }   
+    
+    
+    @Override
+    public void onWampSessionEnd(WampSocket clientSocket) 
+    {
+        super.onWampSessionEnd(clientSocket);
+
+        if(clusterEnabled != null && !"false".equals(clusterEnabled.toLowerCase())) {                            
+            System.out.println("Connection with master node has been closed.");        
+            connectToMasterNode();
+        }
+    }
+    
+    
+    private static synchronized void connectToMasterNode()
+    {
+        int error = 0;
+        do {
+            try {        
+                InitialContext ctx = new InitialContext();
+                String wampClusterRealm = (String)ctx.lookup("java:comp/env/cluster/wamp_realm");
+                
+                masterConnection.connect();
+                masterConnection.hello(wampClusterRealm, null, null, false);
+                masterConnection.waitResponses();
+                System.out.println("Connection established with master node.");
+
+                publishClusterNodeEvent(null, "wgs.cluster.node_attached");   
+                error = 0;
+                
+                Thread.sleep(clusterNodeListSyncMaxMillis);  // FIXME: wait for cluster node list synchronization
+            } catch(Exception ex) {
+                error++;
+                System.out.println("Error connecting with master node: " + ex.getClass().getName() + ": " + ex.getMessage());
+                try { Thread.sleep(masterNodeReconnectionDelayMillis);  } // wait for master restart // wait for master restart
+                catch(Exception ex2) { }
+            }
+            
+        } while(error > 0);
+    }
+    
     
     private static void publishClusterNodeEvent(Long toNode, String wgsClusterEventType) throws Exception
     {

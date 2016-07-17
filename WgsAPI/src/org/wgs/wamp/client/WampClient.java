@@ -336,22 +336,12 @@ public class WampClient
                 }
             }        
             
-            @Override
-            public void onWampSessionEnd(WampSocket clientSocket) {
-                super.onWampSessionEnd(clientSocket);
-                WampClient.this.onWampSessionEnd(clientSocket);
-            }
-
         };
     }
     
     public WampApplication getWampApplication()
     {
         return wampApp;
-    }
-    
-    public void onWampSessionEnd(WampSocket clientSocket) {
-        
     }
     
     public WampSocket getWampSocket()
