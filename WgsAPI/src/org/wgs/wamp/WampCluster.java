@@ -96,11 +96,37 @@ public class WampCluster extends WampModule
                 InitialContext ctx = new InitialContext();
                 clusterEnabled = (String)ctx.lookup("java:comp/env/cluster/enabled");
                 if(clusterEnabled != null && !"false".equals(clusterEnabled.toLowerCase())) {
-                    String wampClusterRealm = (String)ctx.lookup("java:comp/env/cluster/wamp_realm");
-                    String wampClusterUrl   = (String)ctx.lookup("java:comp/env/cluster/wamp_server_url");
+                    final String wampClusterRealm = (String)ctx.lookup("java:comp/env/cluster/wamp_realm");
+                    final String wampClusterUrl   = (String)ctx.lookup("java:comp/env/cluster/wamp_server_url");
                     wgsClusterNodeEndpoint  = (String)ctx.lookup("java:comp/env/cluster/wamp_node_url");
 
-                    masterConnection = new WampClient(wampClusterUrl);
+                    masterConnection = new WampClient(wampClusterUrl) {
+
+                        @Override
+                        public void onWampSessionEnd(WampSocket clientSocket) {
+                            int error = 0;
+                            System.out.println("Cluster session ended");
+                            super.onWampSessionEnd(clientSocket);
+                            
+                            if(clusterEnabled != null && !"false".equals(clusterEnabled.toLowerCase())) {                            
+                                do {
+                                    try {
+                                        Thread.sleep(1000);
+                                        masterConnection.connect();
+                                        masterConnection.hello(wampClusterRealm, null, null, false);
+                                        masterConnection.waitResponses();
+                                        System.out.println("Cluster session restablished");
+
+                                        publishClusterNodeEvent(null, "wgs.cluster.node_attached");
+                                        error = 0;
+                                    } catch(Exception ex) {
+                                        error++;
+                                        System.out.println("Cluster session error: " + ex.getClass().getName() + ": " + ex.getMessage());
+                                    }
+                                } while(error > 0);
+                            }
+                        }
+                    };
                     cluster = new WampCluster(masterConnection.getWampApplication());
                     masterConnection.getWampApplication().registerWampModule(cluster);
                     masterConnection.connect();
@@ -139,6 +165,7 @@ public class WampCluster extends WampModule
     {
         if(clusterEnabled != null && !"false".equals(clusterEnabled.toLowerCase())) {
             publishClusterNodeEvent(null, "wgs.cluster.node_detached");
+            clusterEnabled = null;
             masterConnection.close();
         }
     }    

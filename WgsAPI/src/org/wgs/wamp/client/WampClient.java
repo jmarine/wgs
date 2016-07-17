@@ -320,6 +320,7 @@ public class WampClient
                 }                
             }
             
+            @Override
             public void onWampSessionEstablished(WampSocket clientSocket, Long sessionId, WampDict details) 
             {
                 clientSocket.setRealm(helloRealm);
@@ -333,7 +334,13 @@ public class WampClient
                     System.out.println("SEVERE: WampClient.onWampSessionEstablished: error: "  + ex.getMessage());
                     ex.printStackTrace();
                 }
-            }            
+            }        
+            
+            @Override
+            public void onWampSessionEnd(WampSocket clientSocket) {
+                super.onWampSessionEnd(clientSocket);
+                WampClient.this.onWampSessionEnd(clientSocket);
+            }
 
         };
     }
@@ -341,6 +348,10 @@ public class WampClient
     public WampApplication getWampApplication()
     {
         return wampApp;
+    }
+    
+    public void onWampSessionEnd(WampSocket clientSocket) {
+        
     }
     
     public WampSocket getWampSocket()

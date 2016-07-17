@@ -20,6 +20,7 @@ public class WampClientCalleeTest extends WampModule implements Runnable
     private static String  user = null;
     private static String  password = null;
     private static boolean digestPasswordMD5 = true;
+    private static boolean stop = false;
 
     
     private WampClient client;
@@ -48,12 +49,12 @@ public class WampClientCalleeTest extends WampModule implements Runnable
             client.connect();
 
             System.out.println("Connected");
-            
             client.hello(realm, user, password, digestPasswordMD5);
             client.waitResponses();
 
             System.out.println("Press a key to stop application.");
             System.in.read();
+            stop = true;
             
             client.close();
             
@@ -71,6 +72,28 @@ public class WampClientCalleeTest extends WampModule implements Runnable
         System.out.println("Hello " + details.getText("authid"));
         // doWork(10);
     }
+    
+    
+    @Override
+    public void onWampSessionEnd(WampSocket clientSocket) 
+    {
+        System.out.println("Wamp session ended");
+        super.onWampSessionEnd(clientSocket);
+        while(!stop && !client.isOpen()) {
+            try {
+                System.out.println("Trying to reconnect to wamp router.....");
+                client.connect();
+
+                System.out.println("Connected");
+                client.hello(realm, user, password, digestPasswordMD5);
+            } catch(Exception ex) {
+                System.out.println("Error reconnecting to wamp router: " + ex.getClass().getName() + ": " + ex.getMessage());
+                try { Thread.sleep(1000); }
+                catch(Exception ex2) { }
+            }
+        }
+    }
+    
     
     
     public static final void main(String args[]) throws Exception
