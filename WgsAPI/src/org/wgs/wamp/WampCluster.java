@@ -42,6 +42,12 @@ public class WampCluster extends WampModule
             try { clusterNodeListSyncMaxMillis = Integer.parseInt(maxMillis); }
             catch(Exception ex) { }
         }
+        
+        maxMillis = System.getProperty("WGS_MASTER_NODE_RECONNECTION_DELAY_MILLIS");
+        if(maxMillis != null) {
+            try { masterNodeReconnectionDelayMillis = Integer.parseInt(maxMillis); }
+            catch(Exception ex) { }
+        }
     }
 
     private WampCluster(WampApplication app) {
