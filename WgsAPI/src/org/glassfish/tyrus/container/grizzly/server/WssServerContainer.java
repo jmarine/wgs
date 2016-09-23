@@ -113,6 +113,7 @@ public class WssServerContainer extends GrizzlyServerContainer
                     networkListener.setSSLEngineConfig(new SSLEngineConfigurator(sslContextConfig, false, false, false));
                     networkListener.getKeepAlive().setIdleTimeoutInSeconds(-1);  // forever
                     networkListener.registerAddOn(new WebSocketAddOn(this, "/"));
+                    //networkListener.registerAddOn(new Http2AddOn());   // wait until Java 9 (ALPN support required)
 
                     server.addListener(networkListener);
                 }

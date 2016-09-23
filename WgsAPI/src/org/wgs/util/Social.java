@@ -199,7 +199,7 @@ public class Social
                 WampDict info = (WampDict)WampEncoding.JSON.getSerializer().deserialize(notificationChannel, 0, notificationChannel.length());
                 String endpoint = info.getText("endpoint");
                 if(endpoint != null) {
-                    if(endpoint.startsWith("https://updates.push.services.mozilla.com/push")) {
+                    if(endpoint.startsWith("https://updates.push.services.mozilla.com/")) {
                         
                         notifyWithMozillaPushService(app, endpoint, "{ \"provider\": \""+toUser.getDomain()+"\", \"gid\": \"" + gameGuid + "\"}", template);
                         
@@ -239,7 +239,8 @@ public class Social
     {
         URL url = new URL(endpoint); 
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-        connection.setRequestMethod("PUT");
+        connection.setRequestMethod("POST");                // PUT method doesn't work with FireFox 49
+        connection.setRequestProperty("TTL", "5184000");    // 1 month. Default TTL=0 means the message is discarded if the recipient is not actively connected
         connection.setDoOutput(false);
 
         try(BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
