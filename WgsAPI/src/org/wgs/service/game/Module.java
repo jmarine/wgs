@@ -1066,7 +1066,7 @@ public class Module extends WampModule
     }
 
     
-    private void notifyOfflineUsers(WampSocket fromClientSocket, Group g, String msg) throws Exception    
+    private void notifyOfflineUsers(WampSocket fromClientSocket, Group g, String msg) 
     {
         if(g != null && msg != null) {
             for(Member m : g.getMembers()) {

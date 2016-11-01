@@ -174,7 +174,7 @@ public class Social
         }
     }
     
-    public static void notifyUser(String app, WampSocket fromClientSocket, User toUser, String gameGuid, String template) throws Exception
+    public static void notifyUser(String app, WampSocket fromClientSocket, User toUser, String gameGuid, String template) 
     {
         User fromUser = (User)fromClientSocket.getUserPrincipal();
         template = template.replace("%me%", fromUser.getName());
@@ -184,48 +184,65 @@ public class Social
 
             manager = Storage.getEntityManager();
 
-            TypedQuery<UserPushChannel> queryProvider = manager.createNamedQuery("UserPushChannel.findByAppAndUser", UserPushChannel.class);
-            queryProvider.setParameter(1, app);
-            queryProvider.setParameter(2, toUser);
-
-            UserPushChannel userPushChannel = null;
+            // Web push API notifications
             try {
-                userPushChannel = queryProvider.getSingleResult();
-            } catch(NoResultException noEx) { }
+                TypedQuery<UserPushChannel> queryProvider = manager.createNamedQuery("UserPushChannel.findByAppAndUser", UserPushChannel.class);
+                queryProvider.setParameter(1, app);
+                queryProvider.setParameter(2, toUser);
 
-            if(userPushChannel != null) {
-                System.out.println("Sending notification to " + toUser.getName());
-                String notificationChannel = userPushChannel.getNotificationChannel();
-                WampDict info = (WampDict)WampEncoding.JSON.getSerializer().deserialize(notificationChannel, 0, notificationChannel.length());
-                String endpoint = info.getText("endpoint");
-                if(endpoint != null) {
-                    if(endpoint.startsWith("https://updates.push.services.mozilla.com/")) {
-                        
-                        notifyWithMozillaPushService(app, endpoint, "{ \"provider\": \""+toUser.getDomain()+"\", \"gid\": \"" + gameGuid + "\"}", template);
-                        
-                    } else if(endpoint.startsWith("https://android.googleapis.com/gcm/send")) {
-                        
-                        String subscriptionId = info.getText("subscriptionId");
-                        if(subscriptionId == null) {
-                            subscriptionId = endpoint.substring(endpoint.lastIndexOf("/")+1);
+                UserPushChannel userPushChannel = null;
+                try {
+                    userPushChannel = queryProvider.getSingleResult();
+                } catch(NoResultException noEx) { }
+
+                if(userPushChannel != null) {
+                    System.out.println("Sending notification to " + toUser.getName());
+                    String notificationChannel = userPushChannel.getNotificationChannel();
+                    WampDict info = (WampDict)WampEncoding.JSON.getSerializer().deserialize(notificationChannel, 0, notificationChannel.length());
+                    String endpoint = info.getText("endpoint");
+                    if(endpoint != null) {
+                        if(endpoint.startsWith("https://updates.push.services.mozilla.com/")) {
+
+                            notifyWithMozillaPushService(app, endpoint, "{ \"provider\": \""+toUser.getDomain()+"\", \"gid\": \"" + gameGuid + "\"}", template);
+
+                        } else if(endpoint.startsWith("https://android.googleapis.com/gcm/send")) {
+
+                            String subscriptionId = info.getText("subscriptionId");
+                            if(subscriptionId == null) {
+                                subscriptionId = endpoint.substring(endpoint.lastIndexOf("/")+1);
+                            }
+                            notifyWithGCM(app, subscriptionId, "{ \"provider\": \""+toUser.getDomain()+"\", \"gid\": \"" + gameGuid + "\"}", template);
+
                         }
-                        notifyWithGCM(app, subscriptionId, "{ \"provider\": \""+toUser.getDomain()+"\", \"gid\": \"" + gameGuid + "\"}", template);
-                        
                     }
+
+                } else {
+                    // SEND E-MAIL?  // but e-mail address are not verified, yet
                 }
 
-            } else {
-                // SEND E-MAIL?  // but e-mail address are not verified, yet
-            }
-
-            if("facebook.com".equals(toUser.getDomain()) && fromUser.getDomain().equals(toUser.getDomain())) {
-                System.out.println("Sending Facebook game activity to " + toUser.getName());
-                OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(toUser.getDomain(), app);
-                OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
-                notifyWithFacebook(oidcClient, toUser.getLogin(), "?provider=facebook.com&gid=" + gameGuid, template);
+            } catch(Exception ex) {
+                System.err.println("Social.notifyUser: Error: " + ex.getClass().getName() + ": " + ex.getMessage());
+                ex.printStackTrace(System.err);
             } 
             
+            
+            // Facebook game notifications:
+            try {
+                if("facebook.com".equals(toUser.getDomain()) && fromUser.getDomain().equals(toUser.getDomain())) {
+                    System.out.println("Sending Facebook game activity to " + toUser.getName());
+                    OpenIdConnectClientPK oidcPK = new OpenIdConnectClientPK(toUser.getDomain(), app);
+                    OpenIdConnectClient oidcClient = manager.find(OpenIdConnectClient.class, oidcPK);
+                    notifyWithFacebook(oidcClient, toUser.getLogin(), "?provider=facebook.com&gid=" + gameGuid, template);
+                }                       
+            } catch(Exception ex) {
+                System.err.println("Social.notifyUser: Error: " + ex.getClass().getName() + ": " + ex.getMessage());
+                ex.printStackTrace(System.err);
+            }             
                 
+        } catch(Exception ex) {
+            System.err.println("Social.notifyUser: Error: " + ex.getClass().getName() + ": " + ex.getMessage());
+            ex.printStackTrace(System.err);
+            
         } finally {
             if(manager != null) {
                 try { manager.close(); }
