@@ -103,7 +103,7 @@ public class Social
         //}
 
 
-        String nextPage = "https://graph.facebook.com/v2.2/" + usr.getLogin() + "/friends";
+        String nextPage = "https://graph.facebook.com/v2.8/" + usr.getLogin() + "/friends";
         do {
             if(!nextPage.contains("access_token")) {
                 if(!nextPage.contains("?")) nextPage += "?";
@@ -271,7 +271,7 @@ public class Social
     public static void notifyWithFacebook(OpenIdConnectClient oidcClient, String to_user_id, String rel_link, String template) throws Exception
     {
         String appToken = getFacebookAppAccessToken(oidcClient.getClientId(), oidcClient.getClientSecret());
-        URL url = new URL("https://graph.facebook.com/v2.2/" + to_user_id + "/apprequests?access_token="+ appToken + "&message=" + URLEncoder.encode(template,StandardCharsets.UTF_8.toString()) + "&data=" + URLEncoder.encode(rel_link,StandardCharsets.UTF_8.toString())); 
+        URL url = new URL("https://graph.facebook.com/v2.8/" + to_user_id + "/apprequests?access_token="+ appToken + "&message=" + URLEncoder.encode(template,StandardCharsets.UTF_8.toString()) + "&data=" + URLEncoder.encode(rel_link,StandardCharsets.UTF_8.toString())); 
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setRequestMethod("POST");
         connection.setDoOutput(false);
@@ -295,7 +295,7 @@ public class Social
     
     public static void clearFacebookNotifications(OpenIdConnectClient oidcClient, User usr) throws Exception
     {
-        URL url = new URL("https://graph.facebook.com/v2.2/me/apprequests?access_token="+ URLEncoder.encode(usr.getAccessToken(),StandardCharsets.UTF_8.toString()));
+        URL url = new URL("https://graph.facebook.com/v2.8/me/apprequests?access_token="+ URLEncoder.encode(usr.getAccessToken(),StandardCharsets.UTF_8.toString()));
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setDoOutput(false);
         
@@ -311,7 +311,7 @@ public class Social
                 if(application.getString("id").equalsIgnoreCase(oidcClient.getClientId())) {
                 
                     System.out.println("Deleting : " + id);
-                    url = new URL("https://graph.facebook.com/v2.2/" + id + "?access_token="+ URLEncoder.encode(usr.getAccessToken(),StandardCharsets.UTF_8.toString()));
+                    url = new URL("https://graph.facebook.com/v2.8/" + id + "?access_token="+ URLEncoder.encode(usr.getAccessToken(),StandardCharsets.UTF_8.toString()));
                     HttpURLConnection connection2 = (HttpURLConnection)url.openConnection();
                     connection2.setRequestMethod("DELETE");
                     connection2.setDoOutput(false);
