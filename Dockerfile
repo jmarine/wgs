@@ -28,7 +28,9 @@ RUN ant -f build.xml jar
 RUN chown -R www-data:www-data /etc/opt/wgs
 RUN chown -R www-data:www-data /var/www/html
 RUN mkdir -p /var/opt/wgs && chown -R www-data:www-data /var/opt/wgs
-VOLUME ["/var/opt/wgs", "/etc/opt/wgs", "/var/www/html"]
+
+# Disable volumes for Openshift (that mounts them as empty directories) 
+#VOLUME ["/var/opt/wgs", "/etc/opt/wgs", "/var/www/html"]
 
 # Run WGS server
 # (we don't want to exit on key press, like in OpenShift environments)
