@@ -27,7 +27,7 @@ RUN ant -f build.xml jar
 # Define application directories/permissions and data volume
 RUN chown -R www-data:www-data /etc/opt/wgs
 RUN chown -R www-data:www-data /var/www/html
-RUN mkdir -p /var/opt/wgs && chown -R www-data:www-data /var/opt/wgs
+RUN mkdir -p /var/opt/wgs/WgsDB && chown -R www-data:www-data /var/opt/wgs
 
 # Disable volumes for Openshift (that mounts them as empty directories) 
 #VOLUME ["/var/opt/wgs", "/etc/opt/wgs", "/var/www/html"]
