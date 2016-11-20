@@ -10,6 +10,7 @@ import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
@@ -53,6 +54,7 @@ public class Server
             {
                 if(Character.isLetterOrDigit(ch)) return true;
                 else if(ch == '_') return true;
+                else if(ch == '@') return true;
                 else return false;
             }
             
@@ -61,6 +63,7 @@ public class Server
                 if(val == null) {
                     return null;
                 } else {
+                    boolean debug = false;
                     int ini=0, pos = 0;
                     StringBuffer retval = new StringBuffer();
                     while( (pos = val.indexOf("$", ini)) != -1) {
@@ -68,11 +71,26 @@ public class Server
                         int end = pos+1;
                         while(end<val.length() && isValidEnvChar(val.charAt(end))) end = end+1;
                         
-                        retval.append(System.getenv(val.substring(pos+1,end)));
+                        String varname = val.substring(pos+1,end);
+                        if(varname.startsWith("@")) {
+                            varname = varname.substring(1);
+                            InetAddress address = null;
+                            try {
+                                address = InetAddress.getByName(varname);
+                                retval.append(address.getHostAddress());
+                            } catch (Exception e) {
+                                retval.append(System.getenv(varname));
+                            }
+
+                        } else {
+                            retval.append(System.getenv(varname));
+                        }
+                        
                         ini = end;
+                        debug = true;
                     }
                     retval.append(val.substring(ini));
-                    // System.out.println("Value for key=" + key + " = " + retval.toString());
+                    if(debug) System.out.println("Server.getProperty: " + key + " = " + retval.toString());
                     return retval.toString();
                 }
             }
