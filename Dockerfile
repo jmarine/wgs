@@ -32,6 +32,7 @@ RUN mkdir -p /var/opt/wgs
 
 # Disable volumes for Openshift (that mounts them as empty directories) 
 #VOLUME ["/var/opt/wgs", "/etc/opt/wgs", "/var/www/html"]
+VOLUME ["/var/opt/wgs"]
 
 # Run WGS server
 # (we don't want to exit on key press, like in OpenShift environments)
