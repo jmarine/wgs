@@ -72,17 +72,16 @@ public class Server
                         while(end<val.length() && isValidEnvChar(val.charAt(end))) end = end+1;
                         
                         String varname = val.substring(pos+1,end);
-                        if(varname.startsWith("@")) {
-                            varname = varname.substring(1);
-                            InetAddress address = null;
+                        if(varname.startsWith("@")) {   // resolve host IP from environment variable value
+                            String host = System.getenv(varname.substring(1));
                             try {
-                                address = InetAddress.getByName(varname);
+                                InetAddress address = InetAddress.getByName(host);
                                 retval.append(address.getHostAddress());
                             } catch (Exception e) {
-                                retval.append(System.getenv(varname));
+                                retval.append(host);
                             }
 
-                        } else {
+                        } else {    // get environment variable value
                             retval.append(System.getenv(varname));
                         }
                         
