@@ -25,9 +25,10 @@ WORKDIR /opt/wgs
 RUN ant -f build.xml jar
 
 # Define application directories/permissions and data volume
-RUN chown -R www-data:www-data /etc/opt/wgs
-RUN chown -R www-data:www-data /var/www/html
-RUN mkdir -p /var/opt/wgs && chown -R www-data:www-data /var/opt/wgs
+RUN mkdir -p /var/opt/wgs 
+#RUN chown -R www-data:www-data /var/opt/wgs
+#RUN chown -R www-data:www-data /etc/opt/wgs
+#RUN chown -R www-data:www-data /var/www/html
 
 # Disable volumes for Openshift (that mounts them as empty directories) 
 #VOLUME ["/var/opt/wgs", "/etc/opt/wgs", "/var/www/html"]
@@ -44,7 +45,7 @@ EXPOSE 8443/tcp
 EXPOSE 15270/tcp
 
 # Run as unprivileged user
-USER www-data
+#USER www-data
 
 # Set working directory (it must be the parent directory of Derby databases)
 WORKDIR /var/opt/wgs
