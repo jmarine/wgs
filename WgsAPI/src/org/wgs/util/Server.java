@@ -89,7 +89,7 @@ public class Server
                         debug = true;
                     }
                     retval.append(val.substring(ini));
-                    if(debug) System.out.println("Server.getProperty: " + key + " = " + retval.toString());
+                    //if(debug) System.out.println("Server.getProperty: " + key + " = " + retval.toString());
                     return retval.toString();
                 }
             }
