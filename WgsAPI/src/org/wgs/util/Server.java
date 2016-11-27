@@ -6,8 +6,6 @@
 
 package org.wgs.util;
 
-import com.mysql.jdbc.jdbc2.optional.MysqlDataSource;
-import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -25,7 +23,18 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 
+import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.commons.dbcp2.ConnectionFactory;
+import org.apache.commons.dbcp2.DriverManagerConnectionFactory;
+import org.apache.commons.dbcp2.PoolableConnection;
+import org.apache.commons.dbcp2.PoolableConnectionFactory;
+import org.apache.commons.dbcp2.PoolingDataSource;
+import org.apache.commons.pool2.ObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
+//import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
+
+import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 
 import org.wgs.wamp.WampApplication;
@@ -134,16 +143,7 @@ public class Server
                 String jndi = serverConfig.getProperty("database." + db + ".jndi");
                 String driver = serverConfig.getProperty("database." + db + ".driver", "derby");
                 switch(driver) {
-                    case "mysql":
-                        MysqlDataSource mysqlDS = mysqlDS = new MysqlDataSource();
-                        mysqlDS.setURL(serverConfig.getProperty("database." + db + ".url"));
-                        mysqlDS.setUser(serverConfig.getProperty("database." + db + ".user"));
-                        mysqlDS.setPassword(serverConfig.getProperty("database." + db + ".password"));
-                        ds = mysqlDS;
-                        break;
-
                     case "derby":
-                    default:
                         String path = serverConfig.getProperty("database." + db + ".path");
                         if(path != null) {
                             EmbeddedConnectionPoolDataSource40 derbyDS = new EmbeddedConnectionPoolDataSource40();
@@ -160,6 +160,18 @@ public class Server
                             derbyDS.setPassword(serverConfig.getProperty("database." + db + ".password"));
                             ds = derbyDS;
                         }
+                        break;
+                        
+                    default:                    
+                        ConnectionFactory connectionFactory = new DriverManagerConnectionFactory(
+                                serverConfig.getProperty("database." + db + ".url"),
+                                serverConfig.getProperty("database." + db + ".user"),
+                                serverConfig.getProperty("database." + db + ".password") );
+
+                        PoolableConnectionFactory poolableConnectionFactory = new PoolableConnectionFactory(connectionFactory, null);
+                        ObjectPool<PoolableConnection> connectionPool = new GenericObjectPool<>(poolableConnectionFactory);
+                        poolableConnectionFactory.setPool(connectionPool);
+                        ds = new PoolingDataSource<>(connectionPool);   
                         break;
                 } 
 
