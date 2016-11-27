@@ -6,6 +6,7 @@
 
 package org.wgs.util;
 
+import com.mysql.jdbc.jdbc2.optional.MysqlDataSource;
 import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -22,6 +23,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import javax.sql.DataSource;
 
 import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
 import org.glassfish.tyrus.server.TyrusServerContainer;
@@ -127,24 +129,42 @@ public class Server
         if(databases != null) {
             StringTokenizer tokenizer = new StringTokenizer(databases, ",");
             while(tokenizer.hasMoreTokens()) {
+                DataSource ds = null;
                 String db = tokenizer.nextToken();
                 String jndi = serverConfig.getProperty("database." + db + ".jndi");
-                String host = serverConfig.getProperty("database." + db + ".host");
-                if(host == null) {
-                    EmbeddedConnectionPoolDataSource40 ds = new EmbeddedConnectionPoolDataSource40();
-                    ds.setDatabaseName(serverConfig.getProperty("database." + db + ".path"));
-                    ds.setCreateDatabase("create");
-                    ctx.bind(jndi, ds);
-                } else {
-                    org.apache.derby.jdbc.ClientConnectionPoolDataSource40 ds = new org.apache.derby.jdbc.ClientConnectionPoolDataSource40();
-                    ds.setServerName(host);
-                    ds.setPortNumber(Integer.parseInt(serverConfig.getProperty("database." + db + ".port")));
-                    ds.setDatabaseName(db);
-                    ds.setCreateDatabase("create");
-                    ds.setUser(serverConfig.getProperty("database." + db + ".user"));
-                    ds.setPassword(serverConfig.getProperty("database." + db + ".password"));
-                    ctx.bind(jndi, ds);
-                }
+                String driver = serverConfig.getProperty("database." + db + ".driver", "derby");
+                switch(driver) {
+                    case "mysql":
+                        MysqlDataSource mysqlDS = mysqlDS = new MysqlDataSource();
+                        mysqlDS.setURL(serverConfig.getProperty("database." + db + ".url"));
+                        mysqlDS.setUser(serverConfig.getProperty("database." + db + ".user"));
+                        mysqlDS.setPassword(serverConfig.getProperty("database." + db + ".password"));
+                        ds = mysqlDS;
+                        break;
+
+                    case "derby":
+                    default:
+                        String path = serverConfig.getProperty("database." + db + ".path");
+                        if(path != null) {
+                            EmbeddedConnectionPoolDataSource40 derbyDS = new EmbeddedConnectionPoolDataSource40();
+                            derbyDS.setDatabaseName(path);
+                            derbyDS.setCreateDatabase("create");
+                            ds = derbyDS;
+                        } else {
+                            org.apache.derby.jdbc.ClientConnectionPoolDataSource40 derbyDS = new org.apache.derby.jdbc.ClientConnectionPoolDataSource40();
+                            derbyDS.setServerName(serverConfig.getProperty("database." + db + ".host"));
+                            derbyDS.setPortNumber(Integer.parseInt(serverConfig.getProperty("database." + db + ".port")));
+                            derbyDS.setDatabaseName(db);
+                            derbyDS.setCreateDatabase("create");
+                            derbyDS.setUser(serverConfig.getProperty("database." + db + ".user"));
+                            derbyDS.setPassword(serverConfig.getProperty("database." + db + ".password"));
+                            ds = derbyDS;
+                        }
+                        break;
+                } 
+
+                ctx.bind(jndi, ds);
+                
             } 
         }    
 

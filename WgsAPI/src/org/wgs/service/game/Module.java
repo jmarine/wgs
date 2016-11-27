@@ -233,6 +233,7 @@ public class Module extends WampModule
         app.setName(data.getText("name"));
         app.setDomain(data.getText("domain"));
         app.setVersion(data.getLong("version").intValue());
+        app.setActionValidator(data.getText("action_validator_class"));
         app.setMaxScores(data.getLong("max_scores").intValue());
         app.setDescendingScoreOrder(data.getBoolean("desc_score_order"));
         app.setMaxMembers(data.getLong("max").intValue());
