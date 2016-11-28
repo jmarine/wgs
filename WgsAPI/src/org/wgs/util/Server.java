@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.concurrent.Executors;
@@ -22,17 +23,6 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
-
-import org.apache.commons.dbcp2.BasicDataSource;
-import org.apache.commons.dbcp2.ConnectionFactory;
-import org.apache.commons.dbcp2.DriverManagerConnectionFactory;
-import org.apache.commons.dbcp2.PoolableConnection;
-import org.apache.commons.dbcp2.PoolableConnectionFactory;
-import org.apache.commons.dbcp2.PoolingDataSource;
-import org.apache.commons.pool2.ObjectPool;
-import org.apache.commons.pool2.impl.GenericObjectPool;
-import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40;
-//import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
 import org.glassfish.tyrus.container.grizzly.server.WssServerContainer;
 import org.glassfish.tyrus.server.TyrusServerContainer;
@@ -132,7 +122,7 @@ public class Server
         }
     }
     
-    private static void setupDataSources(InitialContext ctx, Properties serverConfig) throws NamingException
+    private static void setupDataSources(InitialContext ctx, Properties serverConfig) throws Exception
     {
         String databases = serverConfig.getProperty("databases");
         if(databases != null) {
@@ -141,12 +131,12 @@ public class Server
                 DataSource ds = null;
                 String db = tokenizer.nextToken();
                 String jndi = serverConfig.getProperty("database." + db + ".jndi");
-                String driver = serverConfig.getProperty("database." + db + ".driver", "derby");
-                switch(driver) {
+                String driverClassName = serverConfig.getProperty("database." + db + ".driverClassName", "derby");
+                switch(driverClassName) {
                     case "derby":
                         String path = serverConfig.getProperty("database." + db + ".path");
                         if(path != null) {
-                            EmbeddedConnectionPoolDataSource40 derbyDS = new EmbeddedConnectionPoolDataSource40();
+                            org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40 derbyDS = new org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40();
                             derbyDS.setDatabaseName(path);
                             derbyDS.setCreateDatabase("create");
                             ds = derbyDS;
@@ -156,22 +146,22 @@ public class Server
                             derbyDS.setPortNumber(Integer.parseInt(serverConfig.getProperty("database." + db + ".port")));
                             derbyDS.setDatabaseName(db);
                             derbyDS.setCreateDatabase("create");
-                            derbyDS.setUser(serverConfig.getProperty("database." + db + ".user"));
+                            derbyDS.setUser(serverConfig.getProperty("database." + db + ".username"));
                             derbyDS.setPassword(serverConfig.getProperty("database." + db + ".password"));
                             ds = derbyDS;
                         }
                         break;
                         
                     default:                    
-                        ConnectionFactory connectionFactory = new DriverManagerConnectionFactory(
-                                serverConfig.getProperty("database." + db + ".url"),
-                                serverConfig.getProperty("database." + db + ".user"),
-                                serverConfig.getProperty("database." + db + ".password") );
-
-                        PoolableConnectionFactory poolableConnectionFactory = new PoolableConnectionFactory(connectionFactory, null);
-                        ObjectPool<PoolableConnection> connectionPool = new GenericObjectPool<>(poolableConnectionFactory);
-                        poolableConnectionFactory.setPool(connectionPool);
-                        ds = new PoolingDataSource<>(connectionPool);   
+                        String dbPropertyPrefix = "database." + db + ".";
+                        Properties bdsfProperties = new Properties();
+                        for(Entry<Object,Object> entry : serverConfig.entrySet()) {
+                            String key = (String)entry.getKey();
+                            if(key.startsWith(dbPropertyPrefix)) {
+                                bdsfProperties.setProperty(key.substring(dbPropertyPrefix.length()), entry.getValue().toString());
+                            }
+                        }
+                        ds = org.apache.commons.dbcp2.BasicDataSourceFactory.createDataSource(bdsfProperties);
                         break;
                 } 
 
