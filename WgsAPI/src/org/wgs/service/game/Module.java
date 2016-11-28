@@ -58,7 +58,6 @@ public class Module extends WampModule
     private static final Logger logger = Logger.getLogger(Module.class.toString());
     public  static final String WGS_MODULE_NAME = "wgs";
     
-    private WampApplication wampApp = null;
     private Map<String, Application> applications = new ConcurrentHashMap<String,Application>();
     private Map<String, Group> groups = new ConcurrentHashMap<String,Group>();
     private Map<Long,Client> clients = new ConcurrentHashMap<Long,Client>();
@@ -67,7 +66,6 @@ public class Module extends WampModule
     public Module(WampApplication app)
     {
         super(app);
-        this.wampApp = app;
         
         WampBroker.createTopic(app, getFQtopicURI("apps_event"), null);
 
@@ -150,7 +148,7 @@ public class Module extends WampModule
         usr.setLastLoginTime(Calendar.getInstance());
         usr = Storage.saveEntity(usr);
 
-        wampApp.onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED, data);
+        getWampApplication().onUserLogon(socket, usr, WampConnectionState.AUTHENTICATED, data);
         
         return usr.toWampObject(true);
     }
@@ -202,12 +200,12 @@ public class Module extends WampModule
     
     
     private void registerApplication(Application app) {
-        WampBroker.createTopic(wampApp, getFQtopicURI("app_event."+app.getAppId()), null);
+        WampBroker.createTopic(getWampApplication(), getFQtopicURI("app_event."+app.getAppId()), null);
         applications.put(app.getAppId(), app);
     }
     
     private void unregisterApplication(Application app) {
-        WampBroker.removeTopic(wampApp, getFQtopicURI("app_event."+app.getAppId()));
+        WampBroker.removeTopic(getWampApplication(), getFQtopicURI("app_event."+app.getAppId()));
         applications.remove(app.getAppId());
     }
     
@@ -501,7 +499,7 @@ public class Module extends WampModule
             WampTopic topic = WampBroker.getTopic(topicName);
             if(topic == null) {
                 WampTopicOptions topicOptions = new WampTopicOptions();
-                topic = WampBroker.createTopic(wampApp, topicName, topicOptions);
+                topic = WampBroker.createTopic(getWampApplication(), topicName, topicOptions);
             }
             
             //WampSubscriptionOptions subscriptionOptions = new WampSubscriptionOptions(null);
@@ -1122,7 +1120,7 @@ public class Module extends WampModule
         eligible.add(socket.getWampSessionId());
         for(Member m : g.getMembers()) {
             if(m != null && m.getUser() != null) {
-                Set<Long> sessions = wampApp.getSessionsByUser(m.getUser());
+                Set<Long> sessions = getWampApplication().getSessionsByUser(m.getUser());
                 if(sessions != null) eligible.addAll(sessions);
             }
         }
