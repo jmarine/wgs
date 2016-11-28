@@ -3,6 +3,7 @@ package org.wgs.wamp.rpc;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.wgs.wamp.WampSocket;
@@ -20,7 +21,7 @@ public class WampCalleeRegistration
     
     private String methodRegExp;
     
-    private ConcurrentHashMap<Long,WampRemoteMethod> remoteMethods = new ConcurrentHashMap<Long,WampRemoteMethod>();
+    private ConcurrentHashMap<Long,WampRemoteMethod> remoteMethodsBySID = new ConcurrentHashMap<Long,WampRemoteMethod>();
     
     
 
@@ -62,7 +63,7 @@ public class WampCalleeRegistration
         if(sessionId == null) {
             sessionId = socket.getSocketId();
         }
-        remoteMethods.put(sessionId, remoteMethod);                    
+        remoteMethodsBySID.put(sessionId, remoteMethod);                    
     }
     
     public WampRemoteMethod removeRemoteMethod(WampSocket socket)
@@ -71,38 +72,76 @@ public class WampCalleeRegistration
         if(sessionId == null) {
             sessionId = socket.getSocketId();
         }        
-        return remoteMethods.remove(sessionId);
+        return remoteMethodsBySID.remove(sessionId);
     }
     
     public int getRemoteMethodsCount()
     {
-        return remoteMethods.size();
+        return remoteMethodsBySID.size();
     }
         
     
-    public Collection<WampRemoteMethod> getRemoteMethods(Long callerId, WampCallOptions options)
+    public Collection<WampRemoteMethod> getRemoteMethods(Long callerId, WampCallOptions optionsParam)
     {
         Collection<WampRemoteMethod> retval = new ArrayList<WampRemoteMethod>();
 
-        if(options == null) options = new WampCallOptions(null);
-        Set<Long> eligibleParam = options.getEligible();
-        Set<Long> excluded = options.getExcluded();
-        Set<Long> eligible = (eligibleParam != null) ? new HashSet<Long>(eligibleParam) : null;
-        if(eligible == null) eligible = remoteMethods.keySet();
-        else eligible.retainAll(remoteMethods.keySet());
+        final WampCallOptions options = (optionsParam != null)? optionsParam : new WampCallOptions(null);
+        Set<Long> eligibleOption = options.getEligibleSessionIds();
+        Set<Long> eligibleCopy = (eligibleOption != null) ? new HashSet<Long>(eligibleOption) : null;
+        if(eligibleCopy == null) eligibleCopy = new HashSet<Long>(remoteMethodsBySID.keySet());
+        else eligibleCopy.retainAll(remoteMethodsBySID.keySet());
 
-        if(excluded == null) excluded = new HashSet<Long>();        
+        Set<Long> excludedCopy = options.getExcludedSessionIds();
+        if(excludedCopy == null) excludedCopy = new HashSet<Long>();  
+        else excludedCopy = new HashSet<Long>(excludedCopy);
         if(callerId != null && options.hasExcludeMe()) {
-            excluded.add(callerId);
+            excludedCopy.add(callerId);
         }
+        
+        final Set<Long> excludedFinal = excludedCopy;
+        List<Long> sids = java.util.Arrays.asList(eligibleCopy.parallelStream().filter(sid -> {
+                WampRemoteMethod method = remoteMethodsBySID.get(sid);
+                if(method == null) return false;
 
-        for (Long sid : eligible) {
-            if(!excluded.contains(sid)) {
-                WampRemoteMethod method = remoteMethods.get(sid);
-                if(method != null) {
-                    retval.add(method);
+                WampSocket socket = method.getRemotePeer();
+
+                if(socket == null) return false;
+                if(excludedFinal != null && excludedFinal.contains(sid)) {
+                    return false;
                 }
-            }
+
+                String fqAuthId = socket.getAuthId()+"@"+socket.getAuthProvider();
+                if(options.getExcludedAuthIds() != null) {
+                    if(options.getExcludedAuthIds().contains(fqAuthId)) return false;
+                }
+                if(options.getEligibleAuthIds() != null) {
+                    if(!options.getEligibleAuthIds().contains(fqAuthId)) return false;
+                }
+
+                if(options.getExcludedAuthRoles() != null) {
+                    for(String role : options.getExcludedAuthRoles()) {
+                        if(socket.hasAuthRole(role)) return false;
+                    }
+                }                
+                if(options.getEligibleAuthRoles() != null) {
+                    boolean hasEligibleRole = false;
+                    for(String role : options.getEligibleAuthRoles()) {
+                        if(socket.hasAuthRole(role)) {
+                            hasEligibleRole = true;
+                            break;
+                        }
+                    }
+                    if(!hasEligibleRole) return false;
+                }
+
+                return true;
+            }).toArray(Long[]::new));
+        
+        for (Long sid : sids) {
+            WampRemoteMethod method = remoteMethodsBySID.get(sid);
+            if(method != null) {
+                retval.add(method);
+            }   
         }
         
         return retval;

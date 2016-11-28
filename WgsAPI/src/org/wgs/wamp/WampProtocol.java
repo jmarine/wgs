@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 import org.wgs.wamp.topic.WampTopic;
@@ -261,8 +262,60 @@ public class WampProtocol
         sendWampMessage(clientSocket, response);
     }    
     
+    public static List<Long> getEligibleSIDs(String realm, WampSubscription subscription, final WampPublishOptions publishOptions) 
+    {
+        Set<Long> excluded = publishOptions.getExcludedSessionIds();
+        Set<Long> eligibleOption = publishOptions.getEligibleSessionIds();
+        Set<Long> eligibleCopy = (eligibleOption != null) ? new HashSet<Long>(eligibleOption) : null;
+        if(eligibleCopy == null) eligibleCopy = new HashSet<Long>(subscription.getSessionIds(realm));
+        else eligibleCopy.retainAll(subscription.getSessionIds(realm));
+
+        /* TODO: check
+        if(clientSocket != null && options.hasExcludeMe()) {
+            excluded.add(clientSocket.getSessionId());
+        }
+        */
+        
+        List<Long> sids = java.util.Arrays.asList(eligibleCopy.parallelStream().filter(sid -> {
+                WampSocket socket = subscription.getSocket(sid);
+
+                if(socket == null) return false;
+                if(excluded != null && excluded.contains(sid)) {
+                    return false;
+                }
+
+                String fqAuthId = socket.getAuthId()+"@"+socket.getAuthProvider();
+                if(publishOptions.getExcludedAuthIds() != null) {
+                    if(publishOptions.getExcludedAuthIds().contains(fqAuthId)) return false;
+                }
+                if(publishOptions.getEligibleAuthIds() != null) {
+                    if(!publishOptions.getEligibleAuthIds().contains(fqAuthId)) return false;
+                }
+                
+                if(publishOptions.getExcludedAuthRoles() != null) {
+                    for(String role : publishOptions.getExcludedAuthRoles()) {
+                        if(socket.hasAuthRole(role)) return false;
+                    }
+                }                
+                if(publishOptions.getEligibleAuthRoles() != null) {
+                    boolean hasEligibleRole = false;
+                    for(String role : publishOptions.getEligibleAuthRoles()) {
+                        if(socket.hasAuthRole(role)) {
+                            hasEligibleRole = true;
+                            break;
+                        }
+                    }
+                    if(!hasEligibleRole) return false;
+                }
+                
+                return true;
+            }).toArray(Long[]::new));
+        
+        return sids;
+    }
     
-    public static void sendEvents(String realm, Long publicationId, WampTopic topic, WampList payload, WampDict payloadKw, Set<Long> eligibleParam, Set<Long> excluded, WampDict eventDetails) throws Exception
+    
+    public static void sendEvents(String realm, Long publicationId, WampTopic topic, WampList payload, WampDict payloadKw, WampPublishOptions publishOptions, WampDict eventDetails) throws Exception
     {
         // EVENT data
         if(eventDetails == null) eventDetails = new WampDict();
@@ -271,13 +324,8 @@ public class WampProtocol
             
             WampSubscriptionOptions subOptions = subscription.getOptions();
             if(subOptions != null && subOptions.hasEventsEnabled()) {     
-                
-                Set<Long> eligible = (eligibleParam != null) ? new HashSet<Long>(eligibleParam) : null;
-                if(eligible == null) eligible = subscription.getSessionIds(realm);
-                else eligible.retainAll(subscription.getSessionIds(realm));
 
-                final Set<Long> excludedImmutable = (excluded != null)? excluded : new HashSet<Long>();
-                List<Long> sids = java.util.Arrays.asList(eligible.parallelStream().filter(sid -> !excludedImmutable.contains(sid) && subscription.getSocket(sid) != null && subOptions.isEligibleForEvent(sid, subscription, payload, payloadKw)).toArray(Long[]::new));
+                List<Long> sids = getEligibleSIDs(realm, subscription, publishOptions);
                 if(sids.size() > 0) {
                     
                     if(subscription.getOptions().getMatchType() == WampMatchType.exact) {

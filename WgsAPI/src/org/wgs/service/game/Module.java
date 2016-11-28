@@ -969,7 +969,7 @@ public class Module extends WampModule
 
                 if(eligibleSet.size() > 0) {
                     WampPublishOptions options = new WampPublishOptions();
-                    options.setEligible(eligibleSet);
+                    options.setEligibleSessionIds(eligibleSet);
                     options.setDiscloseMe(true);
                     socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, false, true);
                 }
@@ -1125,7 +1125,10 @@ public class Module extends WampModule
             }
         }
         
-        WampBroker.publishEvent(socket.getRealm(), WampProtocol.newGlobalScopeId(), WampBroker.getTopic(getFQtopicURI("apps_event")), null, event, eligible, null, null, true);
+        WampPublishOptions options = new WampPublishOptions();
+        options.setEligibleSessionIds(eligible);
+        options.setExcludedSessionIds(null);
+        WampBroker.publishEvent(socket.getRealm(), WampProtocol.newGlobalScopeId(), WampBroker.getTopic(getFQtopicURI("apps_event")), null, event, options, null, true);
         
         socket.publishEvent(WampBroker.getTopic(getFQtopicURI("app_event." + g.getApplication().getAppId())), null, event, false, false);     // broadcasts to all application subscribers
     }

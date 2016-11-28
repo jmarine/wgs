@@ -169,7 +169,7 @@ public class WampCluster extends WampModule
         WampPublishOptions options = new WampPublishOptions();
         options.setDiscloseMe(true);
         if(toNode != null) {
-            options.setEligible(java.util.Collections.singleton(toNode));
+            options.setEligibleSessionIds(java.util.Collections.singleton(toNode));
         }
         
         masterConnection.publish(wgsClusterTopicName, null, eventData, options.toWampObject());

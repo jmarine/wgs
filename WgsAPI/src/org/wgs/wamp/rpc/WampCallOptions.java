@@ -11,19 +11,23 @@ public class WampCallOptions
     public enum RunOnEnum   { any, all, partition }
     public enum RunModeEnum { progressive, gather }
     
-    private int timeout;
-    private String rkey;
-    private RunOnEnum runOn;
+    private int         timeout;
+    private String      rkey;
+    private RunOnEnum   runOn;
     private RunModeEnum runMode;
-    private boolean discloseMe;
-    private Set<Long> excluded;
-    private Set<Long> eligible;
-    private boolean   excludeMe;   
+    private boolean     discloseMe;
+    private Set<Long>   excludedSessionIds;
+    private Set<String> excludedAuthIds;
+    private Set<String> excludedAuthRoles;
+    private Set<Long>   eligibleSessionIds;
+    private Set<String> eligibleAuthIds;
+    private Set<String> eligibleAuthRoles;  
+    private boolean     excludeMe;   
 
-    private Long   callerId;
-    private String authId;
-    private String authProvider;
-    private String authRole;
+    private Long        callerId;
+    private String      authId;
+    private String      authProvider;
+    private String      authRole;
     
     
     public WampCallOptions(WampDict options) 
@@ -81,12 +85,28 @@ public class WampCallOptions
             }     
             
             if(options.has("eligible")) {
-                setEligible((WampList)options.get("eligible"));
+                setEligibleSessionIds((WampList)options.get("eligible"));
             }                   
             
+            if(options.has("eligible_authid")) {
+                setEligibleAuthIds((WampList)options.get("eligible_authid"));
+            }                        
+            
+            if(options.has("eligible_authrole")) {
+                setEligibleAuthRoles((WampList)options.get("eligible_authrole"));
+            }                        
+            
             if(options.has("exclude")) {
-                setExcluded((WampList)options.get("exclude"));
+                setExcludedSessionIds((WampList)options.get("exclude"));
             }            
+            
+            if(options.has("exclude_authid")) {
+                setExcludedAuthIds((WampList)options.get("exclude_authid"));
+            }                        
+            
+            if(options.has("exclude_authrole")) {
+                setExcludedAuthRoles((WampList)options.get("exclude_authrole"));
+            }                              
             
         }
     }
@@ -215,51 +235,154 @@ public class WampCallOptions
     /**
      * @return the excluded
      */
-    public Set<Long> getExcluded() {
-        return excluded;
+    public Set<Long> getExcludedSessionIds() {
+        return excludedSessionIds;
     }
 
     /**
      * @param excluded the excluded to set
      */
-    public void setExcluded(Set<Long> excluded) {
-        this.excluded = excluded;
+    public void setExcludedSessionIds(Set<Long> excluded) {
+        this.excludedSessionIds = excluded;
     }
     
     /**
      * @param excluded the excluded to set
      */
-    private void setExcluded(WampList excluded) {
-        this.excluded = new HashSet<Long>();
+    private void setExcludedSessionIds(WampList excluded) {
+        this.excludedSessionIds = new HashSet<Long>();
         for(int i = 0; i < excluded.size(); i++) {
-            this.excluded.add(excluded.getLong(i));
+            this.excludedSessionIds.add(excluded.getLong(i));
         }
     }    
+    
+    
+    /**
+     * @return the excluded
+     */
+    public Set<String> getExcludedAuthIds() {
+        return excludedAuthIds;
+    }
+
+    /**
+     * @param excluded the excluded to set
+     */
+    public void setExcludedAuthIds(Set<String> excluded) {
+        this.excludedAuthIds = excluded;
+    }
+    
+    /**
+     * @param excluded the excluded to set
+     */
+    private void setExcludedAuthIds(WampList excluded) {
+        this.excludedAuthIds = new HashSet<String>();
+        for(int i = 0; i < excluded.size(); i++) {
+            this.excludedAuthIds.add(excluded.getText(i));
+        }
+    }        
+    
+    
+    /**
+     * @return the excluded
+     */
+    public Set<String> getExcludedAuthRoles() {
+        return excludedAuthRoles;
+    }
+
+    /**
+     * @param excluded the excluded to set
+     */
+    public void setExcludedAuthRoles(Set<String> excluded) {
+        this.excludedAuthRoles = excluded;
+    }
+    
+    /**
+     * @param excluded the excluded to set
+     */
+    private void setExcludedAuthRoles(WampList excluded) {
+        this.excludedAuthRoles = new HashSet<String>();
+        for(int i = 0; i < excluded.size(); i++) {
+            this.excludedAuthRoles.add(excluded.getText(i));
+        }
+    }      
+    
 
     /**
      * @return the eligible
      */
-    public Set<Long> getEligible() {
-        return eligible;
+    public Set<Long> getEligibleSessionIds() {
+        return eligibleSessionIds;
     }
 
     /**
      * @param eligible the eligible to set
      */
-    public void setEligible(Set<Long> eligible) {
-        this.eligible = eligible;
+    public void setEligibleSessionIds(Set<Long> eligible) {
+        this.eligibleSessionIds = eligible;
     }
     
     
     /**
      * @param eligible the eligible to set
      */
-    private void setEligible(WampList eligible) {
-        this.eligible = new HashSet<Long>();
+    private void setEligibleSessionIds(WampList eligible) {
+        this.eligibleSessionIds = new HashSet<Long>();
         for(int i = 0; i < eligible.size(); i++) {
-            this.eligible.add(eligible.getLong(i));
+            this.eligibleSessionIds.add(eligible.getLong(i));
+        }
+    }  
+    
+    
+    /**
+     * @return the eligible
+     */
+    public Set<String> getEligibleAuthIds() {
+        return eligibleAuthIds;
+    }
+
+    /**
+     * @param eligible the eligible to set
+     */
+    public void setEligibleAuthIds(Set<String> eligible) {
+        this.eligibleAuthIds = eligible;
+    }
+    
+    
+    /**
+     * @param eligible the eligible to set
+     */
+    private void setEligibleAuthIds(WampList eligible) {
+        this.eligibleAuthIds = new HashSet<String>();
+        for(int i = 0; i < eligible.size(); i++) {
+            this.eligibleAuthIds.add(eligible.getText(i));
         }
     }        
+
+
+    /**
+     * @return the eligible
+     */
+    public Set<String> getEligibleAuthRoles() {
+        return eligibleAuthRoles;
+    }
+
+    /**
+     * @param eligible the eligible to set
+     */
+    public void setEligibleAuthRoles(Set<String> eligible) {
+        this.eligibleAuthRoles = eligible;
+    }
+    
+    
+    /**
+     * @param eligible the eligible to set
+     */
+    private void setEligibleAuthRoles(WampList eligible) {
+        this.eligibleAuthRoles = new HashSet<String>();
+        for(int i = 0; i < eligible.size(); i++) {
+            this.eligibleAuthRoles.add(eligible.getText(i));
+        }
+    }         
     
     
     public WampDict toWampObject()
@@ -272,17 +395,41 @@ public class WampCallOptions
         if(runMode != null && runMode != RunModeEnum.gather) options.put("runmode", runMode.toString());
         if(rkey != null) options.put("rkey", rkey);
  
-        if(eligible != null) {
+        if(eligibleSessionIds != null) {
             WampList eligibleList = new WampList();
-            eligibleList.addAll(eligible.toArray());
+            eligibleList.addAll(eligibleSessionIds.toArray());
             options.put("eligible", eligibleList);
         }
         
-        if(excluded != null) {
+        if(eligibleAuthIds != null) {
+            WampList eligibleList = new WampList();
+            eligibleList.addAll(eligibleAuthIds.toArray());
+            options.put("eligible_authid", eligibleList);
+        }        
+        
+        if(eligibleAuthRoles != null) {
+            WampList eligibleList = new WampList();
+            eligibleList.addAll(eligibleAuthRoles.toArray());
+            options.put("eligible_authrole", eligibleList);
+        }       
+        
+        if(excludedSessionIds != null) {
             WampList excludedList = new WampList();
-            excludedList.addAll(excluded.toArray());
+            excludedList.addAll(excludedSessionIds.toArray());
             options.put("exclude", excludedList);
         }    
+        
+        if(excludedAuthIds != null) {
+            WampList excludedList = new WampList();
+            excludedList.addAll(excludedAuthIds.toArray());
+            options.put("exclude_authid", excludedList);
+        }            
+        
+        if(excludedAuthRoles != null) {
+            WampList excludedList = new WampList();
+            excludedList.addAll(excludedAuthRoles.toArray());
+            options.put("exclude_authrole", excludedList);
+        } 
         
         return options;
     }    

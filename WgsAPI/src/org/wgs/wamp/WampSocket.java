@@ -151,6 +151,10 @@ public abstract class WampSocket
         }
     }
     
+    public boolean hasAuthRole(String role) {
+        return role != null && role.equals(getAuthRole());
+    }
+    
     
     public abstract String getNegotiatedSubprotocol();
     
@@ -423,7 +427,7 @@ public abstract class WampSocket
         if(excludeMe) excludedSet.add(this.getWampSessionId());
         WampPublishOptions options = new WampPublishOptions();
         options.setExcludeMe(excludeMe);
-        options.setExcluded(excludedSet);
+        options.setExcludedSessionIds(excludedSet);
         options.setDiscloseMe(identifyMe);
         
         WampDict eventDetails = options.toWampObject();
@@ -434,7 +438,7 @@ public abstract class WampSocket
             eventDetails.put("authrole", this.getAuthRole());
         }           
 
-        WampBroker.publishEvent(this.getRealm(), WampProtocol.newGlobalScopeId(), topic, payload, payloadKw, options.getEligible(), options.getExcluded(), eventDetails, true);
+        WampBroker.publishEvent(this.getRealm(), WampProtocol.newGlobalScopeId(), topic, payload, payloadKw, options, eventDetails, true);
         
     }
 

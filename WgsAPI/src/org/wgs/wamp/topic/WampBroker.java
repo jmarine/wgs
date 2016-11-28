@@ -162,7 +162,7 @@ public class WampBroker
     }
     
 
-    public static void publishEvent(String realm, Long id, WampTopic topic, WampList payload, WampDict payloadKw, Set<Long> eligible, Set<Long> exclude, WampDict eventDetails, boolean broadcastToClusterNodes) throws Exception
+    public static void publishEvent(String realm, Long id, WampTopic topic, WampList payload, WampDict payloadKw, WampPublishOptions options, WampDict eventDetails, boolean broadcastToClusterNodes) throws Exception
     {
         if(broadcastToClusterNodes && WampCluster.getNodes().size() > 0) {
             if(eventDetails == null) eventDetails = new WampDict();
@@ -183,7 +183,7 @@ public class WampBroker
             eventDetails.remove("_cluster_authrole");
         }
         
-        WampProtocol.sendEvents(realm, id, topic, payload, payloadKw, eligible, exclude, eventDetails);        
+        WampProtocol.sendEvents(realm, id, topic, payload, payloadKw, options, eventDetails);        
         
     }
 

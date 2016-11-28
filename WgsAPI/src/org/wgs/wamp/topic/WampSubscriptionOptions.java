@@ -100,10 +100,6 @@ public class WampSubscriptionOptions
         return (this.eventsEnabled);
     }    
     
-    public boolean isEligibleForEvent(Long sid, WampSubscription subscription, WampList payload, WampDict payloadKw)
-    {
-        return true;
-    }
     
     public void updateOptions(WampSubscriptionOptions opts)
     {

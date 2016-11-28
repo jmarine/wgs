@@ -286,10 +286,10 @@ public class WampModule
                 WampDict payloadKw = (request.size() >= 6)? (WampDict)request.get(5) : null;;
                 WampPublishOptions options = new WampPublishOptions(publicationDetails);
                 if(options.hasExcludeMe()) {
-                    Set<Long> excludedSet = options.getExcluded();
+                    Set<Long> excludedSet = options.getExcludedSessionIds();
                     if(excludedSet == null) excludedSet = new HashSet<Long>();
                     excludedSet.add(clientSocket.getWampSessionId());
-                    options.setExcluded(excludedSet);
+                    options.setExcludedSessionIds(excludedSet);
                 }
 
                 if(options.hasAck()) {
@@ -315,7 +315,7 @@ public class WampModule
                     }
                 }      
 
-                WampBroker.publishEvent(realm, publicationId, topic, payload, payloadKw, options.getEligible(), options.getExcluded(), eventDetails, !fromClusterNode);
+                WampBroker.publishEvent(realm, publicationId, topic, payload, payloadKw, options, eventDetails, !fromClusterNode);
             }
         }
     }
