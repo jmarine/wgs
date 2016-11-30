@@ -5,7 +5,7 @@ ARG MAVEN_VERSION=3.3.9
 ENV MAVEN_HOME=/opt/apache-maven-$MAVEN_VERSION
 ENV PATH ${PATH}:$MAVEN_HOME/bin
 
-RUN curl -fsSL http://apache.osuosl.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz | tar -xzC $MAVEN_HOME --strip-components=1 
+RUN mkdir -p $MAVEN_HOME && curl -fsSL http://apache.osuosl.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz | tar -xzC $MAVEN_HOME --strip-components=1 
 
 # Deploy application files
 COPY WgsWebApp/web /var/www/html
