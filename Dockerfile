@@ -1,16 +1,4 @@
-FROM java:8
-
-# Install Ant building tool for Java applications
-ENV ANT_VERSION 1.9.4 
-ENV ANT_HOME /opt/ant 
-ENV PATH ${PATH}:/opt/ant/bin
-
-RUN cd && \
-    wget -q http://archive.apache.org/dist/ant/binaries/apache-ant-${ANT_VERSION}-bin.tar.gz && \
-    tar -xzf apache-ant-${ANT_VERSION}-bin.tar.gz && \
-    mv apache-ant-${ANT_VERSION} /opt/ant && \
-    rm apache-ant-${ANT_VERSION}-bin.tar.gz 
-
+FROM maven:latest
 
 # Deploy application files
 COPY WgsWebApp/web /var/www/html
@@ -22,7 +10,7 @@ COPY WgsAPI/logging.properties /etc/opt/wgs/logging.properties
 
 # Build application JAR
 WORKDIR /opt/wgs
-RUN ant -f build.xml jar
+RUN mvn install
 
 # Define application directories/permissions and data volumes
 RUN mkdir -p /var/opt/wgs 
@@ -52,6 +40,6 @@ USER www-data
 WORKDIR /var/opt/wgs
 
 # Define default command.
-CMD java -Xmx128m -Djava.util.logging.config.file=/etc/opt/wgs/logging.properties -Dderby.drda.startNetworkServer=true -Dderby.drda.host=0.0.0.0 -Dderby.drda.portNumber=15270 -jar /opt/wgs/dist/WgsAPI.jar /etc/opt/wgs/wgs_$WGS_NODE_TYPE.properties
+CMD java -Xmx128m -Djava.util.logging.config.file=/etc/opt/wgs/logging.properties -Dderby.drda.startNetworkServer=true -Dderby.drda.host=0.0.0.0 -Dderby.drda.portNumber=15270 -jar /opt/wgs/target/WgsAPI-2.0-SNAPSHOT.jar /etc/opt/wgs/wgs_$WGS_NODE_TYPE.properties
 
 
