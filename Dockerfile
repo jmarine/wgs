@@ -8,10 +8,6 @@ COPY WgsAPI/wgs_docker_federated.properties /etc/opt/wgs/wgs_federated.propertie
 COPY WgsAPI/derby.properties /etc/opt/wgs/derby.properties
 COPY WgsAPI/logging.properties /etc/opt/wgs/logging.properties
 
-# Build application JAR
-
-WORKDIR /opt/wgs
-RUN mvn install
 
 # Define application directories/permissions and data volumes
 RUN mkdir -p /var/opt/wgs 
@@ -20,6 +16,18 @@ RUN chown -R www-data:www-data /etc/opt/wgs
 RUN chown -R www-data:www-data /var/opt/wgs
 RUN chown -R www-data:www-data /var/www/html
 
+
+
+# Build application JAR
+# Run as unprivileged user
+USER www-data
+
+ENV USER_HOME_DIR /opt/wgs
+ENV MAVEN_CONFIG  /opt/wgs/.m2
+WORKDIR /opt/wgs
+RUN mvn install
+
+
 # Disable some volumes for Openshift (that mounts them as empty directories) 
 #VOLUME ["/var/opt/wgs", "/etc/opt/wgs", "/var/www/html"]
 VOLUME ["/var/opt/wgs"]
@@ -27,8 +35,6 @@ VOLUME ["/var/opt/wgs"]
 # Run WGS server
 # (we don't want to exit on key press, like in OpenShift environments)
 
-ENV USER_HOME_DIR /var/opt/wgs
-ENV MAVEN_CONFIG  /var/opt/wgs/.m2
 
 ENV OPENSHIFT_APP_NAME wgs
 ENV WGS_NODE_TYPE master
@@ -39,13 +45,13 @@ EXPOSE 8080/tcp
 EXPOSE 8443/tcp
 EXPOSE 15270/tcp
 
-# Run as unprivileged user
-USER www-data
 
 # Set working directory (it must be the parent directory of Derby databases)
 WORKDIR /var/opt/wgs
 
 # Define default command.
-ENTRYPOINT ["java","-Xmx128m", "-Djava.util.logging.config.file=/etc/opt/wgs/logging.properties", "-Dderby.drda.startNetworkServer=true", "-Dderby.drda.host=0.0.0.0", "-Dderby.drda.portNumber=15270", "-jar", "/opt/wgs/target/WgsAPI-2.0-SNAPSHOT.jar", "/etc/opt/wgs/wgs_$WGS_NODE_TYPE.properties"]
+#ENTRYPOINT ["java","-Xmx128m", "-Djava.util.logging.config.file=/etc/opt/wgs/logging.properties", "-Dderby.drda.startNetworkServer=true", "-Dderby.drda.host=0.0.0.0", "-Dderby.drda.portNumber=15270", "-jar", "/opt/wgs/target/WgsAPI-2.0-SNAPSHOT.jar", "/etc/opt/wgs/wgs_master.properties"]
+
+CMD "java -Xmx128m -Djava.util.logging.config.file=/etc/opt/wgs/logging.properties -Dderby.drda.startNetworkServer=true -Dderby.drda.host=0.0.0.0 -Dderby.drda.portNumber=15270 -jar /opt/wgs/target/WgsAPI-2.0-SNAPSHOT.jar /etc/opt/wgs/wgs_$WGS_NODE_TYPE.properties"
 
 
