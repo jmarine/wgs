@@ -28,7 +28,7 @@ VOLUME ["/var/opt/wgs"]
 # (we don't want to exit on key press, like in OpenShift environments)
 
 ENV USER_HOME_DIR /var/opt/wgs
-ENV MAVEN_CONFIG  /var/opt/wgs
+ENV MAVEN_CONFIG  /var/opt/wgs/.m2
 
 ENV OPENSHIFT_APP_NAME wgs
 ENV WGS_NODE_TYPE master
@@ -46,6 +46,6 @@ USER www-data
 WORKDIR /var/opt/wgs
 
 # Define default command.
-CMD java -Xmx128m -Djava.util.logging.config.file=/etc/opt/wgs/logging.properties -Dderby.drda.startNetworkServer=true -Dderby.drda.host=0.0.0.0 -Dderby.drda.portNumber=15270 -jar /opt/wgs/target/WgsAPI-2.0-SNAPSHOT.jar /etc/opt/wgs/wgs_$WGS_NODE_TYPE.properties
+ENTRYPOINT ["java","-Xmx128m", "-Djava.util.logging.config.file=/etc/opt/wgs/logging.properties", "-Dderby.drda.startNetworkServer=true", "-Dderby.drda.host=0.0.0.0", "-Dderby.drda.portNumber=15270", "-jar", "/opt/wgs/target/WgsAPI-2.0-SNAPSHOT.jar", "/etc/opt/wgs/wgs_$WGS_NODE_TYPE.properties"]
 
 
