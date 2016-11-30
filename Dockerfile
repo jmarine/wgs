@@ -8,7 +8,7 @@ ENV PATH ${PATH}:$MAVEN_HOME/bin
 RUN mkdir -p $MAVEN_HOME && curl -fsSL http://apache.osuosl.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz | tar -xzC $MAVEN_HOME --strip-components=1 
 
 # Deploy application files
-COPY WgsWebApp/web /var/www/html
+COPY WgsWebApp/src/main/webapp /var/www/html
 COPY WgsAPI /opt/wgs
 COPY WgsAPI/wgs_docker_master.properties /etc/opt/wgs/wgs_master.properties
 COPY WgsAPI/wgs_docker_federated.properties /etc/opt/wgs/wgs_federated.properties
@@ -21,6 +21,7 @@ RUN mvn install
 
 # Define application directories/permissions and data volumes
 RUN mkdir -p /var/opt/wgs 
+RUN chown -R www-data:www-data /opt/wgs
 RUN chown -R www-data:www-data /etc/opt/wgs
 RUN chown -R www-data:www-data /var/opt/wgs
 RUN chown -R www-data:www-data /var/www/html
