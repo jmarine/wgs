@@ -9,8 +9,6 @@ COPY WgsAPI/derby.properties /etc/opt/wgs/derby.properties
 COPY WgsAPI/logging.properties /etc/opt/wgs/logging.properties
 
 # Build application JAR
-ENV USER_HOME_DIR /opt/wgs
-ENV MAVEN_CONFIG  /opt/wgs/.m2
 
 WORKDIR /opt/wgs
 RUN mvn install
@@ -28,6 +26,9 @@ VOLUME ["/var/opt/wgs"]
 
 # Run WGS server
 # (we don't want to exit on key press, like in OpenShift environments)
+
+ENV USER_HOME_DIR /var/opt/wgs
+ENV MAVEN_CONFIG  /var/opt/wgs
 
 ENV OPENSHIFT_APP_NAME wgs
 ENV WGS_NODE_TYPE master
