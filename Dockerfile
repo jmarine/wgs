@@ -24,7 +24,9 @@ VOLUME ["/var/opt/wgs"]
 
 # Run WGS server
 # (we don't want to exit on key press, like in OpenShift environments)
+ENV USER_HOME_DIR /opt/wgs
 ENV MAVEN_CONFIG /opt/wgs/.m2
+
 ENV OPENSHIFT_APP_NAME wgs
 ENV WGS_NODE_TYPE master
 ENV WGS_MASTER_NODE wgs-master
