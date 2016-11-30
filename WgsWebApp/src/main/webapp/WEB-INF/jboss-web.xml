@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jboss-web xmlns="http://www.jboss.com/xml/ns/javaee">
+  <context-root/>
+  <resource-ref>
+    <res-ref-name>jdbc/WgsDS</res-ref-name>
+    <res-type>javax.sql.DataSource</res-type>
+    <jndi-name>java:jboss/datasources/wgs</jndi-name>
+  </resource-ref>
+</jboss-web>
