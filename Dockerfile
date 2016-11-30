@@ -17,7 +17,7 @@ RUN mvn install
 
 # Define application directories/permissions and data volumes
 RUN mkdir -p /var/opt/wgs 
-#RUN chown -R www-data:www-data /opt/wgs
+RUN chown -R www-data:www-data /opt/wgs
 RUN chown -R www-data:www-data /etc/opt/wgs
 RUN chown -R www-data:www-data /var/opt/wgs
 RUN chown -R www-data:www-data /var/www/html
