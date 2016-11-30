@@ -1,7 +1,7 @@
 FROM maven:latest
 
 # Deploy application files
-COPY WgsWebApp/web /var/www/html
+COPY WgsWebApp/src/main/webapp /var/www/html
 COPY WgsAPI /opt/wgs
 COPY WgsAPI/wgs_docker_master.properties /etc/opt/wgs/wgs_master.properties
 COPY WgsAPI/wgs_docker_federated.properties /etc/opt/wgs/wgs_federated.properties
