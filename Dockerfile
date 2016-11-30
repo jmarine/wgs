@@ -22,6 +22,7 @@ RUN chown -R www-data:www-data /var/www/html
 # Run as unprivileged user
 USER www-data
 
+ENV HOME 	  /opt/wgs
 ENV USER_HOME_DIR /opt/wgs
 ENV MAVEN_CONFIG  /opt/wgs/.m2
 WORKDIR /opt/wgs
