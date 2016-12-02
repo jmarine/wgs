@@ -1,5 +1,6 @@
 package org.wgs.security;
 
+import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -19,8 +20,10 @@ import org.wgs.security.User;
 @NamedQueries({
     @NamedQuery(name="UserPushChannel.findByAppAndUser",query="SELECT OBJECT(c) FROM UserPushChannel c WHERE c.appClientName = ?1 and c.user = ?2")
 })
-public class UserPushChannel 
+public class UserPushChannel implements Serializable
 {
+    private static final long serialVersionUID = 0L;    
+    
     @Id
     @Column(name="app_client_name")    
     private String appClientName;

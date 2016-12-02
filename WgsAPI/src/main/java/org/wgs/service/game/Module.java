@@ -169,7 +169,21 @@ public class Module extends WampModule
             usr.setPicture("images/anonymous.png");
         }
         
-        return usr.toWampObject(true);
+        WampDict retval = null;
+        EntityManager manager = null;
+        try {
+            // reattach to get friends
+            manager = Storage.getEntityManager();
+            retval = manager.find(User.class, usr.getUid()).toWampObject(true);
+            
+        } finally {
+            if(manager != null) {
+                try { manager.close(); }
+                catch(Exception ex) { }
+            }
+        }        
+        
+        return retval;
         
     }
     

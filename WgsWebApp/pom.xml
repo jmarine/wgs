@@ -19,6 +19,44 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>WgsAPI</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish.tyrus</groupId>
+                    <artifactId>tyrus-client</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish.tyrus</groupId>
+                    <artifactId>tyrus-container-grizzly-client</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish.tyrus</groupId>
+                    <artifactId>tyrus-container-grizzly-server</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish.tyrus</groupId>
+                    <artifactId>tyrus-container-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish.grizzly</groupId>
+                    <artifactId>grizzly-framework</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish.grizzly</groupId>
+                    <artifactId>grizzly-http</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish.grizzly</groupId>
+                    <artifactId>grizzly-http-server</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish.grizzly</groupId>
+                    <artifactId>grizzly-http-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.persistence</groupId>
+                    <artifactId>eclipselink</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>javax</groupId>

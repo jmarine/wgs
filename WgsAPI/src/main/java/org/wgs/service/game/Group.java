@@ -94,7 +94,7 @@ public class Group implements java.io.Serializable
 
     @OneToMany(mappedBy = "applicationGroup", fetch=FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true)
     @OrderBy("slot")
-    private ArrayList<Member> members = new ArrayList<Member>();
+    private List<Member> members = new ArrayList<Member>();
     
     @OneToMany(mappedBy = "applicationGroup", fetch=FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true)
     @OrderBy("actionOrder")

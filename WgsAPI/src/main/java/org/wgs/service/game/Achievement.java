@@ -58,7 +58,7 @@ public class Achievement implements Serializable
 
     @ManyToOne(fetch=FetchType.EAGER, optional = true)
     @JoinColumns({
-        @JoinColumn(name="app", referencedColumnName = "app", insertable = false, updatable = false),
+        @JoinColumn(name="role_app", referencedColumnName = "app" /* FIXME: prevent "app" column duplication, but it's not supported by Hibernate: name="app", insertable = false, updatable = false */),
         @JoinColumn(name="role_name", referencedColumnName = "name")
     })      
     private Role sourceRole;    

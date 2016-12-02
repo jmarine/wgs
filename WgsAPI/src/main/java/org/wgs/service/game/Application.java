@@ -15,6 +15,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
+import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.wgs.security.User;
@@ -24,6 +25,7 @@ import org.wgs.wamp.type.WampList;
 
 
 @Entity
+@Table(name="APPLICATION")
 @NamedQueries({
     @NamedQuery(name="wgs.findAllApps",query="SELECT OBJECT(a) FROM Application a"),
     @NamedQuery(name="wgs.findAppById",query="SELECT OBJECT(a) FROM Application a WHERE a.id = ?1"),
