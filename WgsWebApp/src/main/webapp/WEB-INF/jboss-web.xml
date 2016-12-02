@@ -4,6 +4,6 @@
   <resource-ref>
     <res-ref-name>jdbc/WgsDS</res-ref-name>
     <res-type>javax.sql.DataSource</res-type>
-    <jndi-name>java:jboss/datasources/wgs</jndi-name>
+    <jndi-name>java:jboss/datasources/WgsDS</jndi-name>
   </resource-ref>
 </jboss-web>

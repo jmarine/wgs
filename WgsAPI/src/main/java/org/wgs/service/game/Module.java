@@ -255,6 +255,7 @@ public class Module extends WampModule
         app.setDynamicGroup(data.getBoolean("dynamic"));
         app.setObservableGroup(data.getBoolean("observable"));
         app.setAIavailable(data.getBoolean("ai_available"));
+        //app = Storage.saveEntity(app);        
 
         WampList roles = (WampList)data.get("roles");
         for(int i = 0; i < roles.size(); i++) {
@@ -273,6 +274,7 @@ public class Module extends WampModule
             role.setName(roleName);
             role.setRequired(!optional);
             role.setMultiple(multiple);
+            //role = Storage.saveEntity(role);    
 
             app.addRole(role);
         }

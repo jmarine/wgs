@@ -15,7 +15,9 @@
     <class>org.wgs.service.game.Achievement</class>
     <class>org.wgs.security.UserPushChannel</class>
     <properties>
-      <property name="hibernate.show_sql" value="true" />
+        <property name="hibernate.show_sql" value="true" />
+        <property name="hibernate.hbm2ddl.auto" value="update"/>   
+        <property name="hibernate.dialect" value="org.hibernate.dialect.MySQLDialect" />   
     </properties>
   </persistence-unit>
 </persistence>
