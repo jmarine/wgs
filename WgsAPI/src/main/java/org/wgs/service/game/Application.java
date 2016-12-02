@@ -412,8 +412,12 @@ public class Application implements Serializable
     @Override
     public boolean equals(Object o)
     {
-        Application app = (Application)o;
-        return (id.equals(app.getAppId()));
+        if(o != null && o instanceof Application) {
+            Application app = (Application)o;
+            return (id.equals(app.getAppId()));
+        } else {
+            return false;
+        }
     }
     
     

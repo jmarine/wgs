@@ -255,8 +255,7 @@ public class Module extends WampModule
         app.setDynamicGroup(data.getBoolean("dynamic"));
         app.setObservableGroup(data.getBoolean("observable"));
         app.setAIavailable(data.getBoolean("ai_available"));
-        //app = Storage.saveEntity(app);        
-
+      
         WampList roles = (WampList)data.get("roles");
         for(int i = 0; i < roles.size(); i++) {
             String roleName = roles.getText(i);
@@ -274,12 +273,11 @@ public class Module extends WampModule
             role.setName(roleName);
             role.setRequired(!optional);
             role.setMultiple(multiple);
-            //role = Storage.saveEntity(role);    
 
             app.addRole(role);
         }
 
-        app = Storage.saveEntity(app);
+        Storage.createEntity(app);
         registerApplication(app);
         valid = true;
 
@@ -303,11 +301,11 @@ public class Module extends WampModule
             EntityTransaction tx = manager.getTransaction();
             tx.begin();
             
-            Query query1 = manager.createQuery("DELETE FROM GroupAction a WHERE a.applicationGroup.application = :app");
+            Query query1 = manager.createQuery("DELETE FROM GroupAction a WHERE a.applicationGroup IN (SELECT OBJECT(g) FROM AppGroup g WHERE g.application = :app)");
             query1.setParameter("app", app);
             query1.executeUpdate();
             
-            Query query2 = manager.createQuery("DELETE FROM GroupMember m WHERE m.applicationGroup.application = :app");
+            Query query2 = manager.createQuery("DELETE FROM GroupMember m WHERE m.applicationGroup IN (SELECT OBJECT(g) FROM AppGroup g WHERE g.application = :app)");
             query2.setParameter("app", app);
             query2.executeUpdate();
             

@@ -21,6 +21,35 @@ public class Storage
         return manager;
     }
     
+    public static <T> void createEntity(T entity)
+    {
+        EntityManager manager = null;
+        EntityTransaction transaction = null;
+
+        try {
+            if(entity != null) {
+                manager = getEntityManager();
+                transaction = manager.getTransaction();
+
+                transaction.begin();
+                manager.persist(entity);
+                transaction.commit();
+            }
+        } catch(Exception ex) {
+            if(transaction != null) {
+                try { transaction.rollback(); } 
+                catch(Exception ex2) { }
+            }
+            throw ex;
+            
+        } finally {
+            if(manager != null) {
+                try { manager.close(); } 
+                catch(Exception ex) { }
+            }
+        }
+        
+    }    
     
     public static <T> T saveEntity(T entity)
     {

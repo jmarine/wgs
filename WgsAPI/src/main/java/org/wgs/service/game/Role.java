@@ -129,6 +129,25 @@ public class Role implements Serializable
         obj.put("iconDataURL", iconDataURL);
         return obj;
     }
+    
+    
+    @Override
+    public boolean equals(Object o)
+    {
+        if(o != null && o instanceof Role) {
+            Role role = (Role)o;
+            return name.equals(role.name) && (application.equals(role.application));
+        } else {
+            return false;
+        }
+    }
+    
+    
+    @Override
+    public int hashCode()
+    {
+        return (application.getName() + ":" + name).hashCode();
+    }    
 
     @Override
     public String toString()
