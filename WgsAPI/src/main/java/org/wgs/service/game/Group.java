@@ -96,7 +96,7 @@ public class Group implements java.io.Serializable
     @OrderBy("slot")
     private List<Member> members = new ArrayList<Member>();
     
-    @OneToMany(mappedBy = "applicationGroup", fetch=FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true)
+    @OneToMany(mappedBy = "applicationGroup", fetch=FetchType.LAZY, cascade = { CascadeType.ALL }, orphanRemoval = true)
     @OrderBy("actionOrder")
     private List<GroupAction> actions = new ArrayList<GroupAction>();    
 
@@ -480,7 +480,23 @@ public class Group implements java.io.Serializable
         this.version = version;
     }
 
+    @Override
+    public boolean equals(Object o)
+    {
+        if(o != null && o instanceof Group) {
+            Group group = (Group)o;
+            return gid.equals(group.gid);
+        } else {
+            return false;
+        }
+    }
     
+    
+    @Override
+    public int hashCode()
+    {
+        return gid.hashCode();
+    }        
     
     
     public WampDict toWampObject(boolean withData)

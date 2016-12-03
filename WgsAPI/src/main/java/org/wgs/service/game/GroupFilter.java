@@ -17,7 +17,7 @@ import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampSubscriptionOptions;
 
 
-public class GroupFilter
+public class GroupFilter implements AutoCloseable
 {
     public enum Scope { mine, all };
     
@@ -25,6 +25,9 @@ public class GroupFilter
     private GroupState state;
     private Scope  scope;
     private User user;
+    
+    private EntityManager manager;
+    
 
     public GroupFilter(String appId, GroupState state, Scope scope, User user) 
     {
@@ -86,7 +89,7 @@ public class GroupFilter
             ejbql = ejbql + " WHERE " + where.toString();
         }
         
-        EntityManager manager = Storage.getEntityManager();
+        manager = Storage.getEntityManager();
         TypedQuery<Group> query = manager.createQuery(ejbql, Group.class);        
         for(Entry<String,Object> entry : params.entrySet()) 
         {
@@ -94,9 +97,16 @@ public class GroupFilter
         }
         
         List<Group> groups = query.getResultList();
-        manager.close();
 
         return groups;
     }
+    
+
+    @Override
+    public void close() throws Exception {
+        if(manager != null) {
+            manager.close();
+        }
+    }    
     
 }

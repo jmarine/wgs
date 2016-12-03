@@ -176,6 +176,25 @@ public class Member implements java.io.Serializable
     }    
     
     
+    @Override
+    public boolean equals(Object o)
+    {
+        if(o != null && o instanceof Member) {
+            Member m = (Member)o;
+            return slot == m.slot && getApplicationGroup().equals(m.getApplicationGroup());
+        } else {
+            return false;
+        }
+    }
+    
+    
+    @Override
+    public int hashCode()
+    {
+        return getApplicationGroup().hashCode() + slot;
+    }            
+    
+    
     public WampDict toWampObject() 
     {
         boolean connected = (getClient() != null);

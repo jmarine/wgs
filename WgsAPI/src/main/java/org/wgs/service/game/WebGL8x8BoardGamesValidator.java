@@ -271,8 +271,12 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                     try { 
                         Application app = iter.next();
                         ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/" + app.getName() +".js"),StandardCharsets.UTF_8)); 
+                    } catch(Exception ex) { 
+                        // skip exception
+                    } finally {
                         iter.remove();
-                    } catch(Exception ex) { }
+                    }
+                    
                 }
             }        
         }

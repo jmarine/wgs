@@ -167,23 +167,24 @@ public class Module extends WampModule
             usr.setLogin("#anonymous-" + socket.getWampSessionId());
             usr.setName("Anonymous");
             usr.setPicture("images/anonymous.png");
-        }
-        
-        WampDict retval = null;
-        EntityManager manager = null;
-        try {
-            // reattach to get friends
-            manager = Storage.getEntityManager();
-            retval = manager.find(User.class, usr.getUid()).toWampObject(true);
+            return usr.toWampObject(true);
             
-        } finally {
-            if(manager != null) {
-                try { manager.close(); }
-                catch(Exception ex) { }
-            }
-        }        
-        
-        return retval;
+        } else {
+            WampDict retval = null;
+            EntityManager manager = null;
+            try {
+                // reattach to get friends
+                manager = Storage.getEntityManager();
+                retval = manager.find(User.class, usr.getUid()).toWampObject(true);
+
+            } finally {
+                if(manager != null) {
+                    try { manager.close(); }
+                    catch(Exception ex) { }
+                }
+            } 
+            return retval;
+        }
         
     }
     
@@ -356,13 +357,12 @@ public class Module extends WampModule
         Client client = clients.get(socket.getWampSessionId());
         
         if(gid != null) {
-                g = groups.get(gid);
-                if(g == null) g = Storage.findEntity(Group.class, gid);
-                
-                if(g != null) {
-                    logger.log(Level.INFO, "open_group: group found: " + gid);
-                    valid = true;
-                } 
+            g = manager.find(Group.class, gid);
+
+            if(g != null) {
+                logger.log(Level.INFO, "open_group: group found: " + gid);
+                valid = true;
+            } 
                 
         } else {
             
@@ -386,10 +386,7 @@ public class Module extends WampModule
                         valid = (tmp != null) && (tmp.isAutoMatchEnabled() && !tmp.isAutoMatchCompleted() && tmp.getState()==GroupState.OPEN);
 
                         if(valid) {
-                            g = groups.get(tmp.getGid());
-                            if(g != null) g.setVersion(tmp.getVersion());
-                            else g = tmp;
-                            
+                            g = tmp;
                             String role = "";
                             if(options.has("role")) role = options.getText("role");
                             if(role.length() > 0) {
@@ -474,6 +471,7 @@ public class Module extends WampModule
                         g.setDescription(options.getText("description"));
                     }
                 }
+                manager.persist(g);
                 
 
                 //updateAppInfo(socket, app, "app_updated", false);
@@ -663,7 +661,7 @@ public class Module extends WampModule
             
             if(created) notifyOfflineUsers(socket, g, getActionNameDescription("INIT"));
             
-            g.setVersion(Storage.saveEntity(g).getVersion());
+            //g.setVersion(Storage.saveEntity(g).getVersion());
 
         }
 
@@ -708,8 +706,10 @@ public class Module extends WampModule
         response.put("cmd", "group_updated");
         response.put("sid", socket.getWampSessionId());
         
+        EntityManager manager = Storage.getEntityManager();
+        manager.getTransaction().begin();
         
-        Group g = groups.get(gid);
+        Group g = manager.find(Group.class, gid);
         if(g != null) synchronized(g) {
             logger.log(Level.FINE, "open_group: group found: " + gid);
             
@@ -768,7 +768,7 @@ public class Module extends WampModule
             
             response.put("members", getMembers(g,0));            
 
-            g.setVersion(Storage.saveEntity(g).getVersion());
+            //g.setVersion(Storage.saveEntity(g).getVersion());
             
             valid = true;
         }
@@ -777,6 +777,9 @@ public class Module extends WampModule
 
         if(broadcastAppInfo)    broadcastAppEventInfo(socket, g, "group_updated");
         if(broadcastGroupInfo)  socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, response, excludeMe, false);  // exclude Me
+        
+        manager.getTransaction().commit();        
+        manager.close();
         return response;
     }
     
@@ -821,7 +824,9 @@ public class Module extends WampModule
             response.put("cmd", "group_updated");
             response.put("sid", socket.getWampSessionId());
 
-            Group g = groups.get(gid);
+            EntityManager manager = Storage.getEntityManager();
+            manager.getTransaction().begin();
+            Group g = manager.find(Group.class, gid);
             if(g != null) synchronized(g) {
                 logger.log(Level.FINE, "open_group: group found: " + gid);
                 
@@ -920,7 +925,7 @@ public class Module extends WampModule
                     valid = true;
                 }
                 
-                if(valid) g.setVersion(Storage.saveEntity(g).getVersion());
+                //if(valid) g.setVersion(Storage.saveEntity(g).getVersion());
             }
 
             response.put("valid", valid);
@@ -930,6 +935,9 @@ public class Module extends WampModule
                 broadcastAppEventInfo(socket, g, "group_updated");
                 socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, response, false, false);
             }  
+            
+            manager.getTransaction().commit();
+            manager.close();
             
             return response;
     }
@@ -1001,7 +1009,9 @@ public class Module extends WampModule
             response.put("gid", gid);
             response.put("valid", "false");
 
-            Group g = groups.get(gid);
+            EntityManager manager = Storage.getEntityManager();
+            manager.getTransaction().begin();
+            Group g = manager.find(Group.class, gid);
 
             if(g != null) synchronized(g) {
                 logger.log(Level.FINE, "open_group: group found: " + gid);
@@ -1026,7 +1036,7 @@ public class Module extends WampModule
                             WampDict obj = member.toWampObject();
                             membersArray.add(obj);
                             
-                            g.setVersion(Storage.saveEntity(g).getVersion());
+                            //g.setVersion(Storage.saveEntity(g).getVersion());
 
                         } else {
                             num_members++;
@@ -1049,6 +1059,9 @@ public class Module extends WampModule
                 broadcastAppEventInfo(socket, g, "group_updated");                
                 
             }
+            
+            manager.getTransaction().commit();
+            manager.close();
 
             return response;
     }
@@ -1058,6 +1071,8 @@ public class Module extends WampModule
     public void deleteFinishedGroups(WampSocket socket) throws Exception
     {   
         EntityManager manager = Storage.getEntityManager();
+        manager.getTransaction().begin();
+        
         TypedQuery<Group> query = manager.createNamedQuery("wgs.findFinishedGroupsFromUser", Group.class);
         query.setParameter(1, socket.getUserPrincipal());
         
@@ -1066,15 +1081,16 @@ public class Module extends WampModule
             for(Member m : g.getMembers()) {
                 if(m.getState() == MemberState.EMPTY || m.getUser().equals(socket.getUserPrincipal())) {
                     m.setState(MemberState.DELETED);
-                    Storage.saveEntity(m);
+                    //m = manager.merge(m);
                 } 
                 if(m.getState() != MemberState.DELETED) {
                     refCount++;
                 }
             }
-            if(refCount == 0) Storage.removeEntity(g);
+            if(refCount == 0) manager.remove(g);
         }
         
+        manager.getTransaction().commit();
         manager.close();
     }
 
@@ -1151,28 +1167,28 @@ public class Module extends WampModule
     @WampRegisterProcedure(name = "list_groups")
     public WampDict listGroups(WampSocket socket, String appId, GroupState state, GroupFilter.Scope scope) throws Exception
     {
-        Client client = clients.get(socket.getWampSessionId());
-        GroupFilter filter = new GroupFilter(appId, state, scope, client.getUser());
-                
-        WampList groupsArray = new WampList();
-        for(Group t : filter.getGroups()) {
-            Group g = groups.get(t.getGid());
-            if(g == null) g = t;
-            
-            if(!g.isHidden()) {
-                WampDict obj = g.toWampObject(false);
-                obj.put("members", getMembers(g,0));                
-                groupsArray.add(obj);
-            }
-        }   
-        
         WampDict retval = new WampDict();
-        retval.put("groups", groupsArray);
+        Client client = clients.get(socket.getWampSessionId());
         
-        if(appId != null) {
-            Application app = applications.get(appId);
-            if(app != null) retval.put("app", app.toWampObject());
-        }
+        try(GroupFilter filter = new GroupFilter(appId, state, scope, client.getUser())) {
+            WampList groupsArray = new WampList();
+            for(Group t : filter.getGroups()) {
+                Group g = groups.get(t.getGid());
+                if(g == null) g = t;
+
+                if(!g.isHidden()) {
+                    WampDict obj = g.toWampObject(false);
+                    obj.put("members", getMembers(g,0));                
+                    groupsArray.add(obj);
+                }
+            }
+            retval.put("groups", groupsArray);
+
+            if(appId != null) {
+                Application app = applications.get(appId);
+                if(app != null) retval.put("app", app.toWampObject());
+            }
+        }            
         
         return retval;
     }    
@@ -1181,7 +1197,10 @@ public class Module extends WampModule
     @WampRegisterProcedure(name = "add_action")
     public boolean addAction(WampSocket socket, String gid, Long playerSlot, String actionName, String actionValue) throws Exception
     {
-        Group g = groups.get(gid);
+        boolean retval = false;
+        EntityManager manager = Storage.getEntityManager();
+        manager.getTransaction().begin();
+        Group g = manager.find(Group.class, gid);
         if(g != null) synchronized(g) {
             GroupActionValidator validator = null;
             String validatorClassName = g.getApplication().getActionValidator();
@@ -1208,7 +1227,8 @@ public class Module extends WampModule
                 }
                 
                 g.getActions().add(action);
-                g.setVersion(Storage.saveEntity(g).getVersion());
+                //g.setVersion(Storage.saveEntity(g).getVersion());
+                manager.getTransaction().commit();
 
                 boolean excludeMe = false;
                 WampDict event = new WampDict();
@@ -1219,11 +1239,13 @@ public class Module extends WampModule
                 broadcastAppEventInfo(socket, g, "group_updated"); // i.e: turn change
                 notifyOfflineUsers(socket, g, getActionNameDescription(actionName));
                 
-                return true;
+                retval = true;
                 
             }
         }
-        return false;
+        
+        manager.close();
+        return retval;
     }
 
     
@@ -1325,6 +1347,7 @@ public class Module extends WampModule
                 Expression<String> gidExpr = group.get("gid");
                 Expression<GroupState> stateExpr = group.get("state");
                 appExpr = group.get("application");
+                
                 Expression<Collection<String>> usersExpr = group.get("members").get("user").get("uid");
                 activeGroupsQuery.multiselect(appExpr.alias("app"), cb.countDistinct(gidExpr).alias("count"));
                 if(opponentUid == null || opponentUid.length() == 0) {
