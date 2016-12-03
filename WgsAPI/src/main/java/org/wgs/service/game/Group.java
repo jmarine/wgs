@@ -104,7 +104,7 @@ public class Group implements java.io.Serializable
     private Application application;
 
     @Version
-    private long version;
+    private Long version;
     
     /**
      * @return the state
@@ -469,14 +469,14 @@ public class Group implements java.io.Serializable
     /**
      * @return the version
      */
-    public long getVersion() {
+    public Long getVersion() {
         return version;
     }
 
     /**
      * @param version the version to set
      */
-    public void setVersion(long version) {
+    public void setVersion(Long version) {
         this.version = version;
     }
 
