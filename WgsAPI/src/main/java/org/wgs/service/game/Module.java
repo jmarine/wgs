@@ -544,7 +544,9 @@ public class Module extends WampModule
                     member = g.getMember(index);
                     boolean connected = (member != null) && (member.getClientSID() != null);
                     String user = ((member == null || member.getUser() == null) ? "" : member.getUser().getUid() );
-                    if(!connected && (options.has("slot") || (currentUser!=null && user.equals(currentUser.getUid()))) ) {
+                    if( (!connected && options.has("slot"))
+                            || (!connected && currentUser!=null && user.equals(currentUser.getUid())) 
+                            || (connected && options.has("slot") && currentUser!=null && user.equals(currentUser.getUid())) ) {
                         reserved = true;
                         reservedSlot = index;
                         if(member == null || member.getUser() == null) {
@@ -593,7 +595,6 @@ public class Module extends WampModule
                 }
                 
                 boolean userUpdated = false;
-                boolean connected = (member.getClientSID() != null);
                 if(!spectator && !joined && ( (reserved && index == reservedSlot) || (!reserved && member.getUser() == null) ) ) {
                     response.put("slotJoinedByClient", member.getSlot());
                     member.setClientSID((client!= null) ? client.getSessionId() : null);
@@ -611,7 +612,6 @@ public class Module extends WampModule
                     }                    
 
                     joined = true;
-                    connected = true;
                     userUpdated = true;
                 }
                 
@@ -1040,7 +1040,7 @@ public class Module extends WampModule
                     subscription.removeSocket(socket.getWampSessionId());
                 }
                 
-                broadcastAppEventInfo(socket, g, "group_updated");                
+                broadcastAppEventInfo(socket, g, "group_updated"); 
                 
             }
             
