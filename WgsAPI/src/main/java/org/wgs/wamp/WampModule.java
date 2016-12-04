@@ -13,7 +13,6 @@ import org.jdeferred.FailCallback;
 import org.jdeferred.ProgressCallback;
 import org.jdeferred.Promise;
 import org.jdeferred.impl.DeferredObject;
-import org.wgs.security.User;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRegisterProcedure;
 import org.wgs.wamp.rpc.WampCallController;

@@ -1172,10 +1172,8 @@ public class Module extends WampModule
         
         try(GroupFilter filter = new GroupFilter(appId, state, scope, client.getUser())) {
             WampList groupsArray = new WampList();
-            for(Group t : filter.getGroups()) {
-                Group g = groups.get(t.getGid());
-                if(g == null) g = t;
-
+            for(Group g : filter.getGroups()) {
+                groups.put(g.getGid(), g);
                 if(!g.isHidden()) {
                     WampDict obj = g.toWampObject(false);
                     obj.put("members", getMembers(g,0));                
@@ -1323,7 +1321,7 @@ public class Module extends WampModule
                 Root<Achievement> achievement = achievementsQuery.from(Achievement.class);
                 Expression<Application> appExpr = achievement.get("sourceRole").get("application");
                 Expression<String> nameExpr = achievement.get("name");
-                achievementsQuery.multiselect(appExpr.alias("app"), nameExpr.alias("name"), cb.count(nameExpr).alias("count"));
+                achievementsQuery.multiselect(appExpr.alias("app"), nameExpr.alias("name"), cb.count(nameExpr).alias("c"));
                 if(opponentUid == null || opponentUid.length() == 0) {
                     achievementsQuery.where(cb.equal(achievement.get("sourceUser"), user));
                 } else {
@@ -1335,13 +1333,23 @@ public class Module extends WampModule
                 for (Tuple t : achievementsTypedQuery.getResultList()) {
                     Application a = (Application)t.get("app");
                     String name = (String)t.get("name");
-                    Object count = t.get("count");
+                    Object count = t.get("c");
                     WampDict appStat = (WampDict)appStats.get(a.getName());
                     appStat.put(name.toLowerCase(), count);
                 }
                 
 
-                // Search active groups stats
+                // Search active groups stats using JQL (FIXME: CriteriaQuery with onetomany relationship fails with Hibernate)
+                String jql = "SELECT g.application AS app,count(DISTINCT g.gid) AS c FROM AppGroup g, IN(g.members) m WHERE m.user.uid = :uid AND g.state <> :finishedState ";
+                if(opponentUid != null && opponentUid.length() > 0) jql += "AND :opponentUid in (SELECT m2.user.uid from GroupMember m2 WHERE m2.applicationGroup = g) " ;
+                jql += "GROUP BY g.application";
+                
+                TypedQuery<Tuple> activeGroupsTypedQuery = manager.createQuery(jql, Tuple.class);
+                activeGroupsTypedQuery.setParameter("uid", user.getUid());
+                activeGroupsTypedQuery.setParameter("finishedState", GroupState.FINISHED);
+                if(opponentUid != null && opponentUid.length() > 0) activeGroupsTypedQuery.setParameter("opponentUid", opponentUid);
+                
+                /* Using CriteriaQuery worked with EclipseLink but the onetomany relationship fails with Hibernate:
                 CriteriaQuery<Tuple> activeGroupsQuery = cb.createTupleQuery();
                 Root<Group> group = activeGroupsQuery.from(Group.class);
                 Expression<String> gidExpr = group.get("gid");
@@ -1349,7 +1357,7 @@ public class Module extends WampModule
                 appExpr = group.get("application");
                 
                 Expression<Collection<String>> usersExpr = group.get("members").get("user").get("uid");
-                activeGroupsQuery.multiselect(appExpr.alias("app"), cb.countDistinct(gidExpr).alias("count"));
+                activeGroupsQuery.multiselect(appExpr.alias("app"), cb.countDistinct(gidExpr).alias("c"));
                 if(opponentUid == null || opponentUid.length() == 0) {
                     activeGroupsQuery.where(cb.and(cb.notEqual(stateExpr, GroupState.FINISHED), cb.isMember(user.getUid(), usersExpr)));
                 } else {
@@ -1357,11 +1365,12 @@ public class Module extends WampModule
                     activeGroupsQuery.where(cb.and(cb.notEqual(stateExpr, GroupState.FINISHED), cb.isMember(user.getUid(), usersExpr), cb.isMember(opponentUid, usersExpr2)));
                 }
                 activeGroupsQuery.groupBy(appExpr);
-                
+
                 TypedQuery<Tuple> activeGroupsTypedQuery = manager.createQuery(activeGroupsQuery);
+                */
                 for (Tuple t : activeGroupsTypedQuery.getResultList()) {
                     Application a = (Application)t.get("app");
-                    Object count = t.get("count");
+                    Object count = t.get("c");
                     WampDict appStat = (WampDict)appStats.get(a.getName());
                     appStat.put("active", count);
                 }
