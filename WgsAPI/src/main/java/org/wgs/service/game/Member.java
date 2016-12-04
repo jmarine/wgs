@@ -54,8 +54,8 @@ public class Member implements java.io.Serializable
     @Enumerated(EnumType.ORDINAL)
     private MemberState state;
 
-    @Transient
-    private transient Client client;
+    @Column(name="sid")
+    private Long  sid;
     
     
     public Member()
@@ -91,19 +91,6 @@ public class Member implements java.io.Serializable
         this.slot = slot;
     }    
     
-    /**
-     * @return the client
-     */
-    public Client getClient() {
-        return client;
-    }
-
-    /**
-     * @param client the client to set
-     */
-    public void setClient(Client client) {
-        this.client = client;
-    }
 
     /**
      * @return the usertype
@@ -119,6 +106,21 @@ public class Member implements java.io.Serializable
         this.userType = userType;
     }
 
+
+    /**
+     * @return the sid
+     */
+    public Long getClientSID() {
+        return sid;
+    }
+
+    /**
+     * @param usertype the usertype to set
+     */
+    public void setClientSID(Long sid) {
+        this.sid = sid;
+    }    
+    
     /**
      * @return the user
      */
@@ -197,13 +199,13 @@ public class Member implements java.io.Serializable
     
     public WampDict toWampObject() 
     {
-        boolean connected = (getClient() != null);
+        boolean connected = (sid != null);
         
         WampDict obj = new WampDict();
-        obj.put("sid",  (client != null)? client.getSessionId() : null);
-        obj.put("user", ((user!=null)? user.getUid() : ((client != null) ? "#anonymous-" + client.getSessionId() : "") ) );
-        obj.put("name", ((user!=null)? user.getName() : ((client != null) ? "Anonymous" : "") ) );
-        obj.put("picture", ((user!=null)? user.getPicture() : ((client != null) ? "images/anonymous.png": "") ) );
+        obj.put("sid",  sid);
+        obj.put("user", ((user!=null)? user.getUid() : ((connected) ? "#anonymous-" + sid : "") ) );
+        obj.put("name", ((user!=null)? user.getName() : ((connected) ? "Anonymous" : "") ) );
+        obj.put("picture", ((user!=null)? user.getPicture() : ((connected) ? "images/anonymous.png": "") ) );
         obj.put("type", userType);
         obj.put("state", String.valueOf(state));
         obj.put("role", ((role!=null)? role.getName():""));

@@ -8,7 +8,6 @@ package org.wgs.service.game;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -26,10 +25,7 @@ import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Expression;
-import javax.persistence.criteria.Path;
-import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
-import javax.persistence.criteria.Subquery;
 import org.wgs.util.Storage;
 import org.wgs.security.User;
 import org.wgs.security.UserRepository;
@@ -59,7 +55,6 @@ public class Module extends WampModule
     public  static final String WGS_MODULE_NAME = "wgs";
     
     private Map<String, Application> applications = new ConcurrentHashMap<String,Application>();
-    private Map<String, Group> groups = new ConcurrentHashMap<String,Group>();
     private Map<Long,Client> clients = new ConcurrentHashMap<Long,Client>();
 
     
@@ -90,10 +85,6 @@ public class Module extends WampModule
         return clients.get(sessionId);
     }
     
-    public Group getGroup(String gid)
-    {
-        return groups.get(gid);
-    }
     
     private String getFQtopicURI(String topicName)
     {
@@ -416,7 +407,6 @@ public class Module extends WampModule
         
         if(g != null) {
             gid = g.getGid();
-            groups.put(gid, g);            
             String pwd = g.getPassword();
             if( (pwd != null) && (pwd.length()>0) ) {
                 String pwd2 = (options!=null && options.has("password"))? options.getText("password") : "";
@@ -482,7 +472,6 @@ public class Module extends WampModule
             
                 if(validator == null || validator.isValidAction(this.applications.values(), g, "INIT", g.getInitialData(), -1L)) {
                     app.addGroup(g);
-                    groups.put(g.getGid(), g);
                     created = true;
                     valid = true;
                 }
@@ -553,7 +542,7 @@ public class Module extends WampModule
                 for(int index = minSlot; index < maxSlot; index++) {
                     Member member = null;
                     member = g.getMember(index);
-                    boolean connected = (member != null) && (member.getClient() != null);
+                    boolean connected = (member != null) && (member.getClientSID() != null);
                     String user = ((member == null || member.getUser() == null) ? "" : member.getUser().getUid() );
                     if(!connected && (options.has("slot") || (currentUser!=null && user.equals(currentUser.getUid()))) ) {
                         reserved = true;
@@ -604,10 +593,10 @@ public class Module extends WampModule
                 }
                 
                 boolean userUpdated = false;
-                boolean connected = (member.getClient() != null);
+                boolean connected = (member.getClientSID() != null);
                 if(!spectator && !joined && ( (reserved && index == reservedSlot) || (!reserved && member.getUser() == null) ) ) {
                     response.put("slotJoinedByClient", member.getSlot());
-                    member.setClient(client);
+                    member.setClientSID((client!= null) ? client.getSessionId() : null);
                     member.setState(MemberState.JOINED);
                     member.setUser(manager.getReference(User.class, client.getUser().getUid()));
                     if(options != null && options.has("role") && options.getText("role").length() > 0) {
@@ -758,7 +747,7 @@ public class Module extends WampModule
                 if(g.getState() == GroupState.STARTED && node.has("ready") && node.getBoolean("ready") ) {
                     for(int slot = 0; slot < g.getNumSlots(); slot++) {
                         Member member = g.getMember(slot);
-                        if(member != null && member.getClient() != null && socket.getWampSessionId().equals(member.getClient().getSessionId())) {
+                        if(member != null && member.getClientSID() != null && socket.getWampSessionId().equals(member.getClientSID())) {
                             member.setState(MemberState.READY);
                             excludeMe = false;
                         }
@@ -787,14 +776,12 @@ public class Module extends WampModule
     @WampRegisterProcedure(name="list_members")
     public WampList getMembers(String gid, int team) throws Exception 
     {
-        Group g = groups.get(gid);
+        Group g = Storage.findEntity(Group.class, gid);
         if(g == null) {
-            g = Storage.findEntity(Group.class, gid);
-            if(g != null) groups.put(gid, g);
-            else throw new WampException(null, "wgs.error.group_not_found", null, null);
+            throw new WampException(null, "wgs.error.group_not_found", null, null);
+        } else {
+            return getMembers(g, team);
         }
-        
-        return getMembers(g, team);
     }
     
     private WampList getMembers(Group g, int team) 
@@ -878,7 +865,7 @@ public class Module extends WampModule
                         }
 
                         if(c==null) member.setState((g.getState() == GroupState.OPEN)? MemberState.EMPTY : MemberState.DETACHED );
-                        else if(c != member.getClient()) member.setState(MemberState.JOINED);
+                        else if(!c.getSessionId().equals(member.getClientSID())) member.setState(MemberState.JOINED);
 
                         if(usertype.equalsIgnoreCase("remote")) {
                             if(user!=null && user.equals(member.getUser())) {
@@ -895,7 +882,7 @@ public class Module extends WampModule
                             }
                         }
 
-                        member.setClient(c);
+                        member.setClientSID( (c!= null)? c.getSessionId() : null );
                         member.setUser(user);
                         member.setUserType(usertype);
                         member.setRole(r);
@@ -915,7 +902,7 @@ public class Module extends WampModule
                     if(state != null) {
                         for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                             Member member = g.getMember(slot);
-                            if( (member != null) && (member.getClient() != null) && (member.getClient().getSessionId().equals(sid)) ) {
+                            if( (member != null) && (member.getClientSID() != null) && (member.getClientSID().equals(sid)) ) {
                                 member.setState(MemberState.valueOf(state));
                             }
                             membersArray.add((member != null) ? member.toWampObject() : null);
@@ -946,19 +933,16 @@ public class Module extends WampModule
     @WampRegisterProcedure(name="send_group_message")
     public void sendGroupMessage(WampSocket socket, String gid, WampObject data) throws Exception
     {
-        Group g = groups.get(gid);
-        if(g != null) {
-            WampDict event = new WampDict();
-            event.put("cmd", "group_message");
-            event.put("message", data);
-            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+gid)), null, event, false, true); // don't exclude Me
-        }
+        WampDict event = new WampDict();
+        event.put("cmd", "group_message");
+        event.put("message", data);
+        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+gid)), null, event, false, true); // don't exclude Me
     }
     
     @WampRegisterProcedure(name="send_team_message")
     public void sendTeamMessage(WampSocket socket, String gid, WampObject data) throws Exception
     {
-        Group g = groups.get(gid);
+        Group g = Storage.findEntity(Group.class, gid);
         if(g != null) {
             int team = 0;
         
@@ -966,8 +950,8 @@ public class Module extends WampModule
             for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                 Member member = g.getMember(slot);
                 if(member != null) {
-                    Client c = member.getClient();
-                    if( (c != null) && (socket.getWampSessionId().equals(c.getSessionId())) ) {
+                    Long sid = member.getClientSID();
+                    if( (sid != null) && (socket.getWampSessionId().equals(sid)) ) {
                         team = slot;
                         break;
                     }
@@ -984,8 +968,8 @@ public class Module extends WampModule
                 for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                     Member member = g.getMember(slot);
                     if( (member != null) && (member.getTeam() == team) ) {
-                        Client c = member.getClient();
-                        if(c != null) eligibleSet.add(c.getSessionId());
+                        Long sid = member.getClientSID();
+                        if(sid != null) eligibleSet.add(sid);
                     }
                 }
 
@@ -1024,12 +1008,12 @@ public class Module extends WampModule
                 for(int slot = g.getNumSlots(); slot > 0; ) {
                     slot = slot-1;
                     Member member = g.getMember(slot);
-                    boolean connected = (member!=null && member.getClient() != null);
+                    boolean connected = (member!=null && member.getClientSID() != null);
                     if(connected) {
-                        if(client == member.getClient()) {
+                        if(client.getSessionId().equals(member.getClientSID())) {
                             logger.log(Level.INFO, "clearing slot " + slot);
 
-                            member.setClient(null);
+                            member.setClientSID(null);
                             member.setState(MemberState.DETACHED);
                             g.setMember(slot, member);
                             
@@ -1100,8 +1084,8 @@ public class Module extends WampModule
         if(g != null && msg != null) {
             for(Member m : g.getMembers()) {
                 if(m != null && m.getUser() != null) {
-                    Client c = m.getClient();
-                    if(c == null) {
+                    Long sid = m.getClientSID();
+                    if(sid == null) {
                         String clientName = fromClientSocket.getHelloDetails().getText("_oauth2_client_name");
                         Social.notifyUser(clientName, fromClientSocket, m.getUser(), g.getGid(), msg);
                     }
@@ -1173,7 +1157,6 @@ public class Module extends WampModule
         try(GroupFilter filter = new GroupFilter(appId, state, scope, client.getUser())) {
             WampList groupsArray = new WampList();
             for(Group g : filter.getGroups()) {
-                groups.put(g.getGid(), g);
                 if(!g.isHidden()) {
                     WampDict obj = g.toWampObject(false);
                     obj.put("members", getMembers(g,0));                

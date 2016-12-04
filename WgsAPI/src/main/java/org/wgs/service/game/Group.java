@@ -342,7 +342,7 @@ public class Group implements java.io.Serializable
         int count = 0;
         for(int i = 0; i < members.size(); i++) {
             Member member = getMember(i);
-            if( (member != null) && (member.getClient() != null) ) count++;
+            if( (member != null) && (member.getClientSID() != null) ) count++;
         }
         return count;
     }
