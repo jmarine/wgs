@@ -1,5 +1,6 @@
 package org.wgs.service.game;
 
+import javax.persistence.Cacheable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -18,6 +19,7 @@ import org.wgs.wamp.type.WampDict;
 
 @Entity(name="GroupMember")
 @Table(name="APP_GROUP_MEMBER")
+@Cacheable(false)
 public class Member implements java.io.Serializable
 {
     private static final long serialVersionUID = 0L;

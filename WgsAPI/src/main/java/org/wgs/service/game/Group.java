@@ -2,6 +2,7 @@ package org.wgs.service.game;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.persistence.Cacheable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -25,6 +26,7 @@ import org.wgs.wamp.type.WampList;
 
 @Entity(name="AppGroup")
 @Table(name="APP_GROUP")
+@Cacheable(false)
 @NamedQueries({
     @NamedQuery(name="wgs.findAllGroups",query="SELECT OBJECT(g) FROM AppGroup g"),
     @NamedQuery(name="wgs.findFinishedGroupsFromUser",query="SELECT DISTINCT OBJECT(g) FROM AppGroup g, IN(g.members) m WHERE g.state = org.wgs.service.game.GroupState.FINISHED AND m.user = ?1")
