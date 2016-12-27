@@ -1351,11 +1351,21 @@ public class Module extends WampModule
 
                 TypedQuery<Tuple> activeGroupsTypedQuery = manager.createQuery(activeGroupsQuery);
                 */
-                for (Tuple t : activeGroupsTypedQuery.getResultList()) {
-                    Application a = (Application)t.get("app");
-                    Object count = t.get("c");
-                    WampDict appStat = (WampDict)appStats.get(a.getName());
-                    appStat.put("active", count);
+                for (Object info : activeGroupsTypedQuery.getResultList()) {
+                    if(info instanceof Tuple) {  // CriteriaQuery
+                        Tuple tuple = (Tuple)info;
+                        Application a = (Application)tuple.get("app");
+                        Object count = tuple.get("c");
+                        WampDict appStat = (WampDict)appStats.get(a.getName());
+                        appStat.put("active", count);
+                        
+                    } else if(info instanceof Object[]) {  // JQL query
+                        Object[] array = (Object[])info;
+                        Application a = (Application)array[0];
+                        Object count = array[1];
+                        WampDict appStat = (WampDict)appStats.get(a.getName());
+                        appStat.put("active", count);
+                    }
                 }
                 
             } finally {

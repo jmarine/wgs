@@ -25,7 +25,7 @@ public class WampClientInitializer implements ServletContainerInitializer
         for(Class cls : set) {
             WampRouterConfig config = (WampRouterConfig)cls.getAnnotation(WampRouterConfig.class);
             if(config != null) {
-                System.out.println("Detected WampClientConfig in module: " + cls.getName());
+                System.out.println("Detected WampRouterConfig in module: " + cls.getName());
                 String key = config.url() + "/" + config.user() + "@" + config.realm();
                 configs.put(key, config);
                 
