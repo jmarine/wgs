@@ -1359,7 +1359,7 @@ public class Module extends WampModule
                         WampDict appStat = (WampDict)appStats.get(a.getName());
                         appStat.put("active", count);
                         
-                    } else if(info instanceof Object[]) {  // JQL query
+                    } else if(info instanceof Object[]) {  // JPQL query
                         Object[] array = (Object[])info;
                         Application a = (Application)array[0];
                         Object count = array[1];
