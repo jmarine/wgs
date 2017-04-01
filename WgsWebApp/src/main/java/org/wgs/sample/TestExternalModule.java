@@ -9,7 +9,7 @@ import org.wgs.wamp.rpc.WampCallController;
 import org.wgs.wamp.rpc.WampCallOptions;
 
 @WampModuleName("com.myapp")
-@WampRouterConfig(url = "http://localhost:8080/wgs", realm = "localhost")
+@WampRouterConfig(url = "ws://localhost:8080/wgs", realm = "localhost")
 public class TestExternalModule extends WampModule 
 {
     public TestExternalModule(WampApplication app) {

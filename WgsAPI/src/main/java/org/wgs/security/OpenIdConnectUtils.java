@@ -203,13 +203,14 @@ public class OpenIdConnectUtils
             String accessTokenResponse = oidcClient.getAccessTokenResponse(code, redirectUri);
             logger.fine("AccessToken endpoint response: " + accessTokenResponse);
             
+            JsonReader accessTokenJsonReader = Json.createReader(new StringReader(accessTokenResponse));
+            JsonObject response = accessTokenJsonReader.readObject();
+            accessTokenJsonReader.close();            
+            
             if(providerDomain.endsWith("facebook.com")) {
                 
-                int pos = accessTokenResponse.indexOf('&');
-                String accessToken = URLDecoder.decode(accessTokenResponse.substring("access_token=".length(), pos), StandardCharsets.UTF_8.toString());
-                String expires = accessTokenResponse.substring(pos + "&expires=".length());
-                Calendar expiration = Calendar.getInstance();
-                expiration.add(Calendar.SECOND, Integer.parseInt(expires));
+                String accessToken = response.getString("access_token");
+                System.out.println("Access token: " + accessToken);
                 
                 String userInfo = oidcClient.getProvider().getUserInfo(accessToken);
                 System.out.println("user info: " + userInfo);
@@ -231,17 +232,12 @@ public class OpenIdConnectUtils
                     usr.setName(userInfoNode.getString("name"));
                     if(userInfoNode.containsKey("email")) usr.setEmail(userInfoNode.getString("email"));
                     usr.setPicture("https://graph.facebook.com/v2.8/"+id+"/picture");
-                    usr.setTokenCaducity(expiration);                
-                    usr.setAccessToken(accessToken);
+
                 }
                 
                 
             } else {
                 // OpenID Connect
-
-                JsonReader   accessTokenJsonReader = Json.createReader(new StringReader(accessTokenResponse));
-                JsonObject   response = accessTokenJsonReader.readObject();
-                accessTokenJsonReader.close();
 
                 if(response != null && response.containsKey("id_token") && !response.isNull("id_token")) {
                     String idTokenJWT = response.getString("id_token");
@@ -294,27 +290,27 @@ public class OpenIdConnectUtils
                         } 
                     
                     }
-                    
-
-
-                    if(response.containsKey("refresh_token")) {
-                        usr.setRefreshToken(response.getString("refresh_token"));
-                    }
-
-                    if(response.containsKey("access_token")) {
-                        usr.setAccessToken(response.getString("access_token"));
-                        if(response.containsKey("expires_in")) {
-                            int expires_in = response.getInt("expires_in");
-                            Calendar expiration = Calendar.getInstance();
-                            expiration.add(Calendar.SECOND, expires_in);
-                            usr.setTokenCaducity(expiration);
-                        }
-                    }
 
                 }
             }
             
+            
             if(usr != null) {
+
+                if(response.containsKey("refresh_token")) {
+                    usr.setRefreshToken(response.getString("refresh_token"));
+                }
+
+                if(response.containsKey("access_token")) {
+                    usr.setAccessToken(response.getString("access_token"));
+                    if(response.containsKey("expires_in")) {
+                        int expires_in = response.getInt("expires_in");
+                        Calendar expiration = Calendar.getInstance();
+                        expiration.add(Calendar.SECOND, expires_in);
+                        usr.setTokenCaducity(expiration);
+                    }
+                }
+                
                 Social.getFriends(usr);
                 Social.clearNotifications(oidcClient, usr);
                 usr.setLastLoginTime(now);
