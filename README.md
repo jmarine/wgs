@@ -20,9 +20,9 @@ The server-side is developed in Java language, and it can be deployed as a stand
 The project also includes Javascript libraries to access the services using websockets and [WAMP](http://wamp.ws) (Web Application Messaging Protocol).
 
 
-Demo sites
-----------
-* [WebGL 8x8 board games](http://wgs-jmarine.rhcloud.com/webgl8x8boardgames/).
+Example projects
+----------------
+* [WebGL 8x8 board games](https://github.com/jmarine/webgl8x8boardgames).
 
 
 Documentation
