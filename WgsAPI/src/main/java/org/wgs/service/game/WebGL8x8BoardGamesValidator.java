@@ -257,7 +257,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
         ScriptEngine ruleEngine = ruleEngines.poll();
         if(ruleEngine == null) {
             ScriptEngineManager factory = new ScriptEngineManager();
-            ruleEngine = factory.getEngineByName("JavaScript");
+            ruleEngine = factory.getEngineByName("JavaScript");  // Graal.js
 
             ClassLoader cl = this.getClass().getClassLoader();
             ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/move.js"),StandardCharsets.UTF_8));
