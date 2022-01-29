@@ -71,10 +71,10 @@ public class User implements Serializable, Principal
     @Column(name="token_caducity")
     private java.util.Calendar tokenCaducity;
     
-    @Column(name="access_token", length=1024)
+    @Column(name="access_token", length=2048)
     private String accessToken;
     
-    @Column(name="refresh_token", length=1024)
+    @Column(name="refresh_token", length=2048)
     private String refreshToken;    
     
     @ManyToMany(fetch = FetchType.LAZY)
