@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.script.*;
@@ -265,6 +266,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
 
             ArrayList<Application> appsToLoad = new ArrayList<Application>();
             appsToLoad.addAll(apps);                
+            Collections.sort(appsToLoad);  // i.e: chess.js required by chess960.js
             while(!appsToLoad.isEmpty()) {  // Note: inherited classes may fail until super class has been loaded
                 Iterator<Application> iter = appsToLoad.iterator();
                 while(iter.hasNext()) {
