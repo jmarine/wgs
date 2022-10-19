@@ -32,7 +32,7 @@ import org.wgs.wamp.type.WampList;
     @NamedQuery(name="wgs.findAppByName",query="SELECT OBJECT(a) FROM Application a WHERE a.name = ?1 ORDER BY a.version DESC")
 
 })
-public class Application implements Serializable 
+public class Application implements Serializable, Comparable
 {
     private static final long serialVersionUID = 0L;
     
@@ -427,5 +427,14 @@ public class Application implements Serializable
         return id.hashCode();
     }
 
-    
+    @Override
+    public int compareTo(Object t) {
+        if(t != null && t instanceof Application) {
+            Application app = (Application)t;
+            return getName().compareToIgnoreCase(app.getName());
+        } else {
+            return 1;
+        }
+    }
+
 }
