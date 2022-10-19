@@ -1,7 +1,7 @@
-FROM openjdk:8-jdk
+FROM openjdk:17-jdk
 
 # Install Maven building tool for Java applications
-ARG MAVEN_VERSION=3.3.9
+ARG MAVEN_VERSION=3.8.6
 ENV MAVEN_HOME=/opt/apache-maven-$MAVEN_VERSION
 ENV PATH ${PATH}:$MAVEN_HOME/bin
 
@@ -48,4 +48,4 @@ USER www-data
 WORKDIR /var/opt/wgs
 
 # Define default command.
-CMD java -Xmx128m -Djava.util.logging.config.file=/etc/opt/wgs/logging.properties -Dderby.drda.startNetworkServer=true -Dderby.drda.host=0.0.0.0 -Dderby.drda.portNumber=15270 -jar /opt/wgs/target/WgsAPI-2.0-SNAPSHOT.jar /etc/opt/wgs/wgs_$WGS_NODE_TYPE.properties
+CMD java -Xmx128m -Djava.util.logging.config.file=/etc/opt/wgs/logging.properties -Dderby.drda.startNetworkServer=true -Dderby.drda.host=0.0.0.0 -Dderby.drda.portNumber=15270 -jar /opt/wgs/target/WgsAPI-3.0-SNAPSHOT.jar /etc/opt/wgs/wgs_$WGS_NODE_TYPE.properties
