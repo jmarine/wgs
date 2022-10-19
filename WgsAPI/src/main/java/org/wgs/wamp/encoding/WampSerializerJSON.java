@@ -3,7 +3,7 @@ package org.wgs.wamp.encoding;
 import java.io.StringReader;
 import java.util.Map.Entry;
 
-import javax.json.*;
+import jakarta.json.*;
 import org.wgs.util.Base64;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
@@ -12,8 +12,18 @@ import org.wgs.wamp.type.WampObject;
 
 public class WampSerializerJSON extends WampObject implements WampSerializer
 {
-    private static JsonReaderFactory  readerFactory  = Json.createReaderFactory(null);
-    private static JsonBuilderFactory builderFactory = Json.createBuilderFactory(null);
+    private static JsonReaderFactory  readerFactory  = null;
+    private static JsonBuilderFactory builderFactory = null;
+    
+    static {
+        try {
+            readerFactory  = Json.createReaderFactory(null);
+            builderFactory = Json.createBuilderFactory(null);
+        } catch(Throwable ex) {
+            System.out.println("Error: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
     
     
     @Override
@@ -121,11 +131,11 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
     {
         Object retval = null;
         if(obj != null) {
-            if(obj.equals(javax.json.JsonValue.NULL)) {
+            if(obj.equals(jakarta.json.JsonValue.NULL)) {
                 retval = null;
-            } else if(obj.equals(javax.json.JsonValue.TRUE)) {
+            } else if(obj.equals(jakarta.json.JsonValue.TRUE)) {
                 return Boolean.TRUE;
-            } else if(obj.equals(javax.json.JsonValue.FALSE)) {
+            } else if(obj.equals(jakarta.json.JsonValue.FALSE)) {
                 return Boolean.FALSE;
             } else if(obj instanceof JsonNumber) {
                 JsonNumber num = (JsonNumber)obj;

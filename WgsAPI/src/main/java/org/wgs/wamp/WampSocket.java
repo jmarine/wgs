@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.websocket.CloseReason;
+import jakarta.websocket.CloseReason;
 import org.jdeferred.Deferred;
 import org.wgs.security.User;
 import org.wgs.security.WampCRA;

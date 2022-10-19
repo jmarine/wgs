@@ -3,10 +3,11 @@ package org.wgs.wamp.transport.http.websocket;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.Session;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.Endpoint;
+import jakarta.websocket.EndpointConfig;
+import jakarta.websocket.OnOpen;
+import jakarta.websocket.Session;
 
 import org.wgs.security.WampCRA;
 import org.wgs.wamp.WampApplication;
@@ -28,17 +29,27 @@ public class WampEndpoint extends Endpoint
     public void onApplicationStart(WampApplication app) { 
     }
    
+    @OnOpen
     @Override
     public  void onOpen(Session session, EndpointConfig endpointConfig) {
         if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "Session opened ("+ session.getNegotiatedSubprotocol() +"): " + session.getId());
         
         Map<String,Object> configProps = endpointConfig.getUserProperties();
-        session.getUserProperties().put(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME,
-            configProps.get(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME) );
+        session.getUserProperties().put(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME, configProps.get(WampCRA.WAMP_AUTH_ID_PROPERTY_NAME) );
         
         this.session = session;
-        this.wampEndpointConfig = (WampEndpointConfig)configProps.get(WampEndpointConfig.WAMP_ENDPOINTCONFIG_PROPERTY_NAME);
-        this.wampEndpointConfig.onWampOpen(session, this);
+        try {        
+            if(endpointConfig != null && endpointConfig instanceof WampEndpointConfig) {
+                this.wampEndpointConfig = (WampEndpointConfig)endpointConfig;
+            } else {
+                this.wampEndpointConfig = (WampEndpointConfig)configProps.get(WampEndpointConfig.WAMP_ENDPOINTCONFIG_PROPERTY_NAME);
+            }
+            this.wampEndpointConfig.onWampOpen(session, this);
+        } catch(Throwable ex) {
+            System.out.println("Error: " + ex.getMessage());
+            ex.printStackTrace();
+            throw ex;
+        }
     }
 
     

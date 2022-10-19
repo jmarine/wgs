@@ -1,9 +1,9 @@
 package org.wgs.wamp.jms;
 
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.MessageListener;
-import javax.jms.Topic;
+import jakarta.jms.JMSException;
+import jakarta.jms.Message;
+import jakarta.jms.MessageListener;
+import jakarta.jms.Topic;
 import org.jdeferred.DoneCallback;
 import org.wgs.wamp.WampModule;
 import org.wgs.wamp.WampSocket;
@@ -13,7 +13,7 @@ import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 
 
-public class WampTopicSubscriber extends WampModule implements javax.jms.TopicSubscriber
+public class WampTopicSubscriber extends WampModule implements jakarta.jms.TopicSubscriber
 {
     private Long subscriptionId;
     

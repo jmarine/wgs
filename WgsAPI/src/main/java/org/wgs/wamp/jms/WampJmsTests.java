@@ -1,13 +1,13 @@
 package org.wgs.wamp.jms;
 
-import javax.jms.Message;
-import javax.jms.MessageListener;
-import javax.jms.Topic;
-import javax.jms.TopicConnection;
-import javax.jms.TopicConnectionFactory;
-import javax.jms.TopicPublisher;
-import javax.jms.TopicSession;
-import javax.jms.TopicSubscriber;
+import jakarta.jms.Message;
+import jakarta.jms.MessageListener;
+import jakarta.jms.Topic;
+import jakarta.jms.TopicConnection;
+import jakarta.jms.TopicConnectionFactory;
+import jakarta.jms.TopicPublisher;
+import jakarta.jms.TopicSession;
+import jakarta.jms.TopicSubscriber;
 
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.type.WampDict;
@@ -29,7 +29,7 @@ public class WampJmsTests
         TopicConnectionFactory tcf = new WampTopicConnectionFactory(WampEncoding.MsgPack, url, realm, digestMD5);
         TopicConnection connection = tcf.createTopicConnection(user, password);
 
-        TopicSession session = connection.createTopicSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);
+        TopicSession session = connection.createTopicSession(false, jakarta.jms.Session.AUTO_ACKNOWLEDGE);
         Topic jmsTopic = session.createTopic(topicName);
 
         String selector = "";

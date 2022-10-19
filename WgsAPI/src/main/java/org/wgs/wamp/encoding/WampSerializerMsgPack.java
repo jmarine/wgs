@@ -5,10 +5,8 @@ import org.wgs.wamp.type.WampObject;
 import org.wgs.wamp.type.WampList;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import org.msgpack.core.MessageFormat;
 
 import org.msgpack.core.MessagePack;
 import org.msgpack.core.MessagePacker;
@@ -21,7 +19,7 @@ import org.msgpack.value.MapValue;
 import org.msgpack.value.NilValue;
 import org.msgpack.value.RawValue;
 import org.msgpack.value.Value;
-import org.msgpack.value.holder.ValueHolder;
+import org.msgpack.value.ImmutableValue;
 
 
 
@@ -76,9 +74,7 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
         MessagePack msgpack = new MessagePack();
         MessageUnpacker unpacker = msgpack.newUnpacker(new ByteArrayInputStream((byte[])obj, offset, len));
         //unpacker.resetReadByteCount();
-        ValueHolder vh = new ValueHolder();
-        MessageFormat fmt = unpacker.unpackValue(vh);
-        Value val = vh.get();
+        ImmutableValue val = unpacker.unpackValue();
         return (WampObject)castToWampObject(val);
     }
     
@@ -88,7 +84,7 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
         if(obj instanceof NilValue) {
             retval = null;
         } else if(obj instanceof BooleanValue) {
-            retval = ((BooleanValue)obj).toBoolean();
+            retval = ((BooleanValue)obj).getBoolean();
         } else if(obj instanceof IntegerValue) {
             retval = ((IntegerValue)obj).toLong();
         } else if(obj instanceof FloatValue) {
@@ -119,7 +115,7 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
     private WampDict createWampDict(MapValue node)
     {
         WampDict dict = new WampDict();
-        Map<Value,Value> map = node.toMap();
+        Map<Value,Value> map = node.map();
         for(Entry<Value,Value> entry : map.entrySet()) {
             dict.put(castToWampObject(entry.getKey()).toString(), castToWampObject(entry.getValue()));
         }

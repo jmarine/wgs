@@ -150,6 +150,7 @@ public class WampCluster extends WampModule
             } catch(Exception ex) {
                 error++;
                 System.out.println("Error connecting with master node: " + ex.getClass().getName() + ": " + ex.getMessage());
+                ex.printStackTrace();
                 try { Thread.sleep(masterNodeReconnectionDelayMillis);  } // wait for master restart // wait for master restart
                 catch(Exception ex2) { }
             }

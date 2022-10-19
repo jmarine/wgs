@@ -8,15 +8,15 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.websocket.CloseReason;
-import javax.websocket.Decoder;
-import javax.websocket.Encoder;
-import javax.websocket.Extension;
-import javax.websocket.HandshakeResponse;
-import javax.websocket.MessageHandler;
-import javax.websocket.Session;
-import javax.websocket.server.HandshakeRequest;
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.Decoder;
+import jakarta.websocket.Encoder;
+import jakarta.websocket.Extension;
+import jakarta.websocket.HandshakeResponse;
+import jakarta.websocket.MessageHandler;
+import jakarta.websocket.Session;
+import jakarta.websocket.server.HandshakeRequest;
+import jakarta.websocket.server.ServerEndpointConfig;
 import org.wgs.security.WampCRA;
 import org.wgs.wamp.*;
 import org.wgs.wamp.WampSocket;
@@ -26,8 +26,8 @@ import org.wgs.wamp.type.WampList;
 
 
 public class WampEndpointConfig 
-    extends javax.websocket.server.ServerEndpointConfig.Configurator
-    implements javax.websocket.server.ServerEndpointConfig
+    extends jakarta.websocket.server.ServerEndpointConfig.Configurator
+    implements jakarta.websocket.server.ServerEndpointConfig
 {
     public  static final String WAMP_APPLICATION_PROPERTY_NAME = "__wamp_application";
     public  static final String WAMP_ENDPOINTCONFIG_PROPERTY_NAME = "__wamp_endpointconfig";
@@ -82,7 +82,7 @@ public class WampEndpointConfig
                         WampList request = (WampList)WampEncoding.MsgPack.getSerializer().deserialize(message, 0, message.length);
                         if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "onWampMessage (deserialized request): " + request);
                         wampApp.onWampMessage(clientSocket, request);
-                    } catch(Exception ex) { 
+                    } catch(Throwable ex) { 
                         logger.log(Level.SEVERE, "WampEndpointConfig.onMessage: Error processing received message (wamp.2.msgpack)", ex);
                     }
                 }
@@ -103,7 +103,7 @@ public class WampEndpointConfig
                             wampApp.onWampMessage(clientSocket, request);
                             offset = offset + 4 + partLen;
                         }
-                    } catch(Exception ex) { 
+                    } catch(Throwable ex) { 
                         logger.log(Level.SEVERE, "WampEndpointConfig.onMessage: Error processing received message (wamp.2.msgpack.batched)", ex);
                     }
                 }
@@ -123,7 +123,7 @@ public class WampEndpointConfig
                             wampApp.onWampMessage(clientSocket, request);
                             offset = offset + partLen + 1;  // MESSAGE_PART_DELIMITER
                         }
-                    } catch(Exception ex) { 
+                    } catch(Throwable ex) { 
                         logger.log(Level.SEVERE, "Error processing message: "+message, ex);
                     }
                 }
@@ -138,7 +138,7 @@ public class WampEndpointConfig
                         if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "onWampMessage (text): " + message);
                         WampList request = (WampList)WampEncoding.JSON.getSerializer().deserialize(message, 0, message.length());
                         wampApp.onWampMessage(clientSocket, request);
-                    } catch(Exception ex) { 
+                    } catch(Throwable ex) {
                         logger.log(Level.SEVERE, "Error processing message: "+message, ex);
                     }
                 }
@@ -271,7 +271,7 @@ public class WampEndpointConfig
             List<String> cookies = response.getHeaders().get("Cookie");
             if(cookies == null) cookies = new ArrayList<String>();
             
-            cookies.add(WAMP_AUTH_COOKIE_NAME +"=" + wampCookieValue);
+            cookies.add(WAMP_AUTH_COOKIE_NAME +"=" + wampCookieValue + ";SameSite=Lax");
             response.getHeaders().put("Set-Cookie", cookies);
         }
 

@@ -16,16 +16,16 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityTransaction;
-import javax.persistence.LockModeType;
-import javax.persistence.Query;
-import javax.persistence.Tuple;
-import javax.persistence.TypedQuery;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Expression;
-import javax.persistence.criteria.Root;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.Query;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Root;
 import org.wgs.util.Storage;
 import org.wgs.security.User;
 import org.wgs.security.UserRepository;
@@ -468,7 +468,7 @@ public class Module extends WampModule
 
                 GroupActionValidator validator = null;
                 String validatorClassName = g.getApplication().getActionValidator();
-                if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).newInstance();
+                if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).getDeclaredConstructor().newInstance();
             
                 if(validator == null || validator.isValidAction(this.applications.values(), g, "INIT", g.getInitialData(), -1L)) {
                     app.addGroup(g);
@@ -1185,7 +1185,7 @@ public class Module extends WampModule
         if(g != null) synchronized(g) {
             GroupActionValidator validator = null;
             String validatorClassName = g.getApplication().getActionValidator();
-            if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).newInstance();
+            if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).getDeclaredConstructor().newInstance();
 
             Member member = null;
             if(playerSlot >= 0) {

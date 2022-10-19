@@ -3,10 +3,10 @@ package org.wgs.wamp.client;
 import java.util.HashMap;
 import java.util.Set;
 
-import javax.servlet.ServletContainerInitializer;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.annotation.HandlesTypes;
+import jakarta.servlet.ServletContainerInitializer;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.HandlesTypes;
 
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampModule;

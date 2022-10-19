@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Query;
-import javax.persistence.TypedQuery;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
+import jakarta.persistence.Query;
+import jakarta.persistence.TypedQuery;
 import org.wgs.security.User;
 import org.wgs.util.Storage;
 
@@ -196,7 +196,7 @@ public class Ranking extends Glicko2
         Achievement ratingAchievement = null;
         try { 
             ratingAchievement = query.getSingleResult(); 
-        } catch(javax.persistence.NoResultException ex) {
+        } catch(jakarta.persistence.NoResultException ex) {
             ratingAchievement = new Achievement();
             ratingAchievement.setApp(app);
             ratingAchievement.setSourceUser(player);
@@ -209,7 +209,7 @@ public class Ranking extends Glicko2
         Achievement rdAchievement = null;
         try {
             rdAchievement = query.getSingleResult();
-        } catch(javax.persistence.NoResultException ex) {
+        } catch(jakarta.persistence.NoResultException ex) {
             rdAchievement = new Achievement();
             rdAchievement.setApp(app);
             rdAchievement.setSourceUser(player);
@@ -222,7 +222,7 @@ public class Ranking extends Glicko2
         Achievement volAchievement = null;
         try {
             volAchievement = query.getSingleResult();
-        } catch(javax.persistence.NoResultException ex) {
+        } catch(jakarta.persistence.NoResultException ex) {
             volAchievement = new Achievement();
             volAchievement.setApp(app);
             volAchievement.setSourceUser(player);

@@ -1,13 +1,9 @@
 package org.wgs.wamp.transport.http.websocket;
 
 import java.nio.ByteBuffer;
-import java.security.Principal;
-import java.util.Map;
-import javax.websocket.CloseReason;
-import javax.websocket.Session;
-import org.wgs.wamp.WampApplication;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.Session;
 import org.wgs.wamp.WampSocket;
-import org.wgs.wamp.type.WampConnectionState;
 
 
 public class WampWebsocket extends WampSocket

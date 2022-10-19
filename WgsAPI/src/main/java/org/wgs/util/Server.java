@@ -305,10 +305,9 @@ public class Server
             synchronized(Server.class) {
                 Server.class.wait();  // Required OpenShift environment (it doesn't wait for key press)
             }  
-            
-            
-        } catch(Exception ex) {
-            System.err.println("Error: " + ex.getClass().getName() + ":" + ex.getMessage());
+
+        } catch(Throwable ex) {
+            System.err.println("Fatal: " + ex.getClass().getName() + ":" + ex.getMessage());
             ex.printStackTrace();
             
         } finally {

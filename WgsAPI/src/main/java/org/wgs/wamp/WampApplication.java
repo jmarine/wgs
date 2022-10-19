@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.naming.InitialContext;
-import javax.websocket.CloseReason;
+import jakarta.websocket.CloseReason;
 import org.jdeferred.Deferred;
 import org.wgs.security.OpenIdConnectUtils;
 import org.wgs.security.User;
@@ -219,11 +219,18 @@ public class WampApplication
                     // TODO
                 } else if(authMethod.equalsIgnoreCase("wampcra") 
                         && helloDetails.has("authid") && helloDetails.getText("authid") != null) {
-                    String authId = helloDetails.getText("authid");
+                    
+                    try { 
+                        String authId = helloDetails.getText("authid");
 
-                    WampDict challenge = WampCRA.getChallenge(clientSocket, authId);
+                        WampDict challenge = WampCRA.getChallenge(clientSocket, authId);
 
-                    WampProtocol.sendChallengeMessage(clientSocket, authMethod, challenge);
+                        WampProtocol.sendChallengeMessage(clientSocket, authMethod, challenge);
+                    } catch(Throwable ex) {
+                        System.out.println("Error: " + ex.getMessage());
+                        ex.printStackTrace();
+                        throw ex;
+                    }
                     break;
                     
                 } else if(authMethod.equals("oauth2")) {

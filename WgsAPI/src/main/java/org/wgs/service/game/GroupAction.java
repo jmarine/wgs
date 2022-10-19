@@ -1,18 +1,18 @@
 package org.wgs.service.game;
 
-import javax.persistence.CascadeType;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinColumns;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.NamedQueries;
+import jakarta.persistence.NamedQuery;
+import jakarta.persistence.Table;
+import jakarta.persistence.TemporalType;
 import org.wgs.security.User;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinColumns;
-import javax.persistence.ManyToOne;
-import javax.persistence.NamedQueries;
-import javax.persistence.NamedQuery;
-import javax.persistence.Table;
-import javax.persistence.TemporalType;
 import org.wgs.wamp.type.WampDict;
 
 
@@ -35,7 +35,7 @@ public class GroupAction implements java.io.Serializable
     @Column(name="actionOrder", nullable=true)
     private int actionOrder;
     
-    @javax.persistence.Temporal(TemporalType.TIMESTAMP)
+    @jakarta.persistence.Temporal(TemporalType.TIMESTAMP)
     @Column(name="actionTime")
     private java.util.Calendar actionTime; 
 

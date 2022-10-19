@@ -2,15 +2,15 @@ package org.wgs.wamp.jms;
 
 import java.util.Collections;
 import java.util.Enumeration;
-import javax.jms.Destination;
-import javax.jms.JMSException;
+import jakarta.jms.Destination;
+import jakarta.jms.JMSException;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.topic.WampBroker;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 
 
-public class WampMessage implements javax.jms.TextMessage
+public class WampMessage implements jakarta.jms.TextMessage
 {
     private WampDict props;
     private WampList payload;

@@ -1,11 +1,11 @@
 package org.wgs.wamp.jms;
 
 import java.util.Enumeration;
-import javax.jms.CompletionListener;
-import javax.jms.Destination;
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.Topic;
+import jakarta.jms.CompletionListener;
+import jakarta.jms.Destination;
+import jakarta.jms.JMSException;
+import jakarta.jms.Message;
+import jakarta.jms.Topic;
 import org.wgs.wamp.client.WampClient;
 import org.wgs.wamp.encoding.WampEncoding;
 import org.wgs.wamp.topic.WampPublishOptions;
@@ -14,7 +14,7 @@ import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
 
 
-public class WampTopicPublisher implements javax.jms.TopicPublisher
+public class WampTopicPublisher implements jakarta.jms.TopicPublisher
 {
     private Topic topic;
     private WampTopicSession session;

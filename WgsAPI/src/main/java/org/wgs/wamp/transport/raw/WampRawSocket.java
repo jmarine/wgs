@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import javax.net.SocketFactory;
-import javax.websocket.CloseReason;
+import jakarta.websocket.CloseReason;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.WampException;
 import org.wgs.wamp.WampSocket;

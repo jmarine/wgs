@@ -7,10 +7,10 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.servlet.ServletRegistration;
-import javax.servlet.http.HttpServlet;
-import javax.websocket.DeploymentException;
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.servlet.ServletRegistration;
+import jakarta.servlet.Servlet;
+import jakarta.websocket.DeploymentException;
+import jakarta.websocket.server.ServerEndpointConfig;
 import org.glassfish.grizzly.PortRange;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.http.server.NetworkListener;
@@ -21,10 +21,13 @@ import org.glassfish.grizzly.http.server.StaticHttpHandler;
 import org.glassfish.grizzly.servlet.WebappContext;
 import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
+import org.glassfish.tyrus.container.grizzly.server.GrizzlyServerContainer;
+import org.glassfish.tyrus.container.grizzly.server.WebSocketAddOn;
 import org.glassfish.tyrus.core.TyrusWebSocketEngine;
 import org.glassfish.tyrus.server.TyrusServerContainer;
 import org.glassfish.tyrus.spi.ServerContainer;
 import org.glassfish.tyrus.spi.WebSocketEngine;
+
 
 
 public class WssServerContainer extends GrizzlyServerContainer
@@ -39,7 +42,7 @@ public class WssServerContainer extends GrizzlyServerContainer
         this.serverProperties = serverProperties;
     }
     
-    public void addServlet(String contextPath, String servletMapping, Class<? extends HttpServlet> servletClass)
+    public void addServlet(String contextPath, String servletMapping, Class<? extends Servlet> servletClass)
     {
         WebappContext context = new WebappContext("WebappContext", contextPath);
         ServletRegistration registration = context.addServlet("ServletContainer", servletClass);
@@ -101,12 +104,12 @@ public class WssServerContainer extends GrizzlyServerContainer
                 String wssPort = serverProperties.getProperty("wss-port");
                 if(wssPort != null) {
                     SSLContextConfigurator sslContextConfig = new SSLContextConfigurator(); 
-                    sslContextConfig.createSSLContext();
+                    sslContextConfig.createSSLContext(true);
                     sslContextConfig.setKeyStoreFile(serverProperties.getProperty("wss-key-store", "keystore.jks"));
                     sslContextConfig.setTrustStoreFile(serverProperties.getProperty("wss-trust-store", "cacerts.jks"));
                     sslContextConfig.setKeyStorePass(serverProperties.getProperty("wss-key-store-password", "changeit"));
                     sslContextConfig.setTrustStorePass(serverProperties.getProperty("wss-trust-store-password", "changeit"));
-                    sslContextConfig.setKeyManagerFactoryAlgorithm("SunX509");
+                    sslContextConfig.setKeyManagerFactoryAlgorithm("PKIX");
 
                     NetworkListener networkListener = new NetworkListener("wss", hostIP, Integer.parseInt(wssPort));
                     networkListener.setSecure(true); 

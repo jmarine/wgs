@@ -3,19 +3,19 @@ package org.wgs.security;
 import java.io.Serializable;
 import java.security.Principal;
 import java.util.List;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.Lob;
-import javax.persistence.ManyToMany;
-import javax.persistence.NamedQueries;
-import javax.persistence.NamedQuery;
-import javax.persistence.OrderBy;
-import javax.persistence.Table;
-import javax.persistence.TemporalType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.NamedQueries;
+import jakarta.persistence.NamedQuery;
+import jakarta.persistence.OrderBy;
+import jakarta.persistence.Table;
+import jakarta.persistence.TemporalType;
 
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
@@ -44,7 +44,7 @@ public class User implements Serializable, Principal
     @Column(name="name", nullable=false)
     private String name;   
 
-    @javax.persistence.Temporal(TemporalType.TIMESTAMP)
+    @jakarta.persistence.Temporal(TemporalType.TIMESTAMP)
     @Column(name="last_login")
     private java.util.Calendar lastLoginTime;
     
@@ -54,7 +54,7 @@ public class User implements Serializable, Principal
     @Column(name="is_admin")
     private boolean administrator;
 
-    @javax.persistence.Temporal(TemporalType.TIMESTAMP)
+    @jakarta.persistence.Temporal(TemporalType.TIMESTAMP)
     @Column(name="profile_caducity")
     private java.util.Calendar profileCaducity;
     
@@ -67,7 +67,7 @@ public class User implements Serializable, Principal
     @Column(name="picture")
     private String picture;    
 
-    @javax.persistence.Temporal(TemporalType.TIMESTAMP)
+    @jakarta.persistence.Temporal(TemporalType.TIMESTAMP)
     @Column(name="token_caducity")
     private java.util.Calendar tokenCaducity;
     

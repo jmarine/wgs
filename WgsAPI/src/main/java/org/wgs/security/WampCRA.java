@@ -152,7 +152,13 @@ public class WampCRA
 
             PBKDF2 pbkdf2 = new PBKDF2("HmacSHA256");
             //return pbkdf2.deriveKey(secret.getBytes(StandardCharsets.UTF_8), salt, iterations, keylen);
-            return Base64.encodeByteArrayToBase64(pbkdf2.deriveKey(secret.getBytes(StandardCharsets.UTF_8), salt, iterations, keylen)).getBytes(StandardCharsets.UTF_8);
+            try {
+                return Base64.encodeByteArrayToBase64(pbkdf2.deriveKey(secret.getBytes(StandardCharsets.UTF_8), salt, iterations, keylen)).getBytes(StandardCharsets.UTF_8);
+            } catch(Throwable ex) {
+                System.out.println("Error:" + ex.getMessage());
+                ex.printStackTrace();
+                throw ex;
+            }
         } else {
             return secret.getBytes(StandardCharsets.UTF_8);
         }

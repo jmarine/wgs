@@ -4,18 +4,18 @@ import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.IdClass;
-import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-import javax.persistence.TemporalType;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.TemporalType;
 
 
 @Entity
@@ -43,7 +43,7 @@ public class OpenIdConnectClient implements Serializable
     @Column(name="client_secret")
     private String clientSecret;
     
-    @javax.persistence.Temporal(TemporalType.TIMESTAMP)
+    @jakarta.persistence.Temporal(TemporalType.TIMESTAMP)
     @Column(name="client_expiration")
     private java.util.Calendar clientExpiration;
     
