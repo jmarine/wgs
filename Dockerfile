@@ -19,8 +19,12 @@ COPY WgsWebApp/src/main/webapp /var/www/html
 WORKDIR /opt/wgs
 RUN mvn -Duser.home=/opt/wgs install
 
+# Define user
+RUN useradd -ms /bin/bash www-data
+
 # Define application directories/permissions and data volumes
 RUN mkdir -p /var/opt/wgs 
+
 RUN chown -R www-data:www-data /opt/wgs
 RUN chown -R www-data:www-data /etc/opt/wgs
 RUN chown -R www-data:www-data /var/opt/wgs
