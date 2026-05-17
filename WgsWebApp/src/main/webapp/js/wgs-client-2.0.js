@@ -211,8 +211,10 @@ WgsClient.prototype._update_group_users = function(id,details,errorURI,payload, 
 
             if(payloadKw.members) {
                 payloadKw.members.forEach(function(item) {
-                    if(isFinite(item.sid) > 0) client.groups[gid].connections[item.sid] = item;
-                    if(isFinite(item.slot)) client.groups[gid].members[item.slot] = item;
+                    if(item != null) {
+                        if(item.sid != null && isFinite(item.sid) && item.sid > 0) client.groups[gid].connections[item.sid] = item;
+                        if(isFinite(item.slot)) client.groups[gid].members[item.slot] = item;
+                    }
                 });
             }
         }
