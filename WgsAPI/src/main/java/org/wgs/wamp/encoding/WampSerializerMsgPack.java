@@ -29,8 +29,9 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
     public Object serialize(WampObject obj) throws Exception 
     {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        MessagePack msgpack = new MessagePack();
-        MessagePacker packer = msgpack.newPacker(baos);
+        //MessagePack msgpack = new MessagePack();
+        //MessagePacker packer = msgpack.newPacker(baos);
+        MessagePacker packer = MessagePack.newDefaultPacker(baos);
         write(packer, obj);
         packer.close();
         byte[] bytes = baos.toByteArray();
@@ -71,8 +72,10 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
     @Override
     public WampObject deserialize(Object obj, int offset, int len) throws Exception 
     {
-        MessagePack msgpack = new MessagePack();
-        MessageUnpacker unpacker = msgpack.newUnpacker(new ByteArrayInputStream((byte[])obj, offset, len));
+        //MessagePack msgpack = new MessagePack();
+        //MessageUnpacker unpacker = msgpack.newUnpacker(new ByteArrayInputStream((byte[])obj, offset, len));
+        MessageUnpacker unpacker = MessagePack.newDefaultUnpacker((byte[])obj, offset, len);
+        
         //unpacker.resetReadByteCount();
         ImmutableValue val = unpacker.unpackValue();
         return (WampObject)castToWampObject(val);
