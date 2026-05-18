@@ -38,7 +38,15 @@ app.model = app.model || {}
 
 app.model.GameFactory = {
   createGame: function(gameType) {
-    return eval(" new app.model." + gameType + "()");
+    var maxPoints = "";
+    var pos = gameType.indexOf('-');
+    if(pos != -1) {
+        maxPoints = gameType.substring(pos+1);
+        gameType = gameType.substring(0, pos);
+    }
+    
+    var camelGameType = gameType.substring(0,1).toUpperCase() + gameType.substring(1).toLowerCase();
+    return eval(" new app.model." + camelGameType + "(" + maxPoints + ")");  // allow card variants
   }
 }
 
@@ -166,6 +174,10 @@ Game.prototype.getMoveString = function(move) {
 Game.prototype.isValidMove = function(str) {
   var move = this.parseMoveString(str);
   return (move != null);
+}
+
+Game.prototype.isValidAction = function(actionSlot, actionName, actionValue, privateData) {
+    return true;
 }
 
 Game.prototype.makeStep = function(player, move) {
