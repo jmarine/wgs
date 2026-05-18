@@ -1,4 +1,4 @@
-FROM openjdk:17-jdk
+FROM eclipse-temurin:17.0.19_10-jdk-jammy
 
 # Install Maven building tool for Java applications
 ARG MAVEN_VERSION=3.8.6
