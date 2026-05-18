@@ -1,11 +1,11 @@
 FROM eclipse-temurin:17.0.19_10-jdk-jammy
 
 # Install Maven building tool for Java applications
-ARG MAVEN_VERSION=3.8.6
+ARG MAVEN_VERSION=3.9.16
 ENV MAVEN_HOME=/opt/apache-maven-$MAVEN_VERSION
 ENV PATH ${PATH}:$MAVEN_HOME/bin
 
-RUN mkdir -p $MAVEN_HOME && curl -fsSL http://apache.osuosl.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz | tar -xzC $MAVEN_HOME --strip-components=1 
+RUN mkdir -p $MAVEN_HOME && curl -fsSL https://dlcdn.apache.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz | tar -xzC $MAVEN_HOME --strip-components=1 
 
 # Deploy application files
 COPY WgsAPI /opt/wgs
