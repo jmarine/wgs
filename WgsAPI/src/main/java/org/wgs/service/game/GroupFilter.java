@@ -19,7 +19,7 @@ import org.wgs.wamp.topic.WampSubscriptionOptions;
 
 public class GroupFilter implements AutoCloseable
 {
-    public enum Scope { mine, all };
+    public enum Scope { mine, visible, all };
     
     private String appId;
     private GroupState state;
@@ -62,9 +62,31 @@ public class GroupFilter implements AutoCloseable
     {
         if(user == null) return new ArrayList<Group>();
         
-        String ejbql = "SELECT DISTINCT OBJECT(g) FROM AppGroup g";
+        String ejbql = "SELECT OBJECT(gDistinct) FROM AppGroup gDistinct where gDistinct.gid IN (SELECT DISTINCT g.gid FROM AppGroup g";
         StringBuilder where = new StringBuilder();
         HashMap<String,Object> params = new HashMap<String,Object>();        
+        
+        if(scope == null || scope == Scope.mine || scope == Scope.visible) {
+            ejbql = ejbql + " LEFT JOIN g.members m";
+            if(where.length() > 0) where.append(" AND ");
+            where.append("m.user = :user AND m.state <> org.wgs.service.game.MemberState.DELETED");
+            params.put("user", user);
+            
+            if(scope != null) {
+                where.insert(0, "((");
+                where.append(")");
+                
+                if(scope == null || scope == Scope.mine) {        
+                    where.append(" OR (g.admin = :user AND NOT EXISTS (SELECT 1 FROM GroupMember gm WHERE g = gm.applicationGroup AND gm.user = :user and gm.state = org.wgs.service.game.MemberState.DELETED))");
+                }
+
+                if(scope == Scope.visible) {
+                    where.append(" OR (g.hidden = FALSE AND NOT EXISTS (SELECT 1 FROM GroupMember gm WHERE g = gm.applicationGroup AND gm.user = :user and gm.state = org.wgs.service.game.MemberState.DELETED))");
+                }
+                
+                where.append(")");
+            }
+        }
         
         if(appId != null) {
             if(where.length() > 0) where.append(" AND ");
@@ -76,18 +98,13 @@ public class GroupFilter implements AutoCloseable
             if(where.length() > 0) where.append(" AND ");
             where.append("g.state = :state");
             params.put("state", state);
-        }      
-        
-        if(scope == null || scope == Scope.mine) {
-            ejbql = ejbql + ", IN(g.members) m";
-            if(where.length() > 0) where.append(" AND ");
-            where.append("m.user = :user and m.state <> org.wgs.service.game.MemberState.DELETED");
-            params.put("user", user);
-        }
+        }             
         
         if(where.length() > 0) {
             ejbql = ejbql + " WHERE " + where.toString();
-        }
+        }        
+        
+        ejbql = ejbql + ")";
         
         manager = Storage.getEntityManager();
         TypedQuery<Group> query = manager.createQuery(ejbql, Group.class);        
