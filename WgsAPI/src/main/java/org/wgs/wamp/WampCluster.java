@@ -177,15 +177,6 @@ public class WampCluster extends WampModule
     }
     
     
-    public static void stop() throws Exception
-    {
-        if(clusterEnabled != null && !"false".equals(clusterEnabled.toLowerCase())) {
-            publishClusterNodeEvent(null, "wgs.cluster.node_detached");
-            clusterEnabled = null;
-            masterConnection.close();
-        }
-    }    
-    
     
     public static void addNode(String uri, Node node) throws Exception
     {
@@ -208,6 +199,17 @@ public class WampCluster extends WampModule
         return nodes.values();
     }
 
+    
+    
+    public static void stopCluster() throws Exception
+    {
+        if(clusterEnabled != null && !"false".equals(clusterEnabled.toLowerCase())) {
+            publishClusterNodeEvent(null, "wgs.cluster.node_detached");
+            clusterEnabled = null;
+            masterConnection.close();
+        }
+    }    
+    
     
     
     public static class Node

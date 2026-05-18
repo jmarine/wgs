@@ -17,8 +17,6 @@ public class WampTopicSubscriber extends WampModule implements jakarta.jms.Topic
 {
     private Long subscriptionId;
     
-    private boolean subscribed;
-    
     private WampClient client;
     
     private WampTopicSession session;
@@ -52,21 +50,20 @@ public class WampTopicSubscriber extends WampModule implements jakarta.jms.Topic
                         WampTopicSubscriber.this.setSubscriptionId(id);
                     }
                 });
-                subscribed = true;
             }
         } catch(Exception ex) {
             throw new JMSException("WAMP subscription error");
         }
     }
     
-    public void stop() throws JMSException
+    
+    @Override
+    public void stop() throws Exception
     {
-        if(subscribed) {
-            if(client.isOpen()) close();
-            subscribed = false;
-        }
-    }
+        close();
+    } 
 
+    
     public void setSubscriptionId(Long subscriptionId) 
     {
         this.subscriptionId = subscriptionId;
@@ -75,16 +72,6 @@ public class WampTopicSubscriber extends WampModule implements jakarta.jms.Topic
     public Long getSubscriptionId() 
     {
         return subscriptionId;
-    }
-    
-    public void setSubscribed(boolean subscribed)
-    {
-        this.subscribed = subscribed;
-    }
-    
-    public boolean isSubscribed()
-    {
-        return this.subscribed;
     }
     
     
@@ -145,8 +132,17 @@ public class WampTopicSubscriber extends WampModule implements jakarta.jms.Topic
     @Override
     public void close() throws JMSException {
         if(subscriptionId != null) {
-            try { client.unsubscribe(subscriptionId); }
-            catch(Exception ex) {
+            try { 
+                client.unsubscribe(subscriptionId); 
+            } catch(Exception ex) {
+                throw new JMSException("WAMP close error");
+            }
+        }
+
+        if(client.isOpen()) {
+            try { 
+                client.close(); 
+            } catch(Exception ex) {
                 throw new JMSException("WAMP close error");
             }
         }

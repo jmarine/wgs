@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -41,6 +42,7 @@ public class Server
     private static ExecutorService execService;
     private static ScheduledExecutorService scheduledExecService;
     private static TyrusServerContainer tyrusServerContainer;
+    private static ArrayList<WampApplication> wampApplications;
     
     
     private static Properties getServerConfig(String[] args) throws IOException, FileNotFoundException
@@ -136,12 +138,12 @@ public class Server
                     case "derby":
                         String path = serverConfig.getProperty("database." + db + ".path");
                         if(path != null) {
-                            org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40 derbyDS = new org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource40();
+                            org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource derbyDS = new org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource();
                             derbyDS.setDatabaseName(path);
                             derbyDS.setCreateDatabase("create");
                             ds = derbyDS;
                         } else {
-                            org.apache.derby.jdbc.ClientConnectionPoolDataSource40 derbyDS = new org.apache.derby.jdbc.ClientConnectionPoolDataSource40();
+                            org.apache.derby.jdbc.ClientConnectionPoolDataSource derbyDS = new org.apache.derby.jdbc.ClientConnectionPoolDataSource();
                             derbyDS.setServerName(serverConfig.getProperty("database." + db + ".host"));
                             derbyDS.setPortNumber(Integer.parseInt(serverConfig.getProperty("database." + db + ".port")));
                             derbyDS.setDatabaseName(db);
@@ -196,6 +198,7 @@ public class Server
 
                 int wampVersion = Integer.parseInt(serverConfig.getProperty("context." + context + ".wampVersion", "2"));
                 WampApplication wampApplication = WampApplication.getInstance(wampVersion, uri);
+                wampApplications.add(wampApplication);
 
                 //tyrusServerConfig = tyrusServerConfig.endpoint(WampEndpoint.class, uri);
                 //server.publishServer(WampEndpoint.class  /* , uri */ );
@@ -278,8 +281,10 @@ public class Server
             setupJndiEnvironment(ctx, serverConfig);
             setupDataSources(ctx, serverConfig);
 
+            // org.wgs.service.game.Module.resetAllMemberConnections();  // TODO: only when running in single node cluster.
             
             // Start WAMP applications:
+            wampApplications = new ArrayList<WampApplication>();
             tyrusServerContainer = setupWampContexts(serverConfig);        
             // WampCluster.startApplicationNode(); 
             System.out.println("WGS server started.");
@@ -320,9 +325,22 @@ public class Server
     {    
         System.out.println("Shutting down...");
 
+        if(wampApplications != null) {
+            try { 
+                for(WampApplication app : wampApplications) {
+                    for(WampModule module : app.getWampModules()) {
+                        module.stop();
+                    }
+                }
+            } catch (Exception ex) {
+                System.err.println("Closing modules: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        }
+
 
         try {
-            WampCluster.stop();
+            WampCluster.stopCluster();
         } catch (Exception ex) {
             System.err.println("Cluster shutdown error: " + ex.getMessage());
             ex.printStackTrace();

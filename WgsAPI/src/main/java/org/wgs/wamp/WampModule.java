@@ -1,5 +1,7 @@
 package org.wgs.wamp;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,7 +35,7 @@ import org.wgs.wamp.type.WampList;
 import org.wgs.wamp.type.WampMatchType;
 
 
-public class WampModule 
+public class WampModule
 {
     private WampApplication app;
     private HashMap<Long,Collection<Method>> eventListeners;  // by subscriptionId
@@ -329,6 +331,12 @@ public class WampModule
                 catch(Exception ex) { }
             }
         }
+    }
+    
+    
+    public void stop() throws Exception
+    {
+        
     }
 
     
