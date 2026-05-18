@@ -143,6 +143,12 @@ $(document).ready(function(){
     
 });
 
+function onInternalDataClassChange(e) {
+    var clazz = $("#app_internalDataClass option:selected").text();
+    $(".internalDataClass").hide();
+    $("." + clazz.toLowerCase()).show();
+}
+
 function adjustScrollTable(tableName){
  
   var colCount = $('#' + tableName + 'Header .columnHeader').length; //get total number of column
@@ -586,7 +592,20 @@ function create_app() {
     var roles = [];
     $("#app_roles option").each(function() { roles[roles.length] = $(this).attr("value"); });
     
-    wgsclient.newApp(name, domain, version, action_validator_class, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, function(id,details,errorURI,result,resultKw) {
+    var internal_data_class = $("#app_internalDataClass").val();
+    var internal_data_options = {};
+    
+    if(internal_data_class.indexOf("Card") != -1) {
+        internal_data_options.num_decks = $("#app_internalDataClass_card_num_decks").val();
+        internal_data_options.types = $("#app_internalDataClass_card_types").val();
+        internal_data_options.values = $("#app_internalDataClass_card_values").val();
+        
+    } else if(internal_data_class.indexOf("Dice") != -1) {
+        internal_data_options.count =  $("#app_internalDataClass_dice_count").val();
+        internal_data_options.faces =  $("#app_internalDataClass_dice_faces").val();
+    }
+    
+    wgsclient.newApp(name, domain, version, action_validator_class, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, internal_data_class, internal_data_options, function(id,details,errorURI,result,resultKw) {
         if(errorURI) {
             alert("Error creating application:"+response.errorDesc);
         } else {
@@ -1225,11 +1244,44 @@ function append_message(text)
     <label for="app_domain">Domain:</label><input type="text" name="app_domain" id="app_domain"/><br/>
     <label for="app_version">Version:</label><input type="number" size="5" name="app_version" id="app_version" min="1" max="99999" value="1"/><br/>
     <label for="app_action_validator_class">Validator:</label><input type="text" name="app_action_validator_class" id="app_action_validator_class" value="org.wgs.service.game.WebGL8x8BoardGamesValidator"/><br/>
-    <label for="app_max_scores">Max.scores:</label><input type="number" size="5" name="app_max_scores" id="app_max_scores" min="1" max="99999" value="10"/><br/>
-    <label for="app_desc_score_order">Desc.scores:</label><input type="checkbox" name="app_desc_score_order" id="app_desc_score_order" /><br/>
+    
+    <label for="app_internalDataClass">Internal Data Class:</label>
+    <select id="app_internalDataClass" name="app_internalDataClass" onchange="javascript:onInternalDataClassChange(event)">
+        <option value="">None</option>
+        <option value="org.wgs.service.game.GroupInternalDataForDiceGame">Dices</option>
+        <option value="org.wgs.service.game.GroupInternalDataForCardGame">Cards</option>
+    </select>
+    <br/>
+
+    <div class="internalDataClass cards" style="display: none;">
+        <label for="app_internalDataClass_card_num_decks">Num. Decks:</label>
+        <input type="number" id="app_internalDataClass_card_num_decks" name="app_internalDataClass_card_num_decks" value="1"/>
+        <br/>          
+        <label for="app_internalDataClass_card_types">Types:</label>
+        <input type="text" id="app_internalDataClass_card_types" name="app_internalDataClass_card_types" value="O,C,B,E" />
+        <br/>
+        <label for="app_internalDataClass_card_values">Values:</label>
+        <input type="text" id="app_internalDataClass_card_values" name="app_internalDataClass_card_values" value="1,2,3,4,5,6,7,8,9,J,Q,K"/>
+        <br/>               
+    </div>
+
+    <div class="internalDataClass dices" style="display: none;">
+        <label for="app_internalDataClass_dice_count">Num. Dices:</label>
+        <input type="number" id="app_internalDataClass_dice_count" name="app_internalDataClass_dice_count" value="1"/>
+        <br/>
+        <label for="app_internalDataClass_dice_faces">Num. Faces</label>
+        <input type="number" id="app_internalDataClass_dice_faces" name="app_internalDataClass_dice_faces" value="6"/>
+        <br/>          
+    </div>
+
+
     <label for="app_min">Min:</label><input type="number" size="5" name="app_min" id="app_min" min="1" max="99999" value="2"/><br/>
     <label for="app_max">Max:</label><input type="number" size="5" name="app_max" id="app_max" min="0" max="99999" value="2"/><br/>
     <label for="app_delta">Delta:</label><input type="number" size="5" name="app_delta" id="app_delta" min="0" max="99999" value="1"/><br/>
+
+    <label for="app_max_scores">Max.scores:</label><input type="number" size="5" name="app_max_scores" id="app_max_scores" min="1" max="99999" value="10"/><br/>
+    <label for="app_desc_score_order">Desc.scores:</label><input type="checkbox" name="app_desc_score_order" id="app_desc_score_order" /><br/>
+
     <label for="app_observable">Observable:</label><input type="checkbox" name="app_observable" id="app_observable" /><br/>
     <label for="app_dynamic">Dynamic:</label><input type="checkbox" name="app_dynamic" id="app_dynamic" /><br/>
     <label for="app_alliances">Alliances:</label><input type="checkbox" name="app_alliances" id="app_alliances" /><br/>

@@ -56,7 +56,7 @@ public class Member implements java.io.Serializable
     @Enumerated(EnumType.ORDINAL)
     private MemberState state;
 
-    @Column(name="sid")
+    @Column(name="sid", nullable = true)
     private Long  sid;
     
     

@@ -12,15 +12,24 @@ import javax.script.*;
 
 import org.wgs.security.User;
 import org.wgs.util.Storage;
+import org.wgs.wamp.WampSocket;
+import org.wgs.wamp.type.WampObject;
 
 
 public class WebGL8x8BoardGamesValidator implements GroupActionValidator 
 {
     private static ConcurrentLinkedQueue<ScriptEngine> ruleEngines = new ConcurrentLinkedQueue<>();
 
+    @Override
+    public WampObject getPrivateState(Group g, Member member)
+    {
+        return null;
+    }
+    
+    
         
     @Override
-    public boolean isValidAction(Collection<Application> apps, Group g, String actionName, String actionValue, Long actionSlot) throws Exception 
+    public boolean isValidAction(Module module, WampSocket socket, Collection<Application> apps, Group g, String actionName, String actionValue, int actionSlot) throws Exception 
     {
         ScriptEngine ruleEngine = null;
         try {
@@ -136,8 +145,8 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
 
                     if(g.getNumSlots() == 2)  {
                         //g.setWinner(actionSlot);
-                        Member m0 = g.getMember(2-actionSlot.intValue()-1);
-                        Member m1 = g.getMember(actionSlot.intValue());
+                        Member m0 = g.getMember(2-actionSlot-1);
+                        Member m1 = g.getMember(actionSlot);
                         if(m0 != null && m0.getUser() != null 
                                 && m1 != null && m1.getUser() != null) {
                             saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
@@ -216,7 +225,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
             System.out.println("ActionValidator: " + actionName + ": valid = " + isValid);
             if(isValid) {
                 if(actionName.equals("RETRACT_QUESTION") || actionName.equals("DRAW_QUESTION")) {
-                    g.setTurn(1-actionSlot.intValue());
+                    g.setTurn(1-actionSlot);
                 } else {
                     int turn = ((Number)ruleEngine.eval("game.getTurn()")).intValue();
                     g.setTurn(turn-1);
@@ -272,7 +281,12 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                 while(iter.hasNext()) {
                     try { 
                         Application app = iter.next();
-                        ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/" + app.getName() +".js"),StandardCharsets.UTF_8)); 
+                        String appName = app.getName();
+                        int pos = appName.indexOf("-");
+                        if(pos != -1) {
+                            appName = appName.substring(0, pos);
+                        }                        
+                        ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/" + appName +".js"),StandardCharsets.UTF_8)); 
                     } catch(Exception ex) { 
                         // skip exception
                     } finally {

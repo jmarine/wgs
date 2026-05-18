@@ -1,5 +1,7 @@
 package org.wgs.service.game;
 
+import jakarta.json.bind.Jsonb;
+import jakarta.json.bind.JsonbBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import jakarta.persistence.Cacheable;
@@ -11,17 +13,28 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.NamedQueries;
 import jakarta.persistence.NamedQuery;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
 
 import org.wgs.security.User;
+import org.wgs.wamp.encoding.WampEncoding;
+import org.wgs.wamp.encoding.WampSerializer;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
+import org.wgs.wamp.type.WampObject;
 
 
 @Entity(name="AppGroup")
@@ -29,12 +42,15 @@ import org.wgs.wamp.type.WampList;
 @Cacheable(false)
 @NamedQueries({
     @NamedQuery(name="wgs.findAllGroups",query="SELECT OBJECT(g) FROM AppGroup g"),
-    @NamedQuery(name="wgs.findFinishedGroupsFromUser",query="SELECT DISTINCT OBJECT(g) FROM AppGroup g, IN(g.members) m WHERE g.state = org.wgs.service.game.GroupState.FINISHED AND m.user = ?1")
+    @NamedQuery(name="wgs.findFinishedGIDsFromUser",query="SELECT DISTINCT g.gid FROM AppGroup g, IN(g.members) m WHERE g.state = org.wgs.service.game.GroupState.FINISHED AND m.user = ?1")
 })
 // @org.eclipse.persistence.annotations.Index(name="APP_GROUP_STATE_IDX", columnNames={"STATE"})
 public class Group implements java.io.Serializable
 {
     private static final long serialVersionUID = 0L;
+    
+    private static final Logger logger = Logger.getLogger(Module.class.toString());
+    
     
     @Id
     @Column(name="gid", nullable = false, length=36)
@@ -44,15 +60,29 @@ public class Group implements java.io.Serializable
     private String description;
     
     //@Lob()
-    @Column(name="data")
+    @Column(name="data", length = 1024)
     private String data;
     
     @Column(name="initial_data")
     private String initialData;    
     
-    @Column(name="internal_data")
-    private String internalData;     
+    //@OneToOne(mappedBy = "applicationGroup", fetch=FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true)
+    @Lob
+    @Column(name = "internal_data")
+    private String internalDataJSON;
     
+    @Transient
+    private GroupInternalData internalDataObject;
+    
+    
+    @Lob
+    @Column(name = "flow")
+    private String flowJSON;    
+
+    @Transient
+    private Map<String, Object> flow;
+
+   
     @Column(name="password")
     private String password;
     
@@ -75,7 +105,6 @@ public class Group implements java.io.Serializable
     @JoinColumn(name="admin_uid")    
     private User admin;
     
-
     @Column(name="automatchEnabled")
     private boolean autoMatchEnabled;
     
@@ -107,6 +136,78 @@ public class Group implements java.io.Serializable
 
     @Version
     private Long version;
+    
+    
+    @PostLoad
+    public void convertJsonToObjects()
+    {
+        this.internalDataObject = null;
+        this.flow = null;
+        
+        if(internalDataJSON != null) {
+            try {
+                Jsonb jsonb = JsonbBuilder.create();
+
+                String internalDataClass = getApplication().getInternalDataClass();
+                Class clazz = Class.forName(internalDataClass);
+                if(clazz != null) {
+                    setInternalDataObject((GroupInternalData)jsonb.fromJson(internalDataJSON, clazz)); 
+                    logger.finest("Group.convertInternDataJsonToObject: internal data object state loaded successfully");
+                }
+                
+            } catch(Exception ex) {
+                logger.severe("Group.convertInternDataJsonToObject: error loading internal data object state: " + ex.getMessage());
+                logger.throwing(Group.class.getName(), "convertInternDataJsonToObject", ex);
+            }
+        }
+
+        if(flowJSON != null) {
+            try {
+                Jsonb jsonb = JsonbBuilder.create();
+                Class<Map<String,Object>> clazz = (Class<Map<String,Object>>)(Class<?>)Map.class;
+                
+                setFlow(jsonb.fromJson(flowJSON, clazz)); 
+                logger.finest("Group.convertFlowJsonToObject: flow state loaded successfully");
+                
+                
+            } catch(Exception ex) {
+                logger.severe("Group.convertFlowJsonToObject: error loading flow state: " + ex.getMessage());
+                logger.throwing(Group.class.getName(), "convertFlowJsonToObject", ex);
+            }
+        }
+    }
+    
+    //@PrePersist
+    //@PreUpdate
+    public void convertInternalDataObjectToJson() {
+        this.internalDataJSON = null;
+        
+        if(internalDataObject != null) {
+            try { 
+                Jsonb jsonb = JsonbBuilder.create();
+                this.internalDataJSON = jsonb.toJson(internalDataObject);
+            } catch(Exception ex) {
+                logger.severe("Group.convertInternalDataObjectToJson: error serializing JSON object: " + ex.getMessage());
+                logger.throwing(Group.class.getName(), "convertInternalDataObjectToJson", ex);
+            }
+        }
+    }
+    
+    
+    public void convertFlowToJson() {
+        this.flowJSON = null;
+        
+        if(flow != null) {
+            try { 
+                Jsonb jsonb = JsonbBuilder.create();
+                this.flowJSON = jsonb.toJson(flow);
+            } catch(Exception ex) {
+                logger.severe("Group.convertFlowToJson: error serializing JSON object: " + ex.getMessage());
+                logger.throwing(Group.class.getName(), "convertFlowToJson", ex);
+            }
+        }
+    }
+        
     
     /**
      * @return the state
@@ -307,20 +408,40 @@ public class Group implements java.io.Serializable
         this.initialData = initialData;
     }
 
+
+    /**
+     * Return InternalData state representation
+     * @return GroupInternalData
+     */
+    public GroupInternalData getInternalDataObject()
+    {
+        return this.internalDataObject;
+    }
     
     /**
-     * @return the internalData
+     * @param internalDataObject the internalDataObject to set
      */
-    public String getInternalData() {
-        return internalData;
+    public void setInternalDataObject(GroupInternalData internalDataObject) {
+        this.internalDataObject = internalDataObject;
+        this.convertInternalDataObjectToJson();
+    }
+    
+
+    /**
+     * @return the flow
+     */
+    public Map<String, Object> getFlow() {
+        if(flow == null) flow = new HashMap<String,Object>();
+        return flow;
     }
 
     /**
-     * @param internalData the internalData to set
+     * @param flow flow information
      */
-    public void setInternalData(String internalData) {
-        this.internalData = internalData;
-    }
+    public void setFlow(Map<String, Object> flow) {
+        this.flow = flow;
+        this.convertFlowToJson();
+    }      
     
     
     /**
@@ -533,6 +654,8 @@ public class Group implements java.io.Serializable
         }
         return obj;
     }
+
+    
 
 }
 

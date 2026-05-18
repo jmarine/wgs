@@ -1,5 +1,7 @@
 package org.wgs.service.game;
 
+import jakarta.json.bind.Jsonb;
+import jakarta.json.bind.JsonbBuilder;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,12 +13,20 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinColumns;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.NamedQueries;
 import jakarta.persistence.NamedQuery;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderColumn;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
 
 import org.wgs.security.User;
 import org.wgs.wamp.type.WampDict;
@@ -35,6 +45,9 @@ import org.wgs.wamp.type.WampList;
 public class Application implements Serializable, Comparable
 {
     private static final long serialVersionUID = 0L;
+    
+    private static final Logger logger = Logger.getLogger(Application.class.toString());
+    
     
     @Id
     @Column(name="id", length=36)
@@ -81,7 +94,8 @@ public class Application implements Serializable, Comparable
     private boolean observableGroup;
 
     @OneToMany(mappedBy = "application", fetch=FetchType.EAGER, cascade = { CascadeType.ALL })
-    private Collection<Role> roles = new ArrayList<Role>();
+    @OrderColumn(name="position")
+    private List<Role> roles = new ArrayList<Role>();
 
     @Column(name="max_scores")
     private int maxScores;    
@@ -89,10 +103,60 @@ public class Application implements Serializable, Comparable
     @Column(name="desc_scores")
     private boolean descendingScoreOrder;
     
+    @Column(name="internal_data_type")
+    private String internalDataClass;
+    
+    @Lob
+    @Column(name="internal_data_options")
+    private String internalDataOptionsJson;
+    
+    @Transient
+    private Map<String,Object> internalDataOptions;      
+    
     
     @Transient
     private HashMap<String,Group> groupsByGid = new HashMap<String,Group>();
 
+
+    
+    @PostLoad
+    public void convertInternDataJsonToObject()
+    {
+        this.internalDataOptions = null;
+        
+        if(getInternalDataOptionsJson() != null) {
+            try {
+                Jsonb jsonb = JsonbBuilder.create();
+
+                HashMap<String,Object> obj = new HashMap<String,Object>();
+                obj = jsonb.fromJson(getInternalDataOptionsJson(), obj.getClass());
+                setInternalDataOptions(obj); 
+                logger.finest("Application.convertInternDataJsonToObject: internal data object state loaded successfully");
+                
+            } catch(Exception ex) {
+                logger.severe("Application.convertInternDataJsonToObject: error loading internal data object state: " + ex.getMessage());
+                logger.throwing(Application.class.getName(), "convertInternDataJsonToObject", ex);
+            }
+        }
+    }
+    
+    
+    //@PrePersist
+    //@PreUpdate
+    public void convertInternalDataOptionsToJSON()
+    {
+        this.internalDataOptionsJson = null;
+        
+        if(internalDataOptions != null) {
+            try { 
+                Jsonb jsonb = JsonbBuilder.create();
+                this.internalDataOptionsJson = jsonb.toJson(getInternalDataOptions());
+            } catch(Exception ex) {
+                logger.severe("Application.convertInternalDataOptionsToJSON: error serializing JSON object: " + ex.getMessage());
+                logger.throwing(Application.class.getName(), "convertInternalDataOptionsToJSON", ex);
+            }
+        }        
+    }    
 
     
     public void setAppId(String id) {
@@ -302,14 +366,14 @@ public class Application implements Serializable, Comparable
     /**
      * @return the roles
      */
-    public Collection<Role> getRoles() {
+    public List<Role> getRoles() {
         return roles;
     }
 
     /**
      * @param roles the roles to set
      */
-    public void setRoles(Collection<Role> roles) {
+    public void setRoles(List<Role> roles) {
         this.roles = roles;
     }
     
@@ -374,13 +438,44 @@ public class Application implements Serializable, Comparable
     public boolean isDescendingScoreOrder() {
         return descendingScoreOrder;
     }
+    
 
     /**
      * @param descendingScoreOrder the descendingScoreValues to set
      */
     public void setDescendingScoreOrder(boolean descendingScoreOrder) {
         this.descendingScoreOrder = descendingScoreOrder;
+    }    
+    
+    /**
+     * @return the internalDataClass
+     */
+    public String getInternalDataClass() {
+        return internalDataClass;
     }
+
+    /**
+     * @param internalDataClass the intenalDataClass to set
+     */
+    public void setInternalDataClass(String internalDataClass) {
+        this.internalDataClass = internalDataClass;
+    }
+    
+    /**
+     * @return the internalDataOptions
+     */
+    public Map<String,Object> getInternalDataOptions() {
+        return internalDataOptions;
+    }
+
+    /**
+     * @param internalDataOptions the internalDataOptions to set
+     */
+    public void setInternalDataOptions(Map<String,Object> internalDataOptions) {
+        this.internalDataOptions = internalDataOptions;
+        convertInternalDataOptionsToJSON();
+    }
+
     
     
     public WampDict toWampObject()
@@ -392,6 +487,8 @@ public class Application implements Serializable, Comparable
         obj.put("ai",       isAIavailable());
         obj.put("version",  getVersion());
         obj.put("roles",    getRolesNode());
+        obj.put("internalDataClass", getInternalDataClass());
+        obj.put("internalDataOptions", obj.castToWampObject(getInternalDataOptions()));
 
         return obj;
     }
@@ -436,5 +533,20 @@ public class Application implements Serializable, Comparable
             return 1;
         }
     }
+
+    /**
+     * @return the internalDataOptionsJson
+     */
+    public String getInternalDataOptionsJson() {
+        return internalDataOptionsJson;
+    }
+
+    /**
+     * @param internalDataOptionsJson the internalDataOptionsJson to set
+     */
+    public void setInternalDataOptionsJson(String internalDataOptionsJson) {
+        this.internalDataOptionsJson = internalDataOptionsJson;
+    }
+
 
 }

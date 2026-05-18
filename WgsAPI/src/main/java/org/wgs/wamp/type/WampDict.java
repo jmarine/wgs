@@ -1,6 +1,7 @@
 package org.wgs.wamp.type;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -86,6 +87,11 @@ public class WampDict extends WampObject
     public int size()
     {
         return hashmap.size();
+    }
+    
+    public Map<String,Object> getMap()
+    {
+        return hashmap;
     }
     
     @Override

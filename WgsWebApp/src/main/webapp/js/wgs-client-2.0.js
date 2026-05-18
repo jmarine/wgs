@@ -162,7 +162,7 @@ WgsClient.prototype.listGroups = function(appId, scope, state, callback) {
     this.call("wgs.list_groups", [appId, state, scope]).then(callback, callback);
 }
 
-WgsClient.prototype.newApp = function(name, domain, version, actionValidatorClass, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, callback) {
+WgsClient.prototype.newApp = function(name, domain, version, actionValidatorClass, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, internal_data_class, internal_data_options, callback) {
     var msg = Object();
     msg.name = name;
     msg.domain = domain;
@@ -178,6 +178,8 @@ WgsClient.prototype.newApp = function(name, domain, version, actionValidatorClas
     msg.alliances = alliances;
     msg.ai_available = ai_available;
     msg.roles = roles;
+    msg.internal_data_class = internal_data_class;
+    msg.internal_data_options = internal_data_options;
 
     this.call("wgs.new_app", msg).then(callback, callback);
 }

@@ -25,7 +25,13 @@ import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Selection;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.stream.Collectors;
 import org.wgs.util.Storage;
 import org.wgs.security.User;
 import org.wgs.security.UserRepository;
@@ -78,6 +84,80 @@ public class Module extends WampModule
             ex.printStackTrace();
         }
     }
+    
+    
+    @Override
+    public void stop() throws Exception
+    {
+        resetClientConnections();
+        super.stop();        
+    }
+    
+    public static void resetAllMemberConnections()
+    {
+        EntityManager manager = null;
+        EntityTransaction transaction = null;
+        
+        try {
+            manager = Storage.getEntityManager();
+            transaction = manager.getTransaction();
+
+            Query updateQuery = manager.createQuery("UPDATE GroupMember m SET m.state = org.wgs.service.game.MemberState.DETACHED, m.sid = NULL WHERE m.state = org.wgs.service.game.MemberState.JOINED OR m.state = org.wgs.service.game.MemberState.READY");
+            transaction.begin();
+            updateQuery.executeUpdate();
+            transaction.commit();
+            
+        } catch(Exception ex) {
+            if(transaction != null) {
+                 transaction.rollback();
+            }
+            throw ex;
+            
+        } finally {
+            if(manager != null) {
+                manager.close();
+            }
+        }
+    }
+    
+    public void resetClientConnections()
+    {
+        int count = 0;
+        
+        EntityManager manager = null;
+        EntityTransaction transaction = null;
+        
+        try {
+            manager = Storage.getEntityManager();
+            transaction = manager.getTransaction();
+
+            Query updateQuery = manager.createQuery("UPDATE GroupMember m SET m.state = org.wgs.service.game.MemberState.DETACHED, m.sid = NULL WHERE m.sid = :sid");
+
+            for(Long sessionId : clients.keySet()) {
+                try {
+                    transaction.begin();
+                    updateQuery.setParameter("sid", sessionId);
+                    count += updateQuery.executeUpdate();
+                    transaction.commit();
+                    
+                } catch(Exception ex) { }
+            }
+            
+            
+        } catch(Exception ex) {
+            if(transaction != null) {
+                 transaction.rollback();
+            }
+            throw ex;
+            
+        } finally {
+            if(manager != null) {
+                manager.close();
+            }
+        }
+    }
+    
+
 
     
     public Client getClient(Long sessionId)
@@ -86,7 +166,7 @@ public class Module extends WampModule
     }
     
     
-    private String getFQtopicURI(String topicName)
+    public String getFQtopicURI(String topicName)
     {
         return WGS_MODULE_NAME + "." + topicName;
     }
@@ -247,6 +327,15 @@ public class Module extends WampModule
         app.setDynamicGroup(data.getBoolean("dynamic"));
         app.setObservableGroup(data.getBoolean("observable"));
         app.setAIavailable(data.getBoolean("ai_available"));
+        
+        String internalDataClass = data.getText("internal_data_class");
+        if(internalDataClass != null) {
+            app.setInternalDataClass(internalDataClass);
+            WampDict internalDataOptions = (WampDict)data.get("internal_data_options");
+            if(internalDataOptions != null && internalDataOptions.size() > 0) {
+                app.setInternalDataOptions(internalDataOptions.getMap());
+            }
+        }
       
         WampList roles = (WampList)data.get("roles");
         for(int i = 0; i < roles.size(); i++) {
@@ -341,14 +430,16 @@ public class Module extends WampModule
             spectator = options.has("spectator")? options.getBoolean("spectator") : false;
         }
 
-        
+        Long wampSessionId = socket.getWampSessionId();
+        if(wampSessionId == null) throw new WampException(null, WGS_MODULE_NAME + ".incorrectWampSessionId", null, null);
+
+        Client client = clients.get(wampSessionId);
         EntityManager manager = Storage.getEntityManager();
         manager.getTransaction().begin();
-        
-        Client client = clients.get(socket.getWampSessionId());
+        System.out.println("BEGIN TRANSACTION (openGroup)");
         
         if(gid != null) {
-            g = manager.find(Group.class, gid);
+            g = manager.find(Group.class, gid, LockModeType.PESSIMISTIC_WRITE);
 
             if(g != null) {
                 logger.log(Level.INFO, "open_group: group found: " + gid);
@@ -367,13 +458,15 @@ public class Module extends WampModule
                 if(app != null) {
                     autoMatchMode = true;
                     
-                    String jpaQuery = "SELECT DISTINCT OBJECT(g) FROM AppGroup g WHERE g.state = org.wgs.service.game.GroupState.OPEN AND g.autoMatchEnabled = TRUE AND g.autoMatchCompleted = FALSE AND g.application = :application";
+                    String jpaQuery = "SELECT OBJECT(g) FROM AppGroup g WHERE g.state = org.wgs.service.game.GroupState.OPEN AND g.autoMatchEnabled = TRUE AND g.autoMatchCompleted = FALSE AND g.application = :application";
                     // TODO: automatch criteria (opponents, role, ELO range, game variant, time criteria,...)                    
                     TypedQuery<Group> groupQuery = manager.createQuery(jpaQuery, Group.class);
                     groupQuery.setParameter("application", app);
+                    groupQuery.setLockMode(LockModeType.PESSIMISTIC_WRITE);  
+                    
                     List<Group> groupList = groupQuery.getResultList();
                     for(Group tmp : groupList) {
-                        manager.lock(tmp, LockModeType.PESSIMISTIC_WRITE);
+                        // manager.lock(tmp, LockModeType.PESSIMISTIC_WRITE);
                         valid = (tmp != null) && (tmp.isAutoMatchEnabled() && !tmp.isAutoMatchCompleted() && tmp.getState()==GroupState.OPEN);
 
                         if(valid) {
@@ -395,9 +488,9 @@ public class Module extends WampModule
                             break;
                         } else {
                             g = null;
-                            manager.lock(tmp, LockModeType.NONE);  // FIXME: MySQL holds lock
+                            // manager.lock(tmp, LockModeType.NONE);  // FIXME: MySQL holds lock
                         }
-                    } 
+                    }
                     
                 }                
                 logger.log(Level.INFO, "open_group: search group for automatch");
@@ -429,6 +522,7 @@ public class Module extends WampModule
                 g.setGid(UUID.randomUUID().toString());
                 g.setApplication(app);
                 g.setState(GroupState.OPEN);
+                g.setFlow(new HashMap<String, Object>());
                 g.setObservableGroup(app.isObservableGroup());
                 g.setDynamicGroup(app.isDynamicGroup());
                 g.setAlliancesAllowed(app.isAlliancesAllowed());
@@ -438,6 +532,7 @@ public class Module extends WampModule
                 g.setAdmin(client.getUser());
                 g.setAutoMatchEnabled(autoMatchMode);
                 g.setAutoMatchCompleted(false);
+                
                 if(options != null) {
                     if(options.has("data")) {
                         g.setInitialData(options.getText("data"));
@@ -461,20 +556,41 @@ public class Module extends WampModule
                         g.setDescription(options.getText("description"));
                     }
                 }
-                manager.persist(g);
-                
 
-                //updateAppInfo(socket, app, "app_updated", false);
+                
+                String internalDataClass = app.getInternalDataClass();
+                if(internalDataClass != null) {
+        
+                    GroupInternalData internalDataObject = null;
+        
+                    Class clazz = Class.forName(internalDataClass);
+                    internalDataObject = (GroupInternalData)clazz.getDeclaredConstructor().newInstance();
+
+                    if(internalDataObject != null) {
+                        internalDataObject.init(app.getInternalDataOptions());
+                    }
+
+                    g.setInternalDataObject(internalDataObject);
+                            
+                }
+                
 
                 GroupActionValidator validator = null;
                 String validatorClassName = g.getApplication().getActionValidator();
                 if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).getDeclaredConstructor().newInstance();
             
-                if(validator == null || validator.isValidAction(this.applications.values(), g, "INIT", g.getInitialData(), -1L)) {
+                if(validator == null || validator.isValidAction(this, socket, this.applications.values(), g, "INIT", g.getInitialData(), -1)) {
+                    // manager.merge(g);
                     app.addGroup(g);
                     created = true;
                     valid = true;
                 }
+                
+                manager.persist(g);
+                manager.lock(g, LockModeType.PESSIMISTIC_WRITE);
+                
+                //updateAppInfo(socket, app, "app_updated", false);
+                
 
             } catch(Exception err) {
                 // valid = false;
@@ -613,6 +729,16 @@ public class Module extends WampModule
 
                     joined = true;
                     userUpdated = true;
+                    
+                    GroupActionValidator validator = null;
+                    String validatorClassName = g.getApplication().getActionValidator();
+                    if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).getDeclaredConstructor().newInstance();
+                    
+                    if(validator != null) {
+                        WampObject privateState = validator.getPrivateState(g, member);
+                        if(privateState != null) response.put("privateState", privateState);
+                    }
+
                 }
                 
                 User u = member.getUser();
@@ -632,6 +758,7 @@ public class Module extends WampModule
                 if(userUpdated) {
                     WampDict event = member.toWampObject();
                     event.put("cmd", "user_joined");
+                    event.put("is_join_event", true);
                     //event.put("sid", client.getSessionId());
                     //event.put("user", member.getUser().getFQid());
                     //event.put("name", member.getUser().getName());
@@ -645,6 +772,7 @@ public class Module extends WampModule
             }
 
             response.put("members", getMembers(g, 0));
+            response.put("flow", g.getFlow());
             
             broadcastAppEventInfo(socket, g, created? "group_created" : "group_updated");
             
@@ -662,6 +790,7 @@ public class Module extends WampModule
 
             WampDict event = new WampDict();
             event.put("cmd", "user_joined");
+            event.put("is_join_event", true);
             event.put("gid", g.getGid());
             event.put("user", user);
             event.put("name", ((u == null)? "" : u.getName()) );
@@ -676,6 +805,7 @@ public class Module extends WampModule
         
         manager.getTransaction().commit();
         manager.close();
+        System.out.println("END TRANSACTION (openGroup)");
         
         return response;
     }
@@ -697,8 +827,9 @@ public class Module extends WampModule
         
         EntityManager manager = Storage.getEntityManager();
         manager.getTransaction().begin();
+        System.out.println("BEGIN TRANSACTION (updateGroup)");
         
-        Group g = manager.find(Group.class, gid);
+        Group g = manager.find(Group.class, gid, LockModeType.PESSIMISTIC_WRITE);
         if(g != null) synchronized(g) {
             logger.log(Level.FINE, "open_group: group found: " + gid);
             
@@ -756,6 +887,7 @@ public class Module extends WampModule
             }
             
             response.put("members", getMembers(g,0));            
+            response.put("flow", g.getFlow());            
 
             //g.setVersion(Storage.saveEntity(g).getVersion());
             
@@ -769,6 +901,9 @@ public class Module extends WampModule
         
         manager.getTransaction().commit();        
         manager.close();
+        
+        System.out.println("END TRANSACTION (updateGroup)");
+        
         return response;
     }
     
@@ -813,7 +948,9 @@ public class Module extends WampModule
 
             EntityManager manager = Storage.getEntityManager();
             manager.getTransaction().begin();
-            Group g = manager.find(Group.class, gid);
+            System.out.println("BEGIN TRANSACTION (updateMember)");
+        
+            Group g = manager.find(Group.class, gid, LockModeType.PESSIMISTIC_WRITE);
             if(g != null) synchronized(g) {
                 logger.log(Level.FINE, "open_group: group found: " + gid);
                 
@@ -833,6 +970,7 @@ public class Module extends WampModule
                             membersArray.add((member != null) ? member.toWampObject() : null);
                         }
                         response.put("members", membersArray);
+                        response.put("flow", g.getFlow());
                         
                         valid = true;
                     }
@@ -908,6 +1046,7 @@ public class Module extends WampModule
                             membersArray.add((member != null) ? member.toWampObject() : null);
                         }
                         response.put("members", membersArray);
+                        response.put("flow", g.getFlow());
                     }
                     valid = true;
                 }
@@ -925,6 +1064,8 @@ public class Module extends WampModule
             
             manager.getTransaction().commit();
             manager.close();
+            
+            System.out.println("ENDTRANSACTION (updateMember)");
             
             return response;
     }
@@ -995,8 +1136,9 @@ public class Module extends WampModule
 
             EntityManager manager = Storage.getEntityManager();
             manager.getTransaction().begin();
-            Group g = manager.find(Group.class, gid);
-
+            System.out.println("BEGIN TRANSACTION (exitGroup)");            
+            
+            Group g = manager.find(Group.class, gid, LockModeType.PESSIMISTIC_WRITE);
             if(g != null) synchronized(g) {
                 logger.log(Level.FINE, "open_group: group found: " + gid);
 
@@ -1028,6 +1170,7 @@ public class Module extends WampModule
                     }
                 }
                 response.put("members", membersArray);
+                response.put("flow", g.getFlow());
 
                 socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+gid)), null, response, true, false); // exclude Me
 
@@ -1047,6 +1190,7 @@ public class Module extends WampModule
             manager.getTransaction().commit();
             manager.close();
 
+            System.out.println("END TRANSACTION (exitGroup)");            
             return response;
     }
     
@@ -1055,26 +1199,52 @@ public class Module extends WampModule
     public void deleteFinishedGroups(WampSocket socket) throws Exception
     {   
         EntityManager manager = Storage.getEntityManager();
-        manager.getTransaction().begin();
         
-        TypedQuery<Group> query = manager.createNamedQuery("wgs.findFinishedGroupsFromUser", Group.class);
+        TypedQuery<String> query = manager.createNamedQuery("wgs.findFinishedGIDsFromUser", String.class);
         query.setParameter(1, socket.getUserPrincipal());
+       
         
-        for(Group g : query.getResultList()) {
+        List<String> gids = query.getResultList().stream().distinct().collect(Collectors.toList());
+
+        EntityTransaction transaction = manager.getTransaction();
+
+        for(String gid : gids) {
+            
             int refCount = 0;
-            for(Member m : g.getMembers()) {
-                if(m.getState() == MemberState.EMPTY || m.getUser().equals(socket.getUserPrincipal())) {
-                    m.setState(MemberState.DELETED);
-                    //m = manager.merge(m);
-                } 
-                if(m.getState() != MemberState.DELETED) {
-                    refCount++;
+    
+            try {
+                transaction.begin();
+
+                Group g = manager.find(Group.class, gid, LockModeType.PESSIMISTIC_WRITE);
+
+                for(Member m : g.getMembers()) {
+                    if(m.getState() == MemberState.EMPTY || m.getUser() == null || m.getUser().equals(socket.getUserPrincipal())) {
+                        m.setState(MemberState.DELETED);
+                        //m = manager.merge(m);
+                    } 
+                    if(m.getState() != MemberState.DELETED) {
+                        refCount++;
+                    }
                 }
+
+                if(refCount == 0) manager.remove(g);
+
+                transaction.commit();     
+                
+            } catch(Exception ex) {
+                
+                System.err.println("Module.deleteFinishedGroups: ERROR: " + ex.getMessage());
+                ex.printStackTrace();
+                
+                if(transaction != null) {
+                    try { transaction.rollback(); }
+                    catch(Exception ex2) { }
+                }
+                
             }
-            if(refCount == 0) manager.remove(g);
+
         }
         
-        manager.getTransaction().commit();
         manager.close();
     }
 
@@ -1124,23 +1294,57 @@ public class Module extends WampModule
     }
 
     
+    private void broadcastGroupInfo(WampSocket socket, Group g, String cmd, GroupAction action) throws Exception
+    {
+        WampDict event = g.toWampObject(false);
+        event.put("cmd", cmd);
+        event.put("members", getMembers(g,0));
+        event.put("flow", g.getFlow());
+        
+        String data = g.getData();
+        if(data != null) event.put("data", data);
+        
+        if(action != null) event.put("action", action.toWampObject());
+
+        HashSet<Long> eligible = null;  // for specs if game is observable
+        if(!g.isObservableGroup()) {
+            eligible = new HashSet<Long>();        
+            eligible.add(socket.getWampSessionId());
+            for(Member m : g.getMembers()) {
+                if(m != null && m.getUser() != null) {
+                    Set<Long> sessions = getWampApplication().getSessionsByUser(m.getUser());
+                    if(sessions != null) eligible.addAll(sessions);
+                }
+            }
+        }
+
+        WampPublishOptions options = new WampPublishOptions();
+        options.setEligibleSessionIds(eligible);  
+        options.setExcludedSessionIds(null);
+        
+        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event." + g.getGid())), null, event, false, false);     // broadcasts to all group subscribers
+    }    
+    
     private void broadcastAppEventInfo(WampSocket socket, Group g, String cmd) throws Exception
     {
         WampDict event = g.toWampObject(false);
         event.put("cmd", cmd);
         event.put("members", getMembers(g,0));
 
-        HashSet<Long> eligible = new HashSet<Long>();
-        eligible.add(socket.getWampSessionId());
-        for(Member m : g.getMembers()) {
-            if(m != null && m.getUser() != null) {
-                Set<Long> sessions = getWampApplication().getSessionsByUser(m.getUser());
-                if(sessions != null) eligible.addAll(sessions);
+        HashSet<Long> eligible = null;  // for specs if game is observable
+        if(!g.isObservableGroup()) {
+            eligible = new HashSet<Long>();        
+            eligible.add(socket.getWampSessionId());
+            for(Member m : g.getMembers()) {
+                if(m != null && m.getUser() != null) {
+                    Set<Long> sessions = getWampApplication().getSessionsByUser(m.getUser());
+                    if(sessions != null) eligible.addAll(sessions);
+                }
             }
         }
-        
+
         WampPublishOptions options = new WampPublishOptions();
-        options.setEligibleSessionIds(eligible);
+        options.setEligibleSessionIds(eligible);  
         options.setExcludedSessionIds(null);
         WampBroker.publishEvent(socket.getRealm(), WampProtocol.newGlobalScopeId(), WampBroker.getTopic(getFQtopicURI("apps_event")), null, event, options, null, true);
         
@@ -1160,6 +1364,7 @@ public class Module extends WampModule
                 if(!g.isHidden()) {
                     WampDict obj = g.toWampObject(false);
                     obj.put("members", getMembers(g,0));                
+                    obj.put("flow", g.getFlow());
                     groupsArray.add(obj);
                 }
             }
@@ -1181,51 +1386,71 @@ public class Module extends WampModule
         boolean retval = false;
         EntityManager manager = Storage.getEntityManager();
         manager.getTransaction().begin();
-        Group g = manager.find(Group.class, gid);
-        if(g != null) synchronized(g) {
-            GroupActionValidator validator = null;
-            String validatorClassName = g.getApplication().getActionValidator();
-            if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).getDeclaredConstructor().newInstance();
+        System.out.println("BEGIN TRANSACTION (addAction)");     
+        
+        try {
+            Group g = manager.find(Group.class, gid, LockModeType.PESSIMISTIC_WRITE);
+            if(g != null) synchronized(g) {
+                GroupActionValidator validator = null;
+                String validatorClassName = g.getApplication().getActionValidator();
+                if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).getDeclaredConstructor().newInstance();
 
-            Member member = null;
-            if(playerSlot >= 0) {
-                member = g.getMember(playerSlot.intValue());
-                if(!member.getUser().equals(socket.getUserPrincipal())) throw new WampException(null, "wgs.incorrect_user_member", null, null);
-            }
-            
-            if(validator == null || validator.isValidAction(this.applications.values(), g, actionName, actionValue, playerSlot)) {
-                GroupAction action = new GroupAction();
-                
-                action.setApplicationGroup(g);
-                action.setActionOrder(g.getActions().size()+1);
-                action.setActionName(actionName);
-                action.setActionValue(actionValue);
-                action.setActionTime(Calendar.getInstance());
-                action.setSlot(-1);
-                action.setUser((User)socket.getUserPrincipal());
-                if(member != null) {
-                    action.setSlot(member.getSlot());
+                Member member = null;
+                if(playerSlot >= 0) {
+                    member = g.getMember(playerSlot.intValue());
+                    if(!member.getUser().equals(socket.getUserPrincipal())) throw new WampException(null, "wgs.incorrect_user_member", null, null);
                 }
-                
-                g.getActions().add(action);
-                //g.setVersion(Storage.saveEntity(g).getVersion());
-                manager.getTransaction().commit();
 
-                boolean excludeMe = false;
-                WampDict event = new WampDict();
-                event.put("gid", g.getGid());
-                event.put("action", action.toWampObject());
-                
-                socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, excludeMe, false);
-                broadcastAppEventInfo(socket, g, "group_updated"); // i.e: turn change
-                notifyOfflineUsers(socket, g, getActionNameDescription(actionName));
-                
-                retval = true;
-                
+                if(validator == null || validator.isValidAction(this, socket, this.applications.values(), g, actionName, actionValue, playerSlot.intValue())) {
+                    GroupAction action = new GroupAction();
+
+                    action.setApplicationGroup(g);
+                    action.setActionOrder(g.getActions().size()+1);
+                    action.setActionName(actionName);
+                    action.setActionValue(actionValue);
+                    action.setActionTime(Calendar.getInstance());
+                    action.setSlot(-1);
+                    action.setUser((User)socket.getUserPrincipal());
+                    if(member != null) {
+                        action.setSlot(member.getSlot());
+                    }
+
+                    g.getActions().add(action);
+                    //g.setVersion(Storage.saveEntity(g).getVersion());
+                    manager.getTransaction().commit();
+                    manager.close();
+                    manager = null;
+                    System.out.println("END TRANSACTION (addAction)");            
+
+                    /*                    
+                    boolean excludeMe = false;
+                    WampDict event = new WampDict();
+                    event.put("gid", g.getGid());
+                    event.put("action", action.toWampObject());
+
+                    socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event."+g.getGid())), null, event, excludeMe, false);
+                    */
+                    
+                    broadcastGroupInfo(socket, g, "action", action);
+                    broadcastAppEventInfo(socket, g, "group_updated"); // i.e: turn change
+                    notifyOfflineUsers(socket, g, getActionNameDescription(actionName));
+
+                    retval = true;
+
+                }
             }
+        
+        } catch(Exception ex) {
+            logger.severe("Module.addAction: Error: " + ex.getMessage());
+            logger.throwing(Module.class.getName(), "addAction", ex);
         }
         
-        manager.close();
+        if(manager != null) {
+            manager.getTransaction().rollback();
+            manager.close();
+            System.out.println("END TRANSACTION (addAction)");            
+        }
+        
         return retval;
     }
 
@@ -1302,30 +1527,31 @@ public class Module extends WampModule
                 // Search achievements stats
                 CriteriaQuery<Tuple> achievementsQuery = cb.createTupleQuery();
                 Root<Achievement> achievement = achievementsQuery.from(Achievement.class);
-                Expression<Application> appExpr = achievement.get("sourceRole").get("application");
+                Path<Application> appNameExpr = achievement.get("sourceRole").get("application").get("name");
                 Expression<String> nameExpr = achievement.get("name");
-                achievementsQuery.multiselect(appExpr.alias("app"), nameExpr.alias("name"), cb.count(nameExpr).alias("c"));
+                achievementsQuery.multiselect(appNameExpr.alias("appName"), nameExpr.alias("name"), cb.count(nameExpr).alias("c"));
                 if(opponentUid == null || opponentUid.length() == 0) {
                     achievementsQuery.where(cb.equal(achievement.get("sourceUser"), user));
                 } else {
                     achievementsQuery.where(cb.and(cb.equal(achievement.get("sourceUser"), user), cb.equal(achievement.get("value"), opponentUid)));
                 }
-                achievementsQuery.groupBy(appExpr, achievement.get("name"));
+                
+                achievementsQuery.groupBy(appNameExpr, achievement.get("name"));
 
                 TypedQuery<Tuple> achievementsTypedQuery = manager.createQuery(achievementsQuery);
                 for (Tuple t : achievementsTypedQuery.getResultList()) {
-                    Application a = (Application)t.get("app");
+                    String appName = (String)t.get("appName");
                     String name = (String)t.get("name");
                     Object count = t.get("c");
-                    WampDict appStat = (WampDict)appStats.get(a.getName());
+                    WampDict appStat = (WampDict)appStats.get(appName);
                     appStat.put(name.toLowerCase(), count);
                 }
                 
 
                 // Search active groups stats using JQL (FIXME: CriteriaQuery with onetomany relationship fails with Hibernate)
-                String jql = "SELECT g.application AS app,count(DISTINCT g.gid) AS c FROM AppGroup g, IN(g.members) m WHERE m.user.uid = :uid AND g.state <> :finishedState ";
+                String jql = "SELECT g.application.name AS appName,count(DISTINCT g.gid) AS c FROM AppGroup g, IN(g.members) m WHERE m.user.uid = :uid AND g.state <> :finishedState ";
                 if(opponentUid != null && opponentUid.length() > 0) jql += "AND :opponentUid in (SELECT m2.user.uid from GroupMember m2 WHERE m2.applicationGroup = g) " ;
-                jql += "GROUP BY g.application";
+                jql += "GROUP BY g.application.name";
                 
                 TypedQuery<Tuple> activeGroupsTypedQuery = manager.createQuery(jql, Tuple.class);
                 activeGroupsTypedQuery.setParameter("uid", user.getUid());
@@ -1354,16 +1580,16 @@ public class Module extends WampModule
                 for (Object info : activeGroupsTypedQuery.getResultList()) {
                     if(info instanceof Tuple) {  // CriteriaQuery
                         Tuple tuple = (Tuple)info;
-                        Application a = (Application)tuple.get("app");
+                        String appName = (String)tuple.get("appName");
                         Object count = tuple.get("c");
-                        WampDict appStat = (WampDict)appStats.get(a.getName());
+                        WampDict appStat = (WampDict)appStats.get(appName);
                         appStat.put("active", count);
                         
                     } else if(info instanceof Object[]) {  // JPQL query
                         Object[] array = (Object[])info;
-                        Application a = (Application)array[0];
+                        String appName = (String)array[0];
                         Object count = array[1];
-                        WampDict appStat = (WampDict)appStats.get(a.getName());
+                        WampDict appStat = (WampDict)appStats.get(appName);
                         appStat.put("active", count);
                     }
                 }
