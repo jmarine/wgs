@@ -28,6 +28,9 @@ public class Role implements Serializable
     @Column(name="name")
     private String  name;
     
+    @Column(name="position")
+    private int position;
+    
     @Column(name="required")
     private boolean required;
     
@@ -162,6 +165,18 @@ public class Role implements Serializable
         return sb.toString();
     }
 
+    /**
+     * @return the position
+     */
+    public int getPosition() {
+        return position;
+    }
 
-    
+    /**
+     * @param position the index to set
+     */
+    public void setPosition(int position) {
+        this.position = position;
+    }
+
 }
