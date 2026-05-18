@@ -4,6 +4,8 @@ import java.io.StringReader;
 import java.util.Map.Entry;
 
 import jakarta.json.*;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import org.wgs.util.Base64;
 import org.wgs.wamp.type.WampDict;
 import org.wgs.wamp.type.WampList;
@@ -65,12 +67,18 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
                     builder.add(key, str);
                 } else if(val instanceof Boolean) {
                     builder.add(key, (Boolean)val);
+                } else if(val instanceof Integer) {
+                    builder.add(key, (Integer)val);
                 } else if(val instanceof Long) {
                     builder.add(key, (Long)val);
                 } else if(val instanceof Float) {
                     builder.add(key, ((Float)val).doubleValue() );
                 } else if(val instanceof Double) {
                     builder.add(key, (Double)val);
+                } else if(val instanceof BigInteger) {
+                    builder.add(key, (BigInteger)val);                        
+                } else if(val instanceof BigDecimal) {
+                    builder.add(key, (BigDecimal)val);                    
                 } else if(val instanceof WampObject) {                    
                     builder.add(key, convertWampObjectToJsonValue((WampObject)val));
                 }
@@ -98,12 +106,18 @@ public class WampSerializerJSON extends WampObject implements WampSerializer
                     builder.add(str);
                 } else if(val instanceof Boolean) {
                     builder.add((Boolean)val);
+                } else if(val instanceof Integer) {
+                    builder.add((Integer)val);                    
                 } else if(val instanceof Long) {
                     builder.add((Long)val);
                 } else if(val instanceof Float) {
                     builder.add(((Float)val).doubleValue() );
                 } else if(val instanceof Double) {
                     builder.add((Double)val);
+                } else if(val instanceof BigDecimal) {
+                    builder.add((BigDecimal)val);                    
+                } else if(val instanceof BigInteger) {
+                    builder.add((BigInteger)val);                      
                 } else if(val instanceof WampObject) {                    
                     builder.add(convertWampObjectToJsonValue((WampObject)val));
                 }

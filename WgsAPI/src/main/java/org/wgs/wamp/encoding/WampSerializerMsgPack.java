@@ -5,6 +5,8 @@ import org.wgs.wamp.type.WampObject;
 import org.wgs.wamp.type.WampList;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -46,10 +48,16 @@ public class WampSerializerMsgPack extends WampObject implements WampSerializer
             packer.packString((String)obj);
         } else if(obj instanceof Boolean) {
             packer.packBoolean((boolean)obj);
+        } else if(obj instanceof Integer) {
+            packer.packLong((Integer)obj);            
         } else if(obj instanceof Long) {
             packer.packLong((long)obj);
         } else if(obj instanceof Double) {
             packer.packDouble((double)obj);
+        } else if(obj instanceof BigDecimal) {
+            packer.packDouble(((BigDecimal)obj).doubleValue());
+        } else if(obj instanceof BigInteger) {
+            packer.packDouble(((BigInteger)obj).longValue());            
         } else if(obj instanceof WampDict) {                    
             WampDict dict = (WampDict)obj;
             packer.packMapHeader(dict.size());
