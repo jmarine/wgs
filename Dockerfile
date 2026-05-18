@@ -20,7 +20,7 @@ WORKDIR /opt/wgs
 RUN mvn -Duser.home=/opt/wgs install
 
 # Define user
-RUN useradd -ms /bin/bash www-data
+RUN id -u www-data >/dev/null 2>&1 || useradd -ms /bin/bash www-data
 
 # Define application directories/permissions and data volumes
 RUN mkdir -p /var/opt/wgs 
