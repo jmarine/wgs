@@ -13,4 +13,14 @@ public class Base64
         return java.util.Base64.getEncoder().encodeToString(data);
     }
     
+    public static String convertBase64UrlToBase64(String base64Url)
+    {
+        return base64Url.replace("-", "+").replace("_", "/");
+    }
+    
+    public static String convertBase64ToBase64Url(String base64)
+    {
+        return base64.replace("+", "-").replace("/", "_");
+    }    
+    
 }

@@ -201,7 +201,11 @@ public class Social
                     WampDict info = (WampDict)WampEncoding.JSON.getSerializer().deserialize(notificationChannel, 0, notificationChannel.length());
                     String endpoint = info.getText("endpoint");
                     if(endpoint != null) {
-                        if(endpoint.startsWith("https://updates.push.services.mozilla.com/")) {
+                        if(VAPID.isSubcriptionCompatibleWithVAPID(info)) {
+                            
+                            VAPID.notifyWithVAPID(app, info, "{ \"provider\": \""+toUser.getDomain()+"\", \"gid\": \"" + gameGuid + "\"}", template);
+                            
+                        } else if(endpoint.startsWith("https://updates.push.services.mozilla.com/")) {
 
                             notifyWithMozillaPushService(app, endpoint, "{ \"provider\": \""+toUser.getDomain()+"\", \"gid\": \"" + gameGuid + "\"}", template);
 

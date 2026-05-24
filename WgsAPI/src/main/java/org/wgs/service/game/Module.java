@@ -48,6 +48,7 @@ import org.wgs.wamp.WampSocket;
 import org.wgs.wamp.annotation.WampModuleName;
 import org.wgs.wamp.annotation.WampRegisterProcedure;
 import org.wgs.util.Social;
+import org.wgs.util.VAPID;
 import org.wgs.wamp.topic.WampPublishOptions;
 import org.wgs.wamp.topic.WampSubscription;
 import org.wgs.wamp.topic.WampTopic;
@@ -258,6 +259,14 @@ public class Module extends WampModule
         }
         
     }
+    
+    
+    @WampRegisterProcedure(name = "get_notification_service_public_key_for_vapid")    
+    public String getNotificationServicePublicKeyForVAPID(WampSocket socket, String appClientName) throws Exception
+    {
+        return VAPID.getNotificationServicePublicKeyForVAPID(appClientName);
+    }
+            
     
     @WampRegisterProcedure(name="set_user_push_channel")
     public void setUserPushChannel(WampSocket socket, String appClientName, String notificationChannel)
@@ -1603,5 +1612,5 @@ public class Module extends WampModule
         }
         return stats;
     }
-        
+    
 }
