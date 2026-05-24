@@ -10,9 +10,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.NamedQueries;
 import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
-import org.wgs.security.User;
-import org.wgs.security.User;
-import org.wgs.security.User;
 
 
 @Entity
