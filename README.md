@@ -13,7 +13,7 @@ This project offers the following services:
 * authentication with Google+, Facebook, and OpenID Connect providers.
 * lobby services (to create/list/join/automatch multi-player online games).
 * real-time presence and communications.
-* offline notifications (GCM notifications, Facebook alerts, ...).
+* offline notifications (Push API, GCM notifications, Facebook alerts, ...).
 
 The server-side is developed in Java language, and it can be deployed as a standalone server, or within JakartaEE 9.1 application servers. 
 
