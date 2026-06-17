@@ -29,12 +29,20 @@ import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Selection;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.TimeZone;
 import java.util.stream.Collectors;
 import org.wgs.util.Storage;
 import org.wgs.security.User;
 import org.wgs.security.UserRepository;
+import org.wgs.service.game.Glicko2.Rating;
 import org.wgs.wamp.WampApplication;
 import org.wgs.wamp.type.WampConnectionState;
 import org.wgs.wamp.type.WampDict;
@@ -70,6 +78,7 @@ public class Module extends WampModule
         super(app);
         
         WampBroker.createTopic(app, getFQtopicURI("apps_event"), null);
+        WampBroker.createTopic(app, getFQtopicURI("tournament_event"), null);
 
         try {
             List<Application> apps = Storage.findEntities(Application.class, "wgs.findAllApps");
@@ -304,7 +313,7 @@ public class Module extends WampModule
         applications.remove(app.getAppId());
     }
     
-
+    
     @WampRegisterProcedure(name="new_app")
     public WampDict newApp(WampSocket socket, WampDict data) throws Exception
     {
@@ -332,10 +341,22 @@ public class Module extends WampModule
         app.setMaxMembers(data.getLong("max").intValue());
         app.setMinMembers(data.getLong("min").intValue());
         app.setDeltaMembers(data.getLong("delta").intValue());
+        app.setMaxTeams(data.getLong("max_teams").intValue());
+        app.setMinTeams(data.getLong("min_teams").intValue());
+        app.setDeltaTeams(data.getLong("delta_teams").intValue());
+        app.setMaxPlayersByTeam(data.getLong("max_players_teams").intValue());
+        app.setMinPlayersByTeam(data.getLong("min_players_teams").intValue());
+        app.setDeltaPlayersByTeam(data.getLong("delta_players_teams").intValue());
+        app.setWinScoreInTournament(data.getDouble("win_score"));
+        app.setTieScoreInTournament(data.getDouble("tie_score"));
+        app.setMaxWinGamesToScoreOrKnockout(data.getLong("max_win_games").intValue());
+        app.setMinWinGamesToScoreOrKnockout(data.getLong("min_win_games").intValue());
+        app.setDiffWinsToScoreOrKnockout(data.getLong("diff_win_games").intValue());
         app.setAlliancesAllowed(data.getBoolean("alliances"));
         app.setDynamicGroup(data.getBoolean("dynamic"));
         app.setObservableGroup(data.getBoolean("observable"));
         app.setAIavailable(data.getBoolean("ai_available"));
+        app.setTeamPlayersInOrder(data.getBoolean("team_players_in_order"));
         
         String internalDataClass = data.getText("internal_data_class");
         if(internalDataClass != null) {
@@ -424,8 +445,8 @@ public class Module extends WampModule
         socket.publishEvent(WampBroker.getTopic(getFQtopicURI("apps_event")), null, event, excludeMe, false);
         return event;
     }
-
     
+
     @WampRegisterProcedure(name="open_group")
     public synchronized WampDict openGroup(WampSocket socket, String appId, String gid, WampDict options) throws Exception
     {
@@ -1334,7 +1355,7 @@ public class Module extends WampModule
         socket.publishEvent(WampBroker.getTopic(getFQtopicURI("group_event." + g.getGid())), null, event, false, false);     // broadcasts to all group subscribers
     }    
     
-    private void broadcastAppEventInfo(WampSocket socket, Group g, String cmd) throws Exception
+    public void broadcastAppEventInfo(WampSocket socket, Group g, String cmd) throws Exception
     {
         WampDict event = g.toWampObject(false);
         event.put("cmd", cmd);
@@ -1393,6 +1414,7 @@ public class Module extends WampModule
     public boolean addAction(WampSocket socket, String gid, Long playerSlot, String actionName, String actionValue) throws Exception
     {
         boolean retval = false;
+        String gidGameFinished = null;
         EntityManager manager = Storage.getEntityManager();
         manager.getTransaction().begin();
         System.out.println("BEGIN TRANSACTION (addAction)");     
@@ -1409,6 +1431,8 @@ public class Module extends WampModule
                     member = g.getMember(playerSlot.intValue());
                     if(!member.getUser().equals(socket.getUserPrincipal())) throw new WampException(null, "wgs.incorrect_user_member", null, null);
                 }
+                
+                GroupState oldState = g.getState();
 
                 if(validator == null || validator.isValidAction(this, socket, this.applications.values(), g, actionName, actionValue, playerSlot.intValue())) {
                     GroupAction action = new GroupAction();
@@ -1447,6 +1471,10 @@ public class Module extends WampModule
                     retval = true;
 
                 }
+                
+                if(oldState != GroupState.FINISHED && g.getState() == GroupState.FINISHED) {
+                    gidGameFinished = g.getGid();
+                }
             }
         
         } catch(Exception ex) {
@@ -1459,6 +1487,17 @@ public class Module extends WampModule
             manager.close();
             System.out.println("END TRANSACTION (addAction)");            
         }
+
+
+        // Trigger tournament actions
+        if(gidGameFinished != null) {
+            List<TournamentMatch> matches = Storage.findEntities(TournamentMatch.class, "wgs.findTournamentMatchByGID", gidGameFinished);
+            if(!matches.isEmpty()) {
+                TournamentMatch match = matches.get(0);
+                match.getRound().getTournament().getManager().onGameFinished(this, socket, applications.values(), match, gidGameFinished);
+            }
+        }
+        
         
         return retval;
     }
@@ -1612,5 +1651,384 @@ public class Module extends WampModule
         }
         return stats;
     }
+
+
+    @WampRegisterProcedure(name="new_tournament")
+    public WampDict newTournament(WampSocket socket, WampDict data) throws Exception
+    {
+        Client client = clients.get(socket.getWampSessionId());
+        if(socket.getState() != WampConnectionState.AUTHENTICATED) {
+            System.err.println("The user hasn't logged in");
+            throw new WampException(null, WGS_MODULE_NAME + ".unknown_user", null, null);
+        }
+        
+        
+        DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE_TIME;
+        ZonedDateTime startZonedDateTime = ZonedDateTime.parse(data.getText("start_datetime"), dtf);
+        Calendar startDate = GregorianCalendar.from(startZonedDateTime);
+        startDate.setTimeZone(TimeZone.getTimeZone("UTC"));
+        
+        String appId = data.getText("appId");
+        Application app = applications.get(appId);
+        if(app == null) {
+            List<Application> list = Storage.findEntities(Application.class, "wgs.findAppByName", appId );
+            if(list.size() > 0) app = list.get(0);
+        }        
+        
+        Tournament tournament = new Tournament();
+        tournament.setApplication(app);
+        tournament.setName(data.getText("name"));
+        tournament.setCreated(Calendar.getInstance());
+        tournament.setStart(startDate); 
+        tournament.setCurrentRound(0);
+        tournament.setMaxTeams(data.getInt("max_teams"));
+        tournament.setMinTeams(data.getInt("min_teams"));
+        tournament.setMaxRoundDurationInMinutes(data.getInt("max_round_duration"));
+        tournament.setOwner(client.getUser());
+        tournament.setState(GroupState.OPEN);
+        tournament.setTournamentType(data.getInt("type"));
+        Storage.createEntity(tournament);
+        
+        WampDict event = tournament.toWampObject();
+        event.put("id", tournament.getId());
+        event.put("cmd", "new_tournament");
+        
+        boolean excludeMe = true;
+        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("tournament_event")), null, event, excludeMe, false);
+        
+        return event;
+    }    
+    
+    @WampRegisterProcedure(name = "list_tournaments")
+    public WampDict listTournaments(WampSocket socket, String appId, GroupState state) throws Exception
+    {
+        String ejbql = "SELECT OBJECT(t) FROM Tournament t  WHERE ";
+        if(state == GroupState.FINISHED) {
+            ejbql += "t.state = :finishedState";
+        } else {
+            ejbql += "t.state <> :finishedState";
+        }
+            
+            
+        EntityManager manager = Storage.getEntityManager();
+        TypedQuery<Tournament> query = manager.createQuery(ejbql, Tournament.class);        
+        query.setParameter("finishedState", GroupState.FINISHED);
+        
+        WampList wampList = new WampList();
+        List<Tournament> tournaments = query.getResultList();
+        for(Tournament tournament : tournaments)
+        {
+            WampDict tournamentInfo = tournament.toWampObject();
+            WampList enrolledByUser = new WampList();
+            for(TournamentEnrollment enroll : tournament.getEnrollments()) {
+                if(tournament.getState() != GroupState.FINISHED) {
+                    Team team = enroll.getTeam();
+                    if(team.getMembers().contains(socket.getUserPrincipal())) {
+                        WampDict enrollInfo = new WampDict();
+                        enrollInfo.put("tournamentEnrollmentId", enroll.getId());
+                        enrollInfo.put("teamId", team.getId());
+                        enrollInfo.put("teamName", team.getAlias());
+                        enrolledByUser.add(enrollInfo);
+                    }
+                }
+            }
+            tournamentInfo.put("userTeamsEnrolled", enrolledByUser);
+            wampList.add(tournamentInfo);
+        }
+
+        manager.close();
+        
+        WampDict retval = new WampDict();
+        retval.put("tournaments", wampList);
+
+        return retval;
+    }
+    
+    
+    @WampRegisterProcedure(name = "delete_tournament")
+    public WampDict deleteTournament(WampSocket socket, long tournamentId) throws Exception
+    {
+        WampDict event = new WampDict();
+        event.put("tid", tournamentId);
+        event.put("cmd", "delete_tournament");
+        
+        Tournament tournament = Storage.findEntity(Tournament.class, tournamentId);
+        if(tournament != null && tournament.getOwner().equals(socket.getUserPrincipal())) {
+            for(TournamentRound round : tournament.getRounds()) {
+                for(TournamentMatch match : round.getMatches()) {
+                    for(String gid : match.getGIDs()) {
+                        Group group = Storage.findEntity(Group.class, gid);
+                        if(group != null) {
+                            for(GroupAction action : group.getActions()) {
+                                Storage.removeEntity(action);
+                            }
+                            for(Member member : group.getMembers()) {
+                                Storage.removeEntity(member);
+                            }
+                            Storage.removeEntity(group);
+                        }
+                    }
+                
+                    for(TournamentMatchParticipantAndResult p : match.getTeamsParticipantsWithResults()) {
+                        Storage.removeEntity(p);
+                    }
+                    
+                    Storage.removeEntity(match);
+                }
+                Storage.removeEntity(round);
+            }
+            
+            for(TournamentEnrollment enroll : tournament.getEnrollments()) {
+                Storage.removeEntity(enroll);
+            }
+            
+            Storage.removeEntity(tournament);
+            
+            event.put("deleted", true);
+            
+        } else {
+            event.put("deleted", false);
+        }
+        
+        
+        boolean excludeMe = true;
+        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("tournament_event")), null, event, excludeMe, false);        
+        
+        return event;
+    }    
+    
+    
+    @WampRegisterProcedure(name = "unenroll_tournament")
+    public WampDict unenrollTournament(WampSocket socket, long tournamentEnrollmentId) throws Exception
+    {
+        WampDict retval = null;
+        EntityManager manager = Storage.getEntityManager();
+        EntityTransaction transaction = manager.getTransaction();
+        
+        try {
+            transaction.begin();
+
+            TournamentEnrollment enroll = manager.find(TournamentEnrollment.class, tournamentEnrollmentId, LockModeType.PESSIMISTIC_WRITE);
+            if(enroll == null) {
+                throw new WampException(null, WGS_MODULE_NAME + ".enrollment_not_found: " + tournamentEnrollmentId, null, null);
+            } else if(!enroll.getTournament().getOwner().equals(socket.getUserPrincipal()) && !enroll.getTeam().getMembers().contains(socket.getUserPrincipal())) {
+                throw new WampException(null, WGS_MODULE_NAME + ".user_cant_unenroll: " + tournamentEnrollmentId, null, null);
+            } else {
+                retval = enroll.toWampObject();
+
+                enroll.getTournament().getEnrollments().remove(enroll);
+                manager.remove(enroll);
+                transaction.commit();
+
+                retval.put("cmd", "unenroll");
+                retval.put("unenroll", true);
+            } 
+            
+        } catch(Exception ex) {
+            if(transaction != null) {
+                retval = new WampDict();
+                retval.put("cmd", "unenroll");
+                retval.put("unenroll", false);
+                
+                transaction.rollback();
+            }
+                
+        } finally {
+            if(manager != null) {
+                manager.close();
+            }
+        }
+        
+        boolean excludeMe = true;
+        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("tournament_event")), null, retval, excludeMe, false);        
+        
+        return retval;
+    }    
+    
+    
+    @WampRegisterProcedure(name = "enroll_tournament")
+    public WampDict enrollTournament(WampSocket socket, long tournamentId, WampDict enrollmentData) throws Exception
+    {
+        
+        EntityManager manager = Storage.getEntityManager();
+        EntityTransaction transaction = manager.getTransaction();
+        transaction.begin();
+        
+        Tournament tournament = manager.find(Tournament.class, tournamentId);
+        Application app = tournament.getApplication();
+        int previousColorsCounts[] = new int[app.getMaxTeams()];
+
+        Team team = null;
+        
+        String teamAlias = enrollmentData.getText("team_alias");
+        User user = (User)socket.getUserPrincipal();
+        
+        if(teamAlias == null) {
+            teamAlias = user.getName();
+        }
+        
+        
+
+        if(teamAlias != null) {
+            List<Team> teams = Storage.findEntities(Team.class, "wgs.findByAlias", teamAlias);
+            if(!teams.isEmpty()) {
+                team = teams.get(0);
+            } else {
+                WampList participants = (WampList)enrollmentData.get("participants");
+                if(participants == null) participants = new WampList();
+
+                team = new Team();
+                team.setId(UUID.randomUUID().toString());
+                team.setAlias(teamAlias);
+                team = manager.merge(team);
+
+                // team = manager.find(Team.class, team.getId());
+
+                if(!participants.contains(user.getUid())) participants.add(user.getUid());
+
+                for(int i = 0; i < participants.size(); i++) {
+                    String participantUid = participants.getText(i);
+                    User player = manager.find(User.class, participantUid);   
+                    
+                    if(player == null) throw new WampException(enrollmentData, WGS_MODULE_NAME + ".participant_not_found: " + participantUid, null, null);
+                    else team.getMembers().add(player);
+                }
+
+            }
+            
+        }
+        
+  
+        TournamentEnrollment enroll;
+        List<TournamentEnrollment> enrolled = Storage.findEntities(TournamentEnrollment.class, "wgs.findByTournamentAndTeam", tournament.getId(), team.getId());
+        if(!enrolled.isEmpty()) {
+            enroll = enrolled.get(0);
+        } else if(tournament.getMaxTeams() > 0 && tournament.getEnrollments().size() >= tournament.getMaxTeams()) {
+            // tournament is full
+            enroll = null;
+        } else {
+            enroll = new TournamentEnrollment();
+            enroll.setCreationDate(Calendar.getInstance());
+            enroll.setByesCount(0);
+            enroll.setCurrentRound(0);
+            enroll.setPoints(0.0);
+            enroll.setPreviousColorsCounts(previousColorsCounts);
+            enroll.setTournament(tournament);
+            enroll.setTeam(team);
+
+            enroll = manager.merge(enroll);
+
+            tournament.getEnrollments().add(enroll);
+        }
+        
+        transaction.commit();
+        manager.close();
+        
+        WampDict event = null;
+        if(enroll == null) {
+            event = new WampDict();
+            event.put("enrolled", false);
+        } else {
+            event = enroll.toWampObject();
+            event.put("enrolled", true);
+            
+            boolean excludeMe = true;
+            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("tournament_event")), null, event, excludeMe, false);        
+        }
+
+        event.put("cmd", "enroll");
+        return event;        
+    } 
+    
+
+    @WampRegisterProcedure(name = "start_tournament")
+    public WampDict startTournament(WampSocket socket, long tournamentId) throws Exception
+    {
+        Tournament tournament = Storage.findEntity(Tournament.class, tournamentId);
+        tournament.setState(GroupState.STARTED);
+        tournament = Storage.saveEntity(tournament);
+        
+        TournamentManager manager = tournament.getManager();
+        manager.createRound(this, socket, this.applications.values(), tournament);
+        
+        WampDict event = tournament.toWampObject();
+        event.put("cmd", "start");
+        
+        boolean excludeMe = true;
+        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("tournament_event")), null, event, excludeMe, false);        
+
+        return event;        
+    }    
+
+
+    @WampRegisterProcedure(name = "get_tournament_details")
+    public WampDict getTournamentDetails(WampSocket socket, long tournamentId) throws Exception
+    {
+        WampDict details = null;
+        
+        Tournament tournament = Storage.findEntity(Tournament.class, tournamentId);
+        if(tournament != null) {
+            details = tournament.toWampObject();
+            
+            Ranking ranking = Ranking.getInstance(tournament.getApplication()); 
+            ArrayList<TournamentEnrollment> sortedEnrollments = new ArrayList<TournamentEnrollment>(tournament.getEnrollments());
+            sortedEnrollments.sort((t1,t2) -> { 
+                double diff = t2.getPoints() - t1.getPoints();
+                if(diff > 0.0) {
+                    return 1;
+                } else if(diff < 0.0) {
+                    return -1;
+                } else {
+                    double count1 = 0;
+                    double sum1 = 0;
+                    for(User user : t1.getTeam().getMembers()) {
+                        Rating rating = ranking.getUserRating(user);
+                        sum1 += rating.getRating();
+                        count1++;
+                    }
+
+                    double count2 = 0;
+                    double sum2 = 0;
+                    for(User user : t1.getTeam().getMembers()) {
+                        Rating rating = ranking.getUserRating(user);
+                        sum2 += rating.getRating();
+                        count2++;
+                    }
+
+                    diff = (sum2/count2) - (sum1/count1);
+                    if(diff > 0.0) {
+                        return 1;
+                    } else if(diff < 0.0) {
+                        return -1;
+                    } else {
+                        return 0;
+                    }
+                }
+            });
+
+            WampList teams = new WampList();
+            for(TournamentEnrollment enroll : sortedEnrollments) {
+                WampDict wampEnroll = enroll.toWampObject();
+                
+                WampList teamUsers = new WampList();
+                for(User user : enroll.getTeam().getMembers()) {
+                    teamUsers.add(user.toWampObject(false));
+                }
+                wampEnroll.put("users", teamUsers);                
+                
+                teams.add(wampEnroll);
+            }
+            
+            details.put("teams", teams);
+            
+            WampList rounds = new WampList();
+            for(TournamentRound round : tournament.getRounds()) {
+                rounds.add(round.toWampObject());
+            }
+            details.put("rounds", rounds);
+        }
+        
+        return details;
+    }      
     
 }

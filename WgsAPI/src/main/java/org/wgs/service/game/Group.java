@@ -643,6 +643,16 @@ public class Group implements java.io.Serializable
         obj.put("state", String.valueOf(getState()));
         obj.put("turn", getTurn());
         obj.put("password", (password != null) && (password.length() > 0) );
+        
+        List<Member> membersList = getMembers();
+        if(membersList != null) {
+            WampList memberWampList = new WampList();
+            for(Member member : membersList) {
+                memberWampList.add(member.toWampObject());
+            }
+            obj.put("members", memberWampList);
+        }
+        
         if(withData) {
             obj.put("data", data);
             obj.put("initialData", initialData);
@@ -655,7 +665,7 @@ public class Group implements java.io.Serializable
         return obj;
     }
 
-    
 
+    
 }
 

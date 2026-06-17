@@ -18,7 +18,6 @@ import org.wgs.wamp.type.WampObject;
 
 public class WebGL8x8BoardGamesValidator implements GroupActionValidator 
 {
-    private static ConcurrentLinkedQueue<ScriptEngine> ruleEngines = new ConcurrentLinkedQueue<>();
 
     @Override
     public WampObject getPrivateState(Group g, Member member)
@@ -41,7 +40,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
             String gameType = g.getApplication().getName();
             gameType = Character.toUpperCase(gameType.charAt(0)) + gameType.substring(1);
 
-            ruleEngine = getRuleEngine(apps);
+            ruleEngine = RuleEngine.getRuleEngine(apps);
             ruleEngine.eval("var game = app.model.GameFactory.createGame('" + gameType+ "');");
             
             if(actionName.equalsIgnoreCase("MOVE") && !g.getData().equals(g.getInitialData())) {
@@ -242,7 +241,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
             
         } finally {
             if(ruleEngine != null) {
-                recycleRuleEngine(ruleEngine);
+                RuleEngine.recycleRuleEngine(ruleEngine);
             }
         }
     }
@@ -261,49 +260,5 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
         Storage.saveEntity(appEvent);
     }
     
-    
-    private ScriptEngine getRuleEngine(Collection<Application> apps) throws Exception
-    {
-        ScriptEngine ruleEngine = ruleEngines.poll();
-        if(ruleEngine == null) {
-            ScriptEngineManager factory = new ScriptEngineManager();
-            ruleEngine = factory.getEngineByName("JavaScript");  // Graal.js
-
-            ClassLoader cl = this.getClass().getClassLoader();
-            ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/move.js"),StandardCharsets.UTF_8));
-            ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/game.js"),StandardCharsets.UTF_8));
-
-            ArrayList<Application> appsToLoad = new ArrayList<Application>();
-            appsToLoad.addAll(apps);                
-            Collections.sort(appsToLoad);  // i.e: chess.js required by chess960.js
-            while(!appsToLoad.isEmpty()) {  // Note: inherited classes may fail until super class has been loaded
-                Iterator<Application> iter = appsToLoad.iterator();
-                while(iter.hasNext()) {
-                    try { 
-                        Application app = iter.next();
-                        String appName = app.getName();
-                        int pos = appName.indexOf("-");
-                        if(pos != -1) {
-                            appName = appName.substring(0, pos);
-                        }                        
-                        ruleEngine.eval(new InputStreamReader(cl.getResourceAsStream("META-INF/rules/" + appName +".js"),StandardCharsets.UTF_8)); 
-                    } catch(Exception ex) { 
-                        // skip exception
-                    } finally {
-                        iter.remove();
-                    }
-                    
-                }
-            }        
-        }
-
-        return ruleEngine;
-    }    
-
-    
-    private void recycleRuleEngine(ScriptEngine ruleEngine)
-    {
-        if(ruleEngine != null) ruleEngines.offer(ruleEngine);
-    }
 
 }

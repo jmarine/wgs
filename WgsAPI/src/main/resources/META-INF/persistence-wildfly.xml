@@ -7,14 +7,21 @@
     <class>org.wgs.security.OpenIdConnectProvider</class>
     <class>org.wgs.security.OpenIdConnectClient</class>
     <class>org.wgs.security.User</class>
+    <class>org.wgs.security.UserPushChannel</class>
+    <class>org.wgs.security.NotificationService</class>
     <class>org.wgs.service.game.Application</class>
     <class>org.wgs.service.game.GroupAction</class>
     <class>org.wgs.service.game.Group</class>
     <class>org.wgs.service.game.Member</class>
     <class>org.wgs.service.game.Role</class>
     <class>org.wgs.service.game.Achievement</class>
-    <class>org.wgs.security.UserPushChannel</class>
-    <class>org.wgs.security.NotificationService</class>
+    <class>org.wgs.service.game.Tournament</class>
+    <class>org.wgs.service.game.TournamentEnrollment</class>
+    <class>org.wgs.service.game.TournamentRound</class>
+    <class>org.wgs.service.game.TournamentMatch</class>    
+    <class>org.wgs.service.game.TournamentMatchParticipantAndResult</class>
+    <class>org.wgs.service.game.Team</class>
+
     <properties>
         <property name="hibernate.show_sql" value="true" />
         <property name="hibernate.hbm2ddl.auto" value="update"/>   

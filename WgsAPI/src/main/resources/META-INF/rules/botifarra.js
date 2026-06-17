@@ -68,6 +68,17 @@ Botifarra.prototype.toString = function() {
 }
 
 
+Botifarra.prototype.getWinner = function() {
+  if(Math.max(this.score_team1, this.score_team2) < this.points) {
+    return NONE;
+  } else {
+    if(this.score_team1 > this.score_team2) return 1;
+    else if(this.score_team2 > this.score_team1) return 2;
+    else return NONE;
+  }
+}
+
+
 Botifarra.prototype.newGame = function() {
   this.turn = PLAYER1;
   //this.movements = null;

@@ -579,35 +579,53 @@ function create_app() {
     var name = $("#app_name").val();
     var domain = $("#app_domain").val();
     var version = parseInt($("#app_version").val());
-    var action_validator_class = $("#app_action_validator_class").val();
-    var maxScores = parseInt($("#app_max_scores").val());
-    var descScoreOrder = $("#app_desc_score_order").is(':checked');
-    var min = parseInt($("#app_min").val()); 
-    var max = parseInt($("#app_max").val());
-    var delta = parseInt($("#app_delta").val());
-    var observable = $("#app_observable").is(':checked');
-    var dynamic = $("#app_dynamic").is(':checked');
-    var alliances = $("#app_alliances").is(':checked');
-    var ai_available = $("#app_ai_available").is(':checked');
+    
     var roles = [];
     $("#app_roles option").each(function() { roles[roles.length] = $(this).attr("value"); });
     
-    var internal_data_class = $("#app_internalDataClass").val();
-    var internal_data_options = {};
+    var options = {};
+    options.roles = roles;
+    options.action_validator_class = $("#app_action_validator_class").val();
+    options.max_scores = parseInt($("#app_max_scores").val());
+    options.desc_score_order = $("#app_desc_score_order").is(':checked');
+    options.min = parseInt($("#app_min").val()); 
+    options.max = parseInt($("#app_max").val());
+    options.delta = parseInt($("#app_delta").val());
+    options.min_teams = parseInt($("#app_min_teams").val());
+    options.max_teams = parseInt($("#app_max_teams").val());
+    options.delta_teams = parseInt($("#app_delta_teams").val());
+    options.min_players_teams = parseInt($("#app_min_players_teams").val());
+    options.max_players_teams = parseInt($("#app_max_players_teams").val());
+    options.delta_players_teams = parseInt($("#app_delta_players_teams").val());
+    options.win_score = parseInt($("#app_win_score").val());
+    options.tie_score = parseInt($("#app_tie_score").val());
+    options.min_win_games = parseInt($("#app_min_win_games").val());
+    options.max_win_games = parseInt($("#app_max_win_games").val());
+    options.diff_win_games = parseInt($("#app_diff_win_games").val());
+    options.observable = $("#app_observable").is(':checked');
+    options.dynamic = $("#app_dynamic").is(':checked');
+    options.alliances = $("#app_alliances").is(':checked');
+    options.ai_available = $("#app_ai_available").is(':checked');
+    options.team_players_in_order = $("#app_team_players_in_order").is(':checked');
     
-    if(internal_data_class.indexOf("Card") != -1) {
-        internal_data_options.num_decks = $("#app_internalDataClass_card_num_decks").val();
-        internal_data_options.types = $("#app_internalDataClass_card_types").val();
-        internal_data_options.values = $("#app_internalDataClass_card_values").val();
+    
+    options.internal_data_class = $("#app_internalDataClass").val();
+    options.internal_data_options = {};
+    
+    if(options.internal_data_class.indexOf("Card") != -1) {
+        options.internal_data_options.num_decks = $("#app_internalDataClass_card_num_decks").val();
+        options.internal_data_options.types = $("#app_internalDataClass_card_types").val();
+        options.internal_data_options.values = $("#app_internalDataClass_card_values").val();
         
-    } else if(internal_data_class.indexOf("Dice") != -1) {
-        internal_data_options.count =  $("#app_internalDataClass_dice_count").val();
-        internal_data_options.faces =  $("#app_internalDataClass_dice_faces").val();
+    } else if(options.internal_data_class.indexOf("Dice") != -1) {
+        options.internal_data_options.count =  $("#app_internalDataClass_dice_count").val();
+        options.internal_data_options.faces =  $("#app_internalDataClass_dice_faces").val();
     }
-    
-    wgsclient.newApp(name, domain, version, action_validator_class, maxScores, descScoreOrder, min, max, delta, observable, dynamic, alliances, ai_available, roles, internal_data_class, internal_data_options, function(id,details,errorURI,result,resultKw) {
+
+    debugger;
+    wgsclient.newApp(name, domain, version, options, function(id,details,errorURI,result,resultKw) {
         if(errorURI) {
-            alert("Error creating application:"+response.errorDesc);
+            alert("Error creating application:"+details);
         } else {
             update_apps(id,details,errorURI,result,resultKw);
             hide_app_params();
@@ -1245,7 +1263,7 @@ function append_message(text)
     <label for="app_version">Version:</label><input type="number" size="5" name="app_version" id="app_version" min="1" max="99999" value="1"/><br/>
     <label for="app_action_validator_class">Validator:</label><input type="text" name="app_action_validator_class" id="app_action_validator_class" value="org.wgs.service.game.WebGL8x8BoardGamesValidator"/><br/>
     
-    <label for="app_internalDataClass">Internal Data Class:</label>
+    <label for="app_internalDataClass">Internal Class:</label>
     <select id="app_internalDataClass" name="app_internalDataClass" onchange="javascript:onInternalDataClassChange(event)">
         <option value="">None</option>
         <option value="org.wgs.service.game.GroupInternalDataForDiceGame">Dices</option>
@@ -1275,10 +1293,26 @@ function append_message(text)
     </div>
 
 
-    <label for="app_min">Min:</label><input type="number" size="5" name="app_min" id="app_min" min="1" max="99999" value="2"/><br/>
-    <label for="app_max">Max:</label><input type="number" size="5" name="app_max" id="app_max" min="0" max="99999" value="2"/><br/>
-    <label for="app_delta">Delta:</label><input type="number" size="5" name="app_delta" id="app_delta" min="0" max="99999" value="1"/><br/>
+    <label for="app_min">Min.Players:</label><input type="number" size="5" name="app_min" id="app_min" min="1" max="99999" value="2"/><br/>
+    <label for="app_max">Max.Players:</label><input type="number" size="5" name="app_max" id="app_max" min="0" max="99999" value="2"/><br/>
+    <label for="app_delta">Delta.Players:</label><input type="number" size="5" name="app_delta" id="app_delta" min="0" max="99999" value="0"/><br/>
 
+    <label for="app_min_teams">Min.Teams:</label><input type="number" size="5" name="app_min_teams" id="app_min_teams" min="1" max="99999" value="2"/><br/>
+    <label for="app_max_teams">Max.Teams:</label><input type="number" size="5" name="app_max_teams" id="app_max_teams" min="0" max="99999" value="2"/><br/>
+    <label for="app_delta_teams">Delta.Teams:</label><input type="number" size="5" name="app_delta_teams" id="app_delta_teams" min="0" max="99999" value="0"/><br/>
+
+    <label for="app_min_players_teams" style="text-wrap: nowrap">Min.team players:</label><input type="number" size="5" name="app_min_players_teams" id="app_min_players_teams" min="1" max="99999" value="1"/><br/>
+    <label for="app_max_players_teams" style="text-wrap: nowrap">Max.team players:</label><input type="number" size="5" name="app_max_players_teams" id="app_max_players_teams" min="0" max="99999" value="1"/><br/>
+    <label for="app_delta_players_teams" style="text-wrap: nowrap">Delta team players:</label><input type="number" size="5" name="app_delta_players_teams" id="app_delta_players_teams" min="0" max="99999" value="0"/><br/>
+
+    <label for="app_win_score">Win score:</label><input type="number" size="5" name="app_win_score" id="app_win_score" min="1" max="3" value="3"/><br/>
+    <label for="app_tie_score">Tie score:</label><input type="number" size="5" name="app_tie_score" id="app_tie_score" min="0" max="1" value="1"/><br/>
+
+    <label for="app_min_win_games" nowrap>Min. Wins:</label><input type="number" size="5" name="app_min_win_games" id="app_min_win_games" min="0" max="1" value="2"/><br/>
+    <label for="app_max_win_games">Max. Wins:</label><input type="number" size="5" name="app_max_win_games" id="app_max_win_games" min="0" max="1" value="2"/><br/>
+    <label for="app_diff_win_games">Diff. Wins:</label><input type="number" size="5" name="app_diff_win_games" id="app_diff_win_games" min="0" max="3" value="0"/><br/>
+    
+    
     <label for="app_max_scores">Max.scores:</label><input type="number" size="5" name="app_max_scores" id="app_max_scores" min="1" max="99999" value="10"/><br/>
     <label for="app_desc_score_order">Desc.scores:</label><input type="checkbox" name="app_desc_score_order" id="app_desc_score_order" /><br/>
 
@@ -1286,6 +1320,7 @@ function append_message(text)
     <label for="app_dynamic">Dynamic:</label><input type="checkbox" name="app_dynamic" id="app_dynamic" /><br/>
     <label for="app_alliances">Alliances:</label><input type="checkbox" name="app_alliances" id="app_alliances" /><br/>
     <label for="app_ai_available">AI engine</label><input type="checkbox" name="app_ai_available" id="app_ai_available" /><br/>
+    <label for="app_team_players_in_order">Ordered t.players:</label><input type="checkbox" name="app_team_players_in_order" id="app_team_players_in_order" /><br/>
 
     <label for="app_roles">Roles:</label>
     <table>

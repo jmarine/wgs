@@ -20,8 +20,6 @@ import jakarta.persistence.NamedQuery;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.PostLoad;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.util.List;
@@ -92,7 +90,43 @@ public class Application implements Serializable, Comparable
     
     @Column(name="observable")
     private boolean observableGroup;
+    
+    @Column(name = "min_teams")
+    private int minTeams;
 
+    @Column(name = "max_teams")
+    private int maxTeams;
+
+    @Column(name = "delta_teams")
+    private int deltaTeams;     
+    
+    @Column(name = "min_players_by_team")
+    private int minPlayersByTeam;  // i.e: 1 for individual players, 2 for pairs in card games
+
+    @Column(name = "max_players_by_team")
+    private int maxPlayersByTeam;       // i.e: 1 for individual players, 2 for pairs in card games
+
+    @Column(name = "delta_players_by_team")
+    private int deltaPlayersByTeam;       // i.e: 1 for individual players, 2 for pairs in card games
+
+    @Column(name = "tournament_win_score")
+    private double winScoreInTournament = 1;
+
+    @Column(name = "tournament_tie_score")
+    private double tieScoreInTournament = 0.5;
+    
+    @Column(name = "tournament_diff_wins_to_score")
+    private int diffWinsToScoreOrKnockout; // n-more wins to win 
+    
+    @Column(name = "tournament_min_wins_to_score")
+    private int minWinGamesToScoreOrKnockout; // limit min of games    
+    
+    @Column(name = "tournament_max_wins_to_score")
+    private int maxWinGamesToScoreOrKnockout; // limit max of games
+    
+    @Column(name="team_players_in_order")
+    private boolean teamPlayersInOrder;
+            
     @OneToMany(mappedBy = "application", fetch=FetchType.EAGER, cascade = { CascadeType.ALL })
     @OrderColumn(name="position")
     private List<Role> roles = new ArrayList<Role>();
@@ -160,11 +194,11 @@ public class Application implements Serializable, Comparable
 
     
     public void setAppId(String id) {
-        this.id = id;
+        this.setId(id);
     }
     
     public String getAppId() {
-        return id;
+        return getId();
     }
     
     /**
@@ -511,7 +545,7 @@ public class Application implements Serializable, Comparable
     {
         if(o != null && o instanceof Application) {
             Application app = (Application)o;
-            return (id.equals(app.getAppId()));
+            return (getId().equals(app.getAppId()));
         } else {
             return false;
         }
@@ -521,7 +555,7 @@ public class Application implements Serializable, Comparable
     @Override
     public int hashCode()
     {
-        return id.hashCode();
+        return getId().hashCode();
     }
 
     @Override
@@ -548,5 +582,194 @@ public class Application implements Serializable, Comparable
         this.internalDataOptionsJson = internalDataOptionsJson;
     }
 
+    
+    
+    
+
+    /**
+     * @return the winScoreInTournament
+     */
+    public double getWinScoreInTournament() {
+        return winScoreInTournament;
+    }
+
+    /**
+     * @param winScoreInTournament the winScoreInTournament to set
+     */
+    public void setWinScoreInTournament(double winScoreInTournament) {
+        this.winScoreInTournament = winScoreInTournament;
+    }
+
+    /**
+     * @return the tieScoreInTournament
+     */
+    public double getTieScoreInTournament() {
+        return tieScoreInTournament;
+    }
+
+    /**
+     * @param tieScoreInTournament the tieScoreInTournament to set
+     */
+    public void setTieScoreInTournament(double tieScoreInTournament) {
+        this.tieScoreInTournament = tieScoreInTournament;
+    }
+
+
+
+    /**
+     * @return the diffWinsToScoreOrKnockout
+     */
+    public int getDiffWinsToScoreOrKnockout() {
+        return diffWinsToScoreOrKnockout;
+    }
+
+    /**
+     * @param diffWinsToScoreOrKnockout the diffWinsToScoreOrKnockout to set
+     */
+    public void setDiffWinsToScoreOrKnockout(int diffWinsToScoreOrKnockout) {
+        this.diffWinsToScoreOrKnockout = diffWinsToScoreOrKnockout;
+    }
+
+    /**
+     * @return the minWinGamesToScoreOrKnockout
+     */
+    public int getMinWinGamesToScoreOrKnockout() {
+        return minWinGamesToScoreOrKnockout;
+    }
+
+    /**
+     * @param minWinGamesToScoreOrKnockout the minWinGamesToScoreOrKnockout to set
+     */
+    public void setMinWinGamesToScoreOrKnockout(int minWinGamesToScoreOrKnockout) {
+        this.minWinGamesToScoreOrKnockout = minWinGamesToScoreOrKnockout;
+    }
+
+    /**
+     * @return the maxWinGamesToScoreOrKnockout
+     */
+    public int getMaxWinGamesToScoreOrKnockout() {
+        return maxWinGamesToScoreOrKnockout;
+    }
+
+    /**
+     * @param maxWinGamesToScoreOrKnockout the maxWinGamesToScoreOrKnockout to set
+     */
+    public void setMaxWinGamesToScoreOrKnockout(int maxWinGamesToScoreOrKnockout) {
+        this.maxWinGamesToScoreOrKnockout = maxWinGamesToScoreOrKnockout;
+    }
+
+
+    /**
+     * @return the minTeams
+     */
+    public int getMinTeams() {
+        return minTeams;
+    }
+
+    /**
+     * @param minTeams the minTeams to set
+     */
+    public void setMinTeams(int minTeams) {
+        this.minTeams = minTeams;
+    }
+    
+    /**
+     * @return the maxTeams
+     */
+    public int getMaxTeams() {
+        return maxTeams;
+    }
+
+    /**
+     * @param maxTeams the maxTeams to set
+     */
+    public void setMaxTeams(int maxTeams) {
+        this.maxTeams = maxTeams;
+    }
+
+    /**
+     * @return the minPlayersByTeam
+     */
+    public int getMinPlayersByTeam() {
+        return minPlayersByTeam;
+    }
+
+    /**
+     * @param minPlayersByTeam the minPlayersByTeam to set
+     */
+    public void setMinPlayersByTeam(int minPlayersByTeam) {
+        this.minPlayersByTeam = minPlayersByTeam;
+    }
+
+    /**
+     * @return the maxPlayersByTeam
+     */
+    public int getMaxPlayersByTeam() {
+        return maxPlayersByTeam;
+    }
+
+    /**
+     * @param maxPlayersByTeam the maxPlayersByTeam to set
+     */
+    public void setMaxPlayersByTeam(int maxPlayersByTeam) {
+        this.maxPlayersByTeam = maxPlayersByTeam;
+    }
+
+    /**
+     * @return the deltaTeams
+     */
+    public int getDeltaTeams() {
+        return deltaTeams;
+    }
+
+    /**
+     * @param deltaTeams the deltaTeams to set
+     */
+    public void setDeltaTeams(int deltaTeams) {
+        this.deltaTeams = deltaTeams;
+    }
+
+    /**
+     * @return the deltaPlayersByTeam
+     */
+    public int getDeltaPlayersByTeam() {
+        return deltaPlayersByTeam;
+    }
+
+    /**
+     * @param deltaPlayersByTeam the deltaPlayersByTeam to set
+     */
+    public void setDeltaPlayersByTeam(int deltaPlayersByTeam) {
+        this.deltaPlayersByTeam = deltaPlayersByTeam;
+    }
+
+    /**
+     * @return the id
+     */
+    public String getId() {
+        return id;
+    }
+
+    /**
+     * @param id the id to set
+     */
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    /**
+     * @return the teamPlayersInOrder
+     */
+    public boolean isTeamPlayersInOrder() {
+        return teamPlayersInOrder;
+    }
+
+    /**
+     * @param teamPlayersInOrder the teamPlayersInOrder to set
+     */
+    public void setTeamPlayersInOrder(boolean teamPlayersInOrder) {
+        this.teamPlayersInOrder = teamPlayersInOrder;
+    }
+        
 
 }

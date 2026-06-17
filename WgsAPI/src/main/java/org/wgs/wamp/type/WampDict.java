@@ -26,15 +26,25 @@ public class WampDict extends WampObject
         return hashmap.get(key);
     }
 
+    public Integer getInt(String key)
+    {
+        Number num = (Number)get(key);
+        if(num != null) return num.intValue();
+        else return null;
+    }
     
     public Long getLong(String key)
     {
-        return (Long)get(key);
+        Number num = (Number)get(key);
+        if(num != null) return num.longValue();
+        else return null;
     }
     
     public Double getDouble(String key)
     {
-        return (Double)get(key);
+        Number num = (Number)get(key);
+        if(num != null) return num.doubleValue();
+        else return null;
     }    
 
     public String getText(String key)

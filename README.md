@@ -1,7 +1,7 @@
 Web Game Services
 =================
 
-Version: 3.0-alpha1
+Version: 3.0-alpha2
 
 
 About
@@ -10,14 +10,15 @@ About
 This project offers the following services:
     
 * local user registration/authentication.
-* authentication with Google+, Facebook, and OpenID Connect providers.
+* authentication with Google+, Facebook, and other OpenID Connect compatible providers.
 * lobby services (to create/list/join/automatch multi-player online games).
+* tournament manager (to create/enroll to Swiss system, Single knockout or Double knockout competitions).
 * real-time presence and communications.
 * offline notifications (Push API, GCM notifications, Facebook alerts, ...).
 
 The server-side is developed in Java language, and it can be deployed as a standalone server, or within JakartaEE 9.1 application servers. 
 
-The project also includes Javascript libraries to access the services using websockets and [WAMP](http://wamp.ws) (Web Application Messaging Protocol).
+The project also includes Javascript libraries to access the services using websockets and [WAMP](https://wamp-proto.org) (Web Application Messaging Protocol).
 
 
 Example projects
