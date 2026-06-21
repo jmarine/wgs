@@ -507,7 +507,7 @@ public class Group implements java.io.Serializable
     
     public Member getMember(int index) 
     {
-        if(index < getNumSlots()) {
+        if(index >= 0 && index < getNumSlots()) {
             return members.get(index);
         } else {
             return null;

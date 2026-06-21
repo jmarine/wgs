@@ -110,8 +110,8 @@ public abstract class TournamentManager
             List<User> m1 = enroll1.getTeam().getMembers();
             for(int i = 1; i < m1.size(); i = i + 2) {
                 User tmp = players.get(i);
-                players.set(i, players.get(i+m1.size()));
-                players.set(i+m1.size(), tmp);
+                players.set(i, players.get(i+m1.size()-1));
+                players.set(i+m1.size()-1, tmp);
             }
         }
 
@@ -120,17 +120,41 @@ public abstract class TournamentManager
             Role role = null;
             if(slot < app.getRoles().size()) role = app.getRoles().get(slot);
 
+            int team = 0;
+            if(app.isTeamPlayersInOrder()) {
+                team = (slot < members1.size()) ? 1 : 2;
+            } else {
+                team = ((slot % 2) == 0) ? 1 : 2;
+            }
+            
             Member member = new Member();
             member.setApplicationGroup(group);
             member.setSlot(slot);
             member.setRole(role);
             member.setUser(player);
+            member.setTeam(team);
             Storage.createEntity(member);
             group.setMember(slot, member);
             slot++;
         }
         
         group = Storage.saveEntity(group);
+        
+        GroupActionValidator validator = null;
+        String validatorClassName = group.getApplication().getActionValidator();
+        if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).getDeclaredConstructor().newInstance();
+
+        if(validator == null || validator.isValidAction(wgsModule, socket, wgsModule.getApplications(), group, "INIT", group.getInitialData(), -1)) {
+            // manager.merge(g);
+            app.addGroup(group);
+            if(validator != null) {
+                int actionSlot = Math.max(0, group.getTurn());
+                boolean isValid = validator.isValidAction(wgsModule, socket, wgsModule.getApplications(), group, "START", tournament.getOwner().getUid(), actionSlot);
+                if(isValid) {
+                    group = Storage.saveEntity(group);
+                }
+            }
+        }
         
         wgsModule.broadcastAppEventInfo(socket, group, "group_updated");
 
@@ -202,7 +226,6 @@ public abstract class TournamentManager
         String gameType = app.getName();
         gameType = Character.toUpperCase(gameType.charAt(0)) + gameType.substring(1);
         
-
         ScriptEngine ruleEngine = RuleEngine.getRuleEngine(apps);
         try {
             ruleEngine.eval("var game = app.model.GameFactory.createGame('" + gameType+ "');");
@@ -211,9 +234,24 @@ public abstract class TournamentManager
             
             int turn = ((Number)ruleEngine.eval("game.getTurn()")).intValue();
             
-            group.setData(data);
             group.setInitialData(data);
+            group.setData(data);
             group.setTurn(turn-1);
+            
+            String internalDataClass = app.getInternalDataClass();
+            if(internalDataClass != null) {
+
+                GroupInternalData internalDataObject = null;
+
+                Class clazz = Class.forName(internalDataClass);
+                internalDataObject = (GroupInternalData)clazz.getDeclaredConstructor().newInstance();
+
+                if(internalDataObject != null) {
+                    internalDataObject.init(app.getInternalDataOptions());
+                }
+
+                group.setInternalDataObject(internalDataObject);
+            }        
             
         } catch(Throwable ex) {
             
@@ -225,7 +263,7 @@ public abstract class TournamentManager
                 RuleEngine.recycleRuleEngine(ruleEngine);
             }
         }
-
+        
     }
     
     

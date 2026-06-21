@@ -193,22 +193,12 @@ public class TournamentMatchParticipantAndResult
     
     public WampDict toWampObject()
     {
-        Team team = getEnrollment().getTeam();
-        WampDict retval = new WampDict();
-        retval.put("teamId", team.getId());
-        retval.put("teamName", team.getAlias());
+        WampDict retval = getEnrollment().getTeam().toWampObject();
         retval.put("result", getResult());
-        retval.put("points", getPoints());
+        retval.put("points", getPoints()); 
         retval.put("wins", getWins());
         retval.put("draws", getDraws());
         retval.put("loses", getLoses());
-        
-        WampList teamUsers = new WampList();
-        for(User user : getEnrollment().getTeam().getMembers()) {
-            teamUsers.add(user.toWampObject(false));
-        }
-        retval.put("users", teamUsers);
-        
         return retval;
     }
     

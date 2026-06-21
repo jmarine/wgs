@@ -111,7 +111,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                   }
                 }            
 
-                if(actionName.equalsIgnoreCase("INIT")) {
+                if(actionName.equalsIgnoreCase("INIT") || actionName.equalsIgnoreCase("START")) {
                     isValid = true;
 
                 } else if(actionName.equalsIgnoreCase("DRAW_QUESTION")) {

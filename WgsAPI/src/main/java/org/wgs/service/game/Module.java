@@ -34,6 +34,7 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -212,6 +213,9 @@ public class Module extends WampModule
     public WampDict registerUser(WampSocket socket, WampDict data) throws Exception
     {
         String login = data.getText("user");
+        List<Team> team = Storage.findEntities(Team.class, "wgs.findTeamByAliasAndDomain", login, socket.getRealm());
+        if(team != null && !team.isEmpty()) throw new WampException(null, WGS_MODULE_NAME + ".team_already_exists", null, null);
+        
         User usr = UserRepository.findUserByLoginAndDomain(login, socket.getRealm());
         if(usr != null) throw new WampException(null, WGS_MODULE_NAME + ".user_already_exists", null, null);
         
@@ -311,6 +315,10 @@ public class Module extends WampModule
     private void unregisterApplication(Application app) {
         WampBroker.removeTopic(getWampApplication(), getFQtopicURI("app_event."+app.getAppId()));
         applications.remove(app.getAppId());
+    }
+    
+    public Collection<Application> getApplications() {
+        return this.applications.values();
     }
     
     
@@ -1849,14 +1857,6 @@ public class Module extends WampModule
     @WampRegisterProcedure(name = "enroll_tournament")
     public WampDict enrollTournament(WampSocket socket, long tournamentId, WampDict enrollmentData) throws Exception
     {
-        
-        EntityManager manager = Storage.getEntityManager();
-        EntityTransaction transaction = manager.getTransaction();
-        transaction.begin();
-        
-        Tournament tournament = manager.find(Tournament.class, tournamentId);
-        Application app = tournament.getApplication();
-        int previousColorsCounts[] = new int[app.getMaxTeams()];
 
         Team team = null;
         
@@ -1866,11 +1866,9 @@ public class Module extends WampModule
         if(teamAlias == null) {
             teamAlias = user.getName();
         }
-        
-        
 
         if(teamAlias != null) {
-            List<Team> teams = Storage.findEntities(Team.class, "wgs.findByAlias", teamAlias);
+            List<Team> teams = Storage.findEntities(Team.class, "wgs.findTeamByAliasAndDomain", teamAlias, socket.getRealm());
             if(!teams.isEmpty()) {
                 team = teams.get(0);
             } else {
@@ -1880,50 +1878,71 @@ public class Module extends WampModule
                 team = new Team();
                 team.setId(UUID.randomUUID().toString());
                 team.setAlias(teamAlias);
-                team = manager.merge(team);
-
-                // team = manager.find(Team.class, team.getId());
+                team.setDomain(socket.getRealm());
+                team.setOwner(user);
+                team = Storage.saveEntity(team);
 
                 if(!participants.contains(user.getUid())) participants.add(user.getUid());
 
                 for(int i = 0; i < participants.size(); i++) {
                     String participantUid = participants.getText(i);
-                    User player = manager.find(User.class, participantUid);   
-                    
+                    User player = Storage.findEntity(User.class, participantUid);   
+                                        
                     if(player == null) throw new WampException(enrollmentData, WGS_MODULE_NAME + ".participant_not_found: " + participantUid, null, null);
                     else team.getMembers().add(player);
                 }
-
+                
+                team = Storage.saveEntity(team);
             }
             
         }
         
   
         TournamentEnrollment enroll;
-        List<TournamentEnrollment> enrolled = Storage.findEntities(TournamentEnrollment.class, "wgs.findByTournamentAndTeam", tournament.getId(), team.getId());
-        if(!enrolled.isEmpty()) {
-            enroll = enrolled.get(0);
-        } else if(tournament.getMaxTeams() > 0 && tournament.getEnrollments().size() >= tournament.getMaxTeams()) {
-            // tournament is full
-            enroll = null;
-        } else {
-            enroll = new TournamentEnrollment();
-            enroll.setCreationDate(Calendar.getInstance());
-            enroll.setByesCount(0);
-            enroll.setCurrentRound(0);
-            enroll.setPoints(0.0);
-            enroll.setPreviousColorsCounts(previousColorsCounts);
-            enroll.setTournament(tournament);
-            enroll.setTeam(team);
+        EntityManager manager = Storage.getEntityManager();
+        EntityTransaction transaction = manager.getTransaction();
+        try {
+            transaction.begin();        
+            Tournament tournament = manager.find(Tournament.class, tournamentId);
+            Application app = tournament.getApplication();
+            int previousColorsCounts[] = new int[app.getMaxTeams()];
 
-            enroll = manager.merge(enroll);
+            List<TournamentEnrollment> enrolled = Storage.findEntities(TournamentEnrollment.class, "wgs.findByTournamentAndTeam", tournament.getId(), team.getId());
+            if(team.getMembers().size() < app.getMinPlayersByTeam()) {
+                throw new WampException(enrollmentData, WGS_MODULE_NAME + ".not_enough_players_in_team: " + team.getMembers().size() + "/" + app.getMinPlayersByTeam(), null, null);        
+            } else if(!enrolled.isEmpty()) {
+                enroll = enrolled.get(0);
+            } else if(tournament.getMaxTeams() > 0 && tournament.getEnrollments().size() >= tournament.getMaxTeams()) {
+                // tournament is full
+                enroll = null;
+            } else {
+                enroll = new TournamentEnrollment();
+                enroll.setCreationDate(Calendar.getInstance());
+                enroll.setByesCount(0);
+                enroll.setCurrentRound(0);
+                enroll.setPoints(0.0);
+                enroll.setPreviousColorsCounts(previousColorsCounts);
+                enroll.setTournament(tournament);
+                enroll.setTeam(team);
 
-            tournament.getEnrollments().add(enroll);
-        }
+                enroll = manager.merge(enroll);
+
+                tournament.getEnrollments().add(enroll);
+            
+                transaction.commit();
+            }
         
-        transaction.commit();
-        manager.close();
-        
+        } catch(Exception ex) {
+            
+            if(transaction != null) {
+                transaction.rollback();
+            }
+            throw ex;
+            
+        } finally {
+            manager.close();            
+        }        
+
         WampDict event = null;
         if(enroll == null) {
             event = new WampDict();
@@ -1945,17 +1964,25 @@ public class Module extends WampModule
     public WampDict startTournament(WampSocket socket, long tournamentId) throws Exception
     {
         Tournament tournament = Storage.findEntity(Tournament.class, tournamentId);
-        tournament.setState(GroupState.STARTED);
-        tournament = Storage.saveEntity(tournament);
-        
-        TournamentManager manager = tournament.getManager();
-        manager.createRound(this, socket, this.applications.values(), tournament);
-        
         WampDict event = tournament.toWampObject();
         event.put("cmd", "start");
         
-        boolean excludeMe = true;
-        socket.publishEvent(WampBroker.getTopic(getFQtopicURI("tournament_event")), null, event, excludeMe, false);        
+        if(tournament.getEnrollments().size() < tournament.getMinTeams()) {
+            
+            throw new WampException(null, WGS_MODULE_NAME + ".not_enough_enrollments", null, null);
+            
+        } else {
+        
+            tournament.setState(GroupState.STARTED);
+            tournament = Storage.saveEntity(tournament);
+
+            TournamentManager manager = tournament.getManager();
+            manager.createRound(this, socket, this.applications.values(), tournament);
+
+
+            boolean excludeMe = true;
+            socket.publishEvent(WampBroker.getTopic(getFQtopicURI("tournament_event")), null, event, excludeMe, false); 
+        }
 
         return event;        
     }    
@@ -2030,5 +2057,275 @@ public class Module extends WampModule
         
         return details;
     }      
+    
+    @WampRegisterProcedure(name = "create_team")
+    public WampDict createTeam(WampSocket socket, String teamAlias) throws Exception
+    {
+        Team team = null;
+        boolean exists = false;
+        
+        User user = (User)socket.getUserPrincipal();
+ 
+        if(teamAlias != null) {
+            List<User> existsUserWithSameTeamName = Storage.findEntities(User.class, "wgs.findUsersByLoginAndDomain", teamAlias, socket.getRealm());
+            if(!existsUserWithSameTeamName.isEmpty()) {
+                exists = true;
+            } else {
+
+                EntityManager manager = Storage.getEntityManager();
+                EntityTransaction transaction = manager.getTransaction();
+                try {
+                    transaction.begin();
+
+                    List<Team> teams = Storage.findEntities(Team.class, "wgs.findTeamByAliasAndDomain", teamAlias, socket.getRealm());
+                    if(!teams.isEmpty()) {
+                        team = teams.get(0);
+                        if(!team.getMembers().contains(user)) {
+                            exists = true;
+                            team = null; // team already exists from other users.
+                        }
+                    } else {
+                        team = new Team();
+                        team.setId(UUID.randomUUID().toString());
+                        team.setAlias(teamAlias);
+                        team.setDomain(socket.getRealm());
+                        team.setOwner(user);
+                        team = manager.merge(team);
+
+                        team.getMembers().add(user);
+                    }
+
+                    transaction.commit();
+                    
+                } catch(Exception ex) {
+                    if(transaction != null) {
+                        transaction.rollback();
+                    }
+                    throw ex;
+                } finally {
+                    manager.close();
+                }
+            }
+        }
+        
+        WampDict event = new WampDict();
+        event.put("cmd", "create_team");
+        event.put("exists", exists);
+        if(team != null) event.put("id", team.getId());
+        
+        return event;        
+    } 
+    
+    
+    @WampRegisterProcedure(name = "get_team_info")
+    public WampDict getTeamInfo(WampSocket socket, String teamAlias) throws Exception
+    {
+        Team team = null;
+        boolean exists = false;
+        
+        User user = (User)socket.getUserPrincipal();
+ 
+        if(teamAlias != null) {
+        
+            EntityManager manager = Storage.getEntityManager();
+            EntityTransaction transaction = manager.getTransaction();
+            transaction.begin();
+ 
+            List<Team> teams = Storage.findEntities(Team.class, "wgs.findTeamByAliasAndDomain", teamAlias, socket.getRealm());
+            if(!teams.isEmpty()) {
+                team = teams.get(0);
+                exists = true;
+            }
+        
+            transaction.commit();
+            manager.close();
+        }
+        
+        WampDict event = null;
+        if(team != null) event = team.toWampObject();
+        else event = new WampDict();
+        event.put("cmd", "get_team_info");
+        event.put("exists", exists);
+        
+        return event;        
+    } 
+    
+    
+    @WampRegisterProcedure(name = "update_team")
+    public WampDict updateTeam(WampSocket socket, String teamAlias, String operation, String uid) throws Exception
+    {
+        Team team = null;        
+        boolean exists = false;
+        
+        User user = Storage.findEntity(User.class, uid);
+ 
+        if(teamAlias != null) {
+
+            List<Team> teams = Storage.findEntities(Team.class, "wgs.findTeamByAliasAndDomain", teamAlias, socket.getRealm());
+            if(!teams.isEmpty()) {
+                exists = true;
+                team = teams.get(0);
+            
+                EntityManager manager = Storage.getEntityManager();
+                EntityTransaction transaction = manager.getTransaction();
+                try {
+                    transaction.begin();
+
+                    switch(operation) {
+                        case "join":
+                            team.getMembers().add(user);
+                            team = manager.merge(team);
+                            break;
+                        case "unjoin":
+                            team.getMembers().remove(user);
+                            team = manager.merge(team);
+                            break;             
+                        default:
+                            throw new WampException(null, WGS_MODULE_NAME + ".incorrect_operation", null, null);
+                    }
+
+                    transaction.commit();
+                    
+                } catch(Exception ex) {
+                    
+                    if(transaction != null) {
+                        transaction.rollback();
+                    }
+                    throw ex;
+                    
+                } finally {
+                    manager.close();
+                }
+            }
+        }
+        
+        WampDict event = null;
+        if(team != null) event = team.toWampObject();
+        else event = new WampDict();
+        event.put("cmd", "update_team");
+        event.put("exists", exists);
+        
+        return event;        
+    }     
+    
+    @WampRegisterProcedure(name = "delete_team")
+    public WampDict deleteTeam(WampSocket socket, String teamAlias) throws Exception
+    {
+        Team team = null;        
+        boolean deleted = false;
+        
+        WampDict retval = new WampDict();
+        retval.put("cmd", "delete_team");
+        retval.put("teamName", teamAlias);
+        
+ 
+        if(teamAlias != null) {
+
+            List<Team> teams = Storage.findEntities(Team.class, "wgs.findTeamByAliasAndDomain", teamAlias, socket.getRealm());
+            if(!teams.isEmpty()) {
+                team = teams.get(0);
+                retval.put("teamId", team.getId());
+                
+                if(!team.getOwner().equals(socket.getUserPrincipal())) {
+                    throw new WampException(null, WGS_MODULE_NAME + ".user_not_owner", null, null);
+                } else {
+            
+                    EntityManager manager = Storage.getEntityManager();
+                    EntityTransaction transaction = manager.getTransaction();
+                    try {
+                        transaction.begin();
+
+                        Storage.removeEntity(team);
+
+                        transaction.commit();
+                        
+                        deleted = true;
+
+                    } catch(Exception ex) {
+
+                        if(transaction != null) {
+                            transaction.rollback();
+                        }
+                        throw ex;
+
+                    } finally {
+                        manager.close();
+                    }
+                }
+            }
+        }
+        
+        retval.put("deleted", deleted);
+        return retval;        
+    }         
+    
+    
+    @WampRegisterProcedure(name="filter_teams")
+    public WampList filterTeams(WampSocket socket, String teamAlias) throws Exception
+    {
+        WampList retval = new WampList();
+        User user = (User)socket.getUserPrincipal();
+        
+        if(teamAlias == null) teamAlias = "%";
+        else teamAlias = "%" + teamAlias + "%";
+        
+        EntityManager manager = Storage.getEntityManager();
+        try {
+            // mine
+            Query query = manager.createQuery("SELECT t.alias, COUNT(t.members) FROM Team t WHERE t.domain = ?1 AND LOWER(t.alias) LIKE LOWER(?2) AND (t.owner.uid = ?3) GROUP BY t.alias");
+            query.setParameter(1, socket.getRealm());
+            query.setParameter(2, teamAlias);
+            query.setParameter(3, user.getUid());
+            for(Object row : query.getResultList()) {
+                Object[] rowArray = (Object[])row;
+                WampDict teamMembersCount = new WampDict();
+                teamMembersCount.put("alias", (String)rowArray[0]);
+                teamMembersCount.put("membersCount", (Long)rowArray[1]);
+                teamMembersCount.put("mine", true);
+                retval.add(teamMembersCount);
+            }
+            
+            // others
+            query = manager.createQuery("SELECT t.alias, COUNT(t.members) FROM Team t WHERE t.domain = ?1 AND LOWER(t.alias) LIKE LOWER(?2) AND (t.owner.uid <> ?3) GROUP BY t.alias");
+            query.setParameter(1, socket.getRealm());
+            query.setParameter(2, teamAlias);
+            query.setParameter(3, user.getUid());
+            for(Object row : query.getResultList()) {
+                Object[] rowArray = (Object[])row;
+                WampDict teamMembersCount = new WampDict();
+                teamMembersCount.put("alias", (String)rowArray[0]);
+                teamMembersCount.put("membersCount", (Long)rowArray[1]);
+                teamMembersCount.put("mine", false);
+                retval.add(teamMembersCount);
+            }
+            
+            
+        } finally {
+            manager.close();
+        }
+
+        return retval;
+    }
+        
+    
+    @WampRegisterProcedure(name="list_users")
+    public WampList listUsers(WampSocket socket) throws Exception
+    {
+        WampList retval = new WampList();
+        
+        EntityManager manager = Storage.getEntityManager();
+        try {
+            TypedQuery<User> query = manager.createQuery("SELECT OBJECT(u) FROM User u WHERE u.domain = ?1", User.class);
+            query.setParameter(1, socket.getRealm());
+            for(User user : query.getResultList()) {
+                retval.add(user.toWampObject(false));
+            }
+        } finally {
+            manager.close();
+        }
+
+        return retval;
+    }
+    
     
 }
