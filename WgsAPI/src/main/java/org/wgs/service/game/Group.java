@@ -122,6 +122,9 @@ public class Group implements java.io.Serializable
     
     @Column(name="hidden")
     private boolean hidden;
+    
+    @Column(name="winner")
+    private int winner = -1;
 
     @OneToMany(mappedBy = "applicationGroup", fetch=FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true)
     @OrderBy("slot")
@@ -588,6 +591,20 @@ public class Group implements java.io.Serializable
     }
     
     
+    /**
+     * @return the winner
+     */
+    public int getWinner() {
+        return winner;
+    }
+
+    /**
+     * @param winner the winner to set
+     */
+    public void setWinner(int winner) {
+        this.winner = winner;
+    }
+    
     
     /**
      * @return the version
@@ -665,7 +682,5 @@ public class Group implements java.io.Serializable
         return obj;
     }
 
-
-    
 }
 

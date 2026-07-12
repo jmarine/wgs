@@ -14,6 +14,9 @@ import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.Calendar;
 import java.util.List;
 import org.wgs.wamp.type.WampDict;
@@ -104,6 +107,7 @@ public class TournamentRound
         WampDict retval = new WampDict();
         retval.put("round", getCurrentRound());
         retval.put("start", startDate.toInstant().toString());
+        retval.put("due", startDate.toInstant().plus(tournament.getMaxRoundDurationInMinutes(), ChronoUnit.MINUTES).toString());
         
         WampList matches = new WampList();
         for(TournamentMatch match : getMatches()) {

@@ -7,6 +7,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.script.*;
 
@@ -62,10 +63,15 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                         System.out.println("ActionValidator: ISOVER=" + isOver);                        
                         
                         if(isOver) {
-                            g.setState(GroupState.FINISHED);
                             
-                            //g.setWinner(winner);
                             int winner = ((Number)ruleEngine.eval("game.getWinner()")).intValue();
+                            
+                            ruleEngine.eval("game.setWinner('"+winner+"');");
+                            String data = (String)ruleEngine.eval("game.toString();");
+                            g.setData(data);  
+                            g.setWinner(winner);
+                            g.setState(GroupState.FINISHED);
+
                             System.out.println("ActionValidator: WINNER=" + winner);
                             Member m0 = g.getMember(winner-1);
                             Member m1 = g.getMember(2-winner);
@@ -86,7 +92,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                 // REPLAY ALL GAME ACTIONS:
                 ruleEngine.eval("game.initFromStateStr('"+g.getInitialData()+"');");
                 for(GroupAction action : g.getActions()) {
-                  if(!action.getActionName().equals("CHAT")) {
+                  if(!action.getActionName().equals("CHAT") && !action.getActionName().equals("CLAIM_VICTORY")) {
                     lastAction = action;
 
                     if(actionName.equalsIgnoreCase("RETRACT_QUESTION")) {
@@ -120,43 +126,97 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                 } else if(lastAction != null && lastAction.getActionName().equals("DRAW_QUESTION") 
                         && actionSlot >= 0 && actionSlot != lastAction.getSlot()
                         && actionName.equalsIgnoreCase("DRAW_ACCEPTED")) {
-                    g.setState(GroupState.FINISHED);                
-
-                    //g.setWinner(0);                
-                    Member m0 = g.getMember(0);
-                    Member m1 = g.getMember(1);
-                    saveAchievement(g, m0.getRole(), m0.getUser(), "DRAW", m1.getUser().getUid());
-                    saveAchievement(g, m1.getRole(), m1.getUser(), "DRAW", m0.getUser().getUid());
                     
-                    Ranking ranking = Ranking.getInstance(g.getApplication());
-                    ranking.addResult(m0.getUser(), m1.getUser(), 0.5); 
-                    ranking.updateRatings();
+                    if(g.getState() == GroupState.STARTED) {
+                    
+                        int winnerTeam = 0;
+                        ruleEngine.eval("game.setWinner('"+winnerTeam+"');");
+                        String data = (String)ruleEngine.eval("game.toString();");
+                        g.setData(data);                    
+                        g.setWinner(winnerTeam);
+                        g.setState(GroupState.FINISHED);                
 
-                    isValid = true;                  
+                        Member m0 = g.getMember(0);
+                        Member m1 = g.getMember(1);
+                        saveAchievement(g, m0.getRole(), m0.getUser(), "DRAW", m1.getUser().getUid());
+                        saveAchievement(g, m1.getRole(), m1.getUser(), "DRAW", m0.getUser().getUid());
 
+                        Ranking ranking = Ranking.getInstance(g.getApplication());
+                        ranking.addResult(m0.getUser(), m1.getUser(), 0.5); 
+                        ranking.updateRatings();
+                    }
+
+                    isValid = true;      
+                    
                 } else if(lastAction != null && lastAction.getActionName().equals("DRAW_QUESTION") 
                         && actionSlot >= 0 && actionSlot != lastAction.getSlot()
                         && actionName.equalsIgnoreCase("DRAW_REJECTED")) {
                     isValid = true;
+                    
+                } else if(actionName.equalsIgnoreCase("CLAIM_VICTORY")) {
 
-                } else if(actionName.equalsIgnoreCase("RESIGN") && actionSlot >= 0) {
-                    g.setState(GroupState.FINISHED);
+                    if(g.getState() == GroupState.STARTED) {
 
-                    if(g.getNumSlots() == 2)  {
-                        //g.setWinner(actionSlot);
-                        Member m0 = g.getMember(2-actionSlot-1);
-                        Member m1 = g.getMember(actionSlot);
-                        if(m0 != null && m0.getUser() != null 
-                                && m1 != null && m1.getUser() != null) {
-                            saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
-                            saveAchievement(g, m1.getRole(), m1.getUser(), "LOSE", m0.getUser().getUid());
-                            
-                            Ranking ranking = Ranking.getInstance(g.getApplication());
-                            ranking.addResult(m0.getUser(), m1.getUser(), 1.0);                            
-                            ranking.updateRatings();
+                        // TODO: check for 3 repeated data states or 50 moves without captures nor pawn moves.
+
+                        int winnerTeam = -1;
+                        int maxTurnInMinutes = 5;
+                        TournamentMatch tournamentMatch = null;
+                        List<TournamentMatch> matches = Storage.findEntities(TournamentMatch.class, "wgs.findTournamentMatchByGID", g.getGid());
+                        if(!matches.isEmpty()) {
+                            // allow more time at start: tournament games are auto-started, and players may not be present, yet.
+                            tournamentMatch = matches.get(0);
+                            int gameTimeInMinutes = (int)(Calendar.getInstance().getTimeInMillis() - tournamentMatch.getRound().getStartDate().getTimeInMillis()) / (60 * 1000);
+                            int remainingTimeInMinutes = tournamentMatch.getRound().getTournament().getMaxRoundDurationInMinutes() - gameTimeInMinutes;
+                            if(remainingTimeInMinutes > gameTimeInMinutes) maxTurnInMinutes = Math.max(maxTurnInMinutes, remainingTimeInMinutes);
+                        }
+
+                        Calendar expirationCalendar = Calendar.getInstance();
+                        expirationCalendar.add(Calendar.MINUTE, -maxTurnInMinutes);
+                        if(lastAction != null && lastAction.getActionTime().before(expirationCalendar) ) {
+                            winnerTeam = 1 + g.getTurn();  // next turn team wins
+                        } else if(tournamentMatch != null) {
+                            // force winner after expected round due date.
+                            expirationCalendar = Calendar.getInstance();
+                            if((tournamentMatch.getRound().getStartDate().getTimeInMillis() + tournamentMatch.getRound().getTournament().getMaxRoundDurationInMinutes()*60*1000) < expirationCalendar.getTimeInMillis()) {    
+                                winnerTeam = 1 + g.getTurn();                                
+                            }
+                        }
+
+                        if(winnerTeam >= 0) {
+                            ruleEngine.eval("game.setWinner('"+winnerTeam+"');");
+                            String data = (String)ruleEngine.eval("game.toString();");
+                            g.setData(data);                    
+                            g.setWinner(winnerTeam);
+                            g.setState(GroupState.FINISHED);       
                         }
                     }
+                    isValid = true;
 
+                } else if(actionName.equalsIgnoreCase("RESIGN") && actionSlot >= 0) {
+                    
+                    if(g.getState() == GroupState.STARTED) {
+                        int winner = 2 - actionSlot - 1;
+                        ruleEngine.eval("game.setWinner('"+winner+"');");
+                        String data = (String)ruleEngine.eval("game.toString();");
+                        g.setData(data);                    
+                        g.setWinner(winner);
+                        g.setState(GroupState.FINISHED);
+
+                        if(g.getNumSlots() == 2)  {
+                            Member m0 = g.getMember(2-actionSlot-1);
+                            Member m1 = g.getMember(actionSlot);
+                            if(m0 != null && m0.getUser() != null 
+                                    && m1 != null && m1.getUser() != null) {
+                                saveAchievement(g, m0.getRole(), m0.getUser(), "WIN", m1.getUser().getUid());
+                                saveAchievement(g, m1.getRole(), m1.getUser(), "LOSE", m0.getUser().getUid());
+
+                                Ranking ranking = Ranking.getInstance(g.getApplication());
+                                ranking.addResult(m0.getUser(), m1.getUser(), 1.0);                            
+                                ranking.updateRatings();
+                            }
+                        }
+                    }
                     isValid = true;
 
                 } else if(lastAction != null && lastAction.getActionName().equals("RETRACT_QUESTION") 
@@ -165,12 +225,18 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
 
                     String gameState = lastAction.getActionValue();
                     if(gameState.equals(actionValue)) {
-                        ruleEngine.eval("game.initFromStateStr('"+gameState+"');");
-                        g.setData(gameState);
-                        if(g.getState() == GroupState.FINISHED) {
+                        /*
+                        if(g.getState() == GroupState.FINISHED) {  
+                            // NOT SUPPORTED (Rollback Ratings, Achievements and TournamentRounds)
                             g.setState(GroupState.STARTED);
                         }
-                        isValid = true;
+                        */                    
+
+                        if(g.getState() == GroupState.STARTED) {
+                            ruleEngine.eval("game.initFromStateStr('"+gameState+"');");
+                            g.setData(gameState);
+                            isValid = true;
+                        }
                     }
 
                 } else if(lastAction != null && lastAction.getActionName().equals("RETRACT_QUESTION") 
@@ -200,10 +266,14 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                             System.out.println("ActionValidator: ISOVER=" + isOver);                        
 
                             if(isOver) {
-                                g.setState(GroupState.FINISHED);
-
-                                //g.setWinner(winner);
+                                
                                 int winner = ((Number)ruleEngine.eval("game.getWinner()")).intValue();
+                                ruleEngine.eval("game.setWinner('"+winner+"');");
+                                String data = (String)ruleEngine.eval("game.toString();");
+                                g.setData(data);  
+                                g.setWinner(winner);
+                                g.setState(GroupState.FINISHED);                                
+                                
                                 System.out.println("ActionValidator: WINNER=" + winner);
                                 Member m0 = g.getMember(winner-1);
                                 Member m1 = g.getMember(2-winner);

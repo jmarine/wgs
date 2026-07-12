@@ -39,6 +39,7 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.wgs.util.Storage;
 import org.wgs.security.User;
@@ -72,6 +73,7 @@ public class Module extends WampModule
     
     private Map<String, Application> applications = new ConcurrentHashMap<String,Application>();
     private Map<Long,Client> clients = new ConcurrentHashMap<Long,Client>();
+    private AtomicLong lastControlTime = new AtomicLong(0L);
 
     
     public Module(WampApplication app)
@@ -1486,8 +1488,7 @@ public class Module extends WampModule
             }
         
         } catch(Exception ex) {
-            logger.severe("Module.addAction: Error: " + ex.getMessage());
-            logger.throwing(Module.class.getName(), "addAction", ex);
+            logger.log(Level.SEVERE, "Module.addAction: Error: " + ex.getMessage(), ex);
         }
         
         if(manager != null) {
@@ -1707,9 +1708,72 @@ public class Module extends WampModule
         return event;
     }    
     
+    private void tournamentsAndRoundsControl(WampSocket socket)
+    {
+        int CONTROL_CYCLE_IN_MILLIS = 5*60*1000;
+        Calendar now = Calendar.getInstance();
+        if( (now.getTimeInMillis() - lastControlTime.get()) < CONTROL_CYCLE_IN_MILLIS) {
+            return;
+        } else {
+            lastControlTime.set(now.getTimeInMillis());
+        
+            EntityManager manager = Storage.getEntityManager();
+
+            // Start pending tournaments if enough players are enrolled.
+            String ejbql = "SELECT OBJECT(t) FROM Tournament t  WHERE t.state = :openState AND t.start < :currentTime";
+            TypedQuery<Tournament> tournamentsQuery = manager.createQuery(ejbql, Tournament.class);        
+            tournamentsQuery.setParameter("openState", GroupState.OPEN);
+            tournamentsQuery.setParameter("currentTime", now);
+
+            List<Tournament> tournaments = tournamentsQuery.getResultList();
+            for(Tournament tournament : tournaments)
+            {
+                try {
+                    logger.log(Level.INFO, "tournamentsAndRoundsControl: auto-starting tournament: " + tournament.getId());
+                    startTournament(socket, tournament.getId());
+                } catch(Exception ex) {
+                    logger.log(Level.SEVERE, "tournamentsAndRoundsControl: error starting tournament: " + tournament.getId(), ex);
+                }
+            }
+
+            // Finish games that are still in progress but round time has expired:
+            ejbql = "SELECT OBJECT(m) FROM Tournament t, IN(t.rounds) round, IN(round.matches) m WHERE t.state = :startedState AND t.currentRound = round.currentRound AND m.state = :startedState";
+            TypedQuery<TournamentMatch> matchesQuery = manager.createQuery(ejbql, TournamentMatch.class);        
+            matchesQuery.setParameter("startedState", GroupState.STARTED);
+
+            List<TournamentMatch> matches = matchesQuery.getResultList();
+            for(TournamentMatch match : matches)
+            {
+                TournamentRound round = match.getRound();
+                Tournament tournament = round.getTournament();
+
+                Long millis = round.getStartDate().getTimeInMillis() + tournament.getMaxRoundDurationInMinutes()*60*1000;
+                if(millis < now.getTimeInMillis()) {
+                    String gid = null;
+                    List<String> gids = match.getGIDs();
+                    if(gids != null && !gids.isEmpty()) {
+                        gid = gids.get(gids.size()-1);
+                    }            
+
+                    try {
+                        logger.log(Level.INFO, "tournamentsAndRoundsControl: claiming victory for game: " + gid);          
+                        Long playerSlot = -1L;
+                        addAction(socket, gid, playerSlot, "CLAIM_VICTORY", "SYSTEM");
+                    } catch(Exception ex) {
+                        logger.log(Level.SEVERE, "tournamentsAndRoundsControl:  claim victory for game: " + gid, ex);
+                    }
+                }
+            }
+
+            manager.close();
+        }
+    }
+    
     @WampRegisterProcedure(name = "list_tournaments")
     public WampDict listTournaments(WampSocket socket, String appId, GroupState state) throws Exception
     {
+        tournamentsAndRoundsControl(socket);
+        
         String ejbql = "SELECT OBJECT(t) FROM Tournament t  WHERE ";
         if(state == GroupState.FINISHED) {
             ejbql += "t.state = :finishedState";
@@ -1992,6 +2056,7 @@ public class Module extends WampModule
     public WampDict getTournamentDetails(WampSocket socket, long tournamentId) throws Exception
     {
         WampDict details = null;
+        tournamentsAndRoundsControl(socket);
         
         Tournament tournament = Storage.findEntity(Tournament.class, tournamentId);
         if(tournament != null) {

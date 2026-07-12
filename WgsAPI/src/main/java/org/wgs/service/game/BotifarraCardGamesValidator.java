@@ -38,14 +38,16 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
         WampList cards = new WampList();
         GroupInternalDataForCardGame internalData = (GroupInternalDataForCardGame)g.getInternalDataObject();
 
-        LinkedList<Card> privateCards = internalData.getPrivateCards().get(member.getSlot());
-        if(privateCards != null) {
-            sortCards(privateCards);
-            for(Card card : privateCards) {
-                WampDict cardDict = new WampDict();
-                cardDict.put("type", card.getType());
-                cardDict.put("value", card.getValue());
-                cards.add(cardDict);
+        if(member != null) {
+            LinkedList<Card> privateCards = internalData.getPrivateCards().get(member.getSlot());
+            if(privateCards != null) {
+                sortCards(privateCards);
+                for(Card card : privateCards) {
+                    WampDict cardDict = new WampDict();
+                    cardDict.put("type", card.getType());
+                    cardDict.put("value", card.getValue());
+                    cards.add(cardDict);
+                }
             }
         }
         
@@ -91,6 +93,7 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
         boolean isValid = false;     
         boolean notifyPrivateData = false;
         int turn = 0;
+        String error = null;
         
         ScriptEngine ruleEngine = null;
         try {      
@@ -157,6 +160,107 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
                         
                         isValid = true;
                         notifyPrivateData = true;
+                    }
+                    break;
+                    
+                case "RESIGN": 
+                    if(g.getWinner() >= 0) {
+                        error = "already_finished";
+                    } else if(g.getState() != GroupState.STARTED) {
+                        error = "group_not_started";
+                    } else if(actionSlot >= 0) {
+                        int winnerTeam = 1 + (actionSlot % 2);
+                        // ruleEngine.eval("game.setWinner('"+winnerTeam+"');");
+                        // String data = (String)ruleEngine.eval("game.toString();");
+                        g.setWinner(winnerTeam);
+                        g.setData(getPublicData(g, internalData));
+                        g.setState(GroupState.FINISHED);
+                        rankFinishedGame(g, winnerTeam);
+                    }
+                    isValid = true;                    
+                    break;
+
+                case "CLAIM_VICTORY": 
+                    if(g.getWinner() >= 0) {
+                        error = "already_finished";
+                    } else if(g.getState() != GroupState.STARTED) {
+                        error = "group_not_started";
+                    } else {
+                        GroupAction lastAction = null;
+                        
+                        List<GroupAction> actions = g.getActions();
+                        int index = actions.size() - 1;
+                        while(index >= 0) {
+                            GroupAction action = actions.get(index--);
+                            if( !action.getActionName().equals("CHAT") && !action.getActionName().equals("CLAIM_VICTORY") ) {
+                                lastAction = action;
+                                break;
+                            }
+                        }
+                        
+                        int winnerTeam = -1;
+                        int maxTurnInMinutes = 5;
+                        TournamentMatch tournamentMatch = null;
+                        List<TournamentMatch> matches = Storage.findEntities(TournamentMatch.class, "wgs.findTournamentMatchByGID", g.getGid());
+                        if(!matches.isEmpty()) {
+                            // allow more time at start: tournament games are auto-started, and players may not be present, yet.
+                            tournamentMatch = matches.get(0);
+                            int gameTimeInMinutes = (int)(Calendar.getInstance().getTimeInMillis() - tournamentMatch.getRound().getStartDate().getTimeInMillis()) / (60 * 1000);
+                            int remainingTimeInMinutes = tournamentMatch.getRound().getTournament().getMaxRoundDurationInMinutes() - gameTimeInMinutes;
+                            if(remainingTimeInMinutes > gameTimeInMinutes) maxTurnInMinutes = Math.max(maxTurnInMinutes, remainingTimeInMinutes);
+                        }
+                        
+                        Calendar expirationCalendar = Calendar.getInstance();
+                        expirationCalendar.add(Calendar.MINUTE, -maxTurnInMinutes);
+                        if(lastAction != null && lastAction.getActionTime().before(expirationCalendar) ) {
+                            winnerTeam = 1 + (g.getTurn() % 2);  // next turn team wins
+                        } else if(tournamentMatch != null) {
+                            // force winner after expected round due date.
+                            expirationCalendar = Calendar.getInstance();
+                            if((tournamentMatch.getRound().getStartDate().getTimeInMillis() + tournamentMatch.getRound().getTournament().getMaxRoundDurationInMinutes()*60*1000) < expirationCalendar.getTimeInMillis()) {
+                                Number pair1_score = (Number)g.getFlow().get("score_team1");
+                                Number pair2_score = (Number)g.getFlow().get("score_team2");
+                                
+                                winnerTeam = 0;
+                                if(pair1_score.doubleValue() > pair2_score.doubleValue()) {
+                                    winnerTeam = 1;
+                                } else if(pair1_score.doubleValue() < pair2_score.doubleValue()) {
+                                    winnerTeam = 2;
+                                } else {
+                                    int pair = 0;
+                                    int totalScoreByPair[] = { 0, 0 };
+                                    List<CardRound> rounds = internalData.getRounds();
+                                    for(CardRound round : rounds) {
+                                        pair = round.getWinner() % 2;
+                                        totalScoreByPair[pair] += round.getScore();
+                                    }
+
+                                    if(totalScoreByPair[0] > totalScoreByPair[1]) {
+                                        winnerTeam = 1;
+                                    } else if(totalScoreByPair[0] < totalScoreByPair[1]) {
+                                        winnerTeam = 2;
+                                    }                                        
+                                }
+
+                            }
+                            
+                        }
+                        
+                        if(winnerTeam >= 0) {
+                            // ruleEngine.eval("game.setWinner('"+winnerTeam+"');");
+                            // String data = (String)ruleEngine.eval("game.toString();");
+                            g.setWinner(winnerTeam);
+                            g.setData(getPublicData(g, internalData));
+                            g.setState(GroupState.FINISHED);
+                            rankFinishedGame(g, winnerTeam);  
+                            
+                        } else if(error == null) {
+                            
+                            error = "too_soon_to_claim_victory";     
+                            
+                        }
+                        
+                        isValid = true;                        
                     }
                     break;
                     
@@ -316,6 +420,7 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
 
 
                                     if(pairPoints.intValue() >= maxScore) {
+                                        g.setWinner(winnerTeam);
                                         g.setState(GroupState.FINISHED);
                                         rankFinishedGame(g, winnerTeam);                                            
 
@@ -373,6 +478,7 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
                     event.put("cmd", "action");
                     event.put("members", module.getMembers(g.getGid(),0));
                     event.put("flow", g.getFlow());
+                    if(error != null) event.put("error", error);
 
                     String data = g.getData();
                     if(data != null) event.put("data", data); 
@@ -547,6 +653,8 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
     {
         StringBuilder sb = new StringBuilder();
         sb.append(g.getApplication().getName().replace("-", "#"));
+        sb.append("#");
+        sb.append(g.getWinner());
         sb.append("#");
         sb.append(g.getTurn());
         sb.append("#");

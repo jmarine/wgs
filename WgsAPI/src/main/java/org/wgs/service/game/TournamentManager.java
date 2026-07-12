@@ -38,10 +38,16 @@ public abstract class TournamentManager
     protected TournamentRound persistNextRound(Module wgsModule, WampSocket socket, Collection<Application> apps, Tournament tournament) throws Exception
     {
         int newRoundCount = 1+tournament.getCurrentRound();
+        
+        Calendar startTime = Calendar.getInstance();
+        if(newRoundCount == 1 && startTime.after(tournament.getStart())) {
+            startTime = tournament.getStart();
+        }
+        
         TournamentRound round = new TournamentRound();
         round.setTournament(tournament);
         round.setCurrentRound(newRoundCount);
-        round.setStartDate(Calendar.getInstance());
+        round.setStartDate(startTime);
         round = Storage.saveEntity(round);
 
         tournament.setCurrentRound(newRoundCount);

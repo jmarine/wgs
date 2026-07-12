@@ -422,24 +422,25 @@ public abstract class WampSocket
      */
     public void publishEvent(WampTopic topic, WampList payload, WampDict payloadKw, boolean excludeMe, boolean identifyMe) throws Exception
     {
-        logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1},{2}", new Object[]{topic.getTopicName(),payload,payloadKw});
-        Set<Long> excludedSet = new HashSet<Long>();
-        if(excludeMe) excludedSet.add(this.getWampSessionId());
-        WampPublishOptions options = new WampPublishOptions();
-        options.setExcludeMe(excludeMe);
-        options.setExcludedSessionIds(excludedSet);
-        options.setDiscloseMe(identifyMe);
-        
-        WampDict eventDetails = options.toWampObject();
-        if(options.hasDiscloseMe()) {
-            eventDetails.put("publisher", this.getWampSessionId());
-            eventDetails.put("authid", this.getAuthId());
-            eventDetails.put("authprovider", this.getAuthProvider());
-            eventDetails.put("authrole", this.getAuthRole());
-        }           
+        if(topic != null) {
+            logger.log(Level.INFO, "Preparation for broadcasting to {0}: {1},{2}", new Object[]{topic.getTopicName(),payload,payloadKw});
+            Set<Long> excludedSet = new HashSet<Long>();
+            if(excludeMe) excludedSet.add(this.getWampSessionId());
+            WampPublishOptions options = new WampPublishOptions();
+            options.setExcludeMe(excludeMe);
+            options.setExcludedSessionIds(excludedSet);
+            options.setDiscloseMe(identifyMe);
 
-        WampBroker.publishEvent(this.getRealm(), WampProtocol.newGlobalScopeId(), topic, payload, payloadKw, options, eventDetails, true);
-        
+            WampDict eventDetails = options.toWampObject();
+            if(options.hasDiscloseMe()) {
+                eventDetails.put("publisher", this.getWampSessionId());
+                eventDetails.put("authid", this.getAuthId());
+                eventDetails.put("authprovider", this.getAuthProvider());
+                eventDetails.put("authrole", this.getAuthRole());
+            }           
+
+            WampBroker.publishEvent(this.getRealm(), WampProtocol.newGlobalScopeId(), topic, payload, payloadKw, options, eventDetails, true);
+        }
     }
 
     
