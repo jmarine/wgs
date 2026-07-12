@@ -36,8 +36,9 @@ Draughts.prototype.getBoardRotationDegrees = function() {
   return 0;
 }
 
-Draughts.prototype.getPreferedLevelAI = function() {
-  return 6;
+Draughts.prototype.getPreferedLevelAI = function(alg) {
+  if(alg == "MCTS") return 40;
+  else return 6;
 }
 
 Draughts.prototype.clone = function() {
@@ -115,6 +116,7 @@ Draughts.prototype.getFirstTurn = function() {
 Draughts.prototype.newGame = function() {
   var rows = 3;
 
+  this.winner = -1;
   this.turn = this.getFirstTurn();
   this.pieces = Array();
   this.pieceCount = Array();
@@ -171,7 +173,8 @@ Draughts.prototype.getMoveString = function(move) {
 
 
 Draughts.prototype.getWinner = function() {
-  if(this.pieceCount[PLAYER1] == 0) return PLAYER2;
+  if(this.winner != null && this.winner >= NONE) return this.winner;
+  else if(this.pieceCount[PLAYER1] == 0) return PLAYER2;
   else if(this.pieceCount[PLAYER2] == 0) return PLAYER1;
   else return NONE;
 }

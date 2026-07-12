@@ -37,16 +37,17 @@ Botifarra.prototype.initFromStateStr = function(str) {
    if(str) parts = str.split('#');
 
    this.points = parts[1];
-   this.turn = parseInt(parts[2]) + 1;
-   this.step = parts[3];
-   this.trump = parts[4];
-   this.multiplier = parts[5];
-   this.ask_pair_to_double = parts[6];
-   this.score_team1 = parts[7];
-   this.score_team2 = parts[8];
-   this.currentRound = parts[9];
-   this.lastRound = parts[10];
-   this.owner = parts[11];
+   this.winner = parts[2];
+   this.turn = parseInt(parts[3]) + 1;
+   this.step = parts[4];
+   this.trump = parts[5];
+   this.multiplier = parts[6];
+   this.ask_pair_to_double = parts[7];
+   this.score_team1 = parts[8];
+   this.score_team2 = parts[9];
+   this.currentRound = parts[10];
+   this.lastRound = parts[11];
+   this.owner = parts[12];
 
 }
 
@@ -54,6 +55,7 @@ Botifarra.prototype.toString = function() {
    var retval = [];
    retval.push("Botifarra");
    retval.push(this.points);
+   retval.push(this.winner);
    retval.push(this.getTurn() - 1);
    retval.push(this.step);
    retval.push(this.trump);
@@ -68,18 +70,26 @@ Botifarra.prototype.toString = function() {
 }
 
 
+Botifarra.prototype.isOver = function() {
+   return ((this.winner != null && this.winner >= NONE) || Math.max(this.score_team1, this.score_team2) >= this.points);
+}
+
+
 Botifarra.prototype.getWinner = function() {
-  if(Math.max(this.score_team1, this.score_team2) < this.points) {
+  if(this.winner != null && this.winner >= NONE) { 
+    return this.winner;
+  } else if(Math.max(this.score_team1, this.score_team2) < this.points) {
     return NONE;
   } else {
     if(this.score_team1 > this.score_team2) return 1;
     else if(this.score_team2 > this.score_team1) return 2;
     else return NONE;
   }
-}
+} 
 
 
 Botifarra.prototype.newGame = function() {
+  this.winner = -1; 
   this.turn = PLAYER1;
   //this.movements = null;
 }
@@ -107,7 +117,6 @@ Botifarra.prototype.getCardPriority = function(card) {
 }
 
 Botifarra.prototype.isValidAction = function(actionSlot, actionName, actionValue, privateCards) {
-  debugger;
   var valid = false;
   switch(actionName) {
   case "INIT":
@@ -115,6 +124,12 @@ Botifarra.prototype.isValidAction = function(actionSlot, actionName, actionValue
     break;
   case "START":
     valid = (this.owner == actionValue && (this.step == null || this.step == "" || this.step == "INIT")); 
+    break;
+  case "RESIGN":
+    valid = (this.winner < 0);
+    break;
+  case "CLAIM_VICTORY":
+    valid = (this.winner < 0);
     break;
   case "SET_TRUMP":
   case "REJECT_DOUBLE": 
