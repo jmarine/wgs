@@ -31,8 +31,8 @@ public class Tournament
     @ManyToOne(fetch=FetchType.LAZY)
     private Application application;
     
-    @Column(name = "state")
-    private GroupState state;  // OPEN, STARTED, FINISHED
+    @Column(name = "status")
+    private GroupStatus status;  // OPEN, STARTED, FINISHED
 
     @ManyToOne(fetch=FetchType.LAZY)
     private User owner;
@@ -95,17 +95,17 @@ public class Tournament
 
 
     /**
-     * @return the state
+     * @return the status
      */
-    public GroupState getState() {
-        return state;
+    public GroupStatus getStatus() {
+        return status;
     }
 
     /**
-     * @param state the state to set
+     * @param status the status to set
      */
-    public void setState(GroupState state) {
-        this.state = state;
+    public void setStatus(GroupStatus status) {
+        this.status = status;
     }
 
     /**
@@ -306,7 +306,7 @@ public class Tournament
         retval.put("min_players", minTeams);
         retval.put("max_round_duration", maxRoundDurationInMinutes);
         retval.put("owner", owner.getUid());
-        retval.put("state", String.valueOf(state));
+        retval.put("status", String.valueOf(status));
         
         return retval;
     }

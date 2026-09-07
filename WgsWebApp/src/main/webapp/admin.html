@@ -434,7 +434,7 @@ function hide_new_group_params() {
 }
 
 function getGroupDescription(group) {
-    return group.state + " (" + group.num + "/" + group.max + "): " + group.description;
+    return group.status + " (" + group.num + "/" + group.max + "): " + group.description;
 }
 
 function getGroupListItem(group) {
@@ -448,7 +448,7 @@ function getGroupListItem(group) {
    if(group.observable) viewButton = "<br><button onclick=\"javascript:view_group('" + group.gid + "')\">View</button>";
    
    opt.append('<td>' + group.appName + '</td>');
-   opt.append('<td>' + group.state + (group.password? "<br>(password)" : "" ) + '</td>');
+   opt.append('<td>' + group.status + (group.password? "<br>(password)" : "" ) + '</td>');
    opt.append('<td>' + group.num + "/" + group.max + viewButton + "</td>");
    
    
@@ -768,17 +768,17 @@ function show_group(group) {
     $("#app_list").hide();
     $("#group_list").hide();
     $("#new_group_params").hide(); 
-    $("#toggle_client_state").html("Ready");
+    $("#toggle_client_status").html("Ready");
     
     if(wgsclient.user == $("#group_admin").val()) {
         $("#start_group").show();
-        $("#toggle_client_state").hide();
+        $("#toggle_client_status").hide();
         $("#add_group_member").show();
         $("#group_options").show();
     }
     else {
         $("#start_group").hide();
-        $("#toggle_client_state").show();
+        $("#toggle_client_status").show();
         $("#add_group_member").hide();        
         $("#group_options").hide();
     }
@@ -813,27 +813,27 @@ function update_member(field, as_previous_client)
     
 }
 
-function update_client_state(state)
+function update_client_status(status)
 {
     var appId = $("#apps").val();
     var gid = $("#group_gid").val();
-    wgsclient.updateMember(appId, gid, state, NaN, false, false, false, false, false, update_group_callback);
+    wgsclient.updateMember(appId, gid, status, NaN, false, false, false, false, false, update_group_callback);
 }
 
-function toggle_client_state()
+function toggle_client_status()
 {
-    if($("#toggle_client_state").html().toUpperCase()=="READY") {
-        $("#toggle_client_state").html("Busy");
-        update_client_state("READY")
+    if($("#toggle_client_status").html().toUpperCase()=="READY") {
+        $("#toggle_client_status").html("Busy");
+        update_client_status("READY")
     } else {
-        $("#toggle_client_state").html("Ready");
-        update_client_state("JOINED");
+        $("#toggle_client_status").html("Ready");
+        update_client_status("JOINED");
     }
 }
 
 
 function populate_group_member_fields(added, memberId, member, currentUserSelected, roleFixed, ai) {
-    var memberState = member.state ? member.state : "empty";
+    var memberStatus = member.status ? member.status : "empty";
     var memberUser  = member.user  ? member.user  : "";
     var memberName  = member.name  ? member.name  : "";
     var memberSid   = member.sid   ? member.sid   : 0;
@@ -883,10 +883,10 @@ function populate_group_member_fields(added, memberId, member, currentUserSelect
     
     $("#team" + memberId).val(memberTeam);
     
-    var status = memberState.toLowerCase();
+    var status = memberStatus.toLowerCase();
     if(status != 'empty') status = memberType.toLowerCase() + "_" + status;
-    $("#state" + memberId).attr("src", "images/" + status + ".png");
-    $("#state" + memberId).attr("title", ((status!='empty')? memberType.toUpperCase():"") + " " + memberState);
+    $("#status" + memberId).attr("src", "images/" + status + ".png");
+    $("#status" + memberId).attr("title", ((status!='empty')? memberType.toUpperCase():"") + " " + memberStatus);
 }
 
 function append_group_member(added, memberId, member, currentUserSelected, roleFixed, ai) {
@@ -894,7 +894,7 @@ function append_group_member(added, memberId, member, currentUserSelected, roleF
     var tbody = $("#group_params table[id='members'] tbody");
     
     var html = '<tr><td align="left"><label for="member' + memberId + '">User ' + (1+memberId) + ':</label><input type="hidden" id="added' + memberId + '" value="' + added + '"/></td>';
-    html += '<td align="left"><img title="EMPTY" id="state' + memberId + '" src="images/empty.png" border="0" /></td>';
+    html += '<td align="left"><img title="EMPTY" id="status' + memberId + '" src="images/empty.png" border="0" /></td>';
     html += '<td><select id="member' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
 
     html += '</select></td><td><select id="role' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')">';
@@ -969,7 +969,7 @@ function update_group_callback(id,details,errorURI,payload,payloadKw) {
                 if(payloadKw.automatch) $("#grp_automatch").attr('checked','yes');
                 else $("#grp_automatch").removeAttr("checked");
             
-                if(payloadKw.state == "STARTED") {
+                if(payloadKw.status == "STARTED") {
                     for(var index = 0; index < num_members; index += 1) {
                         $("#member"+index+" option[selected!='selected']").remove();
                         $("#role"+index+" option[selected!='selected']").remove();
@@ -989,7 +989,7 @@ function update_group_callback(id,details,errorURI,payload,payloadKw) {
         }    
 }
 
-function update_group(state, ready, data) {
+function update_group(status, ready, data) {
     var appId = $("#apps").val();
     var gid = $("#group_gid").val();
     var automatch = $("#grp_automatch").is(':checked');
@@ -998,7 +998,7 @@ function update_group(state, ready, data) {
     var dynamic = $("#grp_dynamic").is(':checked');
     var alliances = $("#grp_alliances").is(':checked');
 
-    wgsclient.updateGroup(appId, gid, state, ready, data, automatch, hidden, observable, dynamic, alliances, function(id,details,errorURI,result,resultKw) {
+    wgsclient.updateGroup(appId, gid, status, ready, data, automatch, hidden, observable, dynamic, alliances, function(id,details,errorURI,result,resultKw) {
         if(!errorURI) update_group_callback(id,details,errorURI,result,resultKw);
     });
 }
@@ -1425,7 +1425,7 @@ function append_message(text)
         <input type="hidden" id="group_admin" name="group_admin" value="" />
     </div>
     <button id="start_group" onclick="start_group();">Start</button>
-    <button id="toggle_client_state" onclick="toggle_client_state();">Ready</button>
+    <button id="toggle_client_status" onclick="toggle_client_status();">Ready</button>
     <button id="add_group_member" class="hidden" onclick="add_group_member(true);">Add</button>
     <button id="exit_group" class="hidden" onclick="exit_group();">Exit</button>
     <button id="enable_network" onclick="enable_network();">Enable network</button>

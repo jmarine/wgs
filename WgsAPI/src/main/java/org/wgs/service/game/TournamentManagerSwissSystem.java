@@ -92,7 +92,7 @@ public class TournamentManagerSwissSystem extends TournamentManager
         double maxScore = 0;
         
         for(TournamentMatch anyMatch : match.getRound().getMatches()) {
-            if(anyMatch.getState() != GroupState.FINISHED) {
+            if(anyMatch.getStatus() != GroupStatus.FINISHED) {
                 pendingGamesInRound = true;
             } else {
                 for(TournamentMatchParticipantAndResult participantWithResult : anyMatch.getTeamsParticipantsWithResults()) {
@@ -115,7 +115,7 @@ public class TournamentManagerSwissSystem extends TournamentManager
                 onTournamentChange(wgsModule, socket, tournament, "update");
             } else {
                 // end of tournament
-                tournament.setState(GroupState.FINISHED);
+                tournament.setStatus(GroupStatus.FINISHED);
                 tournament = Storage.saveEntity(tournament);
                 onTournamentChange(wgsModule, socket, tournament, "finished");
             }

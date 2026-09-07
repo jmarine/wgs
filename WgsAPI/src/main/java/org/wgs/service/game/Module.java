@@ -115,7 +115,7 @@ public class Module extends WampModule
             manager = Storage.getEntityManager();
             transaction = manager.getTransaction();
 
-            Query updateQuery = manager.createQuery("UPDATE GroupMember m SET m.state = org.wgs.service.game.MemberState.DETACHED, m.sid = NULL WHERE m.state = org.wgs.service.game.MemberState.JOINED OR m.state = org.wgs.service.game.MemberState.READY");
+            Query updateQuery = manager.createQuery("UPDATE GroupMember m SET m.status = org.wgs.service.game.MemberStatus.DETACHED, m.sid = NULL WHERE m.status = org.wgs.service.game.MemberStatus.JOINED OR m.status = org.wgs.service.game.MemberStatus.READY");
             transaction.begin();
             updateQuery.executeUpdate();
             transaction.commit();
@@ -144,7 +144,7 @@ public class Module extends WampModule
             manager = Storage.getEntityManager();
             transaction = manager.getTransaction();
 
-            Query updateQuery = manager.createQuery("UPDATE GroupMember m SET m.state = org.wgs.service.game.MemberState.DETACHED, m.sid = NULL WHERE m.sid = :sid");
+            Query updateQuery = manager.createQuery("UPDATE GroupMember m SET m.status = org.wgs.service.game.MemberStatus.DETACHED, m.sid = NULL WHERE m.sid = :sid");
 
             for(Long sessionId : clients.keySet()) {
                 try {
@@ -498,7 +498,7 @@ public class Module extends WampModule
                 if(app != null) {
                     autoMatchMode = true;
                     
-                    String jpaQuery = "SELECT OBJECT(g) FROM AppGroup g WHERE g.state = org.wgs.service.game.GroupState.OPEN AND g.autoMatchEnabled = TRUE AND g.autoMatchCompleted = FALSE AND g.application = :application";
+                    String jpaQuery = "SELECT OBJECT(g) FROM AppGroup g WHERE g.status = org.wgs.service.game.GroupStatus.OPEN AND g.autoMatchEnabled = TRUE AND g.autoMatchCompleted = FALSE AND g.application = :application";
                     // TODO: automatch criteria (opponents, role, ELO range, game variant, time criteria,...)                    
                     TypedQuery<Group> groupQuery = manager.createQuery(jpaQuery, Group.class);
                     groupQuery.setParameter("application", app);
@@ -507,7 +507,7 @@ public class Module extends WampModule
                     List<Group> groupList = groupQuery.getResultList();
                     for(Group tmp : groupList) {
                         // manager.lock(tmp, LockModeType.PESSIMISTIC_WRITE);
-                        valid = (tmp != null) && (tmp.isAutoMatchEnabled() && !tmp.isAutoMatchCompleted() && tmp.getState()==GroupState.OPEN);
+                        valid = (tmp != null) && (tmp.isAutoMatchEnabled() && !tmp.isAutoMatchCompleted() && tmp.getStatus()==GroupStatus.OPEN);
 
                         if(valid) {
                             g = tmp;
@@ -561,7 +561,7 @@ public class Module extends WampModule
                 g = new Group();
                 g.setGid(UUID.randomUUID().toString());
                 g.setApplication(app);
-                g.setState(GroupState.OPEN);
+                g.setStatus(GroupStatus.OPEN);
                 g.setFlow(new HashMap<String, Object>());
                 g.setObservableGroup(app.isObservableGroup());
                 g.setDynamicGroup(app.isDynamicGroup());
@@ -712,7 +712,7 @@ public class Module extends WampModule
                     } 
                 }
 
-                if(g.getState()==GroupState.OPEN && avail_slots == 0) {
+                if(g.getStatus()==GroupStatus.OPEN && avail_slots == 0) {
                     g.setAutoMatchCompleted(true);
                 }
 
@@ -754,7 +754,7 @@ public class Module extends WampModule
                 if(!spectator && !joined && ( (reserved && index == reservedSlot) || (!reserved && member.getUser() == null) ) ) {
                     response.put("slotJoinedByClient", member.getSlot());
                     member.setClientSID((client!= null) ? client.getSessionId() : null);
-                    member.setState(MemberState.JOINED);
+                    member.setStatus(MemberStatus.JOINED);
                     member.setUser(manager.getReference(User.class, client.getUser().getUid()));
                     if(options != null && options.has("role") && options.getText("role").length() > 0) {
                         Role oldRole = member.getRole();
@@ -854,7 +854,7 @@ public class Module extends WampModule
     @WampRegisterProcedure(name="update_group")
     public WampDict updateGroup(WampSocket socket, WampDict node) throws Exception
     {
-        // TODO: change group properties (state, observable, etc)
+        // TODO: change group properties (status, observable, etc)
         boolean valid = false;
         boolean excludeMe = true;
         boolean broadcastAppInfo = false;
@@ -905,21 +905,21 @@ public class Module extends WampModule
                 broadcastGroupInfo = true;
             }                                 
             
-            if(node.has("state")) {
-                String state = node.getText("state");
-                g.setState(GroupState.valueOf(state));
+            if(node.has("status")) {
+                String status = node.getText("status");
+                g.setStatus(GroupStatus.valueOf(status));
                 broadcastAppInfo = true;
                 broadcastGroupInfo = true;                
             }
 
             
             response.putAll(g.toWampObject(true));
-            if(node.has("state")) {            
-                if(g.getState() == GroupState.STARTED && node.has("ready") && node.getBoolean("ready") ) {
+            if(node.has("status")) {            
+                if(g.getStatus() == GroupStatus.STARTED && node.has("ready") && node.getBoolean("ready") ) {
                     for(int slot = 0; slot < g.getNumSlots(); slot++) {
                         Member member = g.getMember(slot);
                         if(member != null && member.getClientSID() != null && socket.getWampSessionId().equals(member.getClientSID())) {
-                            member.setState(MemberState.READY);
+                            member.setStatus(MemberStatus.READY);
                             excludeMe = false;
                         }
                     }
@@ -1042,8 +1042,8 @@ public class Module extends WampModule
                             member.setUserType("user");
                         }
 
-                        if(c==null) member.setState((g.getState() == GroupState.OPEN)? MemberState.EMPTY : MemberState.DETACHED );
-                        else if(!c.getSessionId().equals(member.getClientSID())) member.setState(MemberState.JOINED);
+                        if(c==null) member.setStatus((g.getStatus() == GroupStatus.OPEN)? MemberStatus.EMPTY : MemberStatus.DETACHED );
+                        else if(!c.getSessionId().equals(member.getClientSID())) member.setStatus(MemberStatus.JOINED);
 
                         if(usertype.equalsIgnoreCase("remote")) {
                             if(user!=null && user.equals(member.getUser())) {
@@ -1073,15 +1073,15 @@ public class Module extends WampModule
                     } 
                     
                 } else {
-                    // UPDATE CLIENT STATE ("joined" <--> "ready")
+                    // UPDATE CLIENT STATUS ("joined" <--> "ready")
                     Long sid = socket.getWampSessionId();
                     WampList membersArray = new WampList();
-                    String state = data.getText("state");
-                    if(state != null) {
+                    String status = data.getText("status");
+                    if(status != null) {
                         for(int slot = 0, numSlots = g.getNumSlots(); slot < numSlots; slot++) {
                             Member member = g.getMember(slot);
                             if( (member != null) && (member.getClientSID() != null) && (member.getClientSID().equals(sid)) ) {
-                                member.setState(MemberState.valueOf(state));
+                                member.setStatus(MemberStatus.valueOf(status));
                             }
                             membersArray.add((member != null) ? member.toWampObject() : null);
                         }
@@ -1196,7 +1196,7 @@ public class Module extends WampModule
                             logger.log(Level.INFO, "clearing slot " + slot);
 
                             member.setClientSID(null);
-                            member.setState(MemberState.DETACHED);
+                            member.setStatus(MemberStatus.DETACHED);
                             g.setMember(slot, member);
                             
                             WampDict obj = member.toWampObject();
@@ -1258,11 +1258,11 @@ public class Module extends WampModule
                 Group g = manager.find(Group.class, gid, LockModeType.PESSIMISTIC_WRITE);
 
                 for(Member m : g.getMembers()) {
-                    if(m.getState() == MemberState.EMPTY || m.getUser() == null || m.getUser().equals(socket.getUserPrincipal())) {
-                        m.setState(MemberState.DELETED);
+                    if(m.getStatus() == MemberStatus.EMPTY || m.getUser() == null || m.getUser().equals(socket.getUserPrincipal())) {
+                        m.setStatus(MemberStatus.DELETED);
                         //m = manager.merge(m);
                     } 
-                    if(m.getState() != MemberState.DELETED) {
+                    if(m.getStatus() != MemberStatus.DELETED) {
                         refCount++;
                     }
                 }
@@ -1393,12 +1393,12 @@ public class Module extends WampModule
     
     
     @WampRegisterProcedure(name = "list_groups")
-    public WampDict listGroups(WampSocket socket, String appId, GroupState state, GroupFilter.Scope scope) throws Exception
+    public WampDict listGroups(WampSocket socket, String appId, GroupStatus status, GroupFilter.Scope scope) throws Exception
     {
         WampDict retval = new WampDict();
         Client client = clients.get(socket.getWampSessionId());
         
-        try(GroupFilter filter = new GroupFilter(appId, state, scope, client.getUser())) {
+        try(GroupFilter filter = new GroupFilter(appId, status, scope, client.getUser())) {
             WampList groupsArray = new WampList();
             for(Group g : filter.getGroups()) {
                 if(!g.isHidden()) {
@@ -1442,7 +1442,7 @@ public class Module extends WampModule
                     if(!member.getUser().equals(socket.getUserPrincipal())) throw new WampException(null, "wgs.incorrect_user_member", null, null);
                 }
                 
-                GroupState oldState = g.getState();
+                GroupStatus oldStatus = g.getStatus();
 
                 if(validator == null || validator.isValidAction(this, socket, this.applications.values(), g, actionName, actionValue, playerSlot.intValue())) {
                     GroupAction action = new GroupAction();
@@ -1482,7 +1482,7 @@ public class Module extends WampModule
 
                 }
                 
-                if(oldState != GroupState.FINISHED && g.getState() == GroupState.FINISHED) {
+                if(oldStatus != GroupStatus.FINISHED && g.getStatus() == GroupStatus.FINISHED) {
                     gidGameFinished = g.getGid();
                 }
             }
@@ -1606,29 +1606,29 @@ public class Module extends WampModule
                 
 
                 // Search active groups stats using JQL (FIXME: CriteriaQuery with onetomany relationship fails with Hibernate)
-                String jql = "SELECT g.application.name AS appName,count(DISTINCT g.gid) AS c FROM AppGroup g, IN(g.members) m WHERE m.user.uid = :uid AND g.state <> :finishedState ";
+                String jql = "SELECT g.application.name AS appName,count(DISTINCT g.gid) AS c FROM AppGroup g, IN(g.members) m WHERE m.user.uid = :uid AND g.status <> :finishedStatus ";
                 if(opponentUid != null && opponentUid.length() > 0) jql += "AND :opponentUid in (SELECT m2.user.uid from GroupMember m2 WHERE m2.applicationGroup = g) " ;
                 jql += "GROUP BY g.application.name";
                 
                 TypedQuery<Tuple> activeGroupsTypedQuery = manager.createQuery(jql, Tuple.class);
                 activeGroupsTypedQuery.setParameter("uid", user.getUid());
-                activeGroupsTypedQuery.setParameter("finishedState", GroupState.FINISHED);
+                activeGroupsTypedQuery.setParameter("finishedStatus", GroupStatus.FINISHED);
                 if(opponentUid != null && opponentUid.length() > 0) activeGroupsTypedQuery.setParameter("opponentUid", opponentUid);
                 
                 /* Using CriteriaQuery worked with EclipseLink but the onetomany relationship fails with Hibernate:
                 CriteriaQuery<Tuple> activeGroupsQuery = cb.createTupleQuery();
                 Root<Group> group = activeGroupsQuery.from(Group.class);
                 Expression<String> gidExpr = group.get("gid");
-                Expression<GroupState> stateExpr = group.get("state");
+                Expression<GroupStatus> statusExpr = group.get("status");
                 appExpr = group.get("application");
                 
                 Expression<Collection<String>> usersExpr = group.get("members").get("user").get("uid");
                 activeGroupsQuery.multiselect(appExpr.alias("app"), cb.countDistinct(gidExpr).alias("c"));
                 if(opponentUid == null || opponentUid.length() == 0) {
-                    activeGroupsQuery.where(cb.and(cb.notEqual(stateExpr, GroupState.FINISHED), cb.isMember(user.getUid(), usersExpr)));
+                    activeGroupsQuery.where(cb.and(cb.notEqual(statusExpr, GroupStatus.FINISHED), cb.isMember(user.getUid(), usersExpr)));
                 } else {
                     Expression<Collection<String>> usersExpr2 = group.get("members").get("user").get("uid");
-                    activeGroupsQuery.where(cb.and(cb.notEqual(stateExpr, GroupState.FINISHED), cb.isMember(user.getUid(), usersExpr), cb.isMember(opponentUid, usersExpr2)));
+                    activeGroupsQuery.where(cb.and(cb.notEqual(statusExpr, GroupStatus.FINISHED), cb.isMember(user.getUid(), usersExpr), cb.isMember(opponentUid, usersExpr2)));
                 }
                 activeGroupsQuery.groupBy(appExpr);
 
@@ -1694,7 +1694,7 @@ public class Module extends WampModule
         tournament.setMinTeams(data.getInt("min_teams"));
         tournament.setMaxRoundDurationInMinutes(data.getInt("max_round_duration"));
         tournament.setOwner(client.getUser());
-        tournament.setState(GroupState.OPEN);
+        tournament.setStatus(GroupStatus.OPEN);
         tournament.setTournamentType(data.getInt("type"));
         Storage.createEntity(tournament);
         
@@ -1720,9 +1720,9 @@ public class Module extends WampModule
             EntityManager manager = Storage.getEntityManager();
 
             // Start pending tournaments if enough players are enrolled.
-            String ejbql = "SELECT OBJECT(t) FROM Tournament t  WHERE t.state = :openState AND t.start < :currentTime";
+            String ejbql = "SELECT OBJECT(t) FROM Tournament t  WHERE t.status = :openStatus AND t.start < :currentTime";
             TypedQuery<Tournament> tournamentsQuery = manager.createQuery(ejbql, Tournament.class);        
-            tournamentsQuery.setParameter("openState", GroupState.OPEN);
+            tournamentsQuery.setParameter("openStatus", GroupStatus.OPEN);
             tournamentsQuery.setParameter("currentTime", now);
 
             List<Tournament> tournaments = tournamentsQuery.getResultList();
@@ -1737,9 +1737,9 @@ public class Module extends WampModule
             }
 
             // Finish games that are still in progress but round time has expired:
-            ejbql = "SELECT OBJECT(m) FROM Tournament t, IN(t.rounds) round, IN(round.matches) m WHERE t.state = :startedState AND t.currentRound = round.currentRound AND m.state = :startedState";
+            ejbql = "SELECT OBJECT(m) FROM Tournament t, IN(t.rounds) round, IN(round.matches) m WHERE t.status = :startedStatus AND t.currentRound = round.currentRound AND m.status = :startedStatus";
             TypedQuery<TournamentMatch> matchesQuery = manager.createQuery(ejbql, TournamentMatch.class);        
-            matchesQuery.setParameter("startedState", GroupState.STARTED);
+            matchesQuery.setParameter("startedStatus", GroupStatus.STARTED);
 
             List<TournamentMatch> matches = matchesQuery.getResultList();
             for(TournamentMatch match : matches)
@@ -1770,21 +1770,21 @@ public class Module extends WampModule
     }
     
     @WampRegisterProcedure(name = "list_tournaments")
-    public WampDict listTournaments(WampSocket socket, String appId, GroupState state) throws Exception
+    public WampDict listTournaments(WampSocket socket, String appId, GroupStatus status) throws Exception
     {
         tournamentsAndRoundsControl(socket);
         
         String ejbql = "SELECT OBJECT(t) FROM Tournament t  WHERE ";
-        if(state == GroupState.FINISHED) {
-            ejbql += "t.state = :finishedState";
+        if(status == GroupStatus.FINISHED) {
+            ejbql += "t.status = :finishedStatus";
         } else {
-            ejbql += "t.state <> :finishedState";
+            ejbql += "t.status <> :finishedStatus";
         }
             
             
         EntityManager manager = Storage.getEntityManager();
         TypedQuery<Tournament> query = manager.createQuery(ejbql, Tournament.class);        
-        query.setParameter("finishedState", GroupState.FINISHED);
+        query.setParameter("finishedStatus", GroupStatus.FINISHED);
         
         WampList wampList = new WampList();
         List<Tournament> tournaments = query.getResultList();
@@ -1793,7 +1793,7 @@ public class Module extends WampModule
             WampDict tournamentInfo = tournament.toWampObject();
             WampList enrolledByUser = new WampList();
             for(TournamentEnrollment enroll : tournament.getEnrollments()) {
-                if(tournament.getState() != GroupState.FINISHED) {
+                if(tournament.getStatus() != GroupStatus.FINISHED) {
                     Team team = enroll.getTeam();
                     if(team.getMembers().contains(socket.getUserPrincipal())) {
                         WampDict enrollInfo = new WampDict();
@@ -2037,7 +2037,7 @@ public class Module extends WampModule
             
         } else {
         
-            tournament.setState(GroupState.STARTED);
+            tournament.setStatus(GroupStatus.STARTED);
             tournament = Storage.saveEntity(tournament);
 
             TournamentManager manager = tournament.getManager();

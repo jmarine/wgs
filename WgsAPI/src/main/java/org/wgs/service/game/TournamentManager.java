@@ -97,7 +97,7 @@ public abstract class TournamentManager
         group.setDescription(tournament.getName() + " - R" + round.getCurrentRound() + " - G" + positionOrderInRound + ((branch != null) ? " - " + branch : "") );
         group.setMinMembers(tournament.getMinTeams() * app.getMinPlayersByTeam());
         group.setMaxMembers(members1.size() + members2.size());
-        group.setState(GroupState.STARTED);
+        group.setStatus(GroupStatus.STARTED);
         createGameDataAndTurn(apps, app, group);
         Storage.createEntity(group);
 
@@ -176,10 +176,10 @@ public abstract class TournamentManager
         match.setPositionOrderInRound(positionOrderInRound);
         if(enroll1 != null && enroll2 != null) {
             group = createGroup(wgsModule, socket, apps, app, tournament, round, positionOrderInRound, enroll1, enroll2, branch);
-            match.setState(GroupState.STARTED);
+            match.setStatus(GroupStatus.STARTED);
             match.setBye(false);
         } else {
-            match.setState(GroupState.FINISHED);
+            match.setStatus(GroupStatus.FINISHED);
             match.setBye(true);
         }
         
@@ -276,7 +276,7 @@ public abstract class TournamentManager
     protected TournamentMatch closeMatch(Collection<Application> apps, TournamentMatch match, String gid) throws Exception
     {
         scoreMatch(apps, match, gid); 
-        match.setState(GroupState.FINISHED);
+        match.setStatus(GroupStatus.FINISHED);
         match = Storage.saveEntity(match);
         
         if(match.getTeamsParticipantsWithResults() != null) {

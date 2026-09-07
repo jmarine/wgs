@@ -412,11 +412,11 @@ public class Application implements Serializable, Comparable
     }
     
 
-    public Collection<Group> getGroupsByState(GroupState state)
+    public Collection<Group> getGroupsByStatus(GroupStatus status)
     {
         ArrayList<Group> retval = new ArrayList<Group>();
         for(Group g : groupsByGid.values()) {
-            if(state==null || state==g.getState()) {
+            if(status==null || status==g.getStatus()) {
                 retval.add(g);
             }
         }

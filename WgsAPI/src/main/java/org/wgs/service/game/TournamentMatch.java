@@ -62,7 +62,7 @@ public class TournamentMatch
     private List<String> GIDs;
     
     @Enumerated(EnumType.ORDINAL)
-    private GroupState state;
+    private GroupStatus status;
     
     @Column(name="isbye")
     private boolean isbye;
@@ -133,17 +133,17 @@ public class TournamentMatch
    
     
     /**
-     * @return the state
+     * @return the status
      */
-    public GroupState getState() {
-        return state;
+    public GroupStatus getStatus() {
+        return status;
     }
 
     /**
-     * @param state the state to set
+     * @param status the status to set
      */
-    public void setState(GroupState state) {
-        this.state = state;
+    public void setStatus(GroupStatus status) {
+        this.status = status;
     }    
     
     
@@ -184,7 +184,7 @@ public class TournamentMatch
         List<String> GIDs = getGIDs();
 
         WampDict retval = new WampDict();
-        retval.put("status", getState().toString());
+        retval.put("status", getStatus().toString());
         retval.put("gids", GIDs);
 
         Group group = null;

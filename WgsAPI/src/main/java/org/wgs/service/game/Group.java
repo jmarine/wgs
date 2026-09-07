@@ -42,9 +42,9 @@ import org.wgs.wamp.type.WampObject;
 @Cacheable(false)
 @NamedQueries({
     @NamedQuery(name="wgs.findAllGroups",query="SELECT OBJECT(g) FROM AppGroup g"),
-    @NamedQuery(name="wgs.findFinishedGIDsFromUser",query="SELECT DISTINCT g.gid FROM AppGroup g, IN(g.members) m WHERE g.state = org.wgs.service.game.GroupState.FINISHED AND m.user = ?1")
+    @NamedQuery(name="wgs.findFinishedGIDsFromUser",query="SELECT DISTINCT g.gid FROM AppGroup g, IN(g.members) m WHERE g.status = org.wgs.service.game.GroupStatus.FINISHED AND m.user = ?1")
 })
-// @org.eclipse.persistence.annotations.Index(name="APP_GROUP_STATE_IDX", columnNames={"STATE"})
+// @org.eclipse.persistence.annotations.Index(name="APP_GROUP_STATUS_IDX", columnNames={"STATUS"})
 public class Group implements java.io.Serializable
 {
     private static final long serialVersionUID = 0L;
@@ -87,7 +87,7 @@ public class Group implements java.io.Serializable
     private String password;
     
     @Enumerated(EnumType.ORDINAL)
-    private GroupState state;
+    private GroupStatus status;
     
     @Column(name="turn")
     private Integer turn;
@@ -213,17 +213,17 @@ public class Group implements java.io.Serializable
         
     
     /**
-     * @return the state
+     * @return the status
      */
-    public GroupState getState() {
-        return state;
+    public GroupStatus getStatus() {
+        return status;
     }
 
     /**
-     * @param state the state to set
+     * @param status the status to set
      */
-    public void setState(GroupState state) {
-        this.state = state;
+    public void setStatus(GroupStatus status) {
+        this.status = status;
     }
 
     /**
@@ -657,7 +657,7 @@ public class Group implements java.io.Serializable
         obj.put("dynamic", isDynamicGroup());
         obj.put("alliances", isAlliancesAllowed());
         obj.put("description", getDescription());        
-        obj.put("state", String.valueOf(getState()));
+        obj.put("status", String.valueOf(getStatus()));
         obj.put("turn", getTurn());
         obj.put("password", (password != null) && (password.length() > 0) );
         

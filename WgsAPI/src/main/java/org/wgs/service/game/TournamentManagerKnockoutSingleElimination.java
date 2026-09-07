@@ -94,7 +94,7 @@ public class TournamentManagerKnockoutSingleElimination extends TournamentManage
             
             Group group = createGroup(wgsModule, socket, apps, match.getRound().getTournament().getApplication(), match.getRound().getTournament(), match.getRound(), match.getPositionOrderInRound(), enroll1, enroll2, "Tie Break " + match.getGIDs().size());
             match.getGIDs().add(group.getGid());
-            match.setState(GroupState.STARTED);
+            match.setStatus(GroupStatus.STARTED);
             match = Storage.saveEntity(match);
             
         } else {
@@ -103,7 +103,7 @@ public class TournamentManagerKnockoutSingleElimination extends TournamentManage
             int numPlayersWithLives = 0;
 
             for(TournamentMatch anyMatch : match.getRound().getMatches()) {
-                if(anyMatch.getState() != GroupState.FINISHED) {
+                if(anyMatch.getStatus() != GroupStatus.FINISHED) {
                     pendingGamesInRound = true;
                 } else {
                     for(TournamentMatchParticipantAndResult participantWithResult : anyMatch.getTeamsParticipantsWithResults()) {
@@ -123,7 +123,7 @@ public class TournamentManagerKnockoutSingleElimination extends TournamentManage
                     onTournamentChange(wgsModule, socket, tournament, "updated");
                 } else {
                     // end of tournament
-                    tournament.setState(GroupState.FINISHED);
+                    tournament.setStatus(GroupStatus.FINISHED);
                     tournament = Storage.saveEntity(tournament);
                     onTournamentChange(wgsModule, socket, tournament, "finished");
                 }

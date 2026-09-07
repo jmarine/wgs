@@ -156,7 +156,7 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
                         g.setFlow(g.getFlow());
                         
                         g.setData(getPublicData(g, internalData));
-                        g.setState(GroupState.STARTED);
+                        g.setStatus(GroupStatus.STARTED);
                         
                         isValid = true;
                         notifyPrivateData = true;
@@ -166,7 +166,7 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
                 case "RESIGN": 
                     if(g.getWinner() >= 0) {
                         error = "already_finished";
-                    } else if(g.getState() != GroupState.STARTED) {
+                    } else if(g.getStatus() != GroupStatus.STARTED) {
                         error = "group_not_started";
                     } else if(actionSlot >= 0) {
                         int winnerTeam = 1 + (actionSlot % 2);
@@ -174,7 +174,7 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
                         // String data = (String)ruleEngine.eval("game.toString();");
                         g.setWinner(winnerTeam);
                         g.setData(getPublicData(g, internalData));
-                        g.setState(GroupState.FINISHED);
+                        g.setStatus(GroupStatus.FINISHED);
                         rankFinishedGame(g, winnerTeam);
                     }
                     isValid = true;                    
@@ -183,7 +183,7 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
                 case "CLAIM_VICTORY": 
                     if(g.getWinner() >= 0) {
                         error = "already_finished";
-                    } else if(g.getState() != GroupState.STARTED) {
+                    } else if(g.getStatus() != GroupStatus.STARTED) {
                         error = "group_not_started";
                     } else {
                         GroupAction lastAction = null;
@@ -251,7 +251,7 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
                             // String data = (String)ruleEngine.eval("game.toString();");
                             g.setWinner(winnerTeam);
                             g.setData(getPublicData(g, internalData));
-                            g.setState(GroupState.FINISHED);
+                            g.setStatus(GroupStatus.FINISHED);
                             rankFinishedGame(g, winnerTeam);  
                             
                         } else if(error == null) {
@@ -421,7 +421,7 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
 
                                     if(pairPoints.intValue() >= maxScore) {
                                         g.setWinner(winnerTeam);
-                                        g.setState(GroupState.FINISHED);
+                                        g.setStatus(GroupStatus.FINISHED);
                                         rankFinishedGame(g, winnerTeam);                                            
 
                                     } else {

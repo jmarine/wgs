@@ -70,7 +70,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                             String data = (String)ruleEngine.eval("game.toString();");
                             g.setData(data);  
                             g.setWinner(winner);
-                            g.setState(GroupState.FINISHED);
+                            g.setStatus(GroupStatus.FINISHED);
 
                             System.out.println("ActionValidator: WINNER=" + winner);
                             Member m0 = g.getMember(winner-1);
@@ -127,14 +127,14 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                         && actionSlot >= 0 && actionSlot != lastAction.getSlot()
                         && actionName.equalsIgnoreCase("DRAW_ACCEPTED")) {
                     
-                    if(g.getState() == GroupState.STARTED) {
+                    if(g.getStatus() == GroupStatus.STARTED) {
                     
                         int winnerTeam = 0;
                         ruleEngine.eval("game.setWinner('"+winnerTeam+"');");
                         String data = (String)ruleEngine.eval("game.toString();");
                         g.setData(data);                    
                         g.setWinner(winnerTeam);
-                        g.setState(GroupState.FINISHED);                
+                        g.setStatus(GroupStatus.FINISHED);                
 
                         Member m0 = g.getMember(0);
                         Member m1 = g.getMember(1);
@@ -155,7 +155,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                     
                 } else if(actionName.equalsIgnoreCase("CLAIM_VICTORY")) {
 
-                    if(g.getState() == GroupState.STARTED) {
+                    if(g.getStatus() == GroupStatus.STARTED) {
 
                         // TODO: check for 3 repeated data states or 50 moves without captures nor pawn moves.
 
@@ -188,20 +188,20 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                             String data = (String)ruleEngine.eval("game.toString();");
                             g.setData(data);                    
                             g.setWinner(winnerTeam);
-                            g.setState(GroupState.FINISHED);       
+                            g.setStatus(GroupStatus.FINISHED);       
                         }
                     }
                     isValid = true;
 
                 } else if(actionName.equalsIgnoreCase("RESIGN") && actionSlot >= 0) {
                     
-                    if(g.getState() == GroupState.STARTED) {
+                    if(g.getStatus() == GroupStatus.STARTED) {
                         int winner = 2 - actionSlot - 1;
                         ruleEngine.eval("game.setWinner('"+winner+"');");
                         String data = (String)ruleEngine.eval("game.toString();");
                         g.setData(data);                    
                         g.setWinner(winner);
-                        g.setState(GroupState.FINISHED);
+                        g.setStatus(GroupStatus.FINISHED);
 
                         if(g.getNumSlots() == 2)  {
                             Member m0 = g.getMember(2-actionSlot-1);
@@ -226,13 +226,13 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                     String gameState = lastAction.getActionValue();
                     if(gameState.equals(actionValue)) {
                         /*
-                        if(g.getState() == GroupState.FINISHED) {  
+                        if(g.getStatus() == GroupStatus.FINISHED) {  
                             // NOT SUPPORTED (Rollback Ratings, Achievements and TournamentRounds)
-                            g.setState(GroupState.STARTED);
+                            g.setStatus(GroupStatus.STARTED);
                         }
                         */                    
 
-                        if(g.getState() == GroupState.STARTED) {
+                        if(g.getStatus() == GroupStatus.STARTED) {
                             ruleEngine.eval("game.initFromStateStr('"+gameState+"');");
                             g.setData(gameState);
                             isValid = true;
@@ -272,7 +272,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
                                 String data = (String)ruleEngine.eval("game.toString();");
                                 g.setData(data);  
                                 g.setWinner(winner);
-                                g.setState(GroupState.FINISHED);                                
+                                g.setStatus(GroupStatus.FINISHED);                                
                                 
                                 System.out.println("ActionValidator: WINNER=" + winner);
                                 Member m0 = g.getMember(winner-1);

@@ -52,9 +52,9 @@ public class Member implements java.io.Serializable
     @Column(name="team")
     private int    team;
     
-    @Column(name="state")
+    @Column(name="status")
     @Enumerated(EnumType.ORDINAL)
-    private MemberState state;
+    private MemberStatus status;
 
     @Column(name="sid", nullable = true)
     private Long  sid;
@@ -62,7 +62,7 @@ public class Member implements java.io.Serializable
     
     public Member()
     {
-        state = MemberState.EMPTY;
+        status = MemberStatus.EMPTY;
     }
     
     /**
@@ -166,17 +166,17 @@ public class Member implements java.io.Serializable
     }
     
     /**
-     * @return the state
+     * @return the status
      */
-    public MemberState getState() {
-        return state;
+    public MemberStatus getStatus() {
+        return status;
     }
 
     /**
-     * @param state the state to set
+     * @param status the status to set
      */
-    public void setState(MemberState state) {
-        this.state = state;
+    public void setStatus(MemberStatus status) {
+        this.status = status;
     }    
     
     
@@ -209,7 +209,7 @@ public class Member implements java.io.Serializable
         obj.put("name", ((user!=null)? user.getName() : ((connected) ? "Anonymous" : "") ) );
         obj.put("picture", ((user!=null)? user.getPicture() : ((connected) ? "images/anonymous.png": "") ) );
         obj.put("type", userType);
-        obj.put("state", String.valueOf(state));
+        obj.put("status", String.valueOf(status));
         obj.put("role", ((role!=null)? role.getName():""));
         obj.put("team", team);
         obj.put("slot", slot);

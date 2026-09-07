@@ -22,17 +22,17 @@ public class GroupFilter implements AutoCloseable
     public enum Scope { mine, visible, all };
     
     private String appId;
-    private GroupState state;
+    private GroupStatus status;
     private Scope  scope;
     private User user;
     
     private EntityManager manager;
     
 
-    public GroupFilter(String appId, GroupState state, Scope scope, User user) 
+    public GroupFilter(String appId, GroupStatus status, Scope scope, User user) 
     {
         this.appId = appId;
-        this.state = state;        
+        this.status = status;        
         this.scope = scope;
         this.user = user;
     }
@@ -52,10 +52,10 @@ public class GroupFilter implements AutoCloseable
     }
 
     /**
-     * @param state the state to set
+     * @param status the status to set
      */
-    public void setState(GroupState state) {
-        this.state = state;
+    public void setStatus(GroupStatus status) {
+        this.status = status;
     }    
     
     public List<Group> getGroups()
@@ -69,7 +69,7 @@ public class GroupFilter implements AutoCloseable
         if(scope == null || scope == Scope.mine || scope == Scope.visible) {
             ejbql = ejbql + " LEFT JOIN g.members m";
             if(where.length() > 0) where.append(" AND ");
-            where.append("m.user = :user AND m.state <> org.wgs.service.game.MemberState.DELETED");
+            where.append("m.user = :user AND m.status <> org.wgs.service.game.MemberStatus.DELETED");
             params.put("user", user);
             
             if(scope != null) {
@@ -77,11 +77,11 @@ public class GroupFilter implements AutoCloseable
                 where.append(")");
                 
                 if(scope == null || scope == Scope.mine) {        
-                    where.append(" OR (g.admin = :user AND NOT EXISTS (SELECT 1 FROM GroupMember gm WHERE g = gm.applicationGroup AND gm.user = :user and gm.state = org.wgs.service.game.MemberState.DELETED))");
+                    where.append(" OR (g.admin = :user AND NOT EXISTS (SELECT 1 FROM GroupMember gm WHERE g = gm.applicationGroup AND gm.user = :user and gm.status = org.wgs.service.game.MemberStatus.DELETED))");
                 }
 
                 if(scope == Scope.visible) {
-                    where.append(" OR (g.hidden = FALSE AND NOT EXISTS (SELECT 1 FROM GroupMember gm WHERE g = gm.applicationGroup AND gm.user = :user and gm.state = org.wgs.service.game.MemberState.DELETED))");
+                    where.append(" OR (g.hidden = FALSE AND NOT EXISTS (SELECT 1 FROM GroupMember gm WHERE g = gm.applicationGroup AND gm.user = :user and gm.status = org.wgs.service.game.MemberStatus.DELETED))");
                 }
                 
                 where.append(")");
@@ -94,10 +94,10 @@ public class GroupFilter implements AutoCloseable
             params.put("appId", appId);
         }
         
-        if(state != null) {
+        if(status != null) {
             if(where.length() > 0) where.append(" AND ");
-            where.append("g.state = :state");
-            params.put("state", state);
+            where.append("g.status = :status");
+            params.put("status", status);
         }             
         
         if(where.length() > 0) {

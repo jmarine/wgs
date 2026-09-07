@@ -1,5 +1,5 @@
 package org.wgs.service.game;
 
-public enum GroupState {
+public enum GroupStatus {
     OPEN, STARTED, FINISHED
 }

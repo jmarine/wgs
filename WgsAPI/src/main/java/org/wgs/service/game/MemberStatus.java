@@ -1,5 +1,5 @@
 package org.wgs.service.game;
 
-public enum MemberState {
+public enum MemberStatus {
     EMPTY, DETACHED, JOINED, READY, DELETED
 }
