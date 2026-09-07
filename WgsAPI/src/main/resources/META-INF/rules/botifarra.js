@@ -37,7 +37,7 @@ Botifarra.prototype.initFromStateStr = function(str) {
    if(str) parts = str.split('#');
 
    this.points = parts[1];
-   this.winner = parts[2];
+   this.winner = parseInt(parts[2]);
    this.turn = parseInt(parts[3]) + 1;
    this.step = parts[4];
    this.trump = parts[5];
