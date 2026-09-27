@@ -775,8 +775,8 @@ public class Module extends WampModule
                     if(validatorClassName != null) validator = (GroupActionValidator)Class.forName(validatorClassName).getDeclaredConstructor().newInstance();
                     
                     if(validator != null) {
-                        WampObject privateState = validator.getPrivateState(g, member);
-                        if(privateState != null) response.put("privateState", privateState);
+                        WampObject privateData = validator.getPrivateData(g, member);
+                        if(privateData != null) response.put("privateData", privateData);
                     }
 
                 }

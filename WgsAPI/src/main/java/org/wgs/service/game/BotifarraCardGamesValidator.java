@@ -33,7 +33,7 @@ import org.wgs.wamp.type.WampObject;
 public class BotifarraCardGamesValidator implements GroupActionValidator 
 {
     @Override
-    public WampObject getPrivateState(Group g, Member member)
+    public WampObject getPrivateData(Group g, Member member)
     {
         WampList cards = new WampList();
         GroupInternalDataForCardGame internalData = (GroupInternalDataForCardGame)g.getInternalDataObject();
@@ -109,7 +109,7 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
                 isValid = true;
             } else {
                 ruleEngine.eval("game.initFromStateStr('"+g.getData()+"');");
-                WampObject privateCards = getPrivateState(g, g.getMember(actionSlot));
+                WampObject privateCards = getPrivateData(g, g.getMember(actionSlot));
                 WampSerializer serializer = WampEncoding.JSON.getSerializer();
                 String privateCardsJSON = serializer.serialize(privateCards).toString();
                 
@@ -487,14 +487,14 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
                         // Update new PRIVATE DATA to each member
                         boolean publishEvent = false;
                         WampPublishOptions options = new WampPublishOptions();
-                        event.remove("privateState");
+                        event.remove("privateData");
 
                         if(index < 4) {
                             // members
                             Member member = g.getMember(index);
-                            WampObject privateState = getPrivateState(g, member);
+                            WampObject privateData = getPrivateData(g, member);
 
-                            if(privateState != null) event.put("privateState", privateState);
+                            if(privateData != null) event.put("privateData", privateData);
 
                             HashSet<Long> eligible = new HashSet<Long>();
                             if(member.getClientSID() != null) {

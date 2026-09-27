@@ -21,7 +21,7 @@ public class WebGL8x8BoardGamesValidator implements GroupActionValidator
 {
 
     @Override
-    public WampObject getPrivateState(Group g, Member member)
+    public WampObject getPrivateData(Group g, Member member)
     {
         return null;
     }

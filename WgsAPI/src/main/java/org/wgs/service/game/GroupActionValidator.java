@@ -9,6 +9,6 @@ public interface GroupActionValidator {
 
     boolean isValidAction(Module module, WampSocket socket, Collection<Application> apps, Group g, String actionName, String actionValue, int actionSlot) throws Exception;
 
-    WampObject getPrivateState(Group g, Member member);
+    WampObject getPrivateData(Group g, Member member);
     
 }
