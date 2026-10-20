@@ -1,6 +1,6 @@
 /*
-    WebGL 8x8 board games
-    Copyright (C) 2011 by Jordi Mariné Fort
+    Botifarra game
+    Copyright (C) 2026 by Jordi Mariné Fort
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,9 +20,15 @@ var app = app || {}
 app.model = app.model || {}
 app.model.Botifarra = (function() {
 
-function Botifarra(points) {
+var FREE_VARIANT = 0;         // Occidental (Lleida & Tarragona)
+var OBLIGATORY_VARIANT = 1;   // Oriental (Barcelona & Girona)
+var INTERMEDIATE_VARIANT = 2; // similar to Oriental variant, but not so restrictive
+
+function Botifarra(points, variant) {
   if(!points) points = 101;
+  if(!variant) variant = FREE_VARIANT;
   this.points = points;
+  this.variant = variant;
   return this;
 }
 
@@ -37,24 +43,25 @@ Botifarra.prototype.initFromStateStr = function(str) {
    if(str) parts = str.split('#');
 
    this.points = parts[1];
-   this.winner = parseInt(parts[2]);
-   this.turn = parseInt(parts[3]) + 1;
-   this.step = parts[4];
-   this.trump = parts[5];
-   this.multiplier = parts[6];
-   this.ask_pair_to_double = parts[7];
-   this.score_team1 = parts[8];
-   this.score_team2 = parts[9];
-   this.currentRound = parts[10];
-   this.lastRound = parts[11];
-   this.owner = parts[12];
-
+   this.variant = parts[2];
+   this.winner = parseInt(parts[3]);
+   this.turn = parseInt(parts[4]) + 1;
+   this.step = parts[5];
+   this.trump = parts[6];
+   this.multiplier = parts[7];
+   this.ask_pair_to_double = parts[8];
+   this.score_team1 = parts[9];
+   this.score_team2 = parts[10];
+   this.currentRound = parts[11];
+   this.lastRound = parts[12];
+   this.owner = parts[13];
 }
 
 Botifarra.prototype.toString = function() {
    var retval = [];
    retval.push("Botifarra");
    retval.push(this.points);
+   retval.push(this.variant);
    retval.push(this.winner);
    retval.push(this.getTurn() - 1);
    retval.push(this.step);
@@ -147,7 +154,7 @@ Botifarra.prototype.isValidAction = function(actionSlot, actionName, actionValue
         var winnerSlot = -1;
         var winnerCard = null;
         var count = 0;
-        var roundTrump = "";
+        var roundSuit = "";
         var actionCardParts = actionValue.split("_");
         var actionCard = { "value": actionCardParts[0], "type": actionCardParts[1] };
         var current = this.currentRound.split(',');
@@ -161,7 +168,7 @@ Botifarra.prototype.isValidAction = function(actionSlot, actionName, actionValue
 		var cardParts = current[slot].split("_");
 		winnerSlot = slot;
 		winnerCard = { "value": cardParts[0], "type": cardParts[1] };
-		roundTrump = winnerCard.type;
+		roundSuit = winnerCard.type;
 	  }
 	  count++;
         }
@@ -186,36 +193,85 @@ Botifarra.prototype.isValidAction = function(actionSlot, actionName, actionValue
 	      }
 
 	      // basic checks
-              var hasCard = false;
-              var hasRoundTrump = false;
-	      var hasBetterCardOfRoundTrump = false;
-              var hasGameTrump = false;
-	      for(var i = 0; i < privateCards.length; i++) {
+	      var i = 0;
+              var hasActionCard = false;
+              var hasCardOfRoundSuit = false;
+	      var hasBetterCard = false;
+	      var hasBetterCardOfRoundSuit = false;
+              var hasTrumpCard = false;
+	      for(i = 0; i < privateCards.length; i++) {
 		if(privateCards[i].type == actionCard.type && privateCards[i].value == actionCard.value) {
-		   hasCard = true;
+		   hasActionCard = true;
 		}
-                if(privateCards[i].type == roundTrump) {
-		   hasRoundTrump = true;
-                   if( (privateCards[i].type == roundTrump && privateCards[i].type == winnerCard.type && this.getCardPriority(privateCards[i]) > this.getCardPriority(winnerCard) ) ) {
-		     hasBetterCardOfRoundTrump = true;
+                if(privateCards[i].type == roundSuit) {
+		   hasCardOfRoundSuit = true;
+                   if( (privateCards[i].type == roundSuit && privateCards[i].type == winnerCard.type && this.getCardPriority(privateCards[i]) > this.getCardPriority(winnerCard) ) ) {
+		     hasBetterCardOfRoundSuit = true;
 		   }
 		}
                 if(privateCards[i].type == this.trump) {
-                   hasGameTrump = true;
+                   hasTrumpCard = true;
                 }
 	      }
 
-	      // validate actionValue card
-	      if( (winnerSlot % 2) == (actionSlot % 2) ) {
-	        // partner rules
-		valid = hasCard && (actionCard.type == roundTrump || !hasRoundTrump);
-	      } else {
- 	        // opponent rules
-		valid = hasCard 
-			&& ( (!hasRoundTrump && !hasBetterCardOfRoundTrump && (!hasGameTrump || actionCard.type == this.trump) )
-			     || (hasRoundTrump && !hasBetterCardOfRoundTrump && actionCard.type == roundTrump)
-			     || (hasRoundTrump && actionCard.type == winnerCard.type && this.getCardPriority(actionCard) > this.getCardPriority(winnerCard)) );
+	      if(!hasCardOfRoundSuit) {
+		for(i = 0; i < privateCards.length; i++) {
+		  if( privateCards[i].type == this.trump 
+		      && (winnerCard.type != this.trump || this.getCardPriority(privateCards[i]) > this.getCardPriority(winnerCard) ) ) {
+		    hasBetterCard = true;
+		  }
+		}
 	      }
+
+	      if(!hasActionCard) {
+	        valid = false;
+	      } else {
+
+	        // validate actionValue card
+		var isPartnerWinning = false;
+	        if( (winnerSlot % 2) == (actionSlot % 2) ) {
+	          // partner rules
+		  isPartnerWinning = true;
+		  valid = (actionCard.type == roundSuit || !hasCardOfRoundSuit);
+	        } else {
+ 	          // opponent rules
+		  valid = ( (hasCardOfRoundSuit && actionCard.type == roundSuit && (!hasBetterCardOfRoundSuit || (actionCard.type == winnerCard.type && this.getCardPriority(actionCard) > this.getCardPriority(winnerCard))) )
+			    || (!hasCardOfRoundSuit && (!hasBetterCard || (winnerCard.type != this.trump && actionCard.type == this.trump) || (actionCard.type == winnerCard.type && this.getCardPriority(actionCard) > this.getCardPriority(winnerCard)))) )
+
+	        }
+
+                if(valid && (this.variant == OBLIGATORY_VARIANT || this.variant == INTERMEDIATE_VARIANT)) {
+		  // check card is of round type or trump when available.
+		  var requiredType = roundSuit;
+		  if(!hasCardOfRoundSuit) {
+		    if(hasTrumpCard && !isPartnerWinning && hasBetterCard) requiredType = this.trump;
+		    else requiredType = actionCard.type;  // any
+		  }
+
+		  // check if it is a winner card, or scoring card or lowest card of the round type 
+		  if(requiredType != actionCard.type) {
+		    valid = false;
+		  } else if(isPartnerWinning && this.getCardScore(actionCard) > 0) {
+		    valid = true;
+		  } else if( this.variant == OBLIGATORY_VARIANT 
+			     && ((!isPartnerWinning && actionCard.type == winnerCard.type && this.getCardPriority(actionCard) < this.getCardPriority(winnerCard)) 
+				 || (!isPartnerWinning && actionCard.type != roundSuit && actionCard.type != this.trump)
+				 || (isPartnerWinning && this.getCardScore(actionCard) == 0)) ) {
+		    // check it is the lowest card in the suit when card is not winning the round or partner is winning but played card doesn't provide more points 
+		    // (except for FREE and INTERMEDIATE variants)
+		    var lowestPriority = 1000;
+		    var type = actionCard.type;
+		    for(i = 0; i < privateCards.length; i++) {
+		      var priority = this.getCardPriority(privateCards[i]);
+	  	      if(privateCards[i].type == type && lowestPriority > priority) lowestPriority = priority;
+                    }
+		    if(this.getCardPriority(actionCard) > lowestPriority) {
+		      valid = false;
+		    }
+	  	  }
+	        }
+	      }
+
         }
        
       }

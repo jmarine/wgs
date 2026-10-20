@@ -412,10 +412,12 @@ public class BotifarraCardGamesValidator implements GroupActionValidator
 
 
                                     int maxScore = 101;
-                                    String variant = g.getApplication().getName();
-                                    int pos = variant.indexOf("-");
-                                    if(pos != -1) {
-                                        maxScore = Integer.parseInt(variant.substring(pos+1));
+                                    String appNameWithOptions = g.getApplication().getName();
+                                    int posMaxScore = appNameWithOptions.indexOf("-");
+                                    if(posMaxScore != -1) {
+                                        int posVariant = appNameWithOptions.lastIndexOf("-");
+                                        if(posVariant == -1) posVariant = appNameWithOptions.length();
+                                        maxScore = Integer.parseInt(appNameWithOptions.substring(posMaxScore+1, posVariant));
                                     }                                        
 
 
